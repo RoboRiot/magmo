@@ -20,56 +20,50 @@ import { getStorage, ref, listAll } from "firebase/storage";
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState([]);
-
+  const [items, setItems] = useState([]);
   
 
   const storage = getStorage();
   const listRef = ref(storage, "/");
-
+  
   const list = useRef();
   // const buttonList = items.map((itemName) => loadingButton("primary",itemName.folder,"/"))
 
   // Find all the prefixes and items.
-  function listItems() {
+  async function listItems() {
     console.log("enter 1 ");
-    var itemList = [{}];
-    const [items, setItems] = useState([]);
-    listAll(listRef)
+    var itemList = [];
+    var ctr = 0
+
+    useEffect(() => { listAll(listRef)
       .then((res) => {
         res.prefixes.forEach((folderRef) => {
           // All the prefixes under listRef.
           // You may call listAll() recursively on them.
+          console.log("enter 2");
           console.log(folderRef.name);
-          itemList
+          itemList[ctr] = folderRef.name
+          console.log(ctr)
+          console.log(itemList)
+          setItems(itemList)
+          ctr++
         });
         res.items.forEach((itemRef) => {
           // All the items under listRef.
           //   setItems("item", itemRef.name);
-          console.log("enter 2");
+          console.log("enter 3");
+          console.log(itemRef.name);
         });
       })
       .catch((error) => {
         // Uh-oh, an error occurred!
-        alert(err.message);
+        alert(error.message);
       });
+    }, [itemList, items] )
 
-
-    itemList.forEach((lItem) => {
-        // setItems((prevUsersList) => {
-        //     return [...prevUsersList, { name: lItem }];
-        //   });
-        console.log(lItem + "lItem!!")
-    })
-    
-    console.log("returned");
-    console.log(itemList);
-    return (
-      <div>
-        {" "}
-        <a>bro</a>
-        {items.map((user) => <a>{user.name}</a>)}{" "}
-      </div>
-    );
+      console.log("enter 4");
+      console.log(items)
+      return <a>{items}</a>
   }
 
   function simulateNetworkRequest() {
@@ -78,7 +72,7 @@ export default function dashboard() {
 
   function LoadingButton(type, name, route) {
     const [isLoading, setLoading] = useState({ name: false });
-
+    
     useEffect(() => {
       if (isLoading.name) {
         simulateNetworkRequest().then(() => {

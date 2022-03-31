@@ -58,7 +58,7 @@ export default function dashboard() {
 
                                 {LoadingButton("primary", "MagMon", "#")}
 
-                                {LoadingButton("secondary", "Warehouse db", "#")}
+                                {LoadingButton("secondary", "Warehouse db", "Warehousedb/WarehouseList")}
 
                                 <Button variant="link" onClick={signOut}>Sign out</Button>
 
