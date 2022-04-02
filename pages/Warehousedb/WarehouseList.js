@@ -4,6 +4,9 @@ import { Form, Button, Card, Container, Table } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
 import { useAuth } from "../../context/AuthUserContext";
+import firebase from "../../context/Firebase";
+// import { useCollection } from "react-firebase-hooks/firebase";
+
 import LoggedIn from "../LoggedIn";
 
 function simulateNetworkRequest() {
@@ -43,14 +46,58 @@ const items = [
 ];
 
 function listItems() {
-  console.log(items);
-  return items.map((item) => {
-    <a>{item.name}</a>;
-  });
+  // console.log(items);
+  return items.map((item) => (
+    <tr>
+      <td>{item.name}</td>
+      <td>{item.date}</td>
+      <td>{item.wo}</td>
+      <td>{item.pn}</td>
+      <td>{item.sn}</td>
+      <td>{item.sn}</td>
+    </tr>
+  ));
 }
 
-export default function dashboard() {
+export default function WarehouseList() {
   const { signOut } = useAuth();
+
+  const [info, setInfo] = useState([]);
+
+  // Start the fetch operation as soon as
+  // the page loads
+  if (typeof window !== "undefined") {
+    window.addEventListener("load", () => {
+      console.log("enter 1");
+      Fetchdata();
+      // displayData();
+    });
+  }
+
+  // Fetch the required data using the get() method
+  const Fetchdata = () => {
+    return;
+
+    // if (typeof db !== "undefined") {
+    //   db.collection("Test")
+    //     .get()
+    //     .then((querySnapshot) => {
+    //       // Loop through the data and store
+    //       // it in array to display
+    //       querySnapshot.forEach((element) => {
+    //         var data = element.data();
+    //         console.log("enter 2");
+    //         setInfo((arr) => [...arr, data]);
+    //       });
+    //     });
+    // }
+  };
+
+  const displayData = () => {
+    return;
+    // info.map((item) => console.log(item));
+  };
+
   return (
     <LoggedIn>
       <Container
@@ -72,25 +119,7 @@ export default function dashboard() {
                     <th>desc</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>Mark</td>
-                    <td>Otto</td>
-                    <td>@mdo</td>
-                    <td>Otto</td>
-                    <td>@mdo</td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>Jacob</td>
-                    <td>Thornton</td>
-                    <td>@fat</td>
-                    <td>Otto</td>
-                    <td>@mdo</td>
-                  </tr>
-                  {listItems()}
-                </tbody>
+                <tbody>{listItems()}</tbody>
               </Table>
             </Card.Body>
           </Card>

@@ -21,32 +21,31 @@ export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState([]);
   const [items, setItems] = useState([]);
-  
 
   const storage = getStorage();
   const listRef = ref(storage, "/");
-  
+
   const list = useRef();
   // const buttonList = items.map((itemName) => loadingButton("primary",itemName.folder,"/"))
 
   // Find all the prefixes and items.
-  async function listItems() {
+  const listItems = async () => {
     console.log("enter 1 ");
     var itemList = [];
-    var ctr = 0
+    var ctr = 0;
 
-    useEffect(() => { listAll(listRef)
+    listAll(listRef)
       .then((res) => {
         res.prefixes.forEach((folderRef) => {
           // All the prefixes under listRef.
           // You may call listAll() recursively on them.
           console.log("enter 2");
           console.log(folderRef.name);
-          itemList[ctr] = folderRef.name
-          console.log(ctr)
-          console.log(itemList)
-          setItems(itemList)
-          ctr++
+          itemList[ctr] = folderRef.name;
+          console.log(ctr);
+          console.log(itemList);
+          setItems(itemList);
+          ctr++;
         });
         res.items.forEach((itemRef) => {
           // All the items under listRef.
@@ -59,12 +58,11 @@ export default function dashboard() {
         // Uh-oh, an error occurred!
         alert(error.message);
       });
-    }, [itemList, items] )
 
-      console.log("enter 4");
-      console.log(items)
-      return <a>{items}</a>
-  }
+    console.log("enter 4");
+    console.log(items);
+    return <a>{items}</a>;
+  };
 
   function simulateNetworkRequest() {
     return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -72,7 +70,7 @@ export default function dashboard() {
 
   function LoadingButton(type, name, route) {
     const [isLoading, setLoading] = useState({ name: false });
-    
+
     useEffect(() => {
       if (isLoading.name) {
         simulateNetworkRequest().then(() => {
