@@ -23,8 +23,9 @@
 //     appId: process.env.REACT_APP_FIREBASE_APP_ID,
 //     measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 
-import Firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
+import Firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/firestore";
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
@@ -33,11 +34,11 @@ const FirebaseCredentials = {
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
   appId: "1:177857525147:web:ac8e3c87d82396beb1dd3e",
-  measurementId: "G-L0236JT5N3"
-}
+  measurementId: "G-L0236JT5N3",
+};
 // if a Firebase instance doesn't exist, create one
 if (!Firebase.apps.length) {
-  Firebase.initializeApp(FirebaseCredentials)
+  Firebase.initializeApp(FirebaseCredentials);
 }
 
 export default Firebase;
