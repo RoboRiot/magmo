@@ -78,7 +78,8 @@ export default function WarehouseList() {
   // Fetch the required data using the get() method
   const Fetchdata = () => {
     console.log(firebase.firestore().collection("Test"));
-
+    const snapshot = await citiesRef.get();
+    
     return;
     // if (typeof db !== "undefined") {
     //   db.collection("Test")
