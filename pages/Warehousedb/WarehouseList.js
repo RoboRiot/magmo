@@ -5,6 +5,7 @@ import styles from "../../styles/Home.module.css";
 
 import { useAuth } from "../../context/AuthUserContext";
 import firebase from "../../context/Firebase";
+
 // import { useCollection } from "react-firebase-hooks/firebase";
 
 import LoggedIn from "../LoggedIn";
@@ -76,8 +77,9 @@ export default function WarehouseList() {
 
   // Fetch the required data using the get() method
   const Fetchdata = () => {
-    return;
+    console.log(firebase.firestore().collection("Test"));
 
+    return;
     // if (typeof db !== "undefined") {
     //   db.collection("Test")
     //     .get()

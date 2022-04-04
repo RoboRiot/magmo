@@ -46,7 +46,7 @@ function LoadingButton(type, name, route) {
 export default function WarehouseSelect() {
   const { signOut } = useAuth();
   const [show, setShow] = useState(false);
-  const [select, setSelect] = useState("Action");
+  const [select, setSelect] = useState("Name");
 
   const showDropdown = (e) => {
     setShow(!show);
