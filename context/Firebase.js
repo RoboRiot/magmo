@@ -25,7 +25,7 @@
 
 import Firebase from "firebase/compat/app";
 import "firebase/compat/auth";
-import "firebase/firestore";
+import "firebase/compat/firestore";
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
