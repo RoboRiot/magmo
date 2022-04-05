@@ -40,6 +40,55 @@ function LoadingButton(type, name, route) {
   );
 }
 
+  // Fetch the required data using the get() method
+  const Fetchdata = () => {
+    const [info, setInfo] = useState([{}]);
+    // console.log(firebase.firestore().collection("Test"));
+    const db = firebase.firestore();
+    // const snapshot = citiesRef.get();
+    // const check = info.map((item) => (
+    //   <tr>
+    //     <td>{item.name}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.data}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.date}</td>
+    //   </tr>
+    // ))
+
+    useEffect(() => {
+        db.collection("Test")
+          .get()
+          .then((querySnapshot) => {
+            // Loop through the data and store
+            // it in array to display
+            querySnapshot.forEach((element) => {
+              var data = element.data();
+              console.log("enter 2");
+              console.log(data);
+              setInfo((arr) => [...arr, data]);
+            });
+          });
+    });
+
+    // return info.map((item) => (
+    //   <tr>
+    //     <td>{item.name}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.data}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.date}</td>
+    //     <td>{item.date}</td>
+    //   </tr>
+    // ))
+
+    
+    // console.log("enter 3")
+    console.log(info.map((item) => (item.name)))
+    return <a>bro</a>
+  };
+
 const items = [
   { name: "xc2", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
   { name: "dsp", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
@@ -62,39 +111,18 @@ function listItems() {
 
 export default function WarehouseList() {
   const { signOut } = useAuth();
-
-  const [info, setInfo] = useState([]);
-
+  
   // Start the fetch operation as soon as
   // the page loads
-  if (typeof window !== "undefined") {
-    window.addEventListener("load", () => {
-      console.log("enter 1");
-      Fetchdata();
-      // displayData();
-    });
-  }
+  // if (typeof window !== "undefined") {
+  //   window.addEventListener("load", () => {
+  //     console.log("enter 1");
+  //     Fetchdata();
+  //     // displayData();
+  //   });
+  // }
 
-  // Fetch the required data using the get() method
-  const Fetchdata = () => {
-    console.log(firebase.firestore().collection("Test"));
-    const snapshot = await citiesRef.get();
-    
-    return;
-    // if (typeof db !== "undefined") {
-    //   db.collection("Test")
-    //     .get()
-    //     .then((querySnapshot) => {
-    //       // Loop through the data and store
-    //       // it in array to display
-    //       querySnapshot.forEach((element) => {
-    //         var data = element.data();
-    //         console.log("enter 2");
-    //         setInfo((arr) => [...arr, data]);
-    //       });
-    //     });
-    // }
-  };
+
 
   const displayData = () => {
     return;
@@ -122,7 +150,10 @@ export default function WarehouseList() {
                     <th>desc</th>
                   </tr>
                 </thead>
-                <tbody>{listItems()}</tbody>
+                <tbody>
+                  {listItems()}
+                  {Fetchdata()}
+                </tbody>
               </Table>
             </Card.Body>
           </Card>
