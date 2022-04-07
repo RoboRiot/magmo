@@ -42,22 +42,14 @@ function LoadingButton(type, name, route) {
 
   // Fetch the required data using the get() method
   const Fetchdata = () => {
-    const [info, setInfo] = useState([{}]);
+    const [info, setInfo] = useState([]);
+    
+    useEffect(() => {
     // console.log(firebase.firestore().collection("Test"));
     const db = firebase.firestore();
-    // const snapshot = citiesRef.get();
-    // const check = info.map((item) => (
-    //   <tr>
-    //     <td>{item.name}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.data}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.date}</td>
-    //   </tr>
-    // ))
+   
 
-    useEffect(() => {
+    // useEffect(() => {
         db.collection("Test")
           .get()
           .then((querySnapshot) => {
@@ -70,23 +62,23 @@ function LoadingButton(type, name, route) {
               setInfo((arr) => [...arr, data]);
             });
           });
-    });
-
-    // return info.map((item) => (
-    //   <tr>
-    //     <td>{item.name}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.data}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.date}</td>
-    //     <td>{item.date}</td>
-    //   </tr>
-    // ))
-
+    // });
+    console.log(info)
+    return info.map((item) => (
+      <tr>
+        <td>{item.name}</td>
+        <td>{item.date}</td>
+        <td>{item.data}</td>
+        <td>{item.date}</td>
+        <td>{item.date}</td>
+        <td>{item.date}</td>
+      </tr>
+    ))
+  }, []);
     
     // console.log("enter 3")
-    console.log(info.map((item) => (item.name)))
-    return <a>bro</a>
+    // console.log(info.map((item) => (item.name)))
+    // return <a>bro</a>
   };
 
 const items = [
@@ -109,9 +101,34 @@ function listItems() {
   ));
 }
 
+
+
+ 
+
+  // async function fetchStuff() {
+  //   const promise = new Promise((resolve) => {
+  //     let data;
+  //     useEffect(async () => {
+  //       const snapshot = await firebase.firestore().collection("Test").get();
+  //       data = snapshot.docs.map((doc) => doc.data());
+  //       // setInfo((arr) => [...arr, data]);
+
+  //       // setInfo(data)
+
+  //       console.log(data);
+  //       resolve(data)
+  //     }, []);
+  //   });
+  //   let mydata = await promise
+  //   const listItems = mydata.map((number) => <td>{number.name}</td>);
+  //   console.log(listItems)
+  //   return (<tr>{listItems}</tr>)
+  // }
+
+
 export default function WarehouseList() {
   const { signOut } = useAuth();
-  
+ 
   // Start the fetch operation as soon as
   // the page loads
   // if (typeof window !== "undefined") {
@@ -122,7 +139,25 @@ export default function WarehouseList() {
   //   });
   // }
 
+  // const [info, setInfo] = useState([]);
 
+
+  // useEffect(() => {
+  //   async function fetchStuff() {
+  //     const snapshot = await firebase.firestore().collection("Test").get();
+  //     let data = await snapshot.docs.map((doc) => doc.data());
+  //     // setInfo((arr) => [...arr, data]);
+
+  //     // setInfo(data)
+
+  //     console.log(data);
+  //     data.map((name) => setInfo((arr) => [...arr, name]))
+  //     console.log(info)
+      
+
+  //   }
+  //   fetchStuff();
+  // }, []);
 
   const displayData = () => {
     return;
@@ -152,7 +187,18 @@ export default function WarehouseList() {
                 </thead>
                 <tbody>
                   {listItems()}
+                  {/* {info?.map((item) => (
+                    <tr>
+                      <td>{item.name}</td>
+                      <td>{item.date}</td>
+                      <td>{item.data}</td>
+                      <td>{item.date}</td>
+                      <td>{item.date}</td>
+                      <td>{item.date}</td>
+                    </tr>
+                  ))} */}
                   {Fetchdata()}
+                  
                 </tbody>
               </Table>
             </Card.Body>
