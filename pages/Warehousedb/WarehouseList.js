@@ -40,47 +40,6 @@ function LoadingButton(type, name, route) {
   );
 }
 
-  // Fetch the required data using the get() method
-  const Fetchdata = () => {
-    const [info, setInfo] = useState([]);
-    
-    useEffect(() => {
-    // console.log(firebase.firestore().collection("Test"));
-    const db = firebase.firestore();
-   
-
-    // useEffect(() => {
-        db.collection("Test")
-          .get()
-          .then((querySnapshot) => {
-            // Loop through the data and store
-            // it in array to display
-            querySnapshot.forEach((element) => {
-              var data = element.data();
-              console.log("enter 2");
-              console.log(data);
-              setInfo((arr) => [...arr, data]);
-            });
-          });
-    // });
-    console.log(info)
-    return info.map((item) => (
-      <tr>
-        <td>{item.name}</td>
-        <td>{item.date}</td>
-        <td>{item.data}</td>
-        <td>{item.date}</td>
-        <td>{item.date}</td>
-        <td>{item.date}</td>
-      </tr>
-    ))
-  }, []);
-    
-    // console.log("enter 3")
-    // console.log(info.map((item) => (item.name)))
-    // return <a>bro</a>
-  };
-
 const items = [
   { name: "xc2", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
   { name: "dsp", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
@@ -101,68 +60,50 @@ function listItems() {
   ));
 }
 
-
-
- 
-
-  // async function fetchStuff() {
-  //   const promise = new Promise((resolve) => {
-  //     let data;
-  //     useEffect(async () => {
-  //       const snapshot = await firebase.firestore().collection("Test").get();
-  //       data = snapshot.docs.map((doc) => doc.data());
-  //       // setInfo((arr) => [...arr, data]);
-
-  //       // setInfo(data)
-
-  //       console.log(data);
-  //       resolve(data)
-  //     }, []);
-  //   });
-  //   let mydata = await promise
-  //   const listItems = mydata.map((number) => <td>{number.name}</td>);
-  //   console.log(listItems)
-  //   return (<tr>{listItems}</tr>)
-  // }
-
-
 export default function WarehouseList() {
-  const { signOut } = useAuth();
- 
+  const { signOut } = useAuth([]);
+  const [info, setInfo] = useState([]);
+
   // Start the fetch operation as soon as
   // the page loads
-  // if (typeof window !== "undefined") {
-  //   window.addEventListener("load", () => {
-  //     console.log("enter 1");
-  //     Fetchdata();
-  //     // displayData();
-  //   });
-  // }
+  if (typeof window !== "undefined") {
+    window.addEventListener("load", () => {
+      console.log("enter 1");
+      fetchData();
+      // displayData();
+    });
+  }
 
-  // const [info, setInfo] = useState([]);
+  async function fetchStuff() {
+    const db = firebase.firestore();
+    let data = []
 
+    const cityRef = await db.collection("Test").get().then((querySnapshot) => {
+      // Loop through the data and store
+      // it in array to display
+      querySnapshot.forEach((element) => {
+        
+        console.log("enter 2");
+        console.log(data);
+        data.push(element.data())
+      });
+    });
+    
+    console.log(data)
 
-  // useEffect(() => {
-  //   async function fetchStuff() {
-  //     const snapshot = await firebase.firestore().collection("Test").get();
-  //     let data = await snapshot.docs.map((doc) => doc.data());
-  //     // setInfo((arr) => [...arr, data]);
+    return data
+  }
 
-  //     // setInfo(data)
+  async function fetchData() {
+    let data = await fetchStuff();
+    let itemValue = [];
+    let names = [{ name: "george" }, { name: "bill" }, { name: "adam" }];
 
-  //     console.log(data);
-  //     data.map((name) => setInfo((arr) => [...arr, name]))
-  //     console.log(info)
-      
+    console.log(data);
+    setInfo((oldArray) => [...oldArray, ...data]);
 
-  //   }
-  //   fetchStuff();
-  // }, []);
-
-  const displayData = () => {
-    return;
-    // info.map((item) => console.log(item));
-  };
+    console.log(info);
+  }
 
   return (
     <LoggedIn>
@@ -186,18 +127,19 @@ export default function WarehouseList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {listItems()}
-                  {/* {info?.map((item) => (
+                  {/* {listItems()} */}
+                  {info.map((item) => (
                     <tr>
                       <td>{item.name}</td>
-                      <td>{item.date}</td>
-                      <td>{item.data}</td>
-                      <td>{item.date}</td>
-                      <td>{item.date}</td>
-                      <td>{item.date}</td>
+                      <td>{item.name}</td>
+                      <td>{item.name}</td>
+                      <td>{item.name}</td>
+                      <td>{item.name}</td>
+                      <td>{item.name}</td>
                     </tr>
-                  ))} */}
-                  {Fetchdata()}
+                  ))}
+                 
+                  {/* <a>{info["TestField"]}</a> */}
                   
                 </tbody>
               </Table>
