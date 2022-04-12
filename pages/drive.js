@@ -27,25 +27,27 @@ export default function dashboard() {
 
   const list = useRef();
   // const buttonList = items.map((itemName) => loadingButton("primary",itemName.folder,"/"))
+  if (typeof window !== "undefined") {
+    window.addEventListener("load", () => {
+      console.log("enter 1");
+      fetchData();
+    });
+  }
 
   // Find all the prefixes and items.
-  const listItems = async () => {
+  async function fetchStuff() {
     console.log("enter 1 ");
-    var itemList = [];
-    var ctr = 0;
+    let itemList = [];
 
-    listAll(listRef)
+    await listAll(listRef)
       .then((res) => {
         res.prefixes.forEach((folderRef) => {
           // All the prefixes under listRef.
           // You may call listAll() recursively on them.
           console.log("enter 2");
-          console.log(folderRef.name);
-          itemList[ctr] = folderRef.name;
-          console.log(ctr);
           console.log(itemList);
-          setItems(itemList);
-          ctr++;
+          itemList.push(folderRef.name)
+          
         });
         res.items.forEach((itemRef) => {
           // All the items under listRef.
@@ -59,10 +61,17 @@ export default function dashboard() {
         alert(error.message);
       });
 
-    console.log("enter 4");
-    console.log(items);
-    return <a>{items}</a>;
+    return itemList;
   };
+
+  async function fetchData() {
+    let data = await fetchStuff()
+
+    console.log(data);
+    setItems((oldArray) => [...oldArray, ...data]);
+
+    console.log(items)
+  }
 
   function simulateNetworkRequest() {
     return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -105,9 +114,9 @@ export default function dashboard() {
             <Card.Body ref={list}>
               <h2 className="text-center mb-4">Drive</h2>
               <div class="d-grid gap-3">
-                {listItems()}
+                
                 {LoadingButton("primary", "Info", "#")}
-                {/* <Tab.Container id="list-group-tabs-example" defaultActiveKey="#link1">
+                <Tab.Container id="list-group-tabs-example" defaultActiveKey="#link1">
                                     <Row>
                                         <Col sm={4}>
                                             <ListGroup>
@@ -117,9 +126,9 @@ export default function dashboard() {
                                                 <ListGroup.Item action href="#link2">
                                                     Link 2
                                                 </ListGroup.Item>
-                                                <Button onClick={listItem}>List</Button>
+                                                <Button >List</Button>
                                                 {
-                                                    data.map((val) => (
+                                                    items.map((val) => (
                                                         <h2>{val}</h2>
                                                     ))
                                                 }
@@ -127,7 +136,7 @@ export default function dashboard() {
                                         </Col>
 
                                     </Row>
-                                </Tab.Container> */}
+                                </Tab.Container>
 
                 <Button variant="link" onClick={signOut}>
                   Sign out
