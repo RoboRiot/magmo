@@ -76,22 +76,24 @@ export default function WarehouseList() {
 
   async function fetchStuff() {
     const db = firebase.firestore();
-    let data = []
+    let data = [];
 
-    const cityRef = await db.collection("Test").get().then((querySnapshot) => {
-      // Loop through the data and store
-      // it in array to display
-      querySnapshot.forEach((element) => {
-        
-        console.log("enter 2");
-        console.log(data);
-        data.push(element.data())
+    const cityRef = await db
+      .collection("Test")
+      .get()
+      .then((querySnapshot) => {
+        // Loop through the data and store
+        // it in array to display
+        querySnapshot.forEach((element) => {
+          console.log("enter 2");
+          console.log(data);
+          data.push(element.data());
+        });
       });
-    });
-    
-    console.log(data)
 
-    return data
+    console.log(data);
+
+    return data;
   }
 
   async function fetchData() {
@@ -115,6 +117,7 @@ export default function WarehouseList() {
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
+
               <Table striped bordered hover size="sm">
                 <thead>
                   <tr>
@@ -138,11 +141,15 @@ export default function WarehouseList() {
                       <td>{item.name}</td>
                     </tr>
                   ))}
-                 
+
                   {/* <a>{info["TestField"]}</a> */}
-                  
                 </tbody>
               </Table>
+              {LoadingButton(
+                "secondary",
+                "Add New Item",
+                "Warehousedb/ModItem"
+              )}
             </Card.Body>
           </Card>
         </div>
