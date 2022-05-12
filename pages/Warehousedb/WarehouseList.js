@@ -63,6 +63,7 @@ function listItems() {
 export default function WarehouseList() {
   const { signOut } = useAuth([]);
   const [info, setInfo] = useState([]);
+  const [dates, setDates] = useState([]);
 
   // Start the fetch operation as soon as
   // the page loads
@@ -96,12 +97,21 @@ export default function WarehouseList() {
     return data;
   }
 
+  function toDateTime(secs) {
+    var t = new Date(1970, 0, 1); // Epoch
+    t.setSeconds(secs);
+    return t;
+  }
+
   async function fetchData() {
     let data = await fetchStuff();
     let itemValue = [];
-    let names = [{ name: "george" }, { name: "bill" }, { name: "adam" }];
+    let dateStorage = []
+    // let names = [{ name: "george" }, { name: "bill" }, { name: "adam" }];
+    data.map((elements) => (dateStorage.push( toDateTime(elements.date.seconds).getDate() + "/" +  (toDateTime(elements.date.seconds).getMonth()+1) + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
+    setDates((oldArray) => [...oldArray, ...dateStorage]);
 
-    console.log(data);
+    // console.log(data);
     setInfo((oldArray) => [...oldArray, ...data]);
 
     console.log(info);
@@ -135,10 +145,10 @@ export default function WarehouseList() {
                     <tr>
                       <td>{item.name}</td>
                       <td>{item.name}</td>
-                      <td>{item.name}</td>
-                      <td>{item.name}</td>
-                      <td>{item.name}</td>
-                      <td>{item.name}</td>
+                      <td>{item.pn}</td>
+                      <td>{item.sn}</td>
+                      <td>{item.wo}</td>
+                      <td>{item.desc}</td>
                     </tr>
                   ))}
 

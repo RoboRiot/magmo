@@ -76,7 +76,7 @@ export default function dashboard() {
                 </Row>
 
                 <Form.Group as={Col} controlId="formGridCity">
-                  <Form.Label></Form.Label>
+                  <Form.Label>Date</Form.Label>
                   <Form.Control type="date" />
                 </Form.Group>
                 <Form.Label></Form.Label>
