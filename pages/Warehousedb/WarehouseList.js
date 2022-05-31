@@ -108,7 +108,7 @@ export default function WarehouseList() {
     let itemValue = [];
     let dateStorage = []
     // let names = [{ name: "george" }, { name: "bill" }, { name: "adam" }];
-    data.map((elements) => (dateStorage.push( toDateTime(elements.date.seconds).getDate() + "/" +  (toDateTime(elements.date.seconds).getMonth()+1) + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
+    data.map((elements) => (dateStorage.push( (toDateTime(elements.date.seconds).getMonth()+1) + "/" + toDateTime(elements.date.seconds).getDate() + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
     setDates((oldArray) => [...oldArray, ...dateStorage]);
 
     // console.log(data);
@@ -141,10 +141,10 @@ export default function WarehouseList() {
                 </thead>
                 <tbody>
                   {/* {listItems()} */}
-                  {info.map((item) => (
+                  {info.map((item, index) => (
                     <tr>
                       <td>{item.name}</td>
-                      <td>{item.name}</td>
+                      <td>{dates[index]}</td>
                       <td>{item.pn}</td>
                       <td>{item.sn}</td>
                       <td>{item.wo}</td>
