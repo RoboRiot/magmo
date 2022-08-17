@@ -36,6 +36,17 @@ function LoadingButton(type, name, route) {
     </a>
   );
 }
+var test = "blank"
+
+
+  
+const readQR = (qrData) => {
+ 
+    console.log("this is the qr data: " + qrData);
+ 
+};
+
+
 
 export default function dashboard() {
   const { signOut } = useAuth();
@@ -64,8 +75,8 @@ export default function dashboard() {
                   }}
                   style={{ width: "100%" }}
                 />
-                <Button variant={data === "No result" ? "danger" : "sucess"}>
-                  {data === "No result" ? "No QR located" : "QR located!"}
+                <Button variant={data === "No result" ? "danger" : "sucess"} >
+                  {data === "No result" ? "No QR located" : "QR located! " + readQR(data)}
                 </Button>
 
                 <Button variant="link" onClick={signOut}>

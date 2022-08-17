@@ -7,6 +7,9 @@ import { useAuth } from "../../context/AuthUserContext";
 
 import LoggedIn from "../LoggedIn";
 
+
+
+
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
@@ -37,8 +40,24 @@ function LoadingButton(type, name, route) {
   );
 }
 
+
+
 export default function dashboard() {
   const { signOut } = useAuth();
+
+  cconst [items,setItems] = useState({
+    name: "",
+    wo: "",
+    pn: "",
+    sn: "",
+    date: "",
+  })
+
+  function handleSubmit(event) {
+    // console.log(value)
+    event.preventDefault();
+  }
+
   return (
     <LoggedIn>
       <Container
@@ -50,11 +69,11 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Item</h2>
 
-              <Form>
+              <Form onSubmit={handleSubmit}>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formGridEmail">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control />
+                    <Form.Control  />
                   </Form.Group>
 
                   <Form.Group as={Col} controlId="formGridPassword">

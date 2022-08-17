@@ -31,9 +31,16 @@ function LoadingButton(type, name, route) {
     <a
       class={"btn btn-" + type}
       variant={type}
-      href={"/" + route}
+      // href={"/" + route}
+      href={{
+        pathname: "/ModItem",
+        query: {
+            id: "12345"
+        }
+    }}
       disabled={isLoading.name}
       onClick={!isLoading.name ? handleClick : null}
+      
     >
       {isLoading.name ? "Loading…" : name}
     </a>
@@ -63,7 +70,7 @@ function listItems() {
 export default function WarehouseList() {
   const { signOut } = useAuth([]);
   const [info, setInfo] = useState([]);
-  const [dates, setDates] = useState([]);
+  const [ids, setID] = useState([]);
 
   // Start the fetch operation as soon as
   // the page loads
@@ -78,6 +85,7 @@ export default function WarehouseList() {
   async function fetchStuff() {
     const db = firebase.firestore();
     let data = [];
+    let id = [];
 
     const cityRef = await db
       .collection("Test")
@@ -87,13 +95,14 @@ export default function WarehouseList() {
         // it in array to display
         querySnapshot.forEach((element) => {
           console.log("enter 2");
-          console.log(data);
+          console.log(element.id);
+          id.push(element.id)
           data.push(element.data());
         });
       });
 
     console.log(data);
-
+    setID(id)
     return data;
   }
 
@@ -107,14 +116,21 @@ export default function WarehouseList() {
     let data = await fetchStuff();
     let itemValue = [];
     let dateStorage = []
-    // let names = [{ name: "george" }, { name: "bill" }, { name: "adam" }];
-    data.map((elements) => (dateStorage.push( (toDateTime(elements.date.seconds).getMonth()+1) + "/" + toDateTime(elements.date.seconds).getDate() + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
-    setDates((oldArray) => [...oldArray, ...dateStorage]);
 
-    // console.log(data);
+    data.map((elements) => (dateStorage.push( toDateTime(elements.date.seconds).getDate() + "/" +  (toDateTime(elements.date.seconds).getMonth()+1) + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
+
+    for (const [index, value] of data.entries()) {
+      data[index].date = dateStorage[index]
+    }
+
+    console.log(data);
     setInfo((oldArray) => [...oldArray, ...data]);
 
     console.log(info);
+  }
+
+  const rowSelect = (id) => {
+    console.log(id)
   }
 
   return (
@@ -142,9 +158,9 @@ export default function WarehouseList() {
                 <tbody>
                   {/* {listItems()} */}
                   {info.map((item, index) => (
-                    <tr>
+                    <tr key={index} onClick={() => rowSelect(index)}>
                       <td>{item.name}</td>
-                      <td>{dates[index]}</td>
+                      <td>{item.date}</td>
                       <td>{item.pn}</td>
                       <td>{item.sn}</td>
                       <td>{item.wo}</td>
