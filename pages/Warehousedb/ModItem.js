@@ -46,11 +46,56 @@ export default function dashboard() {
     pn: "",
     sn: "",
     date: "",
+    desc: "",
   });
 
   function handleSubmit(event) {
-    // console.log(value)
+    console.log("enter handle submit")
+    console.log(items)
     event.preventDefault();
+  }
+
+  const nameChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.name = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
+  }
+  const woChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.wo = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
+  }
+  const pnChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.pn = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
+  }
+  const snChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.sn = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
+  }
+  const dateChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.date = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
+  }
+  const descChangeHandler = (event) => {
+    setItems(prevState => {
+      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+      jasper.desc = event.target.value;                     // update the name property, assign a new value                 
+      return { jasper };                                 // return new object jasper object
+    })
   }
 
   return (
@@ -66,37 +111,61 @@ export default function dashboard() {
 
               <Form onSubmit={handleSubmit}>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formGridEmail">
+                  <Form.Group as={Col} controlId="name">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control />
+                    <Form.Control
+                      type="text"
+                      value={items["name"]}
+                      onChange={nameChangeHandler}
+                    />
                   </Form.Group>
 
-                  <Form.Group as={Col} controlId="formGridPassword">
+                  <Form.Group as={Col} controlId="wo">
                     <Form.Label>Work Order</Form.Label>
-                    <Form.Control type="number" />
+                    <Form.Control
+                      type="number"
+                      value={items["wo"]}
+                      onChange={woChangeHandler}
+                    />
                   </Form.Group>
                 </Row>
 
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formGridEmail">
+                  <Form.Group as={Col} controlId="pn">
                     <Form.Label>Product Number</Form.Label>
-                    <Form.Control type="number" />
+                    <Form.Control
+                      type="number"
+                      value={items["pn"]}
+                      onChange={pnChangeHandler}
+                    />
                   </Form.Group>
 
-                  <Form.Group as={Col} controlId="formGridPassword">
+                  <Form.Group as={Col} controlId="sn">
                     <Form.Label>Serial Number</Form.Label>
-                    <Form.Control type="number" />
+                    <Form.Control
+                      type="number"
+                      value={items["sn"]}
+                      onChange={snChangeHandler}
+                    />
                   </Form.Group>
                 </Row>
 
-                <Form.Group as={Col} controlId="formGridCity">
+                <Form.Group as={Col} controlId="date">
                   <Form.Label>Date</Form.Label>
-                  <Form.Control type="date" />
+                  <Form.Control
+                    type="date"
+                    value={items["date"]}
+                    onChange={dateChangeHandler}
+                  />
                 </Form.Group>
                 <Form.Label></Form.Label>
-                <Form.Group className="mb-3" controlId="formGridAddress2">
+                <Form.Group className="mb-3" controlId="desc">
                   <Form.Label>Description</Form.Label>
-                  <Form.Control />
+                  <Form.Control
+                    type="text"
+                    value={items["desc"]}
+                    onChange={descChangeHandler}
+                  />
                 </Form.Group>
 
                 <Button variant="primary" type="submit">

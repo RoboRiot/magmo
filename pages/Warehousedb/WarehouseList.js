@@ -31,13 +31,13 @@ function LoadingButton(type, name, route) {
     <a
       class={"btn btn-" + type}
       variant={type}
-      // href={"/" + route}
-      href={{
-        pathname: "/ModItem",
-        query: {
-            id: "12345"
-        }
-    }}
+      href={"/" + route}
+      // href={{
+      //   pathname: "/ModItem",
+      //   query: {
+      //       id: "12345"
+      //   }}'}
+      
       disabled={isLoading.name}
       onClick={!isLoading.name ? handleClick : null}
       
