@@ -139,7 +139,7 @@ export default function WarehouseList() {
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
       >
-        <div className="w-100" style={{ maxWidth: "400px" }}>
+        <div className="w-100" style={{ maxWidth: "600px" }}>
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
@@ -153,6 +153,7 @@ export default function WarehouseList() {
                     <th>p/n</th>
                     <th>s/n</th>
                     <th>desc</th>
+                    <th>delete</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,6 +166,14 @@ export default function WarehouseList() {
                       <td>{item.sn}</td>
                       <td>{item.wo}</td>
                       <td>{item.desc}</td>
+                      {/* <td>
+                        {LoadingButton(
+                          "secondary",
+                          "X",
+                          "Warehousedb/ModItem"
+                        )}
+                      </td> */}
+                      <td><Button variant="danger">X</Button></td>
                     </tr>
                   ))}
 
@@ -174,6 +183,11 @@ export default function WarehouseList() {
               {LoadingButton(
                 "secondary",
                 "Add New Item",
+                "Warehousedb/ModItem"
+              )}
+               {LoadingButton(
+                "secondary",
+                "Delete Item",
                 "Warehousedb/ModItem"
               )}
             </Card.Body>
