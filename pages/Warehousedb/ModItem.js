@@ -4,8 +4,13 @@ import { Form, Button, Card, Container, Row, Col } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
 import { useAuth } from "../../context/AuthUserContext";
+import firebase from "../../context/Firebase";
 
 import LoggedIn from "../LoggedIn";
+
+import Modal from 'react-bootstrap/Modal';
+import { useRouter } from 'next/router';
+
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -38,23 +43,80 @@ function LoadingButton(type, name, route) {
 }
 
 export default function dashboard() {
+  const router = useRouter()
+
   const { signOut } = useAuth();
 
-  const [items, setItems] = useState({
+  const [items, setItems] = useState({jasper: {
     name: "",
     wo: "",
     pn: "",
     sn: "",
     date: "",
     desc: "",
-  });
+  }});
 
-  function handleSubmit(event) {
-    console.log("enter handle submit")
-    console.log(items)
-    event.preventDefault();
+  const [show, setShow] = useState(false);
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+  
+  async function toSend(){
+    const db = firebase.firestore();
+   
+    await db
+      .collection("Test").add(items["jasper"]).then(() => {
+        console.log('Items added!');
+        router.push("WarehouseList")
+      });
   }
 
+  async function handleSubmit(event) {   
+    // const router = useRouter()
+
+    console.log("enter handle submit")
+    console.log(items)
+    var check = false
+
+    if(items["jasper"]["name"]==""){
+      console.log("error!!!!! name")
+      check=true
+    }
+    if(items["jasper"]["wo"]==""){
+      console.log("error!!!!! work order")
+      check=true
+    }
+    if(items["jasper"]["pn"]==""){
+      console.log("error!!!!! product number")
+      check=true
+    }
+    if(items["jasper"]["sn"]==""){
+      console.log("error!!!!! serial number")
+      check=true
+    }
+    if(items["jasper"]["date"]==""){
+      console.log("error!!!!! date")
+      check=true
+    }
+    if(items["jasper"]["desc"]==""){
+      console.log("error!!!!! description")
+      check=true
+    }
+
+    if(check){
+      console.log("entered")
+      handleShow()
+    }
+    else{
+      console.log("try submit")
+      console.log(items)
+      toSend()
+      
+    }
+   
+
+    event.preventDefault();
+  }
   const nameChangeHandler = (event) => {
     setItems(prevState => {
       let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
@@ -86,7 +148,9 @@ export default function dashboard() {
   const dateChangeHandler = (event) => {
     setItems(prevState => {
       let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.date = event.target.value;                     // update the name property, assign a new value                 
+      // jasper.date = event.target.value;                     // update the name property, assign a new value                 
+      const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
+      jasper.date = date
       return { jasper };                                 // return new object jasper object
     })
   }
@@ -98,12 +162,26 @@ export default function dashboard() {
     })
   }
 
+ 
+
   return (
     <LoggedIn>
+      <Modal show={show} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Missing field</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleClose}>
+            Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
       <Container
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
       >
+        
         <div className="w-100" style={{ maxWidth: "400px" }}>
           <Card className="align-items-center justify-content-center">
             <Card.Body>
