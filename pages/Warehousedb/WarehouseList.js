@@ -32,11 +32,6 @@ function LoadingButton(type, name, route) {
       class={"btn btn-" + type}
       variant={type}
       href={"/" + route}
-      // href={{
-      //   pathname: "/ModItem",
-      //   query: {
-      //       id: "12345"
-      //   }}'}
       
       disabled={isLoading.name}
       onClick={!isLoading.name ? handleClick : null}
@@ -53,24 +48,25 @@ const items = [
   { name: "gts", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
 ];
 
-function listItems() {
-  // console.log(items);
-  return items.map((item) => (
-    <tr>
-      <td>{item.name}</td>
-      <td>{item.date}</td>
-      <td>{item.wo}</td>
-      <td>{item.pn}</td>
-      <td>{item.sn}</td>
-      <td>{item.sn}</td>
-    </tr>
-  ));
-}
+// function listItems() {
+//   // console.log(items);
+//   return items.map((item) => (
+//     <tr>
+//       <td>{item.name}</td>
+//       <td>{item.date}</td>
+//       <td>{item.wo}</td>
+//       <td>{item.pn}</td>
+//       <td>{item.sn}</td>
+//       <td>{item.sn}</td>
+//     </tr>
+//   ));
+// }
 
 export default function WarehouseList() {
   const { signOut } = useAuth([]);
   const [info, setInfo] = useState([]);
   const [ids, setID] = useState([]);
+  const db = firebase.firestore();
 
   // Start the fetch operation as soon as
   // the page loads
@@ -83,7 +79,7 @@ export default function WarehouseList() {
   }
 
   async function fetchStuff() {
-    const db = firebase.firestore();
+    
     let data = [];
     let id = [];
 
@@ -103,7 +99,9 @@ export default function WarehouseList() {
 
     console.log(data);
     setID(id)
-    return data;
+    console.log(ids)
+
+    return [data,id];
   }
 
   function toDateTime(secs) {
@@ -113,7 +111,10 @@ export default function WarehouseList() {
   }
 
   async function fetchData() {
-    let data = await fetchStuff();
+    
+    let datas = await fetchStuff()
+    let data = datas[0]
+    
     let itemValue = [];
     let dateStorage = []
 
@@ -125,12 +126,20 @@ export default function WarehouseList() {
 
     console.log(data);
     setInfo((oldArray) => [...oldArray, ...data]);
+    setID((oldArray) => [...oldArray, ...datas[1]]);
 
     console.log(info);
+    console.log(ids);
   }
 
   const rowSelect = (id) => {
     console.log(id)
+  }
+
+  const deleteItem = (pos,ide) => {
+    setInfo(info.filter((o, i) => pos !== i));
+    const cityRef = db
+      .collection("Test").doc(ide).delete()
   }
 
   return (
@@ -173,7 +182,7 @@ export default function WarehouseList() {
                           "Warehousedb/ModItem"
                         )}
                       </td> */}
-                      <td><Button variant="danger">X</Button></td>
+                      <td><Button onClick={() => deleteItem(index,ids[index])} id={ids[index]} variant="danger">X</Button></td>
                     </tr>
                   ))}
 
