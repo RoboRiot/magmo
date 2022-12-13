@@ -168,7 +168,8 @@ export default function WarehouseList() {
                 <tbody>
                   {/* {listItems()} */}
                   {info.map((item, index) => (
-                    <tr key={index} onClick={() => rowSelect(index)}>
+                    
+                    <tr class='clickable-row' key={index} onClick={() => rowSelect(ids[index])}>
                       <td>{item.name}</td>
                       <td>{item.date}</td>
                       <td>{item.pn}</td>
@@ -194,11 +195,7 @@ export default function WarehouseList() {
                 "Add New Item",
                 "Warehousedb/ModItem"
               )}
-               {LoadingButton(
-                "secondary",
-                "Delete Item",
-                "Warehousedb/ModItem"
-              )}
+               
             </Card.Body>
           </Card>
         </div>

@@ -67,7 +67,10 @@ export default function dashboard() {
     await db
       .collection("Test").add(items["jasper"]).then(() => {
         console.log('Items added!');
-        router.push("WarehouseList")
+        // router.reload("WarehouseList")
+        window.location = "WarehouseList"
+        // router.push("WarehouseList")
+        
       });
   }
 
