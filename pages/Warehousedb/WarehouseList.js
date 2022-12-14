@@ -134,6 +134,7 @@ export default function WarehouseList() {
 
   const rowSelect = (id) => {
     console.log(id)
+    window.location = "Warehousedb/item/" + id
   }
 
   const deleteItem = (pos,ide) => {
@@ -170,7 +171,7 @@ export default function WarehouseList() {
                   {info.map((item, index) => (
                     
                     <tr class='clickable-row' key={index} onClick={() => rowSelect(ids[index])}>
-                      <td>{item.name}</td>
+                      <td href>{item.name}</td>
                       <td>{item.date}</td>
                       <td>{item.pn}</td>
                       <td>{item.sn}</td>
