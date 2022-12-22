@@ -32,10 +32,8 @@ function LoadingButton(type, name, route) {
       class={"btn btn-" + type}
       variant={type}
       href={"/" + route}
-      
       disabled={isLoading.name}
       onClick={!isLoading.name ? handleClick : null}
-      
     >
       {isLoading.name ? "Loading…" : name}
     </a>
@@ -79,7 +77,6 @@ export default function WarehouseList() {
   }
 
   async function fetchStuff() {
-    
     let data = [];
     let id = [];
 
@@ -92,16 +89,16 @@ export default function WarehouseList() {
         querySnapshot.forEach((element) => {
           console.log("enter 2");
           console.log(element.id);
-          id.push(element.id)
+          id.push(element.id);
           data.push(element.data());
         });
       });
 
     console.log(data);
-    setID(id)
-    console.log(ids)
+    setID(id);
+    console.log(ids);
 
-    return [data,id];
+    return [data, id];
   }
 
   function toDateTime(secs) {
@@ -111,17 +108,24 @@ export default function WarehouseList() {
   }
 
   async function fetchData() {
-    
-    let datas = await fetchStuff()
-    let data = datas[0]
-    
-    let itemValue = [];
-    let dateStorage = []
+    let datas = await fetchStuff();
+    let data = datas[0];
 
-    data.map((elements) => (dateStorage.push( toDateTime(elements.date.seconds).getDate() + "/" +  (toDateTime(elements.date.seconds).getMonth()+1) + "/" +  toDateTime(elements.date.seconds).getFullYear() ))) 
+    let itemValue = [];
+    let dateStorage = [];
+
+    data.map((elements) =>
+      dateStorage.push(
+        toDateTime(elements.date.seconds).getDate() +
+          "/" +
+          (toDateTime(elements.date.seconds).getMonth() + 1) +
+          "/" +
+          toDateTime(elements.date.seconds).getFullYear()
+      )
+    );
 
     for (const [index, value] of data.entries()) {
-      data[index].date = dateStorage[index]
+      data[index].date = dateStorage[index];
     }
 
     console.log(data);
@@ -133,15 +137,14 @@ export default function WarehouseList() {
   }
 
   const rowSelect = (id) => {
-    console.log(id)
-    window.location = "Warehousedb/item/" + id
-  }
+    console.log(id);
+    window.location = "item/" + id;
+  };
 
-  const deleteItem = (pos,ide) => {
+  const deleteItem = (pos, ide) => {
     setInfo(info.filter((o, i) => pos !== i));
-    const cityRef = db
-      .collection("Test").doc(ide).delete()
-  }
+    const cityRef = db.collection("Test").doc(ide).delete();
+  };
 
   return (
     <LoggedIn>
@@ -169,8 +172,11 @@ export default function WarehouseList() {
                 <tbody>
                   {/* {listItems()} */}
                   {info.map((item, index) => (
-                    
-                    <tr class='clickable-row' key={index} onClick={() => rowSelect(ids[index])}>
+                    <tr
+                      class="clickable-row"
+                      key={index}
+                      onClick={() => rowSelect(ids[index])}
+                    >
                       <td href>{item.name}</td>
                       <td>{item.date}</td>
                       <td>{item.pn}</td>
@@ -184,7 +190,15 @@ export default function WarehouseList() {
                           "Warehousedb/ModItem"
                         )}
                       </td> */}
-                      <td><Button onClick={() => deleteItem(index,ids[index])} id={ids[index]} variant="danger">X</Button></td>
+                      <td>
+                        <Button
+                          onClick={() => deleteItem(index, ids[index])}
+                          id={ids[index]}
+                          variant="danger"
+                        >
+                          X
+                        </Button>
+                      </td>
                     </tr>
                   ))}
 
@@ -196,7 +210,6 @@ export default function WarehouseList() {
                 "Add New Item",
                 "Warehousedb/ModItem"
               )}
-               
             </Card.Body>
           </Card>
         </div>
