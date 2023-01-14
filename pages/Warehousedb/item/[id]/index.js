@@ -229,10 +229,18 @@ const article = () => {
   }
 
   async function fetchData() {
-    let data = await fetchStuff();
-
+    let datas = await fetchStuff();
+    let data = datas
+    // let data = {}
+    // if(datas.length > 0){
+    //   data = datas[0]
+    // }
+    
     let itemValue = [];
     let dateStorage = [];
+    console.log(datas)
+
+
 
     data.map((elements) => 
       dateStorage.push(
@@ -243,20 +251,21 @@ const article = () => {
           toDateTime(elements.date.seconds).getFullYear()
       )
     );
-
+    
     for (const [index, value] of data.entries()) {
       data[index].date = dateStorage[index];
     }
 
-    console.log(data);
+
     setInfo((oldArray) => [...oldArray, ...data]);
     // setID((oldArray) => [...oldArray, ...datas[1]]);
-
+   
     info.map((item, index) =>
       setItems((prevState) => {
         let jasper = Object.assign({}, prevState.jasper); // creating copy of state variable jasper
         // jasper.date = event.target.value;                     // update the name property, assign a new value
         // const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
+        console.log(item.name)
         jasper.name = item.name;
         jasper.wo = item.wo;
         return { jasper }; // return new object jasper object
@@ -349,7 +358,10 @@ const article = () => {
                 </Form.Group>
 
                 <Button variant="primary" type="submit">
-                  Submit
+                  Submit Changes
+                </Button>
+                <Button variant="secondary" href={"../WarehouseList"} >
+                  Go Back
                 </Button>
               </Form>
             </Card.Body>
