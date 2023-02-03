@@ -77,21 +77,22 @@ const article = () => {
   async function toSend(){
     console.log(items)
     let tempDate = new Date(items.date)
-    setItems(Object.assign({}, items, {date: new Date(Date.UTC(2023, 2, 22, 3, 0, 0))}))
+    const tempFakeDate = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
+    setItems(Object.assign({}, items, {date: tempFakeDate}))
     console.log(tempDate)
-    console.log(tempDate.getUTCMilliseconds())
+    console.log(items)
     console.log(new Date(Date.UTC(2023, 2, 22, 3, 0, 0)))
 
-    // event.preventDefault
-    await db
-      .collection("Test").doc(idSelect).update(items).then(() => {
-        console.log('Items added!');
-        window.location = "../WarehouseList"
-        // router.reload("WarehouseList")
+    event.preventDefault
+    // await db
+    //   .collection("Test").doc(idSelect).update(items).then(() => {
+    //     console.log('Items added!');
+    //     window.location = "../WarehouseList"
+    //     // router.reload("WarehouseList")
         
-        // router.push("WarehouseList")
+    //     // router.push("WarehouseList")
         
-      });
+    //   });
 
       
   }
