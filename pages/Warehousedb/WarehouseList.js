@@ -132,6 +132,7 @@ export default function WarehouseList() {
     setInfo((oldArray) => [...oldArray, ...data]);
     setID((oldArray) => [...oldArray, ...datas[1]]);
 
+    console.log(data)
     console.log(info);
     console.log(ids);
   }
@@ -179,9 +180,9 @@ export default function WarehouseList() {
                     >
                       <td href>{item.name}</td>
                       <td>{item.date}</td>
+                      <td>{item.wo}</td>
                       <td>{item.pn}</td>
                       <td>{item.sn}</td>
-                      <td>{item.wo}</td>
                       <td>{item.desc}</td>
                       {/* <td>
                         {LoadingButton(

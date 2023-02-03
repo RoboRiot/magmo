@@ -67,7 +67,7 @@ const article = () => {
 
   const [info, setInfo] = useState([]);
   const [ids, setID] = useState([]);
-
+  const [idSelect, setIDSelect] = useState([]);
   //
   //
   //functions for sending item
@@ -75,15 +75,25 @@ const article = () => {
   //
 
   async function toSend(){
-   
+    console.log(items)
+    let tempDate = new Date(items.date)
+    setItems(Object.assign({}, items, {date: new Date(Date.UTC(2023, 2, 22, 3, 0, 0))}))
+    console.log(tempDate)
+    console.log(tempDate.getUTCMilliseconds())
+    console.log(new Date(Date.UTC(2023, 2, 22, 3, 0, 0)))
+
+    // event.preventDefault
     await db
-      .collection("Test").add(items["jasper"]).then(() => {
+      .collection("Test").doc(idSelect).update(items).then(() => {
         console.log('Items added!');
+        window.location = "../WarehouseList"
         // router.reload("WarehouseList")
-        window.location = "WarehouseList"
+        
         // router.push("WarehouseList")
         
       });
+
+      
   }
 
   async function handleSubmit(event) {   
@@ -93,27 +103,27 @@ const article = () => {
     console.log(items)
     var check = false
 
-    if(items["jasper"]["name"]==""){
+    if(items["name"]==""){
       console.log("error!!!!! name")
       check=true
     }
-    if(items["jasper"]["wo"]==""){
+    if(items["wo"]==""){
       console.log("error!!!!! work order")
       check=true
     }
-    if(items["jasper"]["pn"]==""){
+    if(items["pn"]==""){
       console.log("error!!!!! product number")
       check=true
     }
-    if(items["jasper"]["sn"]==""){
+    if(items["sn"]==""){
       console.log("error!!!!! serial number")
       check=true
     }
-    if(items["jasper"]["date"]==""){
+    if(items["date"]==""){
       console.log("error!!!!! date")
       check=true
     }
-    if(items["jasper"]["desc"]==""){
+    if(items["desc"]==""){
       console.log("error!!!!! description")
       check=true
     }
@@ -133,48 +143,58 @@ const article = () => {
     event.preventDefault();
   }
   const nameChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.name = event.target.value;                     // update the name property, assign a new value                 
-      return { jasper };                                 // return new object jasper object
-    })
+    setItems(Object.assign({}, items, {name: event.target.value}))
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   jasper.name = event.target.value;                     // update the name property, assign a new value                 
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
   const woChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.wo = event.target.value;                     // update the name property, assign a new value                 
-      return { jasper };                                 // return new object jasper object
-    })
+
+    setItems(Object.assign({}, items, {wo: event.target.value}))
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   jasper.wo = event.target.value;                     // update the name property, assign a new value                 
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
   const pnChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.pn = event.target.value;                     // update the name property, assign a new value                 
-      return { jasper };                                 // return new object jasper object
-    })
+    setItems(Object.assign({}, items, {pn: event.target.value}))
+
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   jasper.pn = event.target.value;                     // update the name property, assign a new value                 
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
   const snChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.sn = event.target.value;                     // update the name property, assign a new value                 
-      return { jasper };                                 // return new object jasper object
-    })
+    setItems(Object.assign({}, items, {sn: event.target.value}))
+
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   jasper.sn = event.target.value;                     // update the name property, assign a new value                 
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
   const dateChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      // jasper.date = event.target.value;                     // update the name property, assign a new value                 
-      const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
-      jasper.date = date
-      return { jasper };                                 // return new object jasper object
-    })
+    console.log(event.target.value)
+    setItems(Object.assign({}, items, {date: event.target.value}))
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   // jasper.date = event.target.value;                     // update the name property, assign a new value                 
+    //   const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
+    //   jasper.date = date
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
   const descChangeHandler = (event) => {
-    setItems(prevState => {
-      let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-      jasper.desc = event.target.value;                     // update the name property, assign a new value                 
-      return { jasper };                                 // return new object jasper object
-    })
+    setItems(Object.assign({}, items, {desc: event.target.value}))
+    // setItems(prevState => {
+    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
+    //   jasper.desc = event.target.value;                     // update the name property, assign a new value                 
+    //   return { jasper };                                 // return new object jasper object
+    // })
   }
 
  //
@@ -196,9 +216,8 @@ const article = () => {
 
   async function fetchStuff() {
     let data = [];
-    // let ids = [];
-    const {realID} = router.query;
-    console.log(realID)
+    let id = [];
+
     const cityRef = await db
       .collection("Test")
       .get()
@@ -207,19 +226,17 @@ const article = () => {
         // it in array to display
         querySnapshot.forEach((element) => {
           console.log("enter 2");
-          console.log(element.id + ":" + id);
-          // ids.push(element.id);
-          if (element.id == id) {
-            console.log("item found! " + id);
-            data.push(element.data());
-          }
+          console.log(element.id);
+          id.push(element.id);
+          data.push(element.data());
         });
       });
 
     console.log(data);
-    // setID(id);
+    setID(id);
+    console.log(ids);
 
-    return data;
+    return [data, id];
   }
 
   function toDateTime(secs) {
@@ -230,50 +247,44 @@ const article = () => {
 
   async function fetchData() {
     let datas = await fetchStuff();
-    let data = datas
-    // let data = {}
-    // if(datas.length > 0){
-    //   data = datas[0]
-    // }
-    
+    let data = datas[0];
+
     let itemValue = [];
     let dateStorage = [];
-    console.log(datas)
 
-
-
-    data.map((elements) => 
+    data.map((elements) =>
       dateStorage.push(
-        toDateTime(elements.date.seconds).getDate() +
-          "/" +
-          (toDateTime(elements.date.seconds).getMonth() + 1) +
-          "/" +
-          toDateTime(elements.date.seconds).getFullYear()
+        toDateTime(elements.date.seconds).getFullYear()
+        + "-" +
+        (toDateTime(elements.date.seconds).getMonth() + 1)
+         + "-" +
+        toDateTime(elements.date.seconds).getDate()
       )
     );
-    
+
     for (const [index, value] of data.entries()) {
       data[index].date = dateStorage[index];
     }
 
+    let elementID = window.location.pathname.substring(window.location.pathname.lastIndexOf("/") + 1)
+    setIDSelect(elementID)
+    datas[1].map((elements, index) => {
+    
+      if (elementID == elements) {
+        data = data[index]
+      }
+    });
 
-    setInfo((oldArray) => [...oldArray, ...data]);
-    // setID((oldArray) => [...oldArray, ...datas[1]]);
-   
-    info.map((item, index) =>
-      setItems((prevState) => {
-        let jasper = Object.assign({}, prevState.jasper); // creating copy of state variable jasper
-        // jasper.date = event.target.value;                     // update the name property, assign a new value
-        // const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
-        console.log(item.name)
-        jasper.name = item.name;
-        jasper.wo = item.wo;
-        return { jasper }; // return new object jasper object
-      })
-    );
+    console.log(data);
+    // setInfo((oldArray) => [...oldArray, ...data]);
+    // setInfo(data)
+    setItems(data)
+    setID((oldArray) => [...oldArray, ...datas[1]]);
 
+    console.log(data.date)
+    console.log(datas[1])
     console.log(info);
-    // console.log(ids);
+    console.log(ids);
   }
 
   return (
@@ -360,7 +371,7 @@ const article = () => {
                 <Button variant="primary" type="submit">
                   Submit Changes
                 </Button>
-                <Button variant="secondary" href={"../WarehouseList"} >
+                <Button className="m-3" variant="secondary" href={"../WarehouseList"} >
                   Go Back
                 </Button>
               </Form>
