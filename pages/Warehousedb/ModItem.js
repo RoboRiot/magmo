@@ -149,6 +149,7 @@ export default function dashboard() {
     })
   }
   const dateChangeHandler = (event) => {
+    console.log(items["date"])
     setItems(prevState => {
       let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
       // jasper.date = event.target.value;                     // update the name property, assign a new value                 
