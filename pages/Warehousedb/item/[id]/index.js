@@ -75,24 +75,22 @@ const article = () => {
   //
 
   async function toSend(){
-    console.log(items)
-    let tempDate = new Date(items.date)
-    const tempFakeDate = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
-    setItems(Object.assign({}, items, {date: tempFakeDate}))
-    console.log(tempDate)
-    console.log(items)
-    console.log(new Date(Date.UTC(2023, 2, 22, 3, 0, 0)))
+   
+  
+    setItems(Object.assign({}, items, {date: items.date}))
+   
 
-    event.preventDefault
-    // await db
-    //   .collection("Test").doc(idSelect).update(items).then(() => {
-    //     console.log('Items added!');
-    //     window.location = "../WarehouseList"
-    //     // router.reload("WarehouseList")
+    // event.preventDefault
+
+    await db
+      .collection("Test").doc(idSelect).update(items).then(() => {
+        console.log('Items added!');
+        window.location = "../WarehouseList"
+        // router.reload("WarehouseList")
         
-    //     // router.push("WarehouseList")
+        // router.push("WarehouseList")
         
-    //   });
+      });
 
       
   }
@@ -180,7 +178,9 @@ const article = () => {
   }
   const dateChangeHandler = (event) => {
     console.log(event.target.value)
-    setItems(Object.assign({}, items, {date: event.target.value}))
+    let tempDate = new Date(event.target.value)
+    setItems(Object.assign({}, items, {date: tempDate}))
+    console.log(items.date)
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
     //   // jasper.date = event.target.value;                     // update the name property, assign a new value                 
