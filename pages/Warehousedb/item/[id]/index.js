@@ -12,7 +12,6 @@ import firebase from "../../../../context/Firebase";
 
 import LoggedIn from "../../../LoggedIn";
 
-
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
@@ -42,9 +41,8 @@ function LoadingButton(type, name, route) {
     </a>
   );
 }
- 
-const article = () => {
 
+const article = () => {
   const router = useRouter();
   const { id } = router.query;
   const [show, setShow] = useState(false);
@@ -54,158 +52,157 @@ const article = () => {
 
   const { signOut } = useAuth();
 
-  const [items, setItems] = useState({jasper: {
-    name: "",
-    wo: "",
-    pn: "",
-    sn: "",
-    date: "",
-    desc: "",
-  }});
+  const [items, setItems] = useState({
+    jasper: {
+      name: "",
+      wo: "",
+      pn: "",
+      sn: "",
+      date: "",
+      desc: "",
+    },
+  });
 
   const db = firebase.firestore();
 
   const [info, setInfo] = useState([]);
   const [ids, setID] = useState([]);
   const [idSelect, setIDSelect] = useState([]);
+  const selectedID = 0;
+
   //
   //
   //functions for sending item
   //
   //
+  async function toSend() {
+    let tempDate = items.date;
+    tempDate = new Date(tempDate.replace("-", ","));
 
-  async function toSend(){
-   
-  
-    setItems(Object.assign({}, items, {date: items.date}))
-   
+    let returnData = Object.assign({}, items, { date: tempDate });
 
-    // event.preventDefault
+    console.log("this is the id: " + selectedID);
+
+    // event.preventDefault;
 
     await db
-      .collection("Test").doc(idSelect).update(items).then(() => {
-        console.log('Items added!');
-        window.location = "../WarehouseList"
+      .collection("Test")
+      .doc(idSelect)
+      .update(returnData)
+      .then(() => {
+        console.log("Items added!");
+        window.location = "../WarehouseList";
         // router.reload("WarehouseList")
-        
-        // router.push("WarehouseList")
-        
-      });
 
-      
+        // router.push("WarehouseList")
+      });
   }
 
-  async function handleSubmit(event) {   
+  async function handleSubmit(event) {
     // const router = useRouter()
 
-    console.log("enter handle submit")
-    console.log(items)
-    var check = false
+    console.log("enter handle submit");
+    console.log(items);
+    var check = false;
 
-    if(items["name"]==""){
-      console.log("error!!!!! name")
-      check=true
+    if (items["name"] == "") {
+      console.log("error!!!!! name");
+      check = true;
     }
-    if(items["wo"]==""){
-      console.log("error!!!!! work order")
-      check=true
+    if (items["wo"] == "") {
+      console.log("error!!!!! work order");
+      check = true;
     }
-    if(items["pn"]==""){
-      console.log("error!!!!! product number")
-      check=true
+    if (items["pn"] == "") {
+      console.log("error!!!!! product number");
+      check = true;
     }
-    if(items["sn"]==""){
-      console.log("error!!!!! serial number")
-      check=true
+    if (items["sn"] == "") {
+      console.log("error!!!!! serial number");
+      check = true;
     }
-    if(items["date"]==""){
-      console.log("error!!!!! date")
-      check=true
+    if (items["date"] == "") {
+      console.log("error!!!!! date");
+      check = true;
     }
-    if(items["desc"]==""){
-      console.log("error!!!!! description")
-      check=true
+    if (items["desc"] == "") {
+      console.log("error!!!!! description");
+      check = true;
     }
 
-    if(check){
-      console.log("entered")
-      handleShow()
+    if (check) {
+      console.log("entered");
+      handleShow();
+    } else {
+      console.log("try submit");
+      console.log(items);
+      toSend();
     }
-    else{
-      console.log("try submit")
-      console.log(items)
-      toSend()
-      
-    }
-   
 
     event.preventDefault();
   }
   const nameChangeHandler = (event) => {
-    setItems(Object.assign({}, items, {name: event.target.value}))
+    setItems(Object.assign({}, items, { name: event.target.value }));
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.name = event.target.value;                     // update the name property, assign a new value                 
+    //   jasper.name = event.target.value;                     // update the name property, assign a new value
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
   const woChangeHandler = (event) => {
-
-    setItems(Object.assign({}, items, {wo: event.target.value}))
+    setItems(Object.assign({}, items, { wo: event.target.value }));
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.wo = event.target.value;                     // update the name property, assign a new value                 
+    //   jasper.wo = event.target.value;                     // update the name property, assign a new value
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
   const pnChangeHandler = (event) => {
-    setItems(Object.assign({}, items, {pn: event.target.value}))
+    setItems(Object.assign({}, items, { pn: event.target.value }));
 
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.pn = event.target.value;                     // update the name property, assign a new value                 
+    //   jasper.pn = event.target.value;                     // update the name property, assign a new value
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
   const snChangeHandler = (event) => {
-    setItems(Object.assign({}, items, {sn: event.target.value}))
+    setItems(Object.assign({}, items, { sn: event.target.value }));
 
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.sn = event.target.value;                     // update the name property, assign a new value                 
+    //   jasper.sn = event.target.value;                     // update the name property, assign a new value
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
   const dateChangeHandler = (event) => {
-    console.log(event.target.value)
-    let tempDate = new Date(event.target.value)
-    setItems(Object.assign({}, items, {date: tempDate}))
-    console.log(items.date)
+    setItems(Object.assign({}, items, { date: event.target.value }));
+    console.log(items.date);
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   // jasper.date = event.target.value;                     // update the name property, assign a new value                 
+    //   // jasper.date = event.target.value;                     // update the name property, assign a new value
     //   const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
     //   jasper.date = date
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
   const descChangeHandler = (event) => {
-    setItems(Object.assign({}, items, {desc: event.target.value}))
+    setItems(Object.assign({}, items, { desc: event.target.value }));
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.desc = event.target.value;                     // update the name property, assign a new value                 
+    //   jasper.desc = event.target.value;                     // update the name property, assign a new value
     //   return { jasper };                                 // return new object jasper object
     // })
-  }
+  };
 
- //
- //
- //functions for pulling item
- //
- //
- //
+  //
+  //
+  //functions for pulling item
+  //
+  //
+  //
 
- // Start the fetch operation as soon as
+  // Start the fetch operation as soon as
   // the page loads
   if (typeof window !== "undefined") {
     window.addEventListener("load", () => {
@@ -216,8 +213,8 @@ const article = () => {
   }
 
   async function fetchStuff() {
-    let data = [];
-    let id = [];
+    let data = 0;
+    let id = 0;
 
     const cityRef = await db
       .collection("Test")
@@ -226,16 +223,19 @@ const article = () => {
         // Loop through the data and store
         // it in array to display
         querySnapshot.forEach((element) => {
-          console.log("enter 2");
-          console.log(element.id);
-          id.push(element.id);
-          data.push(element.data());
+          // console.log("enter 2");
+          // console.log(element.id);
+
+          if (element.id == selectedID) {
+            data = element.data();
+            id = element.id;
+          }
         });
       });
 
-    console.log(data);
-    setID(id);
-    console.log(ids);
+    // console.log(data);
+    // setID(id);
+    // console.log(ids);
 
     return [data, id];
   }
@@ -247,45 +247,62 @@ const article = () => {
   }
 
   async function fetchData() {
+    selectedID = window.location.pathname.substring(
+      window.location.pathname.lastIndexOf("/") + 1
+    );
+
     let datas = await fetchStuff();
+
     let data = datas[0];
 
     let itemValue = [];
     let dateStorage = [];
+    let mSpace = "-";
+    if (toDateTime(data.date.seconds).getMonth() + 1 < 10) mSpace = "-0";
 
-    data.map((elements) =>
-      dateStorage.push(
-        toDateTime(elements.date.seconds).getFullYear()
-        + "-" +
-        (toDateTime(elements.date.seconds).getMonth() + 1)
-         + "-" +
-        toDateTime(elements.date.seconds).getDate()
-      )
-    );
+    data.date =
+      toDateTime(data.date.seconds).getFullYear() +
+      mSpace +
+      (toDateTime(data.date.seconds).getMonth() + 1) +
+      "-" +
+      toDateTime(data.date.seconds).getDate();
 
-    for (const [index, value] of data.entries()) {
-      data[index].date = dateStorage[index];
-    }
+    console.log(data.date);
+    // data.map((elements) =>
+    //   dateStorage.push(
+    //     toDateTime(elements.date.seconds).getFullYear() +
+    //       "-" +
+    //       (toDateTime(elements.date.seconds).getMonth() + 1) +
+    //       "-" +
+    //       toDateTime(elements.date.seconds).getDate()
+    //   )
+    // );
 
-    let elementID = window.location.pathname.substring(window.location.pathname.lastIndexOf("/") + 1)
-    setIDSelect(elementID)
-    datas[1].map((elements, index) => {
-    
-      if (elementID == elements) {
-        data = data[index]
-      }
-    });
+    // for (const [index, value] of data.entries()) {
+    //   data[index].date = dateStorage[index];
+    // }
 
-    console.log(data);
+    // let elementID = window.location.pathname.substring(
+    //   window.location.pathname.lastIndexOf("/") + 1
+    // );
+
+    // datas[1].map((elements, index) => {
+    //   if (elementID == elements) {
+    //     data = data[index];
+    //   }
+    // });
+
+    // console.log(data);
     // setInfo((oldArray) => [...oldArray, ...data]);
     // setInfo(data)
-    setItems(data)
-    setID((oldArray) => [...oldArray, ...datas[1]]);
+    setIDSelect(selectedID);
+    setItems(data);
+    // setID((oldArray) => [...oldArray, ...datas[1]]);
 
-    console.log(data.date)
-    console.log(datas[1])
-    console.log(info);
-    console.log(ids);
+    // console.log(data.date);
+    // console.log(datas[1]);
+    // console.log(info);
+    // console.log(ids);
   }
 
   return (
@@ -372,7 +389,11 @@ const article = () => {
                 <Button variant="primary" type="submit">
                   Submit Changes
                 </Button>
-                <Button className="m-3" variant="secondary" href={"../WarehouseList"} >
+                <Button
+                  className="m-3"
+                  variant="secondary"
+                  href={"../WarehouseList"}
+                >
                   Go Back
                 </Button>
               </Form>
