@@ -3,6 +3,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container, Table } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
+import Modal from "react-bootstrap/Modal";
+
 import { useAuth } from "../../context/AuthUserContext";
 import firebase from "../../context/Firebase";
 
@@ -65,6 +67,13 @@ export default function WarehouseList() {
   const [info, setInfo] = useState([]);
   const [ids, setID] = useState([]);
   const db = firebase.firestore();
+
+  const [show, setShow] = useState(false);
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+
+  const [dItem, setDItem] = useState()
 
   // Start the fetch operation as soon as
   // the page loads
@@ -132,7 +141,7 @@ export default function WarehouseList() {
     setInfo((oldArray) => [...oldArray, ...data]);
     setID((oldArray) => [...oldArray, ...datas[1]]);
 
-    console.log(data)
+    console.log(data);
     console.log(info);
     console.log(ids);
   }
@@ -141,14 +150,40 @@ export default function WarehouseList() {
     console.log(id);
     window.location = "item/" + id;
   };
+  const [gPos, setGPos] = useState()
+  let [gIde, setGIde] = useState()
 
-  const deleteItem = (pos, ide) => {
-    setInfo(info.filter((o, i) => pos !== i));
-    const cityRef = db.collection("Test").doc(ide).delete();
+  const checkDelete = (pos, ide, name) => {
+    setDItem(name)
+    setGPos(pos)
+    setGIde(ide)
+    console.log(gPos + "," + gIde)
+    handleShow()
+  }
+
+  const deleteItem = () => {
+    console.log(gPos + "," + gIde)
+    setInfo(info.filter((o, i) => gPos !== i));
+    const cityRef = db.collection("Test").doc(gIde).delete();
+    handleClose()
   };
 
   return (
     <LoggedIn>
+      <Modal show={show} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Would you like to delete "{dItem}"</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={deleteItem}>
+            Yes
+          </Button>
+          <Button variant="primary" onClick={handleClose}>
+            No
+          </Button>
+        </Modal.Footer>
+      </Modal>
       <Container
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
@@ -173,34 +208,40 @@ export default function WarehouseList() {
                 <tbody>
                   {/* {listItems()} */}
                   {info.map((item, index) => (
-                    <tr
-                      class="clickable-row"
-                      key={index}
-                      onClick={() => rowSelect(ids[index])}
-                    >
-                      <td href>{item.name}</td>
-                      <td>{item.date}</td>
-                      <td>{item.wo}</td>
-                      <td>{item.pn}</td>
-                      <td>{item.sn}</td>
-                      <td>{item.desc}</td>
-                      {/* <td>
+                    
+                      <tr
+                        class="clickable-row"
+                        key={index}
+                        // onClick={() => rowSelect(ids[index])}
+                      >
+                        
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}>{item.name}</td>
+                        
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.date} </td>
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}>  {item.wo} </td>
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.pn} </td>
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.sn} </td>
+                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.desc} </td>
+                        
+                        {/* <td>
                         {LoadingButton(
                           "secondary",
                           "X",
                           "Warehousedb/ModItem"
                         )}
                       </td> */}
-                      <td>
+                        <td style={{textAlign: "center"}}>
                         <Button
-                          onClick={() => deleteItem(index, ids[index])}
+                          onClick={() => checkDelete(index, ids[index],item.name)}
                           id={ids[index]}
                           variant="danger"
                         >
                           X
                         </Button>
                       </td>
-                    </tr>
+                      </tr>
+                      
+                    
                   ))}
 
                   {/* <a>{info["TestField"]}</a> */}
