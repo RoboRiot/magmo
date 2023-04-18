@@ -38,7 +38,9 @@ const FirebaseCredentials = {
 };
 // if a Firebase instance doesn't exist, create one
 if (!Firebase.apps.length) {
+  console.log(Firebase)
   Firebase.initializeApp(FirebaseCredentials);
+  console.log(Firebase)
 }
 
 export default Firebase;
