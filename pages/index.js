@@ -24,8 +24,10 @@ export default function Home() {
     try {
       setError("")
       setLoading(true)
+      // console.log(signInWithEmailAndPassword(emailRef.current.value, passwordRef.current.value))
       signInWithEmailAndPassword(emailRef.current.value, passwordRef.current.value)
       .then(authUser => {
+        // console.log(authUser)
         router.push("/dashboard");
       })
       .catch(error => {
@@ -45,16 +47,6 @@ export default function Home() {
         <title>magmo</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      {/* <main className={styles.main}>
-        <div class="d-grid gap-3">
-
-          {LoadingButton("primary", "Login", "Signup")}
-
-          {LoadingButton("secondary", "Sign Up", "Signup")}
-
-        </div>
-      </main> */}
 
       <Container
         className="d-flex align-items-center justify-content-center"
