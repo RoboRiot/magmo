@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Form, Button, Card, Container, Table } from "react-bootstrap";
+import { Form, Button, Card, Container, Table,   NavDropdown, FormControl} from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
 import Modal from "react-bootstrap/Modal";
@@ -42,29 +42,11 @@ function LoadingButton(type, name, route) {
   );
 }
 
-const items = [
-  { name: "xc2", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
-  { name: "dsp", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
-  { name: "gts", date: "10-2-21", wo: "12345", pn: "12345", sn: "12345" },
-];
-
-// function listItems() {
-//   // console.log(items);
-//   return items.map((item) => (
-//     <tr>
-//       <td>{item.name}</td>
-//       <td>{item.date}</td>
-//       <td>{item.wo}</td>
-//       <td>{item.pn}</td>
-//       <td>{item.sn}</td>
-//       <td>{item.sn}</td>
-//     </tr>
-//   ));
-// }
-
 export default function WarehouseList() {
   const { signOut } = useAuth([]);
   const [info, setInfo] = useState([]);
+  const [backupInfo, setBackupInfo] = useState([]);
+
   const [ids, setID] = useState([]);
   const db = firebase.firestore();
 
@@ -74,6 +56,77 @@ export default function WarehouseList() {
   const handleShow = () => setShow(true);
 
   const [dItem, setDItem] = useState()
+
+  //search features//////
+  const [select, setSelect] = useState("Name");
+  const [showList, setShowList] = useState(false);
+  const [showListSearch, setShowListSearch] = useState("text");
+  const [search, setSearch] = useState();
+
+  const showDropdown = (e) => {
+    setShowList(!show);
+  };
+  const hideDropdown = (e) => {
+    setShowList(false);
+  };
+
+  const searchChangeHandler = (event) => {
+    setSearch(event.target.value);
+  }
+
+  function searchFilter() {
+    var temp = [];
+    backupInfo.map((item) => {
+      console.log(select)
+      if (select == "Name") {
+
+        if (item.name.toLowerCase().indexOf(search.toLowerCase()) > -1) {
+          temp.push(item);
+          console.log("enter1");
+        }
+      }
+      if(select == "Date"){
+        console.log(item.date.split('/') + " : " + search.split('-'))
+      }
+    });
+    
+    console.log(temp);
+    setLabels(labelBase)
+    setSortCheck(sortCheckBase)
+    setInfo(temp)
+  }
+
+  //////sorting items//////
+  const labelBase = ["name","date","w/o","p/n","s/n","desc"]
+  const sortCheckBase = [false,false,false,false,false,false]
+  const [labels, setLabels] = useState(labelBase)
+  const [sortCheck, setSortCheck] = useState(sortCheckBase);
+  const hold = "↓↑"
+  function nameSortCheck(){
+    if(!sortCheck[0]){
+      let sortedItems = info.sort((a, b) => a.name.localeCompare(b.name));
+      setLabels(["name ↓", ...labels.slice(1)]);
+      setInfo(sortedItems)
+      setSortCheck([true, ...sortCheck.slice(1)])
+    }
+    else{
+      let sortedItems = info.sort((a, b) => b.name.localeCompare(a.name));
+      setLabels(["name ↑", ...labels.slice(1)]);
+      setInfo(sortedItems)
+      setSortCheck([false, ...sortCheck.slice(1)])
+    }
+  }
+  function woSortCheck(){
+    if(!sortCheck[1]){
+      let sortedItems = info.sort((a, b) => a.wo.localeCompare(b.name));
+      setLabels([...prevLabels.slice(0, 2), "w/o ↓", ...labels.slice(3)]);
+    }
+    else{
+
+    }
+
+  }
+
 
   // Start the fetch operation as soon as
   // the page loads
@@ -139,6 +192,7 @@ export default function WarehouseList() {
 
     console.log(data);
     setInfo((oldArray) => [...oldArray, ...data]);
+    setBackupInfo((oldArray) => [...oldArray, ...data]);
     setID((oldArray) => [...oldArray, ...datas[1]]);
 
     console.log(data);
@@ -192,12 +246,11 @@ export default function WarehouseList() {
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
-
               <Table striped bordered hover size="sm">
                 <thead>
                   <tr>
-                    <th>name</th>
-                    <th>date</th>
+                    <th onClick={nameSortCheck}>{labels[0]}</th>
+                    <th>{labels[1]}</th>
                     <th>w/o</th>
                     <th>p/n</th>
                     <th>s/n</th>
@@ -208,50 +261,117 @@ export default function WarehouseList() {
                 <tbody>
                   {/* {listItems()} */}
                   {info.map((item, index) => (
-                    
-                      <tr
-                        class="clickable-row"
-                        key={index}
-                        // onClick={() => rowSelect(ids[index])}
+                    <tr
+                      class="clickable-row"
+                      key={index}
+                      // onClick={() => rowSelect(ids[index])}
+                    >
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
                       >
-                        
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}>{item.name}</td>
-                        
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.date} </td>
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}>  {item.wo} </td>
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.pn} </td>
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.sn} </td>
-                        <td style={{textAlign: "center", cursor: 'default'}} onClick={() => rowSelect(ids[index])}> {item.desc} </td>
-                        
-                        {/* <td>
+                        {item.name}
+                      </td>
+
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
+                      >
+                        {" "}
+                        {item.date}{" "}
+                      </td>
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
+                      >
+                        {" "}
+                        {item.wo}{" "}
+                      </td>
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
+                      >
+                        {" "}
+                        {item.pn}{" "}
+                      </td>
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
+                      >
+                        {" "}
+                        {item.sn}{" "}
+                      </td>
+                      <td
+                        style={{ textAlign: "center", cursor: "default" }}
+                        onClick={() => rowSelect(ids[index])}
+                      >
+                        {" "}
+                        {item.desc}{" "}
+                      </td>
+
+                      {/* <td>
                         {LoadingButton(
                           "secondary",
                           "X",
                           "Warehousedb/ModItem"
                         )}
                       </td> */}
-                        <td style={{textAlign: "center"}}>
+                      <td style={{ textAlign: "center" }}>
                         <Button
-                          onClick={() => checkDelete(index, ids[index],item.name)}
+                          onClick={() =>
+                            checkDelete(index, ids[index], item.name)
+                          }
                           id={ids[index]}
                           variant="danger"
                         >
                           X
                         </Button>
                       </td>
-                      </tr>
-                      
-                    
+                    </tr>
                   ))}
 
                   {/* <a>{info["TestField"]}</a> */}
                 </tbody>
               </Table>
+              <Form className="d-flex" style={{ paddingBottom: "10px"}}>
+                <FormControl
+                  type={showListSearch}
+                  placeholder="Search"
+                  className="me-2"
+                  aria-label="Search"
+                  value={search}
+                  onChange={searchChangeHandler}
+                />
+                <NavDropdown
+                  title={select}
+                  id="collasible-nav-dropdown"
+                  show={showList}
+                  onMouseEnter={showDropdown}
+                  onMouseLeave={hideDropdown}
+                 
+                >
+                  <NavDropdown.Item href="" onClick={() => setSelect("Name") & setShowListSearch("text")}>
+                    Name
+                  </NavDropdown.Item>
+                  <NavDropdown.Item href="" onClick={() => setSelect("Date") & setShowListSearch("date")}>
+                    Date
+                  </NavDropdown.Item>
+                  <NavDropdown.Item
+                    href=""
+                    onClick={() => setSelect("Work Order") & setShowListSearch("number")}
+                  >
+                    Work Order
+                  </NavDropdown.Item>
+                </NavDropdown>
+                <Button variant="info" onClick={searchFilter}>Search</Button>
+              </Form>
               {LoadingButton(
                 "secondary",
                 "Add New Item",
                 "Warehousedb/ModItem"
               )}
+              <a style={{ paddingLeft: "10px", paddingRight: "10px" }}></a>{" "}
+              {LoadingButton("primary", "Back", "Warehousedb/WarehouseSelect")}
             </Card.Body>
           </Card>
         </div>

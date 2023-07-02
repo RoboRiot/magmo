@@ -72,7 +72,7 @@ export default function Home() {
             </Card.Body>
           </Card>
           <div className="w-100 text-center mt-2">
-            Don't have an account? <Button variant="link" href="/SignUpTest">Sign Up</Button>
+            Don't have an account? <Button variant="link" href="/Signup">Sign Up</Button>
           </div>
         </div>
       </Container>
