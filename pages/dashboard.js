@@ -52,7 +52,7 @@ export default function dashboard() {
               <div class="d-grid gap-3">
                 {LoadingButton("primary", "Training", "#")}
 
-                {LoadingButton("secondary", "Logs", "logs")}
+                {LoadingButton("secondary", "Logs", "notes/gKeep")}
 
                 {LoadingButton("primary", "MagMon", "#")}
 
