@@ -55,7 +55,7 @@ export default function WarehouseList() {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
-  const [dItem, setDItem] = useState()
+  const [dItem, setDItem] = useState();
 
   //search features//////
   const [select, setSelect] = useState("Name");
@@ -72,61 +72,117 @@ export default function WarehouseList() {
 
   const searchChangeHandler = (event) => {
     setSearch(event.target.value);
-  }
+  };
 
   function searchFilter() {
     var temp = [];
     backupInfo.map((item) => {
-      console.log(select)
+      console.log(select);
       if (select == "Name") {
-
         if (item.name.toLowerCase().indexOf(search.toLowerCase()) > -1) {
           temp.push(item);
           console.log("enter1");
         }
       }
-      if(select == "Date"){
-        console.log(item.date.split('/') + " : " + search.split('-'))
+      if (select == "Date") {
+        console.log(item.date.split("/") + " : " + search.split("-"));
       }
     });
-    
+
     console.log(temp);
-    setLabels(labelBase)
-    setSortCheck(sortCheckBase)
-    setInfo(temp)
+    setLabels(labelBase);
+    setSortCheck(sortCheckBase);
+    setInfo(temp);
   }
 
   //////sorting items//////
-  const labelBase = ["name","date","w/o","p/n","s/n","desc"]
-  const sortCheckBase = [false,false,false,false,false,false]
-  const [labels, setLabels] = useState(labelBase)
+  const labelBase = ["name", "date", "w/o", "p/n", "s/n", "desc"];
+  const sortCheckBase = [false, false, false, false, false, false];
+  const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
-  const hold = "↓↑"
-  function nameSortCheck(){
-    if(!sortCheck[0]){
-      let sortedItems = info.sort((a, b) => a.name.localeCompare(b.name));
-      setLabels(["name ↓", ...labels.slice(1)]);
-      setInfo(sortedItems)
-      setSortCheck([true, ...sortCheck.slice(1)])
-    }
-    else{
-      let sortedItems = info.sort((a, b) => b.name.localeCompare(a.name));
+  const hold = "↓↑";
+
+  function sortCheck(pos){
+    
+  }
+
+
+  function nameSortCheck() {
+    console.log("name sort");
+    if (!sortCheck[0]) {
+      info.sort((a, b) => a.name.localeCompare(b.name));
+
+      setLabels(labelBase);
+      setLabels((prevLabels) => ["name ↓", ...prevLabels.slice(1)]);
+      
+      setSortCheck([true, ...new Array(sortCheck.length - 1).fill(false)]);
+    } else {
+      info.sort((a, b) => b.name.localeCompare(a.name));
+
       setLabels(["name ↑", ...labels.slice(1)]);
-      setInfo(sortedItems)
-      setSortCheck([false, ...sortCheck.slice(1)])
+      
+      setSortCheck([false, ...sortCheck.slice(1)]);
     }
   }
-  function woSortCheck(){
-    if(!sortCheck[1]){
-      let sortedItems = info.sort((a, b) => a.wo.localeCompare(b.name));
-      setLabels([...prevLabels.slice(0, 2), "w/o ↓", ...labels.slice(3)]);
+  function woSortCheck() {
+    console.log("wo sort");
+    if (!sortCheck[1]) {
+      info.sort((a, b) => Number(a.wo) - Number(b.wo));
+      setLabels(labelBase);
+      setLabels((prevLabels) => [
+        ...prevLabels.slice(0, 2),
+        "w/o ↓",
+        ...prevLabels.slice(3),
+      ]);
+      setSortCheck((prevSortCheck) => [
+        ...new Array(1).fill(false),
+        true,
+        ...new Array(prevSortCheck.length - 2).fill(false),
+      ]);
+    } else {
+      info.sort((a, b) => Number(b.wo) - Number(a.wo));
+      setLabels((prevLabels) => [
+        ...prevLabels.slice(0, 2),
+        "w/o ↑",
+        ...prevLabels.slice(3),
+      ]);
+      setSortCheck((prevSortCheck) => [
+        ...prevSortCheck.slice(0, 1),
+        false,
+        ...prevSortCheck.slice(2),
+      ]);
+    }
+  }
+
+  function dateSortCheck(){
+    if (!sortCheck[2]) {
+      info.sort((a, b) => Date(a.date) - Date(b.date));
+      setLabels(labelBase);
+      setLabels((prevLabels) => [
+        ...prevLabels.slice(0, 1),
+        "date ↓",
+        ...prevLabels.slice(2),
+      ]);
+      setSortCheck((prevSortCheck) => [
+        ...new Array(2).fill(false),
+        true,
+        ...new Array(prevSortCheck.length - 3).fill(false),
+      ]);
     }
     else{
-
+      info.sort((a, b) => Date(b.date) - Date(a.date));
+      setLabels((prevLabels) => [
+        ...prevLabels.slice(0, 1),
+        "date ↑",
+        ...prevLabels.slice(2),
+      ]);
+      setSortCheck((prevSortCheck) => [
+        ...prevSortCheck.slice(0, 2),
+        false,
+        ...prevSortCheck.slice(3),
+      ]);
     }
-
   }
-
 
   // Start the fetch operation as soon as
   // the page loads
@@ -204,23 +260,31 @@ export default function WarehouseList() {
     console.log(id);
     window.location = "item/" + id;
   };
-  const [gPos, setGPos] = useState()
-  let [gIde, setGIde] = useState()
+  const [gPos, setGPos] = useState();
+  let [gIde, setGIde] = useState();
 
   const checkDelete = (pos, ide, name) => {
-    setDItem(name)
-    setGPos(pos)
-    setGIde(ide)
-    console.log(gPos + "," + gIde)
-    handleShow()
-  }
+    setDItem(name);
+    setGPos(pos);
+    setGIde(ide);
+    console.log(gPos + "," + gIde);
+    handleShow();
+  };
 
   const deleteItem = () => {
-    console.log(gPos + "," + gIde)
+    console.log(gPos + "," + gIde);
     setInfo(info.filter((o, i) => gPos !== i));
     const cityRef = db.collection("Test").doc(gIde).delete();
-    handleClose()
+    handleClose();
   };
+
+  //styling
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const hoverStyle = (index) => ({
+    backgroundColor: hoverIndex === index ? "#ddd" : "transparent", // Change colors as needed
+    textAlign: "center",
+    cursor: "default",
+  });
 
   return (
     <LoggedIn>
@@ -249,13 +313,63 @@ export default function WarehouseList() {
               <Table striped bordered hover size="sm">
                 <thead>
                   <tr>
-                    <th onClick={nameSortCheck}>{labels[0]}</th>
-                    <th>{labels[1]}</th>
-                    <th>w/o</th>
-                    <th>p/n</th>
-                    <th>s/n</th>
-                    <th>desc</th>
-                    <th>delete</th>
+                  {labels.map((item, index) => (<th
+                      style={hoverStyle(0)}
+                      onMouseOver={() => setHoverIndex(0)}
+                      onMouseOut={() => setHoverIndex(null)}
+                      onClick={sortCheck}
+                    >
+                      {item}
+                    </th>))}
+                    <th
+                      style={hoverStyle(0)}
+                      onMouseOver={() => setHoverIndex(0)}
+                      onMouseOut={() => setHoverIndex(null)}
+                      onClick={nameSortCheck}
+                    >
+                      {labels[0]}
+                    </th>
+                    <th
+                      style={hoverStyle(1)}
+                      onMouseOver={() => setHoverIndex(1)}
+                      onMouseOut={() => setHoverIndex(null)}
+                    >
+                      {labels[1]}
+                    </th>
+                    <th
+                      style={hoverStyle(2)}
+                      onMouseOver={() => setHoverIndex(2)}
+                      onMouseOut={() => setHoverIndex(null)}
+                      onClick={woSortCheck}
+                    >
+                      {labels[2]}
+                    </th>
+                    <th
+                      style={hoverStyle(3)}
+                      onMouseOver={() => setHoverIndex(3)}
+                      onMouseOut={() => setHoverIndex(null)}
+                    >
+                      p/n
+                    </th>
+                    <th
+                      style={hoverStyle(4)}
+                      onMouseOver={() => setHoverIndex(4)}
+                      onMouseOut={() => setHoverIndex(null)}
+                    >
+                      s/n
+                    </th>
+                    <th
+                      style={hoverStyle(5)}
+                      onMouseOver={() => setHoverIndex(5)}
+                      onMouseOut={() => setHoverIndex(null)}
+                    >
+                      desc
+                    </th>
+                    <th
+                      
+                    >
+                      delete
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -333,7 +447,7 @@ export default function WarehouseList() {
                   {/* <a>{info["TestField"]}</a> */}
                 </tbody>
               </Table>
-              <Form className="d-flex" style={{ paddingBottom: "10px"}}>
+              <Form className="d-flex" style={{ paddingBottom: "10px" }}>
                 <FormControl
                   type={showListSearch}
                   placeholder="Search"
@@ -348,22 +462,35 @@ export default function WarehouseList() {
                   show={showList}
                   onMouseEnter={showDropdown}
                   onMouseLeave={hideDropdown}
-                 
                 >
-                  <NavDropdown.Item href="" onClick={() => setSelect("Name") & setShowListSearch("text")}>
+                  <NavDropdown.Item
+                    href=""
+                    onClick={() =>
+                      setSelect("Name") & setShowListSearch("text")
+                    }
+                  >
                     Name
                   </NavDropdown.Item>
-                  <NavDropdown.Item href="" onClick={() => setSelect("Date") & setShowListSearch("date")}>
+                  <NavDropdown.Item
+                    href=""
+                    onClick={() =>
+                      setSelect("Date") & setShowListSearch("date")
+                    }
+                  >
                     Date
                   </NavDropdown.Item>
                   <NavDropdown.Item
                     href=""
-                    onClick={() => setSelect("Work Order") & setShowListSearch("number")}
+                    onClick={() =>
+                      setSelect("Work Order") & setShowListSearch("number")
+                    }
                   >
                     Work Order
                   </NavDropdown.Item>
                 </NavDropdown>
-                <Button variant="info" onClick={searchFilter}>Search</Button>
+                <Button variant="info" onClick={searchFilter}>
+                  Search
+                </Button>
               </Form>
               {LoadingButton(
                 "secondary",
