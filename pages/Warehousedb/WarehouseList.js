@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from 'next/router';
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Form, Button, Card, Container, Table,   NavDropdown, FormControl} from "react-bootstrap";
+import { Form, Button, Card, Container, Table, NavDropdown, FormControl } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
 import Modal from "react-bootstrap/Modal";
@@ -81,12 +82,53 @@ export default function WarehouseList() {
       if (select == "Name") {
         if (item.name.toLowerCase().indexOf(search.toLowerCase()) > -1) {
           temp.push(item);
-          console.log("enter1");
+          console.log("enter Name");
         }
       }
+
       if (select == "Date") {
-        console.log(item.date.split("/") + " : " + search.split("-"));
+        const dateComponents = item.date.split("/");
+        const paddedMonth = String(dateComponents[0]).padStart(2, '0'); // Ensure month has 2 digits
+        const paddedDay = String(dateComponents[1]).padStart(2, '0');   // Ensure day has 2 digits
+
+        const reformattedItemDate = `${dateComponents[2]}-${paddedMonth}-${paddedDay}`; // Convert to "YYYY-MM-DD"
+
+        console.log(reformattedItemDate, search);
+
+        if (reformattedItemDate === search) {
+          temp.push(item);
+          console.log("enterDate");
+        }
       }
+
+      if (select == "Work Order") {  // WO for Work Order or whatever it stands for in your context
+        if (Number(item.wo) === Number(search)) {
+            temp.push(item);
+            console.log("enterWO");
+        }
+    }
+
+      if (select == "Product Number") {  // WO for Work Order or whatever it stands for in your context
+        if (Number(item.pn) === Number(search)) {
+            temp.push(item);
+            console.log("enterWO");
+        }
+    }
+    
+    if (select == "Description") {
+        if (item.desc.toLowerCase().indexOf(search.toLowerCase()) > -1) {
+            temp.push(item);
+            console.log("enterDescription");
+        }
+    }
+
+      // if (select == "Number") {
+      //   const numberFromItem = item.split(",")[1].split(":")[1];
+      //   if (Number(numberFromItem) === Number(search)) {
+      //     temp.push(item);
+      //     console.log("enter Number");
+      //   }
+      // }
     });
 
     console.log(temp);
@@ -97,89 +139,52 @@ export default function WarehouseList() {
 
   //////sorting items//////
   const labelBase = ["name", "date", "w/o", "p/n", "s/n", "desc"];
+  const labelBaseNames = ["name", "date", "wo", "pn", "sn", "desc"];
   const sortCheckBase = [false, false, false, false, false, false];
   const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const hold = "↓↑";
 
-  function sortCheck(pos){
-    
-  }
-
-
-  function nameSortCheck() {
-    console.log("name sort");
-    if (!sortCheck[0]) {
-      info.sort((a, b) => a.name.localeCompare(b.name));
-
-      setLabels(labelBase);
-      setLabels((prevLabels) => ["name ↓", ...prevLabels.slice(1)]);
-      
-      setSortCheck([true, ...new Array(sortCheck.length - 1).fill(false)]);
-    } else {
-      info.sort((a, b) => b.name.localeCompare(a.name));
-
-      setLabels(["name ↑", ...labels.slice(1)]);
-      
-      setSortCheck([false, ...sortCheck.slice(1)]);
-    }
-  }
-  function woSortCheck() {
-    console.log("wo sort");
-    if (!sortCheck[1]) {
-      info.sort((a, b) => Number(a.wo) - Number(b.wo));
+  function sortCheckAll(pos){
+    if (!sortCheck[pos]) {
+      info.sort((a, b) => {
+        if (pos === 0 || pos === 5) {
+          return a[labelBaseNames[pos]].localeCompare(b[labelBaseNames[pos]]);
+        } else if (pos === 1) {
+          return Date.parse(a[labelBaseNames[pos]]) - Date.parse(b[labelBaseNames[pos]]);
+        } else {
+          return Number(a[labelBaseNames[pos]]) - Number(b[labelBaseNames[pos]]);
+        }
+      });
       setLabels(labelBase);
       setLabels((prevLabels) => [
-        ...prevLabels.slice(0, 2),
-        "w/o ↓",
-        ...prevLabels.slice(3),
+        ...prevLabels.slice(0, pos),
+        labelBase[pos] + "↓",
+        ...prevLabels.slice(pos + 1),
       ]);
-      setSortCheck((prevSortCheck) => [
-        ...new Array(1).fill(false),
-        true,
-        ...new Array(prevSortCheck.length - 2).fill(false),
-      ]);
+      setSortCheck(prevSortCheck =>
+        prevSortCheck.map((_, index) => index === pos)
+      );
     } else {
       info.sort((a, b) => Number(b.wo) - Number(a.wo));
+      info.sort((a, b) => {
+        if (pos === 0 || pos === 5) {
+          return b[labelBaseNames[pos]].localeCompare(a[labelBaseNames[pos]]);
+        } else if (pos === 1) {
+          return Date.parse(b[labelBaseNames[pos]]) - Date.parse(a[labelBaseNames[pos]]);
+        } else {
+          return Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]]);
+        }
+      });
       setLabels((prevLabels) => [
-        ...prevLabels.slice(0, 2),
-        "w/o ↑",
-        ...prevLabels.slice(3),
+        ...prevLabels.slice(0, pos),
+        labelBase[pos] + "↑",
+        ...prevLabels.slice(pos + 1),
       ]);
       setSortCheck((prevSortCheck) => [
-        ...prevSortCheck.slice(0, 1),
+        ...prevSortCheck.slice(0, pos),
         false,
-        ...prevSortCheck.slice(2),
-      ]);
-    }
-  }
-
-  function dateSortCheck(){
-    if (!sortCheck[2]) {
-      info.sort((a, b) => Date(a.date) - Date(b.date));
-      setLabels(labelBase);
-      setLabels((prevLabels) => [
-        ...prevLabels.slice(0, 1),
-        "date ↓",
-        ...prevLabels.slice(2),
-      ]);
-      setSortCheck((prevSortCheck) => [
-        ...new Array(2).fill(false),
-        true,
-        ...new Array(prevSortCheck.length - 3).fill(false),
-      ]);
-    }
-    else{
-      info.sort((a, b) => Date(b.date) - Date(a.date));
-      setLabels((prevLabels) => [
-        ...prevLabels.slice(0, 1),
-        "date ↑",
-        ...prevLabels.slice(2),
-      ]);
-      setSortCheck((prevSortCheck) => [
-        ...prevSortCheck.slice(0, 2),
-        false,
-        ...prevSortCheck.slice(3),
+        ...prevSortCheck.slice(pos+1),
       ]);
     }
   }
@@ -234,11 +239,11 @@ export default function WarehouseList() {
 
     data.map((elements) =>
       dateStorage.push(
+        (toDateTime(elements.date.seconds).getMonth() + 1) +
+        "/" +
         toDateTime(elements.date.seconds).getDate() +
-          "/" +
-          (toDateTime(elements.date.seconds).getMonth() + 1) +
-          "/" +
-          toDateTime(elements.date.seconds).getFullYear()
+        "/" +
+        toDateTime(elements.date.seconds).getFullYear()
       )
     );
 
@@ -286,6 +291,22 @@ export default function WarehouseList() {
     cursor: "default",
   });
 
+
+  //This is getting input from warehouse select 
+  //needs to reload page
+  const router = useRouter();
+
+    useEffect(() => {
+        // checking if we have the query params and do something with it
+        if (router.query.inputText && router.query.selectedType) {
+            const input = router.query.inputText;
+            const type = router.query.selectedType;
+            // window.location.reload();
+            // Now you have the input and type, you can do whatever you want with it
+            console.log(input, type);
+        }
+    }, [router.query]);
+
   return (
     <LoggedIn>
       <Modal show={show} onHide={handleClose}>
@@ -313,63 +334,15 @@ export default function WarehouseList() {
               <Table striped bordered hover size="sm">
                 <thead>
                   <tr>
-                  {labels.map((item, index) => (<th
-                      style={hoverStyle(0)}
-                      onMouseOver={() => setHoverIndex(0)}
+                    {labels.map((item, index) => (<th
+                      style={hoverStyle(index)}
+                      onMouseOver={() => setHoverIndex(index)}
                       onMouseOut={() => setHoverIndex(null)}
-                      onClick={sortCheck}
+                      onClick={() => sortCheckAll(index)}
                     >
                       {item}
                     </th>))}
-                    <th
-                      style={hoverStyle(0)}
-                      onMouseOver={() => setHoverIndex(0)}
-                      onMouseOut={() => setHoverIndex(null)}
-                      onClick={nameSortCheck}
-                    >
-                      {labels[0]}
-                    </th>
-                    <th
-                      style={hoverStyle(1)}
-                      onMouseOver={() => setHoverIndex(1)}
-                      onMouseOut={() => setHoverIndex(null)}
-                    >
-                      {labels[1]}
-                    </th>
-                    <th
-                      style={hoverStyle(2)}
-                      onMouseOver={() => setHoverIndex(2)}
-                      onMouseOut={() => setHoverIndex(null)}
-                      onClick={woSortCheck}
-                    >
-                      {labels[2]}
-                    </th>
-                    <th
-                      style={hoverStyle(3)}
-                      onMouseOver={() => setHoverIndex(3)}
-                      onMouseOut={() => setHoverIndex(null)}
-                    >
-                      p/n
-                    </th>
-                    <th
-                      style={hoverStyle(4)}
-                      onMouseOver={() => setHoverIndex(4)}
-                      onMouseOut={() => setHoverIndex(null)}
-                    >
-                      s/n
-                    </th>
-                    <th
-                      style={hoverStyle(5)}
-                      onMouseOver={() => setHoverIndex(5)}
-                      onMouseOut={() => setHoverIndex(null)}
-                    >
-                      desc
-                    </th>
-                    <th
-                      
-                    >
-                      delete
-                    </th>
+                    
                   </tr>
                 </thead>
                 <tbody>
@@ -378,7 +351,7 @@ export default function WarehouseList() {
                     <tr
                       class="clickable-row"
                       key={index}
-                      // onClick={() => rowSelect(ids[index])}
+                    // onClick={() => rowSelect(ids[index])}
                     >
                       <td
                         style={{ textAlign: "center", cursor: "default" }}
@@ -462,6 +435,7 @@ export default function WarehouseList() {
                   show={showList}
                   onMouseEnter={showDropdown}
                   onMouseLeave={hideDropdown}
+                  style={{ marginTop: '-5px' }}  // Adjust this value as needed
                 >
                   <NavDropdown.Item
                     href=""
@@ -486,6 +460,22 @@ export default function WarehouseList() {
                     }
                   >
                     Work Order
+                  </NavDropdown.Item>
+                  <NavDropdown.Item
+                    href=""
+                    onClick={() =>
+                      setSelect("Product Number") & setShowListSearch("number")
+                    }
+                  >
+                    Product Number
+                  </NavDropdown.Item>
+                  <NavDropdown.Item
+                    href=""
+                    onClick={() =>
+                      setSelect("Description") & setShowListSearch("text")
+                    }
+                  >
+                    Description
                   </NavDropdown.Item>
                 </NavDropdown>
                 <Button variant="info" onClick={searchFilter}>
