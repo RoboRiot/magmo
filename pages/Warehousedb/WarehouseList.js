@@ -64,6 +64,26 @@ export default function WarehouseList() {
   const [showListSearch, setShowListSearch] = useState("text");
   const [search, setSearch] = useState();
 
+  //This is getting input from warehouse select
+  //needs to reload page
+  const router = useRouter();
+  const collectDataFromSearch = () => {
+    // useEffect(() => {
+    // checking if we have the query params and do something with it
+    if (router.query.inputText && router.query.selectedType) {
+      const input = router.query.inputText;
+      const type = router.query.selectedType;
+      // window.location.reload();
+      // Now you have the input and type, you can do whatever you want with it
+      console.log(input, type);
+      setSelect(type);
+      setSearch(input);
+      searchFilter();
+    }
+    // }, [router.query]);
+  };
+
+  //dropdown and search management
   const showDropdown = (e) => {
     setShowList(!show);
   };
@@ -88,8 +108,8 @@ export default function WarehouseList() {
 
       if (select == "Date") {
         const dateComponents = item.date.split("/");
-        const paddedMonth = String(dateComponents[0]).padStart(2, '0'); // Ensure month has 2 digits
-        const paddedDay = String(dateComponents[1]).padStart(2, '0');   // Ensure day has 2 digits
+        const paddedMonth = String(dateComponents[0]).padStart(2, "0"); // Ensure month has 2 digits
+        const paddedDay = String(dateComponents[1]).padStart(2, "0"); // Ensure day has 2 digits
 
         const reformattedItemDate = `${dateComponents[2]}-${paddedMonth}-${paddedDay}`; // Convert to "YYYY-MM-DD"
 
@@ -101,26 +121,28 @@ export default function WarehouseList() {
         }
       }
 
-      if (select == "Work Order") {  // WO for Work Order or whatever it stands for in your context
+      if (select == "Work Order") {
+        // WO for Work Order or whatever it stands for in your context
         if (Number(item.wo) === Number(search)) {
-            temp.push(item);
-            console.log("enterWO");
+          temp.push(item);
+          console.log("enterWO");
         }
-    }
+      }
 
-      if (select == "Product Number") {  // WO for Work Order or whatever it stands for in your context
+      if (select == "Product Number") {
+        // WO for Work Order or whatever it stands for in your context
         if (Number(item.pn) === Number(search)) {
-            temp.push(item);
-            console.log("enterWO");
+          temp.push(item);
+          console.log("enterWO");
         }
-    }
-    
-    if (select == "Description") {
+      }
+
+      if (select == "Description") {
         if (item.desc.toLowerCase().indexOf(search.toLowerCase()) > -1) {
-            temp.push(item);
-            console.log("enterDescription");
+          temp.push(item);
+          console.log("enterDescription");
         }
-    }
+      }
 
       // if (select == "Number") {
       //   const numberFromItem = item.split(",")[1].split(":")[1];
@@ -145,15 +167,20 @@ export default function WarehouseList() {
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const hold = "↓↑";
 
-  function sortCheckAll(pos){
+  function sortCheckAll(pos) {
     if (!sortCheck[pos]) {
       info.sort((a, b) => {
         if (pos === 0 || pos === 5) {
           return a[labelBaseNames[pos]].localeCompare(b[labelBaseNames[pos]]);
         } else if (pos === 1) {
-          return Date.parse(a[labelBaseNames[pos]]) - Date.parse(b[labelBaseNames[pos]]);
+          return (
+            Date.parse(a[labelBaseNames[pos]]) -
+            Date.parse(b[labelBaseNames[pos]])
+          );
         } else {
-          return Number(a[labelBaseNames[pos]]) - Number(b[labelBaseNames[pos]]);
+          return (
+            Number(a[labelBaseNames[pos]]) - Number(b[labelBaseNames[pos]])
+          );
         }
       });
       setLabels(labelBase);
@@ -162,7 +189,7 @@ export default function WarehouseList() {
         labelBase[pos] + "↓",
         ...prevLabels.slice(pos + 1),
       ]);
-      setSortCheck(prevSortCheck =>
+      setSortCheck((prevSortCheck) =>
         prevSortCheck.map((_, index) => index === pos)
       );
     } else {
@@ -171,9 +198,14 @@ export default function WarehouseList() {
         if (pos === 0 || pos === 5) {
           return b[labelBaseNames[pos]].localeCompare(a[labelBaseNames[pos]]);
         } else if (pos === 1) {
-          return Date.parse(b[labelBaseNames[pos]]) - Date.parse(a[labelBaseNames[pos]]);
+          return (
+            Date.parse(b[labelBaseNames[pos]]) -
+            Date.parse(a[labelBaseNames[pos]])
+          );
         } else {
-          return Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]]);
+          return (
+            Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]])
+          );
         }
       });
       setLabels((prevLabels) => [
@@ -184,20 +216,24 @@ export default function WarehouseList() {
       setSortCheck((prevSortCheck) => [
         ...prevSortCheck.slice(0, pos),
         false,
-        ...prevSortCheck.slice(pos+1),
+        ...prevSortCheck.slice(pos + 1),
       ]);
     }
   }
 
   // Start the fetch operation as soon as
   // the page loads
-  if (typeof window !== "undefined") {
-    window.addEventListener("load", () => {
+
+  // if (typeof window !== "undefined") {
+  useEffect(() => {
+    // window.addEventListener("load", () => {
       console.log("enter 1");
       fetchData();
       // displayData();
-    });
-  }
+      collectDataFromSearch()
+    // });
+    // }
+  }, [router.route]); // runs every time `router.route` changes
 
   async function fetchStuff() {
     let data = [];
@@ -239,11 +275,12 @@ export default function WarehouseList() {
 
     data.map((elements) =>
       dateStorage.push(
-        (toDateTime(elements.date.seconds).getMonth() + 1) +
-        "/" +
-        toDateTime(elements.date.seconds).getDate() +
-        "/" +
-        toDateTime(elements.date.seconds).getFullYear()
+        toDateTime(elements.date.seconds).getMonth() +
+          1 +
+          "/" +
+          toDateTime(elements.date.seconds).getDate() +
+          "/" +
+          toDateTime(elements.date.seconds).getFullYear()
       )
     );
 
@@ -291,22 +328,6 @@ export default function WarehouseList() {
     cursor: "default",
   });
 
-
-  //This is getting input from warehouse select 
-  //needs to reload page
-  const router = useRouter();
-
-    useEffect(() => {
-        // checking if we have the query params and do something with it
-        if (router.query.inputText && router.query.selectedType) {
-            const input = router.query.inputText;
-            const type = router.query.selectedType;
-            // window.location.reload();
-            // Now you have the input and type, you can do whatever you want with it
-            console.log(input, type);
-        }
-    }, [router.query]);
-
   return (
     <LoggedIn>
       <Modal show={show} onHide={handleClose}>
@@ -334,15 +355,16 @@ export default function WarehouseList() {
               <Table striped bordered hover size="sm">
                 <thead>
                   <tr>
-                    {labels.map((item, index) => (<th
-                      style={hoverStyle(index)}
-                      onMouseOver={() => setHoverIndex(index)}
-                      onMouseOut={() => setHoverIndex(null)}
-                      onClick={() => sortCheckAll(index)}
-                    >
-                      {item}
-                    </th>))}
-                    
+                    {labels.map((item, index) => (
+                      <th
+                        style={hoverStyle(index)}
+                        onMouseOver={() => setHoverIndex(index)}
+                        onMouseOut={() => setHoverIndex(null)}
+                        onClick={() => sortCheckAll(index)}
+                      >
+                        {item}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -351,7 +373,7 @@ export default function WarehouseList() {
                     <tr
                       class="clickable-row"
                       key={index}
-                    // onClick={() => rowSelect(ids[index])}
+                      // onClick={() => rowSelect(ids[index])}
                     >
                       <td
                         style={{ textAlign: "center", cursor: "default" }}
@@ -435,7 +457,7 @@ export default function WarehouseList() {
                   show={showList}
                   onMouseEnter={showDropdown}
                   onMouseLeave={hideDropdown}
-                  style={{ marginTop: '-5px' }}  // Adjust this value as needed
+                  style={{ marginTop: "-5px" }} // Adjust this value as needed
                 >
                   <NavDropdown.Item
                     href=""
