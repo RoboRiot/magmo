@@ -69,6 +69,7 @@ const article = () => {
   const [ids, setID] = useState([]);
   const [idSelect, setIDSelect] = useState([]);
   const selectedID = 0;
+  const [newItem, setNewItem] = useState([false])
 
   //
   //
@@ -84,18 +85,29 @@ const article = () => {
     console.log("this is the id: " + selectedID);
 
     // event.preventDefault;
+    if (newItem) {
+      await db
+        .collection("Test")
+        .add(returnData)
+        .then(() => {
+          console.log("Items added!");
+          // router.reload("WarehouseList")
+          window.location = "../WarehouseList";
+          // router.push("WarehouseList")
+        });
+    } else {
+      await db
+        .collection("Test")
+        .doc(idSelect)
+        .update(returnData)
+        .then(() => {
+          console.log("Items added!");
+          window.location = "../WarehouseList";
+          // router.reload("WarehouseList")
 
-    await db
-      .collection("Test")
-      .doc(idSelect)
-      .update(returnData)
-      .then(() => {
-        console.log("Items added!");
-        window.location = "../WarehouseList";
-        // router.reload("WarehouseList")
-
-        // router.push("WarehouseList")
-      });
+          // router.push("WarehouseList")
+        });
+    }
   }
 
   async function handleSubmit(event) {
@@ -255,54 +267,61 @@ const article = () => {
 
     let data = datas[0];
 
-    let itemValue = [];
-    let dateStorage = [];
-    let mSpace = "-";
-    if (toDateTime(data.date.seconds).getMonth() + 1 < 10) mSpace = "-0";
+    console.log(data);
 
-    data.date =
-      toDateTime(data.date.seconds).getFullYear() +
-      mSpace +
-      (toDateTime(data.date.seconds).getMonth() + 1) +
-      "-" +
-      toDateTime(data.date.seconds).getDate();
+    if (data == 0) {
+      console.log("new item")
+      setNewItem(true)
+    } else {
+      let itemValue = [];
+      let dateStorage = [];
+      let mSpace = "-";
+      if (toDateTime(data.date.seconds).getMonth() + 1 < 10) mSpace = "-0";
 
-    console.log(data.date);
-    // data.map((elements) =>
-    //   dateStorage.push(
-    //     toDateTime(elements.date.seconds).getFullYear() +
-    //       "-" +
-    //       (toDateTime(elements.date.seconds).getMonth() + 1) +
-    //       "-" +
-    //       toDateTime(elements.date.seconds).getDate()
-    //   )
-    // );
+      data.date =
+        toDateTime(data.date.seconds).getFullYear() +
+        mSpace +
+        (toDateTime(data.date.seconds).getMonth() + 1) +
+        "-" +
+        toDateTime(data.date.seconds).getDate();
 
-    // for (const [index, value] of data.entries()) {
-    //   data[index].date = dateStorage[index];
-    // }
+      console.log(data.date);
+      // data.map((elements) =>
+      //   dateStorage.push(
+      //     toDateTime(elements.date.seconds).getFullYear() +
+      //       "-" +
+      //       (toDateTime(elements.date.seconds).getMonth() + 1) +
+      //       "-" +
+      //       toDateTime(elements.date.seconds).getDate()
+      //   )
+      // );
 
-    // let elementID = window.location.pathname.substring(
-    //   window.location.pathname.lastIndexOf("/") + 1
-    // );
+      // for (const [index, value] of data.entries()) {
+      //   data[index].date = dateStorage[index];
+      // }
 
-    // datas[1].map((elements, index) => {
-    //   if (elementID == elements) {
-    //     data = data[index];
-    //   }
-    // });
+      // let elementID = window.location.pathname.substring(
+      //   window.location.pathname.lastIndexOf("/") + 1
+      // );
 
-    // console.log(data);
-    // setInfo((oldArray) => [...oldArray, ...data]);
-    // setInfo(data)
-    setIDSelect(selectedID);
-    setItems(data);
-    // setID((oldArray) => [...oldArray, ...datas[1]]);
+      // datas[1].map((elements, index) => {
+      //   if (elementID == elements) {
+      //     data = data[index];
+      //   }
+      // });
 
-    // console.log(data.date);
-    // console.log(datas[1]);
-    // console.log(info);
-    // console.log(ids);
+      // console.log(data);
+      // setInfo((oldArray) => [...oldArray, ...data]);
+      // setInfo(data)
+      setIDSelect(selectedID);
+      setItems(data);
+      // setID((oldArray) => [...oldArray, ...datas[1]]);
+
+      // console.log(data.date);
+      // console.log(datas[1]);
+      // console.log(info);
+      // console.log(ids);
+    }
   }
 
   return (
