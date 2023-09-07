@@ -67,18 +67,31 @@ export default function WarehouseList() {
   //This is getting input from warehouse select
   //needs to reload page
   const router = useRouter();
+
+  useEffect(() => {
+    
+    if (backupInfo.length > 0 && search) {
+      // Call the function here
+      collectDataFromSearch();
+    }
+  }, [backupInfo]);
+
   const collectDataFromSearch = () => {
     // useEffect(() => {
     // checking if we have the query params and do something with it
     if (router.query.inputText && router.query.selectedType) {
-      const input = router.query.inputText;
-      const type = router.query.selectedType;
-      // window.location.reload();
-      // Now you have the input and type, you can do whatever you want with it
-      console.log(input, type);
-      setSelect(type);
-      setSearch(input);
+      // const input = router.query.inputText;
+      // const type = router.query.selectedType;
+      // // window.location.reload();
+      // // Now you have the input and type, you can do whatever you want with it
+      // console.log(input, type);
+      // setSelect(type);
+      // setSearch(input);
+      
       searchFilter();
+    }
+    else{
+      console.log("no input from previous page")
     }
     // }, [router.query]);
   };
@@ -97,8 +110,11 @@ export default function WarehouseList() {
 
   function searchFilter() {
     var temp = [];
+    console.log("entered search filter")
+    console.log(backupInfo)
     backupInfo.map((item) => {
       console.log(select);
+      console.log(search)
       if (select == "Name") {
         if (item.name.toLowerCase().indexOf(search.toLowerCase()) > -1) {
           temp.push(item);
@@ -230,7 +246,7 @@ export default function WarehouseList() {
       console.log("enter 1");
       fetchData();
       // displayData();
-      collectDataFromSearch()
+      
     // });
     // }
   }, [router.route]); // runs every time `router.route` changes
@@ -267,6 +283,16 @@ export default function WarehouseList() {
   }
 
   async function fetchData() {
+    if (router.query.inputText && router.query.selectedType) {
+      const input = router.query.inputText;
+      const type = router.query.selectedType;
+      // window.location.reload();
+      // Now you have the input and type, you can do whatever you want with it
+      console.log(input, type);
+      setSelect(type);
+      setSearch(input);
+    }
+
     let datas = await fetchStuff();
     let data = datas[0];
 
@@ -296,6 +322,9 @@ export default function WarehouseList() {
     console.log(data);
     console.log(info);
     console.log(ids);
+    // router.reload();
+
+    
   }
 
   const rowSelect = (id) => {

@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useRouter } from 'next/router';
 import { Form, Button, Card, Container } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 import { QrReader } from "react-qr-reader";
 
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
+
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -40,17 +42,22 @@ var test = "blank"
 
 
   
-const readQR = (qrData) => {
- 
-    console.log("this is the qr data: " + qrData);
- 
-};
+
 
 
 
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState("No result");
+
+  const router = useRouter();
+
+  const readQR = (qrData) => {
+    console.log("this is the qr data: " + qrData);
+    // router.push(`item/${qrData}`);
+    window.location = "item/" + qrData;
+    return qrData;
+  };
 
   return (
     <LoggedIn>
@@ -66,17 +73,21 @@ export default function dashboard() {
                 <QrReader
                   onResult={(result, error) => {
                     if (!!result) {
+                      console.log("found!!");
                       setData(result?.text);
                     }
 
-                    if (!!error) {
-                      console.info(error);
-                    }
+                    // if (!!error) {
+                    //   console.log("empty")
+                    //   console.info(error);
+                    // }
                   }}
                   style={{ width: "100%" }}
                 />
-                <Button variant={data === "No result" ? "danger" : "sucess"} >
-                  {data === "No result" ? "No QR located" : "QR located! " + readQR(data)}
+                <Button variant={data === "No result" ? "danger" : "sucess"}>
+                  {data === "No result"
+                    ? "No QR located"
+                    : "QR located! " + readQR(data)}
                 </Button>
 
                 <Button variant="link" onClick={signOut}>
