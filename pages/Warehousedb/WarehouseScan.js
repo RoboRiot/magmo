@@ -84,12 +84,19 @@ export default function dashboard() {
                   }}
                   style={{ width: "100%" }}
                 />
-                <Button variant={data === "No result" ? "danger" : "sucess"}>
+                <Button
+                  variant={data === "No result" ? "danger" : "sucess"}
+                  disabled={data === "No result"}
+                >
                   {data === "No result"
                     ? "No QR located"
                     : "QR located! " + readQR(data)}
                 </Button>
-
+                {LoadingButton(
+                  "primary",
+                  "Back",
+                  "Warehousedb/WarehouseSelect"
+                )}
                 <Button variant="link" onClick={signOut}>
                   Sign out
                 </Button>

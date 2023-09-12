@@ -52,16 +52,18 @@ const article = () => {
 
   const { signOut } = useAuth();
 
-  const [items, setItems] = useState({
-    jasper: {
-      name: "",
-      wo: "",
-      pn: "",
-      sn: "",
-      date: "",
-      desc: "",
-    },
-  });
+  // const [items, setItems] = useState({
+  //   jasper: {
+  //     name: "",
+  //     wo: "",
+  //     pn: "",
+  //     sn: "",
+  //     date: "",
+  //     desc: "",
+  //   },
+  // });
+
+  const [items, setItems] = useState({})
 
   const db = firebase.firestore();
 
@@ -88,7 +90,8 @@ const article = () => {
     if (newItem) {
       await db
         .collection("Test")
-        .add(returnData)
+        .doc(idSelect)
+        .set(returnData)
         .then(() => {
           console.log("Items added!");
           // router.reload("WarehouseList")
@@ -271,6 +274,7 @@ const article = () => {
 
     if (data == 0) {
       console.log("new item")
+      setIDSelect(selectedID);
       setNewItem(true)
     } else {
       let itemValue = [];
