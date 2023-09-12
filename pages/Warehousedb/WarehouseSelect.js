@@ -13,6 +13,7 @@ import styles from "../../styles/Home.module.css";
 
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
+import Link from 'next/link';
 
 
 
@@ -34,15 +35,11 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      className={"btn btn-" + type}
-      variant={type}
-      href={"/" + route}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
+    <Link href={`/${route}`}>
+    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
       {isLoading.name ? "Loading…" : name}
     </a>
+  </Link>
   );
 }
 

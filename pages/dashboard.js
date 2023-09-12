@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container } from "react-bootstrap";
 import styles from "../styles/Home.module.css";
+import Link from 'next/link';
 
 import { useAuth } from "../context/AuthUserContext";
 
@@ -25,15 +26,20 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      class={"btn btn-" + type}
-      variant={type}
-      href={"/" + route}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
+    // <a
+    //   class={"btn btn-" + type}
+    //   variant={type}
+    //   href={"/" + route}
+    //   disabled={isLoading.name}
+    //   onClick={!isLoading.name ? handleClick : null}
+    // >
+    //   {isLoading.name ? "Loading…" : name}
+    // </a>
+    <Link href={`/${route}`}>
+    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
       {isLoading.name ? "Loading…" : name}
     </a>
+  </Link>
   );
 }
 
