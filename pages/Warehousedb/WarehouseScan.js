@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
+import Link from 'next/link';
+
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useRouter } from 'next/router';
 import { Form, Button, Card, Container } from "react-bootstrap";
@@ -27,15 +29,11 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      class={"btn btn-" + type}
-      variant={type}
-      href={"/" + route}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
+    <Link href={`/${route}`}>
+    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
       {isLoading.name ? "Loading…" : name}
     </a>
+  </Link>
   );
 }
 var test = "blank"

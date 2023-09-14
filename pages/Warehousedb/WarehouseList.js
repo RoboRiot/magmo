@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from 'next/router';
+import Link from 'next/link';
+
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container, Table, NavDropdown, FormControl } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
@@ -31,15 +33,20 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      class={"btn btn-" + type}
-      variant={type}
-      href={"/" + route}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
+    // <a
+    //   class={"btn btn-" + type}
+    //   variant={type}
+    //   href={"/" + route}
+    //   disabled={isLoading.name}
+    //   onClick={!isLoading.name ? handleClick : null}
+    // >
+    //   {isLoading.name ? "Loading…" : name}
+    // </a>
+    <Link href={`/${route}`}>
+    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
       {isLoading.name ? "Loading…" : name}
     </a>
+  </Link>
   );
 }
 
@@ -246,7 +253,7 @@ export default function WarehouseList() {
       console.log("enter 1");
       fetchData();
       // displayData();
-      
+      console.log("not too bad")
     // });
     // }
   }, [router.route]); // runs every time `router.route` changes
@@ -329,7 +336,7 @@ export default function WarehouseList() {
 
   const rowSelect = (id) => {
     console.log(id);
-    window.location = "item/" + id;
+    router.push("item/" + id);
   };
   const [gPos, setGPos] = useState();
   let [gIde, setGIde] = useState();
@@ -373,15 +380,19 @@ export default function WarehouseList() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* <Container className="custom-container d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}> */}
       <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
+        className={`${styles.myCustomContainer} d-flex align-items-center justify-content-center`}
+        style={{ minHeight: "100vh", width: "100%" }}
       >
-        <div className="w-100" style={{ maxWidth: "600px" }}>
-          <Card className="align-items-center justify-content-center">
-            <Card.Body>
+        <div className="w-100" style={{ maxWidth: "100%", margin: "0 auto" }}>
+          <Card
+            className="align-items-center justify-content-center"
+            style={{ width: "100%" }}
+          >
+            <Card.Body style={{ width: "100%" }}>
               <h2 className="text-center mb-4">Main Menu</h2>
-              <Table striped bordered hover size="sm">
+              <Table style={{ width: "100%" }} striped bordered hover size="sm">
                 <thead>
                   <tr>
                     {labels.map((item, index) => (
