@@ -129,3 +129,22 @@
               flex-direction: column;
             }
           }
+
+          .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .table {
+            table-layout: fixed;
+            width: 100%;
+            max-width: 100%;
+            white-space: nowrap;
+        }
+        
+        .table td, .table th {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+     

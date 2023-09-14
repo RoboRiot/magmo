@@ -30,15 +30,11 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      class={"btn btn-" + type}
-      variant={type}
-      href={"/" + route}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
+    <Link href={`/${route}`}>
+    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
       {isLoading.name ? "Loading…" : name}
     </a>
+  </Link>
   );
 }
 
@@ -63,7 +59,7 @@ const article = () => {
   //   },
   // });
 
-  const [items, setItems] = useState({})
+  const [items, setItems] = useState({});
 
   const db = firebase.firestore();
 
@@ -71,7 +67,7 @@ const article = () => {
   const [ids, setID] = useState([]);
   const [idSelect, setIDSelect] = useState([]);
   const selectedID = 0;
-  const [newItem, setNewItem] = useState([false])
+  const [newItem, setNewItem] = useState([false]);
 
   //
   //
@@ -219,13 +215,16 @@ const article = () => {
 
   // Start the fetch operation as soon as
   // the page loads
-  if (typeof window !== "undefined") {
-    window.addEventListener("load", () => {
-      console.log("enter 1");
-      fetchData();
-      // displayData();
-    });
-  }
+  // if (typeof window !== "undefined") {
+  //   window.addEventListener("load", () => {
+  useEffect(() => {
+    console.log("enter 1");
+    fetchData();
+  }, [router.route]); // runs every time `router.route` changes
+
+  // displayData();
+  //   });
+  // }
 
   async function fetchStuff() {
     let data = 0;
@@ -273,9 +272,9 @@ const article = () => {
     console.log(data);
 
     if (data == 0) {
-      console.log("new item")
+      console.log("new item");
       setIDSelect(selectedID);
-      setNewItem(true)
+      setNewItem(true);
     } else {
       let itemValue = [];
       let dateStorage = [];
