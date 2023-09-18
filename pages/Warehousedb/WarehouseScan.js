@@ -47,6 +47,7 @@ var test = "blank"
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState("No result");
+  const [cameraFacing, setCameraFacing] = useState('environment'); // default to back camera
 
   const router = useRouter();
 
@@ -80,6 +81,7 @@ export default function dashboard() {
                     //   console.info(error);
                     // }
                   }}
+                  constraints={{ facingMode: cameraFacing }} // Use the state to set the camera facing mode
                   style={{ width: "100%" }}
                 />
                 <Button
@@ -90,6 +92,15 @@ export default function dashboard() {
                     ? "No QR located"
                     : "QR located! " + readQR(data)}
                 </Button>
+                <button
+                  onClick={() =>
+                    setCameraFacing((prev) =>
+                      prev === "environment" ? "user" : "environment"
+                    )
+                  }
+                >
+                  Flip Camera
+                </button>
                 {LoadingButton(
                   "primary",
                   "Back",
