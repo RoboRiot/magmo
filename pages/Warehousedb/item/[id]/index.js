@@ -8,14 +8,12 @@ import styles from "../../../../styles/Home.module.css";
 import { useAuth } from "../../../../context/AuthUserContext";
 import firebase from "../../../../context/Firebase";
 
-// import { useCollection } from "react-firebase-hooks/firebase";
-
 import LoggedIn from "../../../LoggedIn";
 
+//setup for loading buttons 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
-
 function LoadingButton(type, name, route) {
   const [isLoading, setLoading] = useState({ name: false });
 
@@ -48,17 +46,6 @@ const article = () => {
 
   const { signOut } = useAuth();
 
-  // const [items, setItems] = useState({
-  //   jasper: {
-  //     name: "",
-  //     wo: "",
-  //     pn: "",
-  //     sn: "",
-  //     date: "",
-  //     desc: "",
-  //   },
-  // });
-
   const [items, setItems] = useState({});
 
   const db = firebase.firestore();
@@ -82,7 +69,7 @@ const article = () => {
 
     console.log("this is the id: " + selectedID);
 
-    // event.preventDefault;
+    // creates a new id incase the id does not exist
     if (newItem) {
       await db
         .collection("Test")
@@ -90,10 +77,9 @@ const article = () => {
         .set(returnData)
         .then(() => {
           console.log("Items added!");
-          // router.reload("WarehouseList")
           window.location = "../WarehouseList";
-          // router.push("WarehouseList")
         });
+    //uses an existing ID
     } else {
       await db
         .collection("Test")
@@ -102,18 +88,12 @@ const article = () => {
         .then(() => {
           console.log("Items added!");
           window.location = "../WarehouseList";
-          // router.reload("WarehouseList")
-
-          // router.push("WarehouseList")
         });
     }
   }
 
+  //checks to make sure all fields are completed
   async function handleSubmit(event) {
-    // const router = useRouter()
-
-    console.log("enter handle submit");
-    console.log(items);
     var check = false;
 
     if (items["name"] == "") {
@@ -152,58 +132,31 @@ const article = () => {
 
     event.preventDefault();
   }
+
+  //all the change handlers for the input boxes for the item
   const nameChangeHandler = (event) => {
     setItems(Object.assign({}, items, { name: event.target.value }));
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.name = event.target.value;                     // update the name property, assign a new value
-    //   return { jasper };                                 // return new object jasper object
-    // })
+   
   };
   const woChangeHandler = (event) => {
     setItems(Object.assign({}, items, { wo: event.target.value }));
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.wo = event.target.value;                     // update the name property, assign a new value
-    //   return { jasper };                                 // return new object jasper object
-    // })
+   
   };
   const pnChangeHandler = (event) => {
     setItems(Object.assign({}, items, { pn: event.target.value }));
 
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.pn = event.target.value;                     // update the name property, assign a new value
-    //   return { jasper };                                 // return new object jasper object
-    // })
   };
   const snChangeHandler = (event) => {
     setItems(Object.assign({}, items, { sn: event.target.value }));
-
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.sn = event.target.value;                     // update the name property, assign a new value
-    //   return { jasper };                                 // return new object jasper object
-    // })
   };
   const dateChangeHandler = (event) => {
     setItems(Object.assign({}, items, { date: event.target.value }));
     console.log(items.date);
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   // jasper.date = event.target.value;                     // update the name property, assign a new value
-    //   const date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
-    //   jasper.date = date
-    //   return { jasper };                                 // return new object jasper object
-    // })
+    
   };
   const descChangeHandler = (event) => {
     setItems(Object.assign({}, items, { desc: event.target.value }));
-    // setItems(prevState => {
-    //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
-    //   jasper.desc = event.target.value;                     // update the name property, assign a new value
-    //   return { jasper };                                 // return new object jasper object
-    // })
+  
   };
 
   //
