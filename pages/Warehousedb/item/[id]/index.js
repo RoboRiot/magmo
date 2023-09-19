@@ -10,7 +10,7 @@ import firebase from "../../../../context/Firebase";
 
 import LoggedIn from "../../../LoggedIn";
 
-//setup for loading buttons 
+//setup for loading buttons
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
@@ -29,10 +29,14 @@ function LoadingButton(type, name, route) {
 
   return (
     <Link href={`/${route}`}>
-    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
-      {isLoading.name ? "Loading…" : name}
-    </a>
-  </Link>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading.name}
+        onClick={!isLoading.name ? handleClick : null}
+      >
+        {isLoading.name ? "Loading…" : name}
+      </a>
+    </Link>
   );
 }
 
@@ -77,9 +81,9 @@ const article = () => {
         .set(returnData)
         .then(() => {
           console.log("Items added!");
-          window.location = "../WarehouseList";
+          router.push("../WarehouseList");
         });
-    //uses an existing ID
+      //uses an existing ID
     } else {
       await db
         .collection("Test")
@@ -87,7 +91,7 @@ const article = () => {
         .update(returnData)
         .then(() => {
           console.log("Items added!");
-          window.location = "../WarehouseList";
+          router.push("../WarehouseList");
         });
     }
   }
@@ -136,15 +140,12 @@ const article = () => {
   //all the change handlers for the input boxes for the item
   const nameChangeHandler = (event) => {
     setItems(Object.assign({}, items, { name: event.target.value }));
-   
   };
   const woChangeHandler = (event) => {
     setItems(Object.assign({}, items, { wo: event.target.value }));
-   
   };
   const pnChangeHandler = (event) => {
     setItems(Object.assign({}, items, { pn: event.target.value }));
-
   };
   const snChangeHandler = (event) => {
     setItems(Object.assign({}, items, { sn: event.target.value }));
@@ -152,11 +153,9 @@ const article = () => {
   const dateChangeHandler = (event) => {
     setItems(Object.assign({}, items, { date: event.target.value }));
     console.log(items.date);
-    
   };
   const descChangeHandler = (event) => {
     setItems(Object.assign({}, items, { desc: event.target.value }));
-  
   };
 
   //

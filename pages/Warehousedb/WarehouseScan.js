@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
-import Link from 'next/link';
+import Link from "next/link";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 import { Form, Button, Card, Container } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 import { QrReader } from "react-qr-reader";
 
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
-
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -30,31 +29,29 @@ function LoadingButton(type, name, route) {
 
   return (
     <Link href={`/${route}`}>
-    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
-      {isLoading.name ? "Loading…" : name}
-    </a>
-  </Link>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading.name}
+        onClick={!isLoading.name ? handleClick : null}
+      >
+        {isLoading.name ? "Loading…" : name}
+      </a>
+    </Link>
   );
 }
-var test = "blank"
-
-
-  
-
-
-
+var test = "blank";
 
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState("No result");
-  const [cameraFacing, setCameraFacing] = useState('environment'); // default to back camera
+  const [cameraFacing, setCameraFacing] = useState("environment"); // default to back camera
 
   const router = useRouter();
 
   const readQR = (qrData) => {
     console.log("this is the qr data: " + qrData);
     // router.push(`item/${qrData}`);
-    window.location = "item/" + qrData;
+    router.push("item/" + qrData);
     return qrData;
   };
 
