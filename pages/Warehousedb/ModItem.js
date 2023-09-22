@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container, Row, Col } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
+import Link from "next/link";
 
 import { useAuth } from "../../context/AuthUserContext";
 import firebase from "../../context/Firebase";
@@ -46,30 +47,29 @@ export default function dashboard() {
 
   const { signOut } = useAuth();
 
-  const [items, setItems] = useState({
-    jasper: {
-      name: "",
-      wo: "",
-      pn: "",
-      sn: "",
-      date: "",
-      desc: "",
-    },
-  });
+  const [items, setItems] = useState({});
 
   const [show, setShow] = useState(false);
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
+  const [showErr, setShowErr] = useState(false);
+  const [Err, setErr] = useState("N/A");
+
+  const handleCloseErr = () => setShowErr(false);
+  const handleShowErr = () => setShowErr(true);
+
   async function toSend() {
     const db = firebase.firestore();
 
     let tempDate = items.date;
-    tempDate = new Date(tempDate.replace("-", ","));
+
+    const [year, month, day] = tempDate.split("-").map(Number);
+    tempDate = new Date(year, month - 1, day); // Note: month is 0-indexed in JavaScript
 
     let returnData = Object.assign({}, items, { date: tempDate });
-
+    console.log(returnData.date.toString());
     await db
       .collection("Test")
       .add(returnData)
@@ -77,7 +77,16 @@ export default function dashboard() {
         console.log("Items added!");
         // router.reload("WarehouseList")
         router.push("WarehouseList");
-        // router.push("WarehouseList")
+      })
+      .then(() => {
+        console.log("Items updated successfully!");
+        // setErr("Success");
+        // handleShowErr();
+      })
+      .catch((error) => {
+        console.error("Error updating data: ", error);
+        // setErr("Fail");
+        // handleShowErr();
       });
   }
 
@@ -161,6 +170,7 @@ export default function dashboard() {
   };
   const dateChangeHandler = (event) => {
     setItems(Object.assign({}, items, { date: event.target.value }));
+
     console.log(items.date);
     // setItems(prevState => {
     //   let jasper = Object.assign({}, prevState.jasper);  // creating copy of state variable jasper
@@ -188,6 +198,17 @@ export default function dashboard() {
         <Modal.Body>Missing field</Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleClose}>
+            Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showErr} onHide={handleCloseErr}>
+        <Modal.Header closeButton>
+          <Modal.Title>Error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{Err}</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleCloseErr}>
             Ok
           </Button>
         </Modal.Footer>
@@ -263,13 +284,11 @@ export default function dashboard() {
                 <Button variant="primary" type="submit">
                   Submit
                 </Button>
-                <Button
-                  className="m-3"
-                  variant="secondary"
-                  href={"WarehouseList"}
-                >
-                  Go Back
-                </Button>
+                <Link href="WarehouseList">
+                  <Button className="m-3" variant="secondary">
+                    Go Back
+                  </Button>
+                </Link>
               </Form>
             </Card.Body>
           </Card>
