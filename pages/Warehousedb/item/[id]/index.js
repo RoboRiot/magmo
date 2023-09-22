@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container, Row, Col } from "react-bootstrap";
 import styles from "../../../../styles/Home.module.css";
+import Link from "next/link";
 
 import { useAuth } from "../../../../context/AuthUserContext";
 import firebase from "../../../../context/Firebase";
@@ -57,7 +58,7 @@ const article = () => {
   const [info, setInfo] = useState([]);
   const [ids, setID] = useState([]);
   const [idSelect, setIDSelect] = useState([]);
-  const selectedID = 0;
+  let selectedID = 0;
   const [newItem, setNewItem] = useState([false]);
 
   //
@@ -67,7 +68,9 @@ const article = () => {
   //
   async function toSend() {
     let tempDate = items.date;
-    tempDate = new Date(tempDate.replace("-", ","));
+
+    const [year, month, day] = tempDate.split("-").map(Number);
+    tempDate = new Date(year, month - 1, day);
 
     let returnData = Object.assign({}, items, { date: tempDate });
 
@@ -213,6 +216,11 @@ const article = () => {
   }
 
   async function fetchData() {
+    console.log(
+      window.location.pathname.substring(
+        window.location.pathname.lastIndexOf("/") + 1
+      )
+    );
     selectedID = window.location.pathname.substring(
       window.location.pathname.lastIndexOf("/") + 1
     );
@@ -231,51 +239,21 @@ const article = () => {
       let itemValue = [];
       let dateStorage = [];
       let mSpace = "-";
+      let dSpace = "-";
       if (toDateTime(data.date.seconds).getMonth() + 1 < 10) mSpace = "-0";
+      if (toDateTime(data.date.seconds).getDate() + 1 < 10) dSpace = "-0";
 
       data.date =
         toDateTime(data.date.seconds).getFullYear() +
         mSpace +
         (toDateTime(data.date.seconds).getMonth() + 1) +
-        "-" +
+        dSpace +
         toDateTime(data.date.seconds).getDate();
 
       console.log(data.date);
-      // data.map((elements) =>
-      //   dateStorage.push(
-      //     toDateTime(elements.date.seconds).getFullYear() +
-      //       "-" +
-      //       (toDateTime(elements.date.seconds).getMonth() + 1) +
-      //       "-" +
-      //       toDateTime(elements.date.seconds).getDate()
-      //   )
-      // );
 
-      // for (const [index, value] of data.entries()) {
-      //   data[index].date = dateStorage[index];
-      // }
-
-      // let elementID = window.location.pathname.substring(
-      //   window.location.pathname.lastIndexOf("/") + 1
-      // );
-
-      // datas[1].map((elements, index) => {
-      //   if (elementID == elements) {
-      //     data = data[index];
-      //   }
-      // });
-
-      // console.log(data);
-      // setInfo((oldArray) => [...oldArray, ...data]);
-      // setInfo(data)
       setIDSelect(selectedID);
       setItems(data);
-      // setID((oldArray) => [...oldArray, ...datas[1]]);
-
-      // console.log(data.date);
-      // console.log(datas[1]);
-      // console.log(info);
-      // console.log(ids);
     }
   }
 
@@ -363,13 +341,11 @@ const article = () => {
                 <Button variant="primary" type="submit">
                   Submit Changes
                 </Button>
-                <Button
-                  className="m-3"
-                  variant="secondary"
-                  href={"../WarehouseList"}
-                >
-                  Go Back
-                </Button>
+                <Link href="../WarehouseList">
+                  <Button className="m-3" variant="secondary">
+                    Go Back
+                  </Button>
+                </Link>
               </Form>
             </Card.Body>
           </Card>

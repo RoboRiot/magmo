@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from 'next/router';
-import Link from 'next/link';
+import { useRouter } from "next/router";
+import Link from "next/link";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Form, Button, Card, Container, Table, NavDropdown, FormControl } from "react-bootstrap";
+import {
+  Form,
+  Button,
+  Card,
+  Container,
+  Table,
+  NavDropdown,
+  FormControl,
+} from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
 import Modal from "react-bootstrap/Modal";
@@ -43,10 +51,14 @@ function LoadingButton(type, name, route) {
     //   {isLoading.name ? "Loading…" : name}
     // </a>
     <Link href={`/${route}`}>
-    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
-      {isLoading.name ? "Loading…" : name}
-    </a>
-  </Link>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading.name}
+        onClick={!isLoading.name ? handleClick : null}
+      >
+        {isLoading.name ? "Loading…" : name}
+      </a>
+    </Link>
   );
 }
 
@@ -76,7 +88,6 @@ export default function WarehouseList() {
   const router = useRouter();
 
   useEffect(() => {
-    
     if (backupInfo.length > 0 && search) {
       // Call the function here
       collectDataFromSearch();
@@ -94,11 +105,10 @@ export default function WarehouseList() {
       // console.log(input, type);
       // setSelect(type);
       // setSearch(input);
-      
+
       searchFilter();
-    }
-    else{
-      console.log("no input from previous page")
+    } else {
+      console.log("no input from previous page");
     }
     // }, [router.query]);
   };
@@ -117,11 +127,11 @@ export default function WarehouseList() {
 
   function searchFilter() {
     var temp = [];
-    console.log("entered search filter")
-    console.log(backupInfo)
+    console.log("entered search filter");
+    console.log(backupInfo);
     backupInfo.map((item) => {
       console.log(select);
-      console.log(search)
+      console.log(search);
       if (select == "Name") {
         if (item.name.toLowerCase().indexOf(search.toLowerCase()) > -1) {
           temp.push(item);
@@ -250,10 +260,10 @@ export default function WarehouseList() {
   // if (typeof window !== "undefined") {
   useEffect(() => {
     // window.addEventListener("load", () => {
-      console.log("enter 1");
-      fetchData();
-      // displayData();
-      console.log("not too bad")
+    console.log("enter 1");
+    fetchData();
+    // displayData();
+    console.log("not too bad");
     // });
     // }
   }, [router.route]); // runs every time `router.route` changes
@@ -330,8 +340,6 @@ export default function WarehouseList() {
     console.log(info);
     console.log(ids);
     // router.reload();
-
-    
   }
 
   const rowSelect = (id) => {
@@ -341,7 +349,7 @@ export default function WarehouseList() {
   const [gPos, setGPos] = useState();
   let [gIde, setGIde] = useState();
 
-  const checkDelete = (pos, ide, name) => {
+  const checkDelete = async (pos, ide, name) => {
     setDItem(name);
     setGPos(pos);
     setGIde(ide);
@@ -349,7 +357,7 @@ export default function WarehouseList() {
     handleShow();
   };
 
-  const deleteItem = () => {
+  const deleteItem = async () => {
     console.log(gPos + "," + gIde);
     setInfo(info.filter((o, i) => gPos !== i));
     const cityRef = db.collection("Test").doc(gIde).delete();
