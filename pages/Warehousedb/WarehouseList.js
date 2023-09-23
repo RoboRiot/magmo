@@ -193,9 +193,9 @@ export default function WarehouseList() {
   }
 
   //////sorting items//////
-  const labelBase = ["name", "date", "w/o", "p/n", "s/n", "desc"];
-  const labelBaseNames = ["name", "date", "wo", "pn", "sn", "desc"];
-  const sortCheckBase = [false, false, false, false, false, false];
+  const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
+  const labelBaseNames = ["name", "date", "wo", "pn", "sn"];
+  const sortCheckBase = [false, false, false, false, false];
   const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const hold = "↓↑";
@@ -458,13 +458,13 @@ export default function WarehouseList() {
                         {" "}
                         {item.sn}{" "}
                       </td>
-                      <td
+                      {/* <td
                         style={{ textAlign: "center", cursor: "default" }}
                         onClick={() => rowSelect(ids[index])}
                       >
                         {" "}
                         {item.desc}{" "}
-                      </td>
+                      </td> */}
 
                       {/* <td>
                         {LoadingButton(
