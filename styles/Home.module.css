@@ -164,4 +164,10 @@
             text-overflow: ellipsis;
         }
         
+        .auto-grow-textarea {
+          width: 100%;             /* Use the full width of its container */
+          overflow-y: auto;        /* Show vertical scrollbar when necessary */
+          resize: none;            /* Disallow manual resizing */
+          max-height: calc(1.5em * 10); /* Set max height for 10 lines, assuming 1.5em line height */
+        }
      

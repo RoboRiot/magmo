@@ -236,7 +236,7 @@ export default function dashboard() {
                   <Form.Group as={Col} controlId="wo">
                     <Form.Label>Work Order</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["wo"]}
                       onChange={woChangeHandler}
                     />
@@ -247,7 +247,7 @@ export default function dashboard() {
                   <Form.Group as={Col} controlId="pn">
                     <Form.Label>Product Number</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["pn"]}
                       onChange={pnChangeHandler}
                     />
@@ -256,7 +256,7 @@ export default function dashboard() {
                   <Form.Group as={Col} controlId="sn">
                     <Form.Label>Serial Number</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["sn"]}
                       onChange={snChangeHandler}
                     />

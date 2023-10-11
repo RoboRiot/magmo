@@ -1,11 +1,18 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useRouter } from "next/router";
 import { Form, Button, Card, Container } from "react-bootstrap";
-import styles from "../../styles/Home.module.css";
-import { QrReader } from "react-qr-reader";
+
+// import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import dynamic from 'next/dynamic';
+
+// This will only load the component on the client-side.
+const BarcodeScannerComponent = dynamic(
+  () => import('react-qr-barcode-scanner'),
+  { ssr: false }
+);
 
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
@@ -39,18 +46,16 @@ function LoadingButton(type, name, route) {
     </Link>
   );
 }
-var test = "blank";
 
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState("No result");
   const [cameraFacing, setCameraFacing] = useState("environment"); // default to back camera
-
+  const [scanning, setScanning] = useState(true);
   const router = useRouter();
 
   const readQR = (qrData) => {
     console.log("this is the qr data: " + qrData);
-    // router.push(`item/${qrData}`);
     router.push("item/" + qrData);
     return qrData;
   };
@@ -65,29 +70,25 @@ export default function dashboard() {
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
-              <div class="d-grid gap-3">
-                <QrReader
-                  onResult={(result, error) => {
-                    if (!!result) {
-                      console.log("found!!");
-                      setData(result?.text);
+              <div className="d-grid gap-3">
+                <BarcodeScannerComponent
+                  width="100%"
+                  height={300}
+                  onUpdate={(err, result) => {
+                    if (result && result.text !== "Not%20Found") {
+                      setData(result.text);
+                      setScanning(false); // Stop scanning once a valid barcode is found
                     }
-
-                    // if (!!error) {
-                    //   console.log("empty")
-                    //   console.info(error);
-                    // }
                   }}
-                  constraints={{ facingMode: cameraFacing }} // Use the state to set the camera facing mode
-                  style={{ width: "100%" }}
+                  facingMode={cameraFacing}  // Add this to control the camera
                 />
                 <Button
-                  variant={data === "No result" ? "danger" : "sucess"}
+                  variant={data === "No result" ? "danger" : "success"}
                   disabled={data === "No result"}
                 >
                   {data === "No result"
-                    ? "No QR located"
-                    : "QR located! " + readQR(data)}
+                    ? "No code located"
+                    : "Code located! " + readQR(data)}
                 </Button>
                 <button
                   onClick={() =>
