@@ -293,7 +293,7 @@ const article = () => {
                   <Form.Group as={Col} controlId="wo">
                     <Form.Label>Work Order</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["wo"]}
                       onChange={woChangeHandler}
                     />
@@ -304,7 +304,7 @@ const article = () => {
                   <Form.Group as={Col} controlId="pn">
                     <Form.Label>Product Number</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["pn"]}
                       onChange={pnChangeHandler}
                     />
@@ -313,7 +313,7 @@ const article = () => {
                   <Form.Group as={Col} controlId="sn">
                     <Form.Label>Serial Number</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={items["sn"]}
                       onChange={snChangeHandler}
                     />
@@ -332,7 +332,8 @@ const article = () => {
                 <Form.Group className="mb-3" controlId="desc">
                   <Form.Label>Description</Form.Label>
                   <Form.Control
-                    type="text"
+                    as="textarea" // Convert it to textarea
+                    className="auto-grow-textarea"
                     value={items["desc"]}
                     onChange={descChangeHandler}
                   />
