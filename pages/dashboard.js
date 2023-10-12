@@ -12,39 +12,51 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
-  const [isLoading, setLoading] = useState({ name: false });
+function LoadingButton( type, name, route ) {
+  const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isLoading.name) {
+    if (isLoading) {
       simulateNetworkRequest().then(() => {
-        setLoading({ name: false });
+        setLoading(false);
       });
     }
-  }, [isLoading.name]);
+  }, [isLoading]);
 
-  const handleClick = () => setLoading({ name: true });
+  const handleClick = () => setLoading(true);
 
-  return (
-    // <a
-    //   class={"btn btn-" + type}
-    //   variant={type}
-    //   href={"/" + route}
-    //   disabled={isLoading.name}
-    //   onClick={!isLoading.name ? handleClick : null}
-    // >
-    //   {isLoading.name ? "Loading…" : name}
-    // </a>
-    <a
-      href={route}
-      className={`btn btn-${type}`}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
-      {isLoading.name ? "Loading…" : name}
-    </a>
-  );
+  
+  // Guard against falsy route values
+  if (!route) return null;
+
+  const isExternal = route.startsWith('http://') || route.startsWith('https://');
+
+  if (isExternal) {
+    return (
+      <a
+        href={route}
+        className={`btn btn-${type}`}
+        disabled={isLoading}
+        onClick={!isLoading ? handleClick : null}
+      >
+        {isLoading ? "Loading…" : name}
+      </a>
+    );
+  } else {
+    return (
+      <Link href={route}>
+        <a
+          className={`btn btn-${type}`}
+          disabled={isLoading}
+          onClick={!isLoading ? handleClick : null}
+        >
+          {isLoading ? "Loading…" : name}
+        </a>
+      </Link>
+    );
+  }
 }
+
 
 export default function dashboard() {
   const { signOut } = useAuth();
