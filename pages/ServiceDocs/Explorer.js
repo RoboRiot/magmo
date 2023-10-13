@@ -51,6 +51,7 @@ export default function dashboard() {
   let baseURL = "";
 
   const [info, setInfo] = useState([{}]);
+  const [items, setItems] = useState([{}]);
 
   useEffect(() => {
     fetchData("");
@@ -95,7 +96,11 @@ export default function dashboard() {
     console.log("File URLs:", fileURLs);
     console.log("Folder Names:", folderNames);
 
-    const toSend = folderNames.map((name) => ({ folder: name }));
+    const toSend = {
+      folders: folderNames.map((name) => ({ folder: name })),
+      files: fileNames.map((name) => ({ file: name })),
+    };
+
     setInfo(toSend);
   };
 
@@ -139,7 +144,7 @@ export default function dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {info.map((item, index) => (
+                    {info.folders && info.folders.map((item, index) => (
                       <tr
                         class="clickable-row"
                         key={index}
@@ -149,13 +154,50 @@ export default function dashboard() {
                           style={{ textAlign: "center", cursor: "default" }}
                           onClick={() => fetchData(item.folder)}
                         >
-                          {item.folder}
+                          {item}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </Table>
-
+                <Table
+                  style={{ width: "100%" }}
+                  striped
+                  bordered
+                  hover
+                  size="sm"
+                >
+                  <thead>
+                    <tr>
+                      {labels.map((item, index) => (
+                        <th
+                          style={hoverStyle(index)}
+                          onMouseOver={() => setHoverIndex(index)}
+                          onMouseOut={() => setHoverIndex(null)}
+                          onClick={() => sortCheckAll(index)}
+                        >
+                          {item}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {info.files && info.files.map((item, index) => (
+                      <tr
+                        class="clickable-row"
+                        key={index}
+                        // onClick={() => rowSelect(ids[index])}
+                      >
+                        <td
+                          style={{ textAlign: "center", cursor: "default" }}
+                          onClick={() => fetchData(item.folder)}
+                        >
+                          {item}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
                 <Button variant="link" onClick={signOut}>
                   Sign out
                 </Button>
