@@ -1,0 +1,25 @@
+.table-custom {
+    width: 100%;
+    margin-bottom: 20px; /* Spacing between tables */
+    background-color: red !important;
+  }
+  
+  .table-custom thead th {
+    background-color: #f5f5f5; /* Light grey background for headers */
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Transition effect for hover */
+  }
+  
+  .table-custom thead th:hover {
+    background-color: #e0e0e0; /* Slightly darker grey for hover effect */
+  }
+  
+  .table-custom tbody tr.clickable-row {
+    cursor: pointer;
+  }
+  
+  .table-custom tbody td {
+    text-align: center;
+    cursor: default;
+  }
