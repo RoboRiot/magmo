@@ -26,14 +26,15 @@ function LoadingButton(type, name, route) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <a
-      href={route}
-      className={`btn btn-${type}`}
-      disabled={isLoading.name}
-      onClick={!isLoading.name ? handleClick : null}
-    >
-      {isLoading.name ? "Loading…" : name}
-    </a>
+    <Link href={`/${route}`}>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading.name}
+        onClick={!isLoading.name ? handleClick : null}
+      >
+        {isLoading.name ? "Loading…" : name}
+      </a>
+    </Link>
   );
 }
 
@@ -61,7 +62,7 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Service Docs</h2>
               <div class="d-grid gap-3">
-                {LoadingButton("primary", "Explorer", "./Explorer")}
+                {LoadingButton("primary", "Explorer", "ServiceDocs/Explorer")}
 
                 {LoadingButton(
                   "secondary",
