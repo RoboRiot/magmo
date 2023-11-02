@@ -59,6 +59,7 @@ function LoadingButton(type, name, route) {
 
 export default function dashboard() {
   const [items, setItems] = useState({});
+  const today = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
     console.log("submit");
@@ -67,6 +68,27 @@ export default function dashboard() {
   const dateChangeHandler = (event) => {
     setItems(Object.assign({}, items, { date: event.target.value }));
   };
+
+  //Buttons generate and function
+  // Function to generate buttons
+  function generateTimeButtons() {
+    const buttonCount = 5; // for generating 5 buttons
+    return Array.from({ length: buttonCount }, (_, index) => (
+        <div className="my-2" key={index}>
+            <Button 
+                variant={index % 2 === 0 ? "primary" : "secondary"} 
+                onClick={() => buttonClicked(index + 5)}
+            >
+                {index + 5}:00 PM - {index + 6}:00 PM
+            </Button>
+        </div>
+    ));
+}
+
+
+  function buttonClicked(time) {
+    alert("Button for " + time + ":00 PM clicked!");
+  }
 
   //   const { signOut } = useAuth();
   return (
@@ -83,16 +105,18 @@ export default function dashboard() {
               <Form onSubmit={handleSubmit}>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="date">
-                    <Form.Label>Date</Form.Label>
+                    {/* <Form.Label>Date</Form.Label> */}
                     <Form.Control
                       type="date"
                       value={items["date"]}
                       onChange={dateChangeHandler}
+                      min={today}
                     />
                   </Form.Group>
                 </Row>
+                {/* Buttons generated using loop */}
+                {items["date"] && generateTimeButtons()}
               </Form>
-              
             </div>
           </Card.Body>
         </Card>
