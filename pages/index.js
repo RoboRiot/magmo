@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import React, { useEffect, useState, useRef } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
+// import 'bootstrap/dist/css/bootstrap.min.css';
 import { Form, Button, Card, Container, Alert } from 'react-bootstrap'
 import styles from "../styles/Home.module.css"
 
