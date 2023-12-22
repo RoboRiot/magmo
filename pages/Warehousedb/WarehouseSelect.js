@@ -160,37 +160,11 @@ export default function WarehouseSelect() {
                     Search
                   </Button>
                 </Form>
-
-                {/* <Form className="d-flex">
-                  <FormControl
-                    type="search"
-                    placeholder="Search"
-                    className="me-2"
-                    aria-label="Search"
-                  />
-                  <NavDropdown
-                    title={select}
-                    id="collasible-nav-dropdown"
-                    show={show}
-                    onMouseEnter={showDropdown}
-                    onMouseLeave={hideDropdown}
-                  >
-                    <NavDropdown.Item href="" onClick={() => setSelect("Name")}>
-                      Name
-                    </NavDropdown.Item>
-                    <NavDropdown.Item href="" onClick={() => setSelect("Date")}>
-                      Date
-                    </NavDropdown.Item>
-                    <NavDropdown.Item
-                      href=""
-                      onClick={() => setSelect("Work Order")}
-                    >
-                      Work Order
-                    </NavDropdown.Item>
-                    
-                  </NavDropdown>
-                  <Button variant="info">Search</Button>
-                </Form> */}
+                {LoadingButton(
+                  "secondary",
+                  "Back <-",
+                  "dashboard"
+                )}
               </div>
             </Card.Body>
           </Card>
