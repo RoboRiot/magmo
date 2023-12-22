@@ -92,6 +92,12 @@ export default function WarehouseSelect() {
                   "Warehousedb/WarehouseList"
                 )}
 
+                 {LoadingButton(
+                  "primary",
+                  "Client List",
+                  "Warehousedb/ClientList"
+                )}
+
                 <Form className="d-flex">
                   <FormControl
                     type={showListSearch}
