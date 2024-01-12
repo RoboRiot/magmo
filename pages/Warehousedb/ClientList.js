@@ -49,7 +49,7 @@ export default function ClientList() {
 
   // Handler for row selection (navigation)
   const rowSelect = (id) => {
-    router.push("item/" + id);
+    router.push("client/" + id);
   };
 
   // Handler for checking deletion confirmation
@@ -96,7 +96,6 @@ export default function ClientList() {
                     <th>Name</th>
                     <th>Company</th>
                     <th>Location</th>
-                    <th>Machines</th>
                     <th>Last PM</th>
                     <th>Next PM</th>
                     <th>Delete</th>
@@ -108,7 +107,6 @@ export default function ClientList() {
                       <td onClick={() => rowSelect(client.id)}>{client.Name}</td>
                       <td onClick={() => rowSelect(client.id)}>{client.Company}</td>
                       <td onClick={() => rowSelect(client.id)}>{client.Location}</td>
-                      <td onClick={() => rowSelect(client.id)}>{client.Machines.join(", ")}</td>
                       <td onClick={() => rowSelect(client.id)}>{client.LastPM}</td>
                       <td onClick={() => rowSelect(client.id)}>{client.NextPM}</td>
                       <td>
