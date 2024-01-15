@@ -1,15 +1,15 @@
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { Form, Button, Card, Container, Row, Col, Table } from "react-bootstrap";
-import Link from "next/link";
 import firebase from "../../../../context/Firebase"; // Adjust the path as needed
 import LoggedIn from "../../../LoggedIn";
 
 const ClientComponent = () => {
     const router = useRouter();
     const { id } = router.query;
-    const [client, setClient] = useState({ Company: '', Name: '', Location: '', LastPM: '',NextPM: '', Machines: [] });
+    const [client, setClient] = useState({ Company: '', Name: '', Location: '', LastPM: '', NextPM: '', Machines: [] });
     const [editMode, setEditMode] = useState(false);
+    const [machineRefs, setMachineRefs] = useState([]);
 
     useEffect(() => {
         if (id) {
@@ -18,12 +18,12 @@ const ClientComponent = () => {
                 .then(async doc => {
                     if (doc.exists) {
                         const clientData = doc.data();
-                        // Fetch machine data for each reference in the Machines array
-                        const machines = await Promise.all(clientData.Machines.map(async ref => {
+                        const machineReferences = clientData.Machines;
+                        setMachineRefs(machineReferences);
+                        const machines = await Promise.all(machineReferences.map(async ref => {
                             const machineDoc = await ref.get();
                             return machineDoc.exists ? machineDoc.data() : null;
                         }));
-                        // Set the client data along with the fetched machines
                         setClient({ ...clientData, Machines: machines.filter(m => m) });
                     }
                 })
@@ -31,48 +31,49 @@ const ClientComponent = () => {
         }
     }, [id]);
 
-    // Handle field changes
     const handleChange = (event) => {
         const { name, value } = event.target;
         setClient({ ...client, [name]: value });
     };
 
-    // Add new machine
     const addMachine = () => {
         const newId = 'AIS' + Math.floor(100000 + Math.random() * 900000);
         router.push(`../Machines/${newId}`);
     };
 
-    // Delete a machine
     const deleteMachine = (machineIndex) => {
         const newMachines = client.Machines.filter((_, index) => index !== machineIndex);
+        const newMachineRefs = machineRefs.filter((_, index) => index !== machineIndex);
         setClient({ ...client, Machines: newMachines });
+        setMachineRefs(newMachineRefs);
     };
 
-    // Submit changes to the database
     const handleSubmit = () => {
         const db = firebase.firestore();
-        db.collection('Client').doc(id).set(client)
+        const clientDataToSave = {
+            ...client,
+            Machines: machineRefs // Save only the references
+        };
+        db.collection('Client').doc(id).set(clientDataToSave)
             .then(() => console.log('Client updated successfully'))
             .catch(error => console.error('Error updating client:', error));
     };
 
-    //change date format DB to Form
     function convertDateToInputFormat(dateStr) {
         if (!dateStr) return '';
-    
         const [month, day, year] = dateStr.split('/');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
-    //change date format Form to DB
     function convertInputDateBack(dateStr) {
         if (!dateStr) return '';
-    
         const [year, month, day] = dateStr.split('-');
         return `${month}/${day}/${year}`;
     }
-    
+
+    const handleBack = () => {
+        router.back();
+    };
 
     return (
         <LoggedIn>
@@ -124,7 +125,7 @@ const ClientComponent = () => {
                                         <Form.Control
                                             type="date"
                                             name="LastPM"
-                                            value={new Date(convertDateToInputFormat(client.LastPM))}
+                                            value={convertDateToInputFormat(client.LastPM)}
                                             onChange={handleChange}
                                             readOnly={!editMode}
                                         />
@@ -136,12 +137,13 @@ const ClientComponent = () => {
                                         <Form.Control
                                             type="date"
                                             name="NextPM"
-                                            value={new Date(client.NextPM)}
+                                            value={convertDateToInputFormat(client.NextPM)}
                                             onChange={handleChange}
                                             readOnly={!editMode}
                                         />
                                     </Col>
                                 </Form.Group>
+
                                 <Table striped bordered hover>
                                     <thead>
                                         <tr>
@@ -162,11 +164,21 @@ const ClientComponent = () => {
                                         ))}
                                     </tbody>
                                 </Table>
-                                <div className="d-flex justify-content-between pb-3">
-                                    <Button variant="primary" onClick={addMachine} className="me-2">Add Machine</Button>
-                                    <Button variant="secondary" onClick={() => setEditMode(!editMode)} className="me-2">{editMode ? 'Lock Fields' : 'Edit Fields'}</Button>
-                                    <Button variant="success" onClick={handleSubmit}>Submit Changes</Button>
-                                </div>
+
+                                <Row>
+                                    <Col xs={6} className="mb-2">
+                                        <Button variant="primary" onClick={addMachine}>Add Machine</Button>
+                                    </Col>
+                                    <Col xs={6} className="mb-2">
+                                        <Button variant="secondary" onClick={() => setEditMode(!editMode)}>{editMode ? 'Lock Fields' : 'Edit Fields'}</Button>
+                                    </Col>
+                                    <Col xs={6}>
+                                        <Button variant="info" onClick={handleBack}>Back</Button>
+                                    </Col>
+                                    <Col xs={6}>
+                                        <Button variant="success" onClick={handleSubmit}>Submit Changes</Button>
+                                    </Col>
+                                </Row>
                             </Form>
                         </Card.Body>
                     </Card>
