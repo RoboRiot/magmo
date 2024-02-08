@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from 'next/router';
 import "bootstrap/dist/css/bootstrap.min.css";
+import styles from "../../styles/Home.module.css";
 import {
   Form,
   Button,
@@ -9,8 +10,6 @@ import {
   FormControl,
   NavDropdown,
 } from "react-bootstrap";
-import styles from "../../styles/Home.module.css";
-
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
 import Link from 'next/link';
@@ -96,6 +95,11 @@ export default function WarehouseSelect() {
                   "primary",
                   "Client List",
                   "Warehousedb/ClientList"
+                )}
+                {LoadingButton(
+                  "secondary",
+                  "New Search",
+                  "../NewSearch/mainSearch"
                 )}
 
                 <Form className="d-flex">
