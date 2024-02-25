@@ -91,6 +91,12 @@ export default function dashboard() {
                   "Warehousedb/WarehouseSelect"
                 )}
 
+                {LoadingButton(
+                  "secondary",
+                  "Interview",
+                  "schedule/interview"
+                )}
+
                 <Button variant="link" onClick={signOut}>
                   Sign out
                 </Button>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Button, Card, Container, Table } from "react-bootstrap";
+import {Button, Card, Container, Table } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 import Modal from "react-bootstrap/Modal";
 import { useAuth } from "../../context/AuthUserContext";
