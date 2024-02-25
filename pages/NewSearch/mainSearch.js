@@ -26,7 +26,7 @@ export default function mainSearch() {
               <ButtonGroup>
                 <div class="dropdown">
                   <button
-                    class="btn btn-secondary dropdown-toggle"
+                    class="btn btn-primary dropdown-toggle"
                     type="button"
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
@@ -52,7 +52,7 @@ export default function mainSearch() {
                   </ul>
                 </div>
 
-                <div class="dropdown">
+                <div class="dropdown m-2">
                   <button
                     class="btn btn-secondary dropdown-toggle"
                     type="button"

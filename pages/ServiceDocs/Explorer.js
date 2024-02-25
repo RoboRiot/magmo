@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
-
+import dynamic from 'next/dynamic';
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Form, Button, Card, Container, Table } from "react-bootstrap";
 import styles from "../../styles/Home.module.css";
 
-import PdfViewer from '../../components/PdfViewer';
+// import PdfViewer from '../../components/PdfViewer';
 
 import Link from "next/link";
 
@@ -13,6 +13,11 @@ import { useAuth } from "../../context/AuthUserContext";
 import firebase from "../../context/Firebase";
 
 import LoggedIn from "./../LoggedIn";
+
+const DynamicPdfViewer = dynamic(() => import('../../components/PdfViewer'), {
+  ssr: false, // This disables server-side rendering for PdfViewer
+});
+
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -175,7 +180,7 @@ export default function dashboard() {
 
                 {selectedFile ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                    <PdfViewer file={selectedFile} />
+                    <DynamicPdfViewer file={selectedFile} />
                     <button
                       style={{
                         position: 'absolute',
