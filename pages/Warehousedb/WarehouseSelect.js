@@ -101,6 +101,11 @@ export default function WarehouseSelect() {
                   "New Search",
                   "../NewSearch/mainSearch"
                 )}
+                {LoadingButton(
+                  "primary",
+                  "BlueFolder",
+                  "../BlueFolder/bluefolder"
+                )}
 
                 <Form className="d-flex">
                   <FormControl
