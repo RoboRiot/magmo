@@ -1,16 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/router";
-import {
-  Form,
-  Button,
-  Card,
-  Container,
-  FormControl,
-  NavDropdown,
-  ButtonGroup,
-} from "react-bootstrap";
-import { useAuth } from "../../context/AuthUserContext";
-import LoggedIn from "../LoggedIn";
+import React from 'react';
+import { Container, Card, Row, Col, InputGroup, Dropdown, FormControl } from 'react-bootstrap';
+import LoggedIn from '../LoggedIn';
 
 export default function mainSearch() {
   return (
@@ -19,67 +9,39 @@ export default function mainSearch() {
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
       >
-        <div className="w-100" style={{ maxWidth: "400px" }}>
-          <Card className="align-items-center justify-content-center">
+        <div className="w-100" style={{ maxWidth: "600px" }}>
+          <Card>
             <Card.Body>
               <h2 className="text-center mb-4">New Search</h2>
-              <ButtonGroup>
-                <div class="dropdown">
-                  <button
-                    class="btn btn-primary dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Dropdown button one
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Action
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Another action
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Something else here
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                <div class="dropdown m-2">
-                  <button
-                    class="btn btn-secondary dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Dropdown button two
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Action
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Another action
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        Something else here
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </ButtonGroup>
+              <Row>
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Col md={4} className="mb-3">
+                    <InputGroup>
+                      <InputGroup.Text>{`Dropdown ${idx + 1}`}</InputGroup.Text>
+                      <Dropdown>
+                        <Dropdown.Toggle
+                          variant="outline-secondary"
+                          id={`dropdown-button-${idx + 1}`}
+                          className="w-100"
+                        >
+                          Select Option
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu className="w-100">
+                          <FormControl
+                            autoFocus
+                            className="mx-3 my-2 w-auto"
+                            placeholder="Type to search"
+                            onChange={(e) => console.log(e.target.value)}
+                          />
+                          <Dropdown.Item eventKey="1">Action</Dropdown.Item>
+                          <Dropdown.Item eventKey="2">Another action</Dropdown.Item>
+                          <Dropdown.Item eventKey="3">Something else</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </InputGroup>
+                  </Col>
+                ))}
+              </Row>
             </Card.Body>
           </Card>
         </div>

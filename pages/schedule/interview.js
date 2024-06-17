@@ -136,17 +136,20 @@ export default function interview() {
   function generateTimeButtons() {
     console.log(dates)
     const buttonCount = 10;
+    const selectedDate = items["date"]; // Ensure this date format matches your database
+
     return (
       <div className="d-flex flex-wrap">
         {Array.from({ length: buttonCount }, (_, index) => {
           const timeSlot = `${Math.floor(index * 0.5 + 5)}:${index % 2 === 0 ? "00" : "30"} PM - ${Math.floor(index * 0.5 + 5.5)}:${index % 2 === 0 ? "30" : "00"} PM`;
-          const isDisabled = dates.some(date => date.Position === index);
+          // Adjust this check to also consider the date
+          const isDisabled = dates.some(date => date.Position === index && date.date === selectedDate);
           return (
             <div className="col-6 my-2" key={index}>
               <Button
                 variant={index % 2 === 0 ? "primary" : "secondary"}
                 onClick={() => handleModalShow(index)}
-                disabled={isDisabled} // Disable button based on position match
+                disabled={isDisabled} // Disable button based on position and date match
               >
                 {timeSlot}
               </Button>
@@ -155,7 +158,8 @@ export default function interview() {
         })}
       </div>
     );
-  }
+}
+
 
   function buttonClicked(pos) {
     alert("Pos: " + pos);
