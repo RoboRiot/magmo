@@ -1,0 +1,47 @@
+/* MainSearch.module.css */
+
+.divider {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+  }
+  
+  .tableContainer {
+    position: relative;
+    height: 600px;
+  }
+  
+  .scrollableTable {
+    max-height: 540px; /* Adjusted to leave space for the search bar and buttons */
+    overflow-y: auto; /* Enable scroll for the table body */
+  }
+  
+  .stickyHeader {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+  
+  .searchContainer {
+    padding-top: 10px;
+    background: white;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+  }
+  
+  .buttonGroup {
+    display: flex;
+    width: 100%;
+  }
+  
+  .flexButton {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: calc(12px + 0.5vw);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
