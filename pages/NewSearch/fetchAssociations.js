@@ -1,21 +1,18 @@
+// fetchAssociations.js
 import firebase from "../../context/Firebase";
 
-// Fetch parts with associated machine and client data
-// Fetch parts with associated machine and client data
 export async function fetchPartsWithMachineData() {
   const db = firebase.firestore();
   const partsSnapshot = await db.collection("Test").get();
   const parts = await Promise.all(
     partsSnapshot.docs.map(async (partDoc) => {
       const partData = partDoc.data();
-
       if (
         partData.Machine &&
         partData.Machine instanceof firebase.firestore.DocumentReference
       ) {
         const machineDoc = await partData.Machine.get();
         partData.machineData = machineDoc.exists ? machineDoc.data() : {};
-
         if (partData.machineData.client) {
           const clientDoc = await partData.machineData.client.get();
           partData.machineData.Client = clientDoc.exists
@@ -31,39 +28,44 @@ export async function fetchPartsWithMachineData() {
   return parts;
 }
 
-// Fetch all clients and filter based on selected OEM or Modality
 export async function fetchClients(selectedOEM, selectedModality) {
   const db = firebase.firestore();
   const clientsSnapshot = await db.collection("Client").get();
+  const clients = clientsSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 
-  const clients = await Promise.all(
-    clientsSnapshot.docs.map(async (doc) => {
-      const clientData = doc.data();
-
-      const machines = await Promise.all(
-        clientData.machines.map(async (machineRef) => {
+  // Filter clients based on OEM and Modality if selected
+  if (selectedOEM || selectedModality) {
+    const filteredClients = [];
+    for (const client of clients) {
+      let match = true;
+      if (selectedOEM || selectedModality) {
+        for (const machineRef of client.machines) {
           const machineDoc = await machineRef.get();
-          return machineDoc.exists ? machineDoc.data() : {};
-        })
-      );
-
-      const hasOEM = machines.some(
-        (machine) => selectedOEM && machine.OEM === selectedOEM
-      );
-      const hasModality = machines.some(
-        (machine) => selectedModality && machine.Modality === selectedModality
-      );
-      console.log(hasOEM);
-      if ((!selectedOEM || hasOEM) && (!selectedModality || hasModality)) {
-        return { id: doc.id, ...clientData };
+          const machineData = machineDoc.data();
+          if (
+            (selectedOEM && machineData.OEM === selectedOEM) ||
+            (selectedModality && machineData.Modality === selectedModality)
+          ) {
+            match = true;
+            break;
+          } else {
+            match = false;
+          }
+        }
       }
-    })
-  );
+      if (match) {
+        filteredClients.push(client);
+      }
+    }
+    return filteredClients;
+  }
 
-  return clients.filter((client) => client !== undefined); // Filter out undefined clients
+  return clients;
 }
 
-// Fetch models based on selected filters and ensure uniqueness
 export async function fetchModels(
   selectedOEM,
   selectedModality,
@@ -71,8 +73,7 @@ export async function fetchModels(
 ) {
   const db = firebase.firestore();
   const machinesSnapshot = await db.collection("Machine").get();
-  const models = {};
-  const uniqueModels = [];
+  const models = new Set();
 
   await Promise.all(
     machinesSnapshot.docs.map(async (machineDoc) => {
@@ -88,17 +89,15 @@ export async function fetchModels(
           isValid = false;
       }
 
-      if (isValid && machineData.Model && !models[machineData.Model]) {
-        models[machineData.Model] = true;
-        uniqueModels.push(machineData.Model);
+      if (isValid) {
+        models.add(machineData.Model);
       }
     })
   );
 
-  return uniqueModels;
+  return Array.from(models);
 }
 
-// Format Firestore timestamp to date string
 export function formatDate(timestamp) {
   if (!timestamp) return "";
   const date = timestamp.toDate();
