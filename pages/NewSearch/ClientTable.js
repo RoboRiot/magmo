@@ -2,7 +2,12 @@ import React from "react";
 import { Table, Button } from "react-bootstrap";
 import styles from "../../styles/ClientTable.module.css";
 
-export default function ClientTable({ clients, onSelectClient, onInfoClick }) {
+export default function ClientTable({
+  clients,
+  onSelectClient,
+  onInfoClick,
+  clearSelection,
+}) {
   return (
     <Table striped bordered hover size="sm" className={styles.clientTable}>
       <thead>
@@ -13,6 +18,13 @@ export default function ClientTable({ clients, onSelectClient, onInfoClick }) {
         </tr>
       </thead>
       <tbody>
+        <tr>
+          <td colSpan="3" style={{ textAlign: "center" }}>
+            <Button variant="secondary" onClick={clearSelection}>
+              Clear Selection
+            </Button>
+          </td>
+        </tr>
         {clients.map((client) => (
           <tr key={client.id}>
             <td>{client.name}</td>

@@ -18,13 +18,18 @@ import { useRouter } from "next/router";
 import {
   fetchPartsWithMachineData,
   fetchClients,
+  fetchModels,
   formatDate,
 } from "./fetchAssociations"; // Import utility functions
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
 import ClientTable from "./ClientTable"; // Import ClientTable component
+import ModelTable from "./ModelTable";
 import PartTable from "./PartTable"; // Import PartTable component
 import styles from "../../styles/MainSearch.module.css"; // Import the new CSS file
+
+const CLIENT_WAREHOUSE = "igor-house";
+const CLIENT_UNASSIGNED = "unassigned";
 
 // Simulates a network request delay
 function simulateNetworkRequest() {
@@ -78,6 +83,7 @@ export default function MainSearch() {
   const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(null);
 
   // Fetch data on component mount and route change
   useEffect(() => {
@@ -102,13 +108,13 @@ export default function MainSearch() {
   // Filter items based on search criteria
   function searchFilter() {
     const temp = backupInfo.filter((item) => {
-      console.log(selectedOEM);
-      console.log(item);
       if (item.machineData) {
         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
         if (selectedModality && item.machineData.Modality !== selectedModality)
           return false;
         if (selectedClient && item.machineData.Client !== selectedClient)
+          return false;
+        if (selectedModel && item.machineData.Model !== selectedModel)
           return false;
       }
 
@@ -222,19 +228,20 @@ export default function MainSearch() {
 
   useEffect(() => {
     searchFilter();
-  }, [selectedOEM, selectedModality, selectedClient, search]); // Trigger filter when a new OEM is selected
+  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]); // Trigger filter when a new OEM is selected
 
   // Fetch clients and show modal
   const handleClientClick = async () => {
-    const clientsData = await fetchClients();
+    const clientsData = await fetchClients(selectedOEM, selectedModality);
     setClients(clientsData);
+    setClientSearchTerm(""); // Reset search term
     setShowClientModal(true);
   };
 
   // Client selection handler
   const handleClientSelect = (clientName) => {
-    setClientButtonText(clientName);
-    setSelectedClient(clientName);
+    setClientButtonText(clientName || "Select Option");
+    setSelectedClient(clientName || null);
     setShowClientModal(false);
   };
 
@@ -242,6 +249,64 @@ export default function MainSearch() {
   const handleClientInfo = (clientId, clientName) => {
     console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
   };
+
+  // Clear client selection handler
+  const handleClearClientSelection = () => {
+    setClientButtonText("Select Option");
+    setSelectedClient(null);
+    setShowClientModal(false);
+    searchFilter();
+  };
+
+  //Modal Handlers
+  // Add new state for models
+  const [models, setModels] = useState([]);
+  const [showModelModal, setShowModelModal] = useState(false);
+  const [modelButtonText, setModelButtonText] = useState("Select Option");
+
+  // Fetch models and show modal
+  const handleModelClick = async () => {
+    const modelsData = await fetchModels(
+      selectedOEM,
+      selectedModality,
+      selectedClient
+    );
+    setModels(modelsData);
+    setModelSearchTerm(""); // Reset search term
+    setShowModelModal(true);
+  };
+
+  // Model selection handler
+  const handleModelSelect = (modelName) => {
+    setModelButtonText(modelName || "Select Option");
+    setSelectedModel(modelName || null);
+    setShowModelModal(false);
+  };
+
+  // Clear model selection handler
+  const handleClearModelSelection = () => {
+    setModelButtonText("Select Option");
+    setSelectedModel(null);
+    setShowModelModal(false);
+    searchFilter();
+  };
+
+  // Add these handlers in the relevant section of your MainSearch component
+
+  const handleWarehouseClick = () => {
+    setClientButtonText(CLIENT_WAREHOUSE);
+    setSelectedClient(CLIENT_WAREHOUSE);
+    searchFilter();
+  };
+
+  const handleUnassignedClick = () => {
+    setClientButtonText(CLIENT_UNASSIGNED);
+    setSelectedClient(CLIENT_UNASSIGNED);
+    searchFilter();
+  };
+
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [modelSearchTerm, setModelSearchTerm] = useState("");
 
   return (
     <LoggedIn>
@@ -264,13 +329,46 @@ export default function MainSearch() {
           <Modal.Title>Select Client</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <FormControl
+            type="text"
+            placeholder="Search by name"
+            className="mb-3"
+            value={clientSearchTerm}
+            onChange={(e) => setClientSearchTerm(e.target.value)}
+          />
           <ClientTable
-            clients={clients}
+            clients={clients.filter((client) =>
+              client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+            )}
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
+            clearSelection={() => handleClientSelect(null)} // Clear selection handler
           />
         </Modal.Body>
       </Modal>
+
+      <Modal show={showModelModal} onHide={() => setShowModelModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Model</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FormControl
+            type="text"
+            placeholder="Search by name"
+            className="mb-3"
+            value={modelSearchTerm}
+            onChange={(e) => setModelSearchTerm(e.target.value)}
+          />
+          <ModelTable
+            models={models.filter((model) =>
+              model.toLowerCase().includes(modelSearchTerm.toLowerCase())
+            )}
+            onSelectModel={handleModelSelect}
+            clearSelection={() => handleModelSelect(null)} // Clear selection handler
+          />
+        </Modal.Body>
+      </Modal>
+
       <Container
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
@@ -347,7 +445,6 @@ export default function MainSearch() {
                         {clientButtonText}
                       </Button>
                     </InputGroup>
-
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Client-2</InputGroup.Text>
                       <Button
@@ -358,29 +455,32 @@ export default function MainSearch() {
                         Select Option
                       </Button>
                     </InputGroup>
-
                     <InputGroup className="mb-3">
-                      <InputGroup.Text>Models</InputGroup.Text>
-                      <Button variant="outline-secondary" className="w-100">
-                        Select Option
+                      <InputGroup.Text>Model</InputGroup.Text>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        onClick={handleModelClick}
+                      >
+                        {modelButtonText}
                       </Button>
                     </InputGroup>
-
                     {/* Divider */}
                     <div className={styles.divider}></div>
-
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Warehouse</InputGroup.Text>
                       <div className={styles.buttonGroup}>
                         <Button
                           variant="outline-secondary"
                           className={styles.flexButton}
+                          onClick={handleWarehouseClick} // Add this handler
                         >
                           Warehouse
                         </Button>
                         <Button
                           variant="outline-secondary"
                           className={styles.flexButton}
+                          onClick={handleUnassignedClick} // Add this handler
                         >
                           Unassigned
                         </Button>
