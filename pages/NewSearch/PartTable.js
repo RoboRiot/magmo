@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Button } from "react-bootstrap";
-import { formatDate } from "./fetchAssociations"; // Import the formatDate function
+import { formatDate } from "./fetchAssociations";
 import styles from "../../styles/PartTable.module.css"; // Ensure you have a CSS file for the part table
 
 export default function PartTable({
@@ -61,7 +61,9 @@ export default function PartTable({
                   cursor: "default",
                 }}
               >
-                {item.wo}
+                {item.workOrders && item.workOrders.length > 0
+                  ? item.workOrders[item.workOrders.length - 1].workOrder
+                  : "N/A"}
               </td>
               <td
                 style={{
@@ -81,7 +83,11 @@ export default function PartTable({
               </td>
               <td style={{ textAlign: "center" }}>
                 <Button
-                  onClick={(e) => checkDelete(e, index, ids[index], item.name)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    checkDelete(e, index, ids[index], item.name);
+                  }}
                   id={ids[index]}
                   variant="danger"
                 >

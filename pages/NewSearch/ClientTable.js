@@ -1,4 +1,3 @@
-// components/ClientTable.js
 import React from "react";
 import { Table, Button, FormControl } from "react-bootstrap";
 import styles from "../../styles/ClientTable.module.css";
@@ -8,6 +7,7 @@ const ClientTable = ({
   onSelectClient,
   onInfoClick,
   clearSelection,
+  disableSelect,
 }) => {
   return (
     <>
@@ -42,6 +42,7 @@ const ClientTable = ({
                 <Button
                   variant="primary"
                   onClick={() => onSelectClient(client.name)}
+                  disabled={disableSelect}
                 >
                   Select
                 </Button>

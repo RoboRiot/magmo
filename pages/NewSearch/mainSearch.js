@@ -7,7 +7,6 @@ import {
   InputGroup,
   Dropdown,
   FormControl,
-  Table,
   Button,
   NavDropdown,
   Form,
@@ -20,13 +19,14 @@ import {
   fetchClients,
   fetchModels,
   formatDate,
-} from "./fetchAssociations"; // Import utility functions
+} from "./fetchAssociations";
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
-import ClientTable from "./ClientTable"; // Import ClientTable component
+import ClientTable from "./ClientTable";
 import ModelTable from "./ModelTable";
-import PartTable from "./PartTable"; // Import PartTable component
-import styles from "../../styles/MainSearch.module.css"; // Import the new CSS file
+import PartTable from "./PartTable";
+import styles from "../../styles/MainSearch.module.css";
+import firebase from "../../context/Firebase";
 
 const CLIENT_WAREHOUSE = "igor-house";
 const CLIENT_UNASSIGNED = "unassigned";
@@ -84,6 +84,8 @@ export default function MainSearch() {
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const [hoverIndex, setHoverIndex] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [gPos, setGPos] = useState(null);
+  const [gIde, setGIde] = useState(null);
 
   // Fetch data on component mount and route change
   useEffect(() => {
@@ -100,6 +102,7 @@ export default function MainSearch() {
     const data = await fetchPartsWithMachineData();
     setInfo(data);
     setBackupInfo(data);
+    setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
   }
 
   // Handle search input changes
@@ -125,9 +128,7 @@ export default function MainSearch() {
         return true;
       if (select === "Date") {
         const [month, day, year] = item.date.split("/");
-        const paddedMonth = month.padStart(2, "0");
-        const paddedDay = day.padStart(2, "0");
-        const reformattedDate = `${year}-${paddedMonth}-${paddedDay}`;
+        const reformattedDate = `${year}-${month}-${day}`;
         return reformattedDate === search;
       }
       if (select === "Work Order" && Number(item.wo) === Number(search))
@@ -184,6 +185,7 @@ export default function MainSearch() {
   const checkDelete = (event, pos, ide, name) => {
     event.preventDefault();
     event.stopPropagation();
+    console.log(ide);
     setDItem(name);
     setGPos(pos);
     setGIde(ide);
@@ -191,8 +193,10 @@ export default function MainSearch() {
   };
 
   const deleteItem = async () => {
-    setInfo(info.filter((_, i) => gPos !== i));
+    const db = firebase.firestore();
+    console.log(gIde);
     await db.collection("Test").doc(gIde).delete();
+    setInfo(info.filter((_, i) => gPos !== i));
     handleClose();
   };
 
@@ -228,7 +232,7 @@ export default function MainSearch() {
 
   useEffect(() => {
     searchFilter();
-  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]); // Trigger filter when a new OEM is selected
+  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]);
 
   // Fetch clients and show modal
   const handleClientClick = async () => {
@@ -258,7 +262,7 @@ export default function MainSearch() {
     searchFilter();
   };
 
-  //Modal Handlers
+  // Modal Handlers
   // Add new state for models
   const [models, setModels] = useState([]);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -314,16 +318,17 @@ export default function MainSearch() {
         <Modal.Header closeButton>
           <Modal.Title>Delete</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Would you like to delete "{dItem}"</Modal.Body>
+        <Modal.Body>Would you like to delete "{dItem}"?</Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={deleteItem}>
             Yes
           </Button>
-          <Button variant="primary" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             No
           </Button>
         </Modal.Footer>
       </Modal>
+
       <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Select Client</Modal.Title>
@@ -473,14 +478,14 @@ export default function MainSearch() {
                         <Button
                           variant="outline-secondary"
                           className={styles.flexButton}
-                          onClick={handleWarehouseClick} // Add this handler
+                          onClick={handleWarehouseClick}
                         >
                           Warehouse
                         </Button>
                         <Button
                           variant="outline-secondary"
                           className={styles.flexButton}
-                          onClick={handleUnassignedClick} // Add this handler
+                          onClick={handleUnassignedClick}
                         >
                           Unassigned
                         </Button>
@@ -568,7 +573,7 @@ export default function MainSearch() {
                         <LoadingButton
                           type="secondary"
                           name="Add New Item"
-                          route="Warehousedb/ModItem"
+                          route="NewSearch/AddItem/NewItem"
                         />
                         <LoadingButton
                           type="primary"
