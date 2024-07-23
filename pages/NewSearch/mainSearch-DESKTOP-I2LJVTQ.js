@@ -1,0 +1,489 @@
+import React, { useEffect, useState } from "react";
+import {
+  Container,
+  Card,
+  Row,
+  Col,
+  InputGroup,
+  Dropdown,
+  FormControl,
+  Table,
+  Button,
+  NavDropdown,
+  Form,
+  Modal,
+} from "react-bootstrap";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import {
+  fetchPartsWithMachineData,
+  fetchClients,
+  formatDate,
+} from "./fetchAssociations"; // Import utility functions
+import { useAuth } from "../../context/AuthUserContext";
+import LoggedIn from "../LoggedIn";
+import ClientTable from "./ClientTable"; // Import ClientTable component
+import PartTable from "./PartTable"; // Import PartTable component
+import styles from "../../styles/MainSearch.module.css"; // Import the new CSS file
+
+// Simulates a network request delay
+function simulateNetworkRequest() {
+  return new Promise((resolve) => setTimeout(resolve, 2000));
+}
+
+// Custom LoadingButton component
+function LoadingButton({ type, name, route }) {
+  const [isLoading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      simulateNetworkRequest().then(() => setLoading(false));
+    }
+  }, [isLoading]);
+
+  return (
+    <Link href={`/${route}`}>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading}
+        onClick={() => !isLoading && setLoading(true)}
+      >
+        {isLoading ? "Loading…" : name}
+      </a>
+    </Link>
+  );
+}
+
+export default function MainSearch() {
+  const { signOut } = useAuth();
+  const [info, setInfo] = useState([]);
+  const [backupInfo, setBackupInfo] = useState([]);
+  const [ids, setID] = useState([]);
+  const [show, setShow] = useState(false);
+  const [dItem, setDItem] = useState();
+  const [select, setSelect] = useState("Name");
+  const [showList, setShowList] = useState(false);
+  const [showListSearch, setShowListSearch] = useState("text");
+  const [search, setSearch] = useState("");
+  const [selectedOEM, setSelectedOEM] = useState(null);
+  const [selectedModality, setSelectedModality] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientButtonText, setClientButtonText] = useState("Select Option");
+  const router = useRouter();
+  const labelBase = ["name", "date", "w/o", "p/n", "s/n", " "];
+  const labelBaseNames = ["name", "date", "wo", "pn", "sn", " "];
+  const sortCheckBase = [false, false, false, false, false, false];
+  const [labels, setLabels] = useState(labelBase);
+  const [sortCheck, setSortCheck] = useState(sortCheckBase);
+  const [hoverIndex, setHoverIndex] = useState(null);
+
+  // Fetch data on component mount and route change
+  useEffect(() => {
+    fetchData();
+  }, [router.route]);
+
+  // Handle data fetching and set states accordingly
+  async function fetchData() {
+    if (router.query.inputText && router.query.selectedType) {
+      setSelect(router.query.selectedType);
+      setSearch(router.query.inputText);
+    }
+
+    const data = await fetchPartsWithMachineData();
+    setInfo(data);
+    setBackupInfo(data);
+  }
+
+  // Handle search input changes
+  const searchChangeHandler = (event) => setSearch(event.target.value);
+
+  // Filter items based on search criteria
+  function searchFilter() {
+    const temp = backupInfo.filter((item) => {
+      console.log(selectedOEM);
+      console.log(item);
+      if (item.machineData) {
+        if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
+        if (selectedModality && item.machineData.Modality !== selectedModality)
+          return false;
+        if (selectedClient && item.machineData.Client !== selectedClient)
+          return false;
+      }
+
+      if (
+        select === "Name" &&
+        item.name.toLowerCase().includes(search.toLowerCase())
+      )
+        return true;
+      if (select === "Date") {
+        const [month, day, year] = item.date.split("/");
+        const paddedMonth = month.padStart(2, "0");
+        const paddedDay = day.padStart(2, "0");
+        const reformattedDate = `${year}-${paddedMonth}-${paddedDay}`;
+        return reformattedDate === search;
+      }
+      if (select === "Work Order" && Number(item.wo) === Number(search))
+        return true;
+      if (select === "Product Number" && Number(item.pn) === Number(search))
+        return true;
+      if (
+        select === "Description" &&
+        item.desc.toLowerCase().includes(search.toLowerCase())
+      )
+        return true;
+      return false;
+    });
+    setInfo(temp);
+  }
+
+  // Sort items based on column
+  function sortCheckAll(pos) {
+    const sortedInfo = [...info].sort((a, b) => {
+      if (pos === 0 || pos === 5) {
+        return sortCheck[pos]
+          ? b[labelBaseNames[pos]].localeCompare(a[labelBaseNames[pos]])
+          : a[labelBaseNames[pos]].localeCompare(b[labelBaseNames[pos]]);
+      }
+      if (pos === 1) {
+        return sortCheck[pos]
+          ? Date.parse(b[labelBaseNames[pos]]) -
+              Date.parse(a[labelBaseNames[pos]])
+          : Date.parse(a[labelBaseNames[pos]]) -
+              Date.parse(b[labelBaseNames[pos]]);
+      }
+      return sortCheck[pos]
+        ? Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]])
+        : Number(a[labelBaseNames[pos]]) - Number(b[labelBaseNames[pos]]);
+    });
+    setInfo(sortedInfo);
+    setSortCheck((prevSortCheck) =>
+      prevSortCheck.map((_, index) =>
+        index === pos ? !prevSortCheck[pos] : prevSortCheck[index]
+      )
+    );
+  }
+
+  // Row selection handler
+  const rowSelect = (id) => {
+    router.push("item/" + id);
+  };
+
+  // Modal handlers
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+
+  // Delete item handler
+  const checkDelete = (event, pos, ide, name) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDItem(name);
+    setGPos(pos);
+    setGIde(ide);
+    handleShow();
+  };
+
+  const deleteItem = async () => {
+    setInfo(info.filter((_, i) => gPos !== i));
+    await db.collection("Test").doc(gIde).delete();
+    handleClose();
+  };
+
+  const hoverStyle = (index) => ({
+    backgroundColor: hoverIndex === index ? "#ddd" : "transparent",
+    textAlign: "center",
+    cursor: "default",
+  });
+
+  // Dropdown handlers
+  const [dropdown1Text, setDropdown1Text] = useState("Select Option");
+  const [dropdown2Text, setDropdown2Text] = useState("Select Option");
+
+  const handleSelect1 = (eventKey, event) => {
+    if (eventKey === "unassigned") {
+      setDropdown1Text("Select Option");
+      setSelectedOEM(null);
+    } else {
+      setDropdown1Text(event.target.textContent);
+      setSelectedOEM(event.target.textContent);
+    }
+  };
+
+  const handleSelect2 = (eventKey, event) => {
+    if (eventKey === "unassigned") {
+      setDropdown2Text("Select Option");
+      setSelectedModality(null);
+    } else {
+      setDropdown2Text(event.target.textContent);
+      setSelectedModality(event.target.textContent);
+    }
+  };
+
+  useEffect(() => {
+    searchFilter();
+  }, [selectedOEM, selectedModality, selectedClient, search]); // Trigger filter when a new OEM is selected
+
+  // Fetch clients and show modal
+  const handleClientClick = async () => {
+    const clientsData = await fetchClients();
+    setClients(clientsData);
+    setShowClientModal(true);
+  };
+
+  // Client selection handler
+  const handleClientSelect = (clientName) => {
+    setClientButtonText(clientName);
+    setSelectedClient(clientName);
+    setShowClientModal(false);
+  };
+
+  // Client info handler
+  const handleClientInfo = (clientId, clientName) => {
+    console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
+  };
+
+  return (
+    <LoggedIn>
+      <Modal show={show} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Would you like to delete "{dItem}"</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={deleteItem}>
+            Yes
+          </Button>
+          <Button variant="primary" onClick={handleClose}>
+            No
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Client</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <ClientTable
+            clients={clients}
+            onSelectClient={handleClientSelect}
+            onInfoClick={handleClientInfo}
+          />
+        </Modal.Body>
+      </Modal>
+      <Container
+        className="d-flex align-items-center justify-content-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <div className="w-100" style={{ maxWidth: "1200px" }}>
+          <Card>
+            <Card.Body>
+              <h2 className="text-center mb-4">New Search</h2>
+              <Row>
+                <Col md={4}>
+                  {/* Dropdowns */}
+                  <div>
+                    <InputGroup className="mb-3">
+                      <InputGroup.Text>OEM</InputGroup.Text>
+                      <Dropdown onSelect={handleSelect1}>
+                        <Dropdown.Toggle
+                          variant="outline-secondary"
+                          id="dropdown-button-1"
+                          className="w-100"
+                        >
+                          {dropdown1Text}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu className="w-100">
+                          <Dropdown.Item eventKey="unassigned">
+                            Select Option
+                          </Dropdown.Item>
+                          <Dropdown.Item eventKey="GE">GE</Dropdown.Item>
+                          <Dropdown.Item eventKey="Toshiba">
+                            Toshiba
+                          </Dropdown.Item>
+                          <Dropdown.Item eventKey="Siemens">
+                            Siemens
+                          </Dropdown.Item>
+                          <Dropdown.Item eventKey="Philips">
+                            Philips
+                          </Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </InputGroup>
+
+                    <InputGroup className="mb-5">
+                      <InputGroup.Text>Modality</InputGroup.Text>
+                      <Dropdown onSelect={handleSelect2}>
+                        <Dropdown.Toggle
+                          variant="outline-secondary"
+                          id="dropdown-button-2"
+                          className="w-100"
+                        >
+                          {dropdown2Text}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu className="w-100">
+                          <Dropdown.Item eventKey="unassigned">
+                            Select Option
+                          </Dropdown.Item>
+                          <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
+                          <Dropdown.Item eventKey="MRI">MRI</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </InputGroup>
+                  </div>
+
+                  {/* Divider */}
+                  <div className={styles.divider}></div>
+
+                  {/* Buttons */}
+                  <div>
+                    <InputGroup className="mb-3">
+                      <InputGroup.Text>Client</InputGroup.Text>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        onClick={handleClientClick}
+                      >
+                        {clientButtonText}
+                      </Button>
+                    </InputGroup>
+
+                    <InputGroup className="mb-3">
+                      <InputGroup.Text>Client-2</InputGroup.Text>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        disabled
+                      >
+                        Select Option
+                      </Button>
+                    </InputGroup>
+
+                    <InputGroup className="mb-3">
+                      <InputGroup.Text>Models</InputGroup.Text>
+                      <Button variant="outline-secondary" className="w-100">
+                        Select Option
+                      </Button>
+                    </InputGroup>
+
+                    {/* Divider */}
+                    <div className={styles.divider}></div>
+
+                    <InputGroup className="mb-3">
+                      <InputGroup.Text>Warehouse</InputGroup.Text>
+                      <div className={styles.buttonGroup}>
+                        <Button
+                          variant="outline-secondary"
+                          className={styles.flexButton}
+                        >
+                          Warehouse
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          className={styles.flexButton}
+                        >
+                          Unassigned
+                        </Button>
+                      </div>
+                    </InputGroup>
+                  </div>
+                </Col>
+
+                <Col md={8}>
+                  <div className={styles.tableContainer}>
+                    <PartTable
+                      info={info}
+                      labels={labels}
+                      ids={ids}
+                      hoverStyle={hoverStyle}
+                      sortCheckAll={sortCheckAll}
+                      checkDelete={checkDelete}
+                      rowSelect={rowSelect}
+                      setHoverIndex={setHoverIndex}
+                      hoverIndex={hoverIndex}
+                    />
+                    <div className={styles.searchContainer}>
+                      <Form className="d-flex pb-2">
+                        <FormControl
+                          type={showListSearch}
+                          placeholder="Search"
+                          className="me-2 flex-grow-1"
+                          aria-label="Search"
+                          value={search}
+                          onChange={searchChangeHandler}
+                          style={{ flex: "1" }}
+                        />
+                        <NavDropdown
+                          title={select}
+                          id="collasible-nav-dropdown"
+                          show={showList}
+                          onMouseEnter={() => setShowList(true)}
+                          onMouseLeave={() => setShowList(false)}
+                          style={{ marginTop: "-5px" }}
+                        >
+                          <NavDropdown.Item
+                            onClick={() =>
+                              setSelect("Name") & setShowListSearch("text")
+                            }
+                          >
+                            Name
+                          </NavDropdown.Item>
+                          <NavDropdown.Item
+                            onClick={() =>
+                              setSelect("Date") & setShowListSearch("date")
+                            }
+                          >
+                            Date
+                          </NavDropdown.Item>
+                          <NavDropdown.Item
+                            onClick={() =>
+                              setSelect("Work Order") &
+                              setShowListSearch("number")
+                            }
+                          >
+                            Work Order
+                          </NavDropdown.Item>
+                          <NavDropdown.Item
+                            onClick={() =>
+                              setSelect("Product Number") &
+                              setShowListSearch("number")
+                            }
+                          >
+                            Product Number
+                          </NavDropdown.Item>
+                          <NavDropdown.Item
+                            onClick={() =>
+                              setSelect("Description") &
+                              setShowListSearch("text")
+                            }
+                          >
+                            Description
+                          </NavDropdown.Item>
+                        </NavDropdown>
+                        <Button variant="info" onClick={searchFilter}>
+                          Search
+                        </Button>
+                      </Form>
+                      <div className="d-flex justify-content-between">
+                        <LoadingButton
+                          type="secondary"
+                          name="Add New Item"
+                          route="Warehousedb/ModItem"
+                        />
+                        <LoadingButton
+                          type="primary"
+                          name="Back"
+                          route="Warehousedb/WarehouseSelect"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+        </div>
+      </Container>
+    </LoggedIn>
+  );
+}
