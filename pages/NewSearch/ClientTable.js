@@ -8,6 +8,7 @@ const ClientTable = ({
   onInfoClick,
   clearSelection,
   disableSelect,
+  disableInfo,
 }) => {
   return (
     <>
@@ -15,7 +16,7 @@ const ClientTable = ({
         <thead>
           <tr>
             <th>Client Name</th>
-            <th>Info</th>
+            {!disableInfo && <th>Info</th>}
             {!disableSelect && <th>Select</th>}
           </tr>
         </thead>
@@ -30,14 +31,16 @@ const ClientTable = ({
           {clients.map((client) => (
             <tr key={client.id}>
               <td>{client.name}</td>
-              <td>
-                <Button
-                  variant="info"
-                  onClick={() => onInfoClick(client.id, client.name)}
-                >
-                  Info
-                </Button>
-              </td>
+              {!disableInfo && (
+                <td>
+                  <Button
+                    variant="info"
+                    onClick={() => onInfoClick(client.id, client.name)}
+                  >
+                    Info
+                  </Button>
+                </td>
+              )}
               {!disableSelect && (
                 <td>
                   <Button

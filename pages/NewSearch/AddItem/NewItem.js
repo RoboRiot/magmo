@@ -431,8 +431,39 @@ export default function NewItem() {
                     />
                   </Form.Group>
                 </Row>
-                <div style={{ marginBottom: "1rem" }}>
-                  <Form.Label>Work Orders</Form.Label>
+                <Row>
+                  <Form.Group as={Col} controlId="date">
+                    <Form.Label>Dimensions</Form.Label>
+                    <Row>
+                      <Col>
+                        <Form.Control
+                          placeholder="Length"
+                          type="text"
+                          value={items.length}
+                          onChange={handleChange("length")}
+                        />
+                      </Col>
+                      <Col>
+                        <Form.Control
+                          placeholder="Width"
+                          type="text"
+                          value={items.width}
+                          onChange={handleChange("width")}
+                        />
+                      </Col>
+                      <Col>
+                        <Form.Control
+                          placeholder="Height"
+                          type="text"
+                          value={items.height}
+                          onChange={handleChange("height")}
+                        />
+                      </Col>
+                    </Row>
+                  </Form.Group>
+                </Row>
+                <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
+                  {/* <Form.Label>Work Orders</Form.Label> */}
                   <div className="d-flex align-items-center">
                     <Button
                       variant="outline-secondary"
@@ -477,7 +508,7 @@ export default function NewItem() {
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
                   <Form.Group className="mb-3" controlId="desc">
-                    <Form.Label>Description</Form.Label>
+                    {/* <Form.Label>Description</Form.Label> */}
                     <Button
                       variant="outline-secondary"
                       onClick={listDescriptions}

@@ -448,9 +448,9 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                               Description
                             </NavDropdown.Item>
                           </NavDropdown>
-                          <Button variant="info" onClick={searchFilter}>
+                          {/* <Button variant="info" onClick={searchFilter}>
                             Search
-                          </Button>
+                          </Button> */}
                         </Form>
                       </div>
                     </div>
@@ -482,6 +482,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
             clients={clients.filter((client) =>
               client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
             )}
+            disableInfo={true}
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
             clearSelection={() => handleClientSelect(null)} // Clear selection handler
