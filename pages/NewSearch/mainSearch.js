@@ -111,6 +111,7 @@ export default function MainSearch() {
   // Filter items based on search criteria
   function searchFilter() {
     const temp = backupInfo.filter((item) => {
+      // console.log(item.machineData);
       if (item.machineData) {
         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
         if (selectedModality && item.machineData.Modality !== selectedModality)
@@ -366,7 +367,9 @@ export default function MainSearch() {
           />
           <ModelTable
             models={models.filter((model) =>
-              model.toLowerCase().includes(modelSearchTerm.toLowerCase())
+              typeof model === "string"
+                ? model.toLowerCase().includes(modelSearchTerm.toLowerCase())
+                : false
             )}
             onSelectModel={handleModelSelect}
             clearSelection={() => handleModelSelect(null)} // Clear selection handler
@@ -561,13 +564,14 @@ export default function MainSearch() {
                               setSelect("Description") &
                               setShowListSearch("text")
                             }
+                            // Add this line
                           >
                             Description
                           </NavDropdown.Item>
                         </NavDropdown>
-                        <Button variant="info" onClick={searchFilter}>
+                        {/* <Button variant="info" onClick={searchFilter}>
                           Search
-                        </Button>
+                        </Button> */}
                       </Form>
                       <div className="d-flex justify-content-between">
                         <LoadingButton

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import styles from "../../styles/Home.module.css";
 import {
@@ -12,9 +12,7 @@ import {
 } from "react-bootstrap";
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
-import Link from 'next/link';
-
-
+import Link from "next/link";
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -35,17 +33,20 @@ function LoadingButton(type, name, route) {
 
   return (
     <Link href={`/${route}`}>
-    <a className={`btn btn-${type}`} disabled={isLoading.name} onClick={!isLoading.name ? handleClick : null}>
-      {isLoading.name ? "Loading…" : name}
-    </a>
-  </Link>
+      <a
+        className={`btn btn-${type}`}
+        disabled={isLoading.name}
+        onClick={!isLoading.name ? handleClick : null}
+      >
+        {isLoading.name ? "Loading…" : name}
+      </a>
+    </Link>
   );
 }
 
 export default function WarehouseSelect() {
   const { signOut } = useAuth();
   const [show, setShow] = useState(false);
-
 
   //passsing variables to warehouse list
   // const [select, setSelect] = useState("Name");
@@ -66,9 +67,9 @@ export default function WarehouseSelect() {
   };
 
   const handleSubmit = () => {
-    console.log(search, showListSearch)
+    console.log(search, showListSearch);
     router.push(`WarehouseList?inputText=${search}&selectedType=${select}`);
-  }
+  };
 
   const router = useRouter();
 
@@ -87,24 +88,13 @@ export default function WarehouseSelect() {
 
                 {LoadingButton(
                   "secondary",
-                  "Item List",
-                  "Warehousedb/WarehouseList"
-                )}
-
-                 {LoadingButton(
-                  "primary",
-                  "Client List",
-                  "Warehousedb/ClientList"
-                )}
-                {LoadingButton(
-                  "secondary",
                   "New Search",
                   "../NewSearch/mainSearch"
                 )}
                 {LoadingButton(
                   "primary",
-                  "BlueFolder",
-                  "../BlueFolder/bluefolder"
+                  "Add New Item",
+                  "../NewSearch/AddItem/NewItem"
                 )}
 
                 <Form className="d-flex">
@@ -151,7 +141,8 @@ export default function WarehouseSelect() {
                     <NavDropdown.Item
                       href=""
                       onClick={() =>
-                        setSelect("Product Number") & setShowListSearch("number")
+                        setSelect("Product Number") &
+                        setShowListSearch("number")
                       }
                     >
                       Product Number
@@ -169,11 +160,7 @@ export default function WarehouseSelect() {
                     Search
                   </Button>
                 </Form>
-                {LoadingButton(
-                  "secondary",
-                  "Back <-",
-                  "dashboard"
-                )}
+                {LoadingButton("secondary", "Back <-", "dashboard")}
               </div>
             </Card.Body>
           </Card>
