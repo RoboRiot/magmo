@@ -16,7 +16,7 @@ const ClientTable = ({
           <tr>
             <th>Client Name</th>
             <th>Info</th>
-            <th>Select</th>
+            {!disableSelect && <th>Select</th>}
           </tr>
         </thead>
         <tbody>
@@ -38,15 +38,17 @@ const ClientTable = ({
                   Info
                 </Button>
               </td>
-              <td>
-                <Button
-                  variant="primary"
-                  onClick={() => onSelectClient(client.name)}
-                  disabled={disableSelect}
-                >
-                  Select
-                </Button>
-              </td>
+              {!disableSelect && (
+                <td>
+                  <Button
+                    variant="primary"
+                    onClick={() => onSelectClient(client.name)}
+                    hide={disableSelect}
+                  >
+                    Select
+                  </Button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

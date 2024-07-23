@@ -19,7 +19,16 @@ import {
   fetchModels,
   formatDate,
 } from "../fetchAssociations";
+import { useAuth } from "../../../context/AuthUserContext";
+import LoggedIn from "../../LoggedIn";
+import ClientTable from "../ClientTable";
+import ModelTable from "../ModelTable";
+import PartTable from "../PartTable";
 import styles from "../../../styles/MainSearch.module.css";
+import firebase from "../../../context/Firebase";
+
+const CLIENT_WAREHOUSE = "igor-house";
+const CLIENT_UNASSIGNED = "unassigned";
 
 const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   const [info, setInfo] = useState([]);
@@ -37,6 +46,11 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   const [clientButtonText, setClientButtonText] = useState("Select Option");
   const [hoverIndex, setHoverIndex] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [models, setModels] = useState([]);
+  const [showModelModal, setShowModelModal] = useState(false);
+  const [modelButtonText, setModelButtonText] = useState("Select Option");
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [modelSearchTerm, setModelSearchTerm] = useState("");
 
   useEffect(() => {
     async function fetchData() {
@@ -47,6 +61,12 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
     }
     fetchData();
   }, []);
+
+  const handleCloseClientModal = () => setShowClientModal(false);
+  const handleShowClientModal = () => setShowClientModal(true);
+
+  const handleCloseModelModal = () => setShowModelModal(false);
+  const handleShowModelModal = () => setShowModelModal(true);
 
   // Handle search input changes
   const searchChangeHandler = (event) => setSearch(event.target.value);
@@ -136,6 +156,74 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
     searchFilter();
   }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]);
 
+  // Fetch clients and show modal
+  const handleClientClick = async () => {
+    console.log("clicked");
+    const clientsData = await fetchClients(selectedOEM, selectedModality);
+    setClients(clientsData);
+    setClientSearchTerm(""); // Reset search term
+    setShowClientModal(true);
+  };
+
+  // Client selection handler
+  const handleClientSelect = (clientName) => {
+    setClientButtonText(clientName || "Select Option");
+    setSelectedClient(clientName || null);
+    setShowClientModal(false);
+  };
+
+  // Client info handler
+  const handleClientInfo = (clientId, clientName) => {
+    console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
+  };
+
+  // Clear client selection handler
+  const handleClearClientSelection = () => {
+    setClientButtonText("Select Option");
+    setSelectedClient(null);
+    setShowClientModal(false);
+    searchFilter();
+  };
+
+  // Fetch models and show modal
+  const handleModelClick = async () => {
+    const modelsData = await fetchModels(
+      selectedOEM,
+      selectedModality,
+      selectedClient
+    );
+    setModels(modelsData);
+    setModelSearchTerm(""); // Reset search term
+    setShowModelModal(true);
+  };
+
+  // Model selection handler
+  const handleModelSelect = (modelName) => {
+    setModelButtonText(modelName || "Select Option");
+    setSelectedModel(modelName || null);
+    setShowModelModal(false);
+  };
+
+  // Clear model selection handler
+  const handleClearModelSelection = () => {
+    setModelButtonText("Select Option");
+    setSelectedModel(null);
+    setShowModelModal(false);
+    searchFilter();
+  };
+
+  const handleWarehouseClick = () => {
+    setClientButtonText(CLIENT_WAREHOUSE);
+    setSelectedClient(CLIENT_WAREHOUSE);
+    searchFilter();
+  };
+
+  const handleUnassignedClick = () => {
+    setClientButtonText(CLIENT_UNASSIGNED);
+    setSelectedClient(CLIENT_UNASSIGNED);
+    searchFilter();
+  };
+
   return (
     <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
@@ -181,7 +269,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                         </Dropdown>
                       </InputGroup>
 
-                      <InputGroup className="mb-5">
+                      <InputGroup className="mb-3">
                         <InputGroup.Text>Modality</InputGroup.Text>
                         <Dropdown onSelect={handleSelect2}>
                           <Dropdown.Toggle
@@ -200,6 +288,61 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                           </Dropdown.Menu>
                         </Dropdown>
                       </InputGroup>
+
+                      {/* Buttons */}
+                      <div>
+                        <InputGroup className="mb-3">
+                          <InputGroup.Text>Client</InputGroup.Text>
+                          <Button
+                            variant="outline-secondary"
+                            className="w-100"
+                            onClick={handleClientClick}
+                          >
+                            {clientButtonText}
+                          </Button>
+                        </InputGroup>
+                        <InputGroup className="mb-3">
+                          <InputGroup.Text>Client-2</InputGroup.Text>
+                          <Button
+                            variant="outline-secondary"
+                            className="w-100"
+                            disabled
+                          >
+                            Select Option
+                          </Button>
+                        </InputGroup>
+                        <InputGroup className="mb-3">
+                          <InputGroup.Text>Model</InputGroup.Text>
+                          <Button
+                            variant="outline-secondary"
+                            className="w-100"
+                            onClick={handleModelClick}
+                          >
+                            {modelButtonText}
+                          </Button>
+                        </InputGroup>
+                        {/* Divider */}
+                        <div className={styles.divider}></div>
+                        <InputGroup className="mb-3">
+                          <InputGroup.Text>Warehouse</InputGroup.Text>
+                          <div className={styles.buttonGroup}>
+                            <Button
+                              variant="outline-secondary"
+                              className={styles.flexButton}
+                              onClick={handleWarehouseClick}
+                            >
+                              Warehouse
+                            </Button>
+                            <Button
+                              variant="outline-secondary"
+                              className={styles.flexButton}
+                              onClick={handleUnassignedClick}
+                            >
+                              Unassigned
+                            </Button>
+                          </div>
+                        </InputGroup>
+                      </div>
                     </div>
                   </Col>
 
@@ -323,6 +466,52 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
           Close
         </Button>
       </Modal.Footer>
+      <Modal show={showClientModal} onHide={handleCloseClientModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Client</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FormControl
+            type="text"
+            placeholder="Search by name"
+            className="mb-3"
+            value={clientSearchTerm}
+            onChange={(e) => setClientSearchTerm(e.target.value)}
+          />
+          <ClientTable
+            clients={clients.filter((client) =>
+              client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+            )}
+            onSelectClient={handleClientSelect}
+            onInfoClick={handleClientInfo}
+            clearSelection={() => handleClientSelect(null)} // Clear selection handler
+          />
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={showModelModal} onHide={handleCloseModelModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Model</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FormControl
+            type="text"
+            placeholder="Search by name"
+            className="mb-3"
+            value={modelSearchTerm}
+            onChange={(e) => setModelSearchTerm(e.target.value)}
+          />
+          <ModelTable
+            models={models.filter((model) =>
+              typeof model === "string"
+                ? model.toLowerCase().includes(modelSearchTerm.toLowerCase())
+                : false
+            )}
+            onSelectModel={handleModelSelect}
+            clearSelection={() => handleModelSelect(null)} // Clear selection handler
+          />
+        </Modal.Body>
+      </Modal>
     </Modal>
   );
 };

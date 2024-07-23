@@ -12,14 +12,14 @@ import {
   FormControl,
 } from "react-bootstrap";
 import Link from "next/link";
-import { useAuth } from "../../../context/AuthUserContext";
-import firebase from "../../../context/Firebase";
-import LoggedIn from "../../LoggedIn";
+import { useAuth } from "../../../../context/AuthUserContext";
+import firebase from "../../../../context/Firebase";
+import LoggedIn from "../../../LoggedIn";
 import { useRouter } from "next/router";
-import { fetchClients } from "../fetchAssociations";
-import ClientTable from "../ClientTable";
-import ClientInfoModal from "../ClientInfoModal";
-import ParentModal from "./ParentModal";
+import { fetchClients } from "../../fetchAssociations";
+import ClientTable from "../../ClientTable";
+import ClientInfoModal from "../../ClientInfoModal";
+import ParentModal from "../../AddItem/ParentModal";
 
 // Simulates a network request delay
 function simulateNetworkRequest() {
@@ -54,6 +54,7 @@ function LoadingButton({ type, name, route }) {
 export default function NewItem() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { id } = router.query;
   const [items, setItems] = useState({
     name: "",
     pn: "",
@@ -93,6 +94,30 @@ export default function NewItem() {
 
     fetchClientsData();
   }, []);
+
+  useEffect(() => {
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
+
+  const fetchData = async () => {
+    const db = firebase.firestore();
+    const doc = await db.collection("Test").doc(id).get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.date && data.date.seconds) {
+        data.date = new Date(data.date.seconds * 1000)
+          .toISOString()
+          .split("T")[0];
+      }
+      setItems(data);
+      setDescriptions(data.descriptions || []);
+      setWorkOrders(data.workOrders || []);
+      setSelectedMachine(data.Machine || null);
+      setSelectedParent(data.Parent || null);
+    }
+  };
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -154,8 +179,13 @@ export default function NewItem() {
     const customID = generateCustomID();
 
     try {
-      await db.collection("Test").doc(customID).set(formattedItems);
-      console.log("Items added!");
+      if (id) {
+        await db.collection("Test").doc(id).update(formattedItems);
+        console.log("Items updated!");
+      } else {
+        await db.collection("Test").doc(customID).set(formattedItems);
+        console.log("Items added!");
+      }
       router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);

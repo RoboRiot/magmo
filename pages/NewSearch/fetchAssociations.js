@@ -7,10 +7,12 @@ export async function fetchPartsWithMachineData() {
     partsSnapshot.docs.map(async (partDoc) => {
       const partData = partDoc.data();
       partData.id = partDoc.id; // Add document ID here
+      // console.log(partData);
       if (
         partData.Machine &&
         partData.Machine instanceof firebase.firestore.DocumentReference
       ) {
+        console.log(partData.Machine);
         const machineDoc = await partData.Machine.get();
         partData.machineData = machineDoc.exists ? machineDoc.data() : {};
         if (partData.machineData.client) {
