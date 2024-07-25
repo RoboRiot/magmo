@@ -12,6 +12,7 @@ import {
   FormControl,
 } from "react-bootstrap";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useAuth } from "../../../context/AuthUserContext";
 import firebase from "../../../context/Firebase";
 import LoggedIn from "../../LoggedIn";
@@ -20,6 +21,12 @@ import { fetchClients } from "../fetchAssociations";
 import ClientTable from "../ClientTable";
 import ClientInfoModal from "../ClientInfoModal";
 import ParentModal from "./ParentModal";
+
+// This will only load the component on the client-side.
+const BarcodeScannerComponent = dynamic(
+  () => import("react-qr-barcode-scanner"),
+  { ssr: false }
+);
 
 // Simulates a network request delay
 function simulateNetworkRequest() {
@@ -66,6 +73,7 @@ export default function NewItem() {
   ]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [show, setShow] = useState(false);
   const [showErr, setShowErr] = useState(false);
   const [Err, setErr] = useState("N/A");
@@ -74,12 +82,15 @@ export default function NewItem() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
   const [search, setSearch] = useState("");
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [cameraFacing, setCameraFacing] = useState("environment");
 
   useEffect(() => {
     async function fetchClientsData() {
@@ -155,12 +166,23 @@ export default function NewItem() {
 
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
+      await uploadPhotos(customID);
       console.log("Items added!");
       router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);
     }
   }
+
+  const uploadPhotos = async (customID) => {
+    const storageRef = firebase.storage().ref();
+    for (let i = 0; i < photos.length; i++) {
+      const photoRef = storageRef.child(
+        `Parts/${customID}/${customID}${i === 0 ? "" : `.${i + 1}`}`
+      );
+      await photoRef.put(photos[i]);
+    }
+  };
 
   // Handle form submission
   async function handleSubmit(event) {
@@ -229,11 +251,48 @@ export default function NewItem() {
     setShowDescModal(false);
   };
 
+  const handleShowCameraModal = () => {
+    setShowCameraModal(true);
+  };
+
+  const handleCloseCameraModal = () => {
+    setShowCameraModal(false);
+    setCapturedPhoto(null);
+  };
+
+  const handleCapture = (err, result) => {
+    if (result) {
+      setCapturedPhoto(result);
+    }
+  };
+
+  const savePhoto = () => {
+    setPhotos((prevPhotos) => [...prevPhotos, capturedPhoto]);
+    setCapturedPhoto(null);
+    handleCloseCameraModal();
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
   const mostRecentWorkOrder = workOrders.reduce((latest, current) => {
     const latestDate = new Date(latest.date);
     const currentDate = new Date(current.date);
     return currentDate > latestDate ? current : latest;
   }, workOrders[0]);
+
+  const capturePhoto = () => {
+    const video = document.querySelector("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      setCapturedPhoto(blob);
+    }, "image/jpeg");
+  };
 
   return (
     <LoggedIn>
@@ -385,6 +444,77 @@ export default function NewItem() {
         handleClose={handleCloseParentModal}
         setSelectedParent={setSelectedParent}
       />
+
+      <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Take a Photo</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="camera">
+            {!capturedPhoto && (
+              <BarcodeScannerComponent
+                width="100%"
+                height={300}
+                onUpdate={handleCapture}
+                facingMode={cameraFacing}
+              />
+            )}
+            {capturedPhoto && (
+              <div className="photo-preview">
+                <img
+                  src={URL.createObjectURL(capturedPhoto)}
+                  alt="captured"
+                  style={{ width: "100%" }}
+                />
+              </div>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          {!capturedPhoto ? (
+            <>
+              <Button
+                onClick={capturePhoto}
+                style={{
+                  borderRadius: "50%",
+                  width: "60px",
+                  height: "60px",
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  bottom: "10px",
+                }}
+              >
+                📷
+              </Button>
+              <Button
+                onClick={() =>
+                  setCameraFacing((prev) =>
+                    prev === "environment" ? "user" : "environment"
+                  )
+                }
+              >
+                Flip Camera
+              </Button>
+              <Button variant="secondary" onClick={handleCloseCameraModal}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setCapturedPhoto(null)}
+              >
+                Retake
+              </Button>
+              <Button variant="primary" onClick={savePhoto}>
+                OK
+              </Button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
 
       <Container
         className="d-flex align-items-center justify-content-center"
@@ -593,6 +723,38 @@ export default function NewItem() {
                       )}
                     </Col>
                   </Row>
+                </div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <Button
+                    variant="outline-secondary"
+                    onClick={handleShowCameraModal}
+                  >
+                    Take Photo
+                  </Button>
+                  <div className="mt-3 d-flex flex-wrap">
+                    {photos.map((photo, index) => (
+                      <div
+                        key={index}
+                        className="d-flex flex-column align-items-center mb-2 me-2"
+                      >
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={`Photo ${index + 1}`}
+                          style={{
+                            width: "100px",
+                            height: "100px",
+                            marginRight: "10px",
+                          }}
+                        />
+                        <Button
+                          variant="danger"
+                          onClick={() => removePhoto(index)}
+                        >
+                          X
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <Button
