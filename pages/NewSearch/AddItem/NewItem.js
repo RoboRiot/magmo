@@ -91,6 +91,7 @@ export default function NewItem() {
   const [search, setSearch] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
+  const [addToWebsite, setAddToWebsite] = useState(false);
 
   useEffect(() => {
     async function fetchClientsData() {
@@ -167,6 +168,24 @@ export default function NewItem() {
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
       await uploadPhotos(customID);
+
+      if (addToWebsite) {
+        const partsItem = {
+          Name: items.name,
+          PN: items.pn,
+          SN: items.sn,
+          Description: descriptions[0]?.description || "",
+          Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
+          Available: true,
+          Machine: selectedMachine?.name || "",
+          Modality: "MRI", // Set your default or dynamic modality here
+          OEM: "Philips", // Set your default or dynamic OEM here
+          PM: items.pn,
+        };
+
+        await db.collection("Parts").doc(customID).set(partsItem);
+      }
+
       console.log("Items added!");
       router.push("../mainSearch");
     } catch (error) {
@@ -725,37 +744,50 @@ export default function NewItem() {
                   </Row>
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
-                  <Button
-                    variant="outline-secondary"
-                    onClick={handleShowCameraModal}
-                  >
-                    Take Photo
-                  </Button>
-                  <div className="mt-3 d-flex flex-wrap">
-                    {photos.map((photo, index) => (
-                      <div
-                        key={index}
-                        className="d-flex flex-column align-items-center mb-2 me-2"
-                      >
-                        <img
-                          src={URL.createObjectURL(photo)}
-                          alt={`Photo ${index + 1}`}
-                          style={{
-                            width: "100px",
-                            height: "100px",
-                            marginRight: "10px",
-                          }}
-                        />
-                        <Button
-                          variant="danger"
-                          onClick={() => removePhoto(index)}
-                        >
-                          X
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                  <Row>
+                    <Col>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={handleShowCameraModal}
+                    >
+                      Take Photo
+                    </Button>
+                    </Col>
+                    <Col>
+                    <Button
+                      variant={addToWebsite ? "primary" : "outline-primary"}
+                      onClick={() => setAddToWebsite((prev) => !prev)}
+                    >
+                      {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                    </Button>
+                    </Col>
+                  </Row>
                 </div>
+                <div className="mt-3 d-flex flex-wrap">
+                  {photos.map((photo, index) => (
+                    <div
+                      key={index}
+                      className="d-flex flex-column align-items-center mb-2 me-2"
+                    >
+                      <img
+                        src={URL.createObjectURL(photo)}
+                        alt={`Photo ${index + 1}`}
+                        style={{
+                          width: "100px",
+                          height: "100px",
+                          marginRight: "10px",
+                        }}
+                      />
+                      <Button
+                        variant="danger"
+                        onClick={() => removePhoto(index)}
+                      >
+                        X
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
                 <div>
                   <Button
                     variant="primary"
