@@ -20,6 +20,13 @@ import { fetchClients } from "../../fetchAssociations";
 import ClientTable from "../../ClientTable";
 import ClientInfoModal from "../../ClientInfoModal";
 import ParentModal from "../../AddItem/ParentModal";
+import dynamic from "next/dynamic";
+
+// This will only load the component on the client-side.
+const BarcodeScannerComponent = dynamic(
+  () => import("react-qr-barcode-scanner"),
+  { ssr: false }
+);
 
 // Simulates a network request delay
 function simulateNetworkRequest() {
@@ -51,7 +58,7 @@ function LoadingButton({ type, name, route }) {
   );
 }
 
-export default function NewItem() {
+export default function DisplayItem() {
   const router = useRouter();
   const { signOut } = useAuth();
   const { id } = router.query;
@@ -67,6 +74,7 @@ export default function NewItem() {
   ]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [show, setShow] = useState(false);
   const [showErr, setShowErr] = useState(false);
   const [Err, setErr] = useState("N/A");
@@ -75,12 +83,17 @@ export default function NewItem() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
   const [search, setSearch] = useState("");
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [cameraFacing, setCameraFacing] = useState("environment");
+  const [addToWebsite, setAddToWebsite] = useState(false);
 
   useEffect(() => {
     async function fetchClientsData() {
@@ -114,8 +127,38 @@ export default function NewItem() {
       setItems(data);
       setDescriptions(data.descriptions || []);
       setWorkOrders(data.workOrders || []);
-      setSelectedMachine(data.Machine || null);
-      setSelectedParent(data.Parent || null);
+      if (data.Machine) {
+        const machineDoc = await data.Machine.get();
+        setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
+      }
+      if (data.Parent) {
+        const parentDoc = await data.Parent.get();
+        setSelectedParent({ id: parentDoc.id, ...parentDoc.data() });
+      }
+      await fetchPhotos(id);
+      await checkIfAddedToWebsite(id);
+    }
+  };
+
+  const fetchPhotos = async (docID) => {
+    const storageRef = firebase.storage().ref();
+    const listRef = storageRef.child(`Parts/${docID}`);
+    try {
+      const res = await listRef.listAll();
+      const urls = await Promise.all(
+        res.items.map((item) => item.getDownloadURL())
+      );
+      setPhotos(urls.map((url) => ({ url, file: null })));
+    } catch (error) {
+      console.error("Error fetching photos: ", error);
+    }
+  };
+
+  const checkIfAddedToWebsite = async (docID) => {
+    const db = firebase.firestore();
+    const partsDoc = await db.collection("Parts").doc(docID).get();
+    if (partsDoc.exists) {
+      setAddToWebsite(true);
     }
   };
 
@@ -123,6 +166,8 @@ export default function NewItem() {
   const handleShow = () => setShow(true);
   const handleCloseErr = () => setShowErr(false);
   const handleShowErr = () => setShowErr(true);
+  const handleCloseSaveModal = () => setShowSaveModal(false);
+  const handleShowSaveModal = () => setShowSaveModal(true);
 
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
@@ -176,21 +221,73 @@ export default function NewItem() {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
 
-    const customID = generateCustomID();
-
     try {
       if (id) {
         await db.collection("Test").doc(id).update(formattedItems);
+        await uploadPhotos(id);
+
+        if (addToWebsite) {
+          const partsItem = {
+            Name: items.name,
+            PN: items.pn,
+            SN: items.sn,
+            Description: descriptions[0]?.description || "",
+            Images: photos.map((photo) => photo.url),
+            Available: true,
+            Machine: selectedMachine?.name || "",
+            Modality: "MRI", // Set your default or dynamic modality here
+            OEM: "Philips", // Set your default or dynamic OEM here
+            PM: items.pn,
+          };
+
+          await db.collection("Parts").doc(id).set(partsItem);
+        }
         console.log("Items updated!");
       } else {
+        const customID = generateCustomID();
         await db.collection("Test").doc(customID).set(formattedItems);
+        await uploadPhotos(customID);
+
+        if (addToWebsite) {
+          const partsItem = {
+            Name: items.name,
+            PN: items.pn,
+            SN: items.sn,
+            Description: descriptions[0]?.description || "",
+            Images: photos.map((photo) => photo.url),
+            Available: true,
+            Machine: selectedMachine?.name || "",
+            Modality: "MRI", // Set your default or dynamic modality here
+            OEM: "Philips", // Set your default or dynamic OEM here
+            PM: items.pn,
+          };
+
+          await db.collection("Parts").doc(customID).set(partsItem);
+        }
         console.log("Items added!");
       }
-      router.push("../mainSearch");
+      handleShowSaveModal(); // Show the save confirmation modal
     } catch (error) {
       console.error("Error updating data: ", error);
     }
   }
+
+  const uploadPhotos = async (docID) => {
+    const storageRef = firebase.storage().ref();
+    for (let i = 0; i < photos.length; i++) {
+      if (photos[i].file) {
+        const photoRef = storageRef.child(
+          `Parts/${docID}/${docID}${i === 0 ? "" : `.${i + 1}`}`
+        );
+        const metadata = {
+          contentType: "image/png",
+        };
+        await photoRef.put(photos[i].file, metadata);
+        const url = await photoRef.getDownloadURL();
+        photos[i].url = url;
+      }
+    }
+  };
 
   // Handle form submission
   async function handleSubmit(event) {
@@ -259,11 +356,51 @@ export default function NewItem() {
     setShowDescModal(false);
   };
 
+  const handleShowCameraModal = () => {
+    setShowCameraModal(true);
+  };
+
+  const handleCloseCameraModal = () => {
+    setShowCameraModal(false);
+    setCapturedPhoto(null);
+  };
+
+  const handleCapture = (err, result) => {
+    if (result) {
+      setCapturedPhoto(result);
+    }
+  };
+
+  const savePhoto = () => {
+    setPhotos((prevPhotos) => [
+      ...prevPhotos,
+      { file: capturedPhoto, url: URL.createObjectURL(capturedPhoto) },
+    ]);
+    setCapturedPhoto(null);
+    handleCloseCameraModal();
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
   const mostRecentWorkOrder = workOrders.reduce((latest, current) => {
     const latestDate = new Date(latest.date);
     const currentDate = new Date(current.date);
     return currentDate > latestDate ? current : latest;
   }, workOrders[0]);
+
+  const capturePhoto = () => {
+    const video = document.querySelector("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      setCapturedPhoto(blob);
+    }, "image/png");
+  };
 
   return (
     <LoggedIn>
@@ -285,6 +422,17 @@ export default function NewItem() {
         <Modal.Body>{Err}</Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleCloseErr}>
+            Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Save Confirmation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Data has been saved successfully.</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleCloseSaveModal}>
             Ok
           </Button>
         </Modal.Footer>
@@ -416,6 +564,77 @@ export default function NewItem() {
         setSelectedParent={setSelectedParent}
       />
 
+      <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Take a Photo</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="camera">
+            {!capturedPhoto && (
+              <BarcodeScannerComponent
+                width="100%"
+                height={300}
+                onUpdate={handleCapture}
+                facingMode={cameraFacing}
+              />
+            )}
+            {capturedPhoto && (
+              <div className="photo-preview">
+                <img
+                  src={URL.createObjectURL(capturedPhoto)}
+                  alt="captured"
+                  style={{ width: "100%" }}
+                />
+              </div>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          {!capturedPhoto ? (
+            <>
+              <Button
+                onClick={capturePhoto}
+                style={{
+                  borderRadius: "50%",
+                  width: "60px",
+                  height: "60px",
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  bottom: "10px",
+                }}
+              >
+                📷
+              </Button>
+              <Button
+                onClick={() =>
+                  setCameraFacing((prev) =>
+                    prev === "environment" ? "user" : "environment"
+                  )
+                }
+              >
+                Flip Camera
+              </Button>
+              <Button variant="secondary" onClick={handleCloseCameraModal}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setCapturedPhoto(null)}
+              >
+                Retake
+              </Button>
+              <Button variant="primary" onClick={savePhoto}>
+                OK
+              </Button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+
       <Container
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
@@ -461,8 +680,38 @@ export default function NewItem() {
                     />
                   </Form.Group>
                 </Row>
-                <div style={{ marginBottom: "1rem" }}>
-                  <Form.Label>Work Orders</Form.Label>
+                <Row>
+                  <Form.Group as={Col} controlId="dimensions">
+                    <Form.Label>Dimensions</Form.Label>
+                    <Row>
+                      <Col>
+                        <Form.Control
+                          placeholder="Length"
+                          type="text"
+                          value={items.length}
+                          onChange={handleChange("length")}
+                        />
+                      </Col>
+                      <Col>
+                        <Form.Control
+                          placeholder="Width"
+                          type="text"
+                          value={items.width}
+                          onChange={handleChange("width")}
+                        />
+                      </Col>
+                      <Col>
+                        <Form.Control
+                          placeholder="Height"
+                          type="text"
+                          value={items.height}
+                          onChange={handleChange("height")}
+                        />
+                      </Col>
+                    </Row>
+                  </Form.Group>
+                </Row>
+                <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                   <div className="d-flex align-items-center">
                     <Button
                       variant="outline-secondary"
@@ -507,7 +756,6 @@ export default function NewItem() {
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
                   <Form.Group className="mb-3" controlId="desc">
-                    <Form.Label>Description</Form.Label>
                     <Button
                       variant="outline-secondary"
                       onClick={listDescriptions}
@@ -593,13 +841,58 @@ export default function NewItem() {
                     </Col>
                   </Row>
                 </div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <Row>
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleShowCameraModal}
+                      >
+                        Take Photo
+                      </Button>
+                    </Col>
+                    <Col>
+                      <Button
+                        variant={addToWebsite ? "primary" : "outline-primary"}
+                        onClick={() => setAddToWebsite((prev) => !prev)}
+                      >
+                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                      </Button>
+                    </Col>
+                  </Row>
+                </div>
+                <div className="mt-3 d-flex flex-wrap">
+                  {photos.map((photo, index) => (
+                    <div
+                      key={index}
+                      className="d-flex flex-column align-items-center mb-2 me-2"
+                    >
+                      <img
+                        src={photo.url}
+                        alt={`Photo ${index + 1}`}
+                        style={{
+                          width: "100px",
+                          height: "100px",
+                          marginRight: "10px",
+                        }}
+                      />
+                      <Button
+                        variant="danger"
+                        onClick={() => removePhoto(index)}
+                      >
+                        X
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
                 <div>
                   <Button
                     variant="primary"
                     type="submit"
                     style={{ marginRight: "1rem" }}
                   >
-                    Submit
+                    Save
                   </Button>
 
                   <LoadingButton
