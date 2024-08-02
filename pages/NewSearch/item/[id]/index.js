@@ -19,7 +19,7 @@ import { useRouter } from "next/router";
 import { fetchClients } from "../../fetchAssociations";
 import ClientTable from "../../ClientTable";
 import ClientInfoModal from "../../ClientInfoModal";
-import ParentModal from "../../AddItem/ParentModal";
+import ParentModal from "../../addItem/ParentModal";
 import dynamic from "next/dynamic";
 
 // This will only load the component on the client-side.

@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "magmo-ac10c"
-  }
+    "default": "magmo-ac10c",
+    "magmo": "magmo-ac10c"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
 }
