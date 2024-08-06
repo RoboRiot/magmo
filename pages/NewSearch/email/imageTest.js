@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import firebase from "../../context/Firebase"; // Adjust the path according to your project structure
+import firebase from "../../../context/Firebase"; // Adjust the path according to your project structure
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export default function DisplayImage() {

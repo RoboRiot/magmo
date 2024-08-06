@@ -253,6 +253,7 @@ export default function MainSearch() {
   // Client info handler
   const handleClientInfo = (clientId, clientName) => {
     console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
+    router.push("client/" + clientId);
   };
 
   // Clear client selection handler
