@@ -64,6 +64,7 @@ const Client = () => {
 
   const handleSelectMachine = (id, name) => {
     console.log(`Selected machine ID: ${id}, Name: ${name}`);
+    router.push("../machine/" + id);
   };
 
   return (

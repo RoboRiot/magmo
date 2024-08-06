@@ -56,7 +56,7 @@ export default function dashboard() {
 
   const readQR = (qrData) => {
     console.log("this is the qr data: " + qrData);
-    router.push("item/" + qrData);
+    router.push("../NewSearch/item/" + qrData);
     return qrData;
   };
 

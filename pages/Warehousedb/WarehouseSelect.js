@@ -68,7 +68,7 @@ export default function WarehouseSelect() {
 
   const handleSubmit = () => {
     console.log(search, showListSearch);
-    router.push(`WarehouseList?inputText=${search}&selectedType=${select}`);
+    router.push("../NewSearch/mainSearch" + `?inputText=${search}&selectedType=${select}`);
   };
 
   const router = useRouter();
