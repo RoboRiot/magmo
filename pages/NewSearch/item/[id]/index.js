@@ -99,6 +99,7 @@ export default function DisplayItem() {
     async function fetchClientsData() {
       try {
         const clientsData = await fetchClients();
+        console.log(clientsData)
         setClients(clientsData);
       } catch (error) {
         console.error("Error fetching clients: ", error);
@@ -111,6 +112,7 @@ export default function DisplayItem() {
   useEffect(() => {
     if (id) {
       fetchData();
+      // consolelog(data)
     }
   }, [id]);
 
@@ -137,6 +139,13 @@ export default function DisplayItem() {
       }
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
+    }
+    else{
+      console.log("I wanna be here")
+        router.push({
+          pathname: "../AddItem/NewItem",
+          query: { signal: id }
+        });
     }
   };
 

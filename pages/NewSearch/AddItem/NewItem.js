@@ -60,6 +60,7 @@ function LoadingButton({ type, name, route }) {
 
 export default function NewItem() {
   const router = useRouter();
+  const { signal } = router.query;  // Retrieve the query parameter
   const { signOut } = useAuth();
   const [items, setItems] = useState({
     name: "",
@@ -92,8 +93,15 @@ export default function NewItem() {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
   const [addToWebsite, setAddToWebsite] = useState(false);
+  const [setID, setSetId] = useState(null);
 
   useEffect(() => {
+    if (signal) {
+      // Execute special behavior
+      console.log("Special behavior triggered: " + signal);
+      setSetId(signal)
+    }
+
     async function fetchClientsData() {
       try {
         const clientsData = await fetchClients();
@@ -163,7 +171,11 @@ export default function NewItem() {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
 
-    const customID = generateCustomID();
+    let customID = generateCustomID();
+
+    if(signal){
+      customID = signal
+    }
 
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
