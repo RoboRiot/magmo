@@ -1,12 +1,21 @@
-import EmailForm from "./email/EmailForm";
+import React from 'react'
 
-const SendEmailPage = () => {
+function sendEmail() {
   return (
-    <div>
-      <h1>Send Email</h1>
-      <EmailForm />
-    </div>
-  );
-};
+    <div>sendEmail</div>
+  )
+}
 
-export default SendEmailPage;
+export default sendEmail
+// import EmailForm from "./email/EmailForm";
+
+// const SendEmailPage = () => {
+//   return (
+//     <div>
+//       <h1>Send Email</h1>
+//       <EmailForm />
+//     </div>
+//   );
+// };
+
+// export default SendEmailPage;

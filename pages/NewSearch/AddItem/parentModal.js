@@ -18,12 +18,12 @@ import {
   fetchClients,
   fetchModels,
   formatDate,
-} from "../fetchAssociations";
+} from "../../../utils/fetchAssociations";
 import { useAuth } from "../../../context/AuthUserContext";
 import LoggedIn from "../../LoggedIn";
-import ClientTable from "../ClientTable";
-import ModelTable from "../ModelTable";
-import PartTable from "../PartTable";
+import ClientTable from "../../../utils/ClientTable";
+import ModelTable from "../../../utils/ModelTable";
+import PartTable from "../../../utils/PartTable";
 import styles from "../../../styles/MainSearch.module.css";
 import firebase from "../../../context/Firebase";
 

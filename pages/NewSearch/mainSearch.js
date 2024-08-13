@@ -11,6 +11,7 @@ import {
   NavDropdown,
   Form,
   Modal,
+  Spinner,
 } from "react-bootstrap";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -19,12 +20,12 @@ import {
   fetchClients,
   fetchModels,
   formatDate,
-} from "./fetchAssociations";
+} from "../../utils/fetchAssociations";
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
-import ClientTable from "./ClientTable";
-import ModelTable from "./ModelTable";
-import PartTable from "./PartTable";
+import ClientTable from "../../utils/ClientTable";
+import ModelTable from "../../utils/ModelTable";
+import PartTable from "../../utils/PartTable";
 import styles from "../../styles/MainSearch.module.css";
 import firebase from "../../context/Firebase";
 
@@ -86,6 +87,9 @@ export default function MainSearch() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [gPos, setGPos] = useState(null);
   const [gIde, setGIde] = useState(null);
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
 
   // Fetch data on component mount and route change
   useEffect(() => {
@@ -193,13 +197,30 @@ export default function MainSearch() {
     handleShow();
   };
 
-  const deleteItem = async () => {
-    const db = firebase.firestore();
-    console.log(gIde);
-    await db.collection("Test").doc(gIde).delete();
-    setInfo(info.filter((_, i) => gPos !== i));
+  // const deleteItem = async () => {
+  //   const db = firebase.firestore();
+  //   console.log(gIde);
+  //   await db.collection("Test").doc(gIde).delete();
+  //   setInfo(info.filter((_, i) => gPos !== i));
+  //   handleClose();
+  // };
+
+  const handleDelete = async () => {
+    let itemId = gIde;
+    try {
+      setIsDeleting(true);  // Show the loading spinner
+      const db = firebase.firestore();
+      await db.collection("Test").doc(itemId).delete();
+      setInfo(info.filter((_, i) => gPos !== i));
+      // You might want to refresh the item list here or remove the item from state
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    } finally {
+      setIsDeleting(false);  // Hide the loading spinner
+    }
     handleClose();
   };
+  
 
   const hoverStyle = (index) => ({
     backgroundColor: hoverIndex === index ? "#ddd" : "transparent",
@@ -316,13 +337,20 @@ export default function MainSearch() {
 
   return (
     <LoggedIn>
+      {isDeleting && (
+        <div className="loading-spinner-overlay">
+          <Spinner animation="border" role="status">
+            <span className="sr-only">Loading...</span>
+          </Spinner>
+        </div>
+      )}
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Delete</Modal.Title>
         </Modal.Header>
         <Modal.Body>Would you like to delete "{dItem}"?</Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={deleteItem}>
+          <Button variant="primary" onClick={handleDelete}>
             Yes
           </Button>
           <Button variant="secondary" onClick={handleClose}>
@@ -507,6 +535,7 @@ export default function MainSearch() {
                       hoverStyle={hoverStyle}
                       sortCheckAll={sortCheckAll}
                       checkDelete={checkDelete}
+                      isDeleting={isDeleting}
                       rowSelect={rowSelect}
                       setHoverIndex={setHoverIndex}
                       hoverIndex={hoverIndex}

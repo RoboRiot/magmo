@@ -1,4 +1,5 @@
-import firebase from "../../context/Firebase";
+import React from 'react'
+import firebase from "../context/Firebase";
 
 export async function fetchPartsWithMachineData() {
   const db = firebase.firestore();

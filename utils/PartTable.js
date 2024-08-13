@@ -1,7 +1,7 @@
 import React from "react";
 import { Table, Button } from "react-bootstrap";
 import { formatDate } from "./fetchAssociations";
-import styles from "../../styles/PartTable.module.css"; // Ensure you have a CSS file for the part table
+import styles from "../styles/PartTable.module.css"; // Ensure you have a CSS file for the part table
 
 export default function PartTable({
   info,
@@ -10,6 +10,7 @@ export default function PartTable({
   hoverStyle,
   sortCheckAll,
   checkDelete,
+  isDeleting,
   rowSelect,
   setHoverIndex,
   hoverIndex,
@@ -90,6 +91,7 @@ export default function PartTable({
                   }}
                   id={ids[index]}
                   variant="danger"
+                  disabled={isDeleting}
                 >
                   X
                 </Button>

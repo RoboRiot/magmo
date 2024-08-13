@@ -4,6 +4,12 @@
     "magmo": "magmo-ac10c"
   },
   "targets": {},
-  "etags": {},
+  "etags": {
+    "magmo-ac10c": {
+      "extensionInstances": {
+        "firestore-send-email": "399f29263625ebc9dc695261dd9dc2e8e6e499bbe02d58bccecffa5265d8a86a"
+      }
+    }
+  },
   "dataconnectEmulatorConfig": {}
 }
