@@ -1,7 +1,7 @@
 // components/ModelTable.js
 import React from "react";
 import { Table, Button, FormControl } from "react-bootstrap";
-import styles from "../../styles/ClientTable.module.css";
+import styles from "../styles/ClientTable.module.css";
 
 const ModelTable = ({ models, onSelectModel, clearSelection }) => {
   return (

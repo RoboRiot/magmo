@@ -67,6 +67,7 @@ const Machine = () => {
 
   const handleSelectPart = (id, name) => {
     console.log(`Selected part ID: ${id}, Name: ${name}`);
+    router.push("../item/" + id);
   };
 
   const formatDate = (timestamp) => {

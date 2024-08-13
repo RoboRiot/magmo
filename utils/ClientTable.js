@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Button, FormControl } from "react-bootstrap";
-import styles from "../../styles/ClientTable.module.css";
+import styles from "../styles/ClientTable.module.css";
 
 const ClientTable = ({
   clients,
