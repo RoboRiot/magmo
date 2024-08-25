@@ -197,22 +197,24 @@ export default function MainSearch() {
     handleShow();
   };
 
-  // const deleteItem = async () => {
-  //   const db = firebase.firestore();
-  //   console.log(gIde);
-  //   await db.collection("Test").doc(gIde).delete();
-  //   setInfo(info.filter((_, i) => gPos !== i));
-  //   handleClose();
-  // };
-
   const handleDelete = async () => {
     let itemId = gIde;
     try {
       setIsDeleting(true);  // Show the loading spinner
+  
+      // Delete from Firestore Test collection
       const db = firebase.firestore();
       await db.collection("Test").doc(itemId).delete();
+  
+      // Delete from Firestore Parts collection
+      await deleteFromPartsCollection(itemId);
+  
+      // Delete images from Firebase Storage
+      await deleteFromStorage(itemId);
+  
+      // Remove the item from the UI list
       setInfo(info.filter((_, i) => gPos !== i));
-      // You might want to refresh the item list here or remove the item from state
+      console.log(`Deleted item from Firestore and Storage: ${itemId}`);
     } catch (error) {
       console.error("Error deleting item:", error);
     } finally {
@@ -220,6 +222,7 @@ export default function MainSearch() {
     }
     handleClose();
   };
+  
   
 
   const hoverStyle = (index) => ({
@@ -334,6 +337,33 @@ export default function MainSearch() {
 
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [modelSearchTerm, setModelSearchTerm] = useState("");
+
+  //deleting item
+
+  const deleteFromStorage = async (itemId) => {
+    const storageRef = firebase.storage().ref();
+    const folderRef = storageRef.child(`Parts/${itemId}/`);
+  
+    try {
+      const listResult = await folderRef.listAll();
+      const deletePromises = listResult.items.map((item) => item.delete());
+      await Promise.all(deletePromises);
+      console.log(`Deleted images from storage for item: ${itemId}`);
+    } catch (error) {
+      console.error("Error deleting from storage:", error);
+    }
+  };
+
+  const deleteFromPartsCollection = async (itemId) => {
+    const db = firebase.firestore();
+    try {
+      await db.collection("Parts").doc(itemId).delete();
+      console.log(`Deleted item from Parts collection: ${itemId}`);
+    } catch (error) {
+      console.error("Error deleting from Parts collection:", error);
+    }
+  };
+  
 
   return (
     <LoggedIn>
