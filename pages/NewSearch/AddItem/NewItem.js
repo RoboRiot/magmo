@@ -136,6 +136,7 @@ export default function NewItem() {
   const handleClientInfo = async (clientId) => {
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
+    console.log("testing 12345")
     if (clientDoc.exists) {
       const clientData = clientDoc.data();
       setSelectedClient(clientData);
@@ -147,6 +148,7 @@ export default function NewItem() {
         id: machineDoc.id,
         ...machineDoc.data(),
       }));
+      console.log(machines)
       setMachineOptions(machines);
       handleShowMachineModal();
     }
@@ -180,7 +182,7 @@ export default function NewItem() {
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
       await uploadPhotos(customID);
-
+      console.log(selectedMachine)
       if (addToWebsite) {
         const partsItem = {
           Name: items.name,
@@ -190,8 +192,8 @@ export default function NewItem() {
           Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
           Available: true,
           Machine: selectedMachine?.name || "",
-          Modality: "MRI", // Set your default or dynamic modality here
-          OEM: "Philips", // Set your default or dynamic OEM here
+          Modality: selectedMachine?.Modality || "", // Set your default or dynamic modality here
+          OEM: selectedMachine?.OEM || "", // Set your default or dynamic OEM here
           PM: items.pn,
         };
 
@@ -199,7 +201,7 @@ export default function NewItem() {
       }
 
       console.log("Items added!");
-      router.push("../mainSearch");
+      // router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);
     }
@@ -209,7 +211,7 @@ export default function NewItem() {
     const storageRef = firebase.storage().ref();
     for (let i = 0; i < photos.length; i++) {
       const photoRef = storageRef.child(
-        `Parts/${customID}/${customID}${i === 0 ? "" : `.${i + 1}`}`
+        `Parts/${customID}/${customID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
       );
       await photoRef.put(photos[i]);
     }
@@ -219,7 +221,7 @@ export default function NewItem() {
   async function handleSubmit(event) {
     event.preventDefault();
     console.log("enter handle submit");
-    console.log(items);
+    // console.log(items);
     let check = false;
 
     if (!items.name) check = true;
@@ -322,7 +324,7 @@ export default function NewItem() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
       setCapturedPhoto(blob);
-    }, "image/jpeg");
+    }, "image/png");
   };
 
   return (
@@ -440,8 +442,8 @@ export default function NewItem() {
         handleClose={handleCloseMachineModal}
         selectedClient={selectedClient}
         machineOptions={machineOptions}
-        setSelectedMachine={(id, name) => {
-          setSelectedMachine({ id, name });
+        setSelectedMachine={(id, name, OEM, Modality) => {
+          setSelectedMachine({ id, name, OEM, Modality });
           handleCloseMachineModal();
         }}
       />
