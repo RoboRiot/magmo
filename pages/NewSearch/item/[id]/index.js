@@ -21,6 +21,7 @@ import ClientTable from "../../../../utils/ClientTable";
 import ClientInfoModal from "../../ClientInfoModal";
 import ParentModal from "../../addItem/ParentModal";
 import dynamic from "next/dynamic";
+import InfoModal from "./InfoModal";
 
 // This will only load the component on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -99,7 +100,7 @@ export default function DisplayItem() {
     async function fetchClientsData() {
       try {
         const clientsData = await fetchClients();
-        console.log(clientsData)
+        console.log(clientsData);
         setClients(clientsData);
       } catch (error) {
         console.error("Error fetching clients: ", error);
@@ -139,13 +140,12 @@ export default function DisplayItem() {
       }
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
-    }
-    else{
-      console.log("I wanna be here")
-        router.push({
-          pathname: "../AddItem/NewItem",
-          query: { signal: id }
-        });
+    } else {
+      console.log("I wanna be here");
+      router.push({
+        pathname: "../AddItem/NewItem",
+        query: { signal: id },
+      });
     }
   };
 
@@ -411,6 +411,30 @@ export default function DisplayItem() {
     }, "image/png");
   };
 
+  //More info modal
+
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [itemName, setItemName] = useState("");
+
+  // Function to fetch the item data and show modal
+  const handleShowInfoModal = async () => {
+    const db = firebase.firestore();
+    try {
+      const doc = await db.collection("Test").doc(id).get();
+      if (doc.exists) {
+        const data = doc.data();
+        setItemName(data.name || "N/A");
+        setShowInfoModal(true);
+      } else {
+        console.error("Item not found");
+      }
+    } catch (error) {
+      console.error("Error fetching item info:", error);
+    }
+  };
+
+  const handleCloseInfoModal = () => setShowInfoModal(false);
+
   return (
     <LoggedIn>
       <Modal show={show} onHide={handleClose}>
@@ -643,6 +667,12 @@ export default function DisplayItem() {
           )}
         </Modal.Footer>
       </Modal>
+
+      <InfoModal
+        show={showInfoModal}
+        handleClose={handleCloseInfoModal}
+        itemName={itemName}
+      />
 
       <Container
         className="d-flex align-items-center justify-content-center"
@@ -904,8 +934,16 @@ export default function DisplayItem() {
                     Save
                   </Button>
 
+                  <Button
+                    variant="secondary"
+                    onClick={handleShowInfoModal}
+                    style={{ marginRight: "1rem" }}
+                  >
+                    More Info
+                  </Button>
+
                   <LoadingButton
-                    type="secondary"
+                    type="primary"
                     name="Back"
                     route="NewSearch/mainSearch"
                   />
