@@ -12,7 +12,7 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton( type, name, route ) {
+function LoadingButton({ type, name, route, enable = true }) {
   const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,7 +25,6 @@ function LoadingButton( type, name, route ) {
 
   const handleClick = () => setLoading(true);
 
-  
   // Guard against falsy route values
   if (!route) return null;
 
@@ -36,8 +35,9 @@ function LoadingButton( type, name, route ) {
       <a
         href={route}
         className={`btn btn-${type}`}
-        disabled={isLoading}
+        disabled={!enable || isLoading}
         onClick={!isLoading ? handleClick : null}
+        style={{ pointerEvents: !enable ? 'none' : 'auto', opacity: !enable ? 0.65 : 1 }}
       >
         {isLoading ? "Loading…" : name}
       </a>
@@ -47,8 +47,9 @@ function LoadingButton( type, name, route ) {
       <Link href={route}>
         <a
           className={`btn btn-${type}`}
-          disabled={isLoading}
+          disabled={!enable || isLoading}
           onClick={!isLoading ? handleClick : null}
+          style={{ pointerEvents: !enable ? 'none' : 'auto', opacity: !enable ? 0.65 : 1 }}
         >
           {isLoading ? "Loading…" : name}
         </a>
@@ -56,6 +57,7 @@ function LoadingButton( type, name, route ) {
     );
   }
 }
+
 
 
 export default function dashboard() {
@@ -71,31 +73,33 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
               <div class="d-grid gap-3">
-                {LoadingButton(
-                  "primary",
-                  "Service Docs",
-                  "ServiceDocs/ServiceSelect"
-                )}
+              <LoadingButton
+                  type="primary"
+                  name="Service Docs"
+                  route="ServiceDocs/ServiceSelect"
+                  enable={false}
+                />
 
-                {/* {LoadingButton("secondary", "Logs", "notes/gKeep")} */}
+                {/* <LoadingButton type="secondary" name="Logs" route="notes/gKeep" /> */}
 
-                {LoadingButton(
-                  "secondary",
-                  "MagMon",
-                  "http://mri.advancedimagingparts.com/login"
-                )}
+                <LoadingButton
+                  type="secondary"
+                  name="MagMon"
+                  route="http://mri.advancedimagingparts.com/login"
+                />
 
-                {LoadingButton(
-                  "primary",
-                  "Warehouse db",
-                  "Warehousedb/WarehouseSelect"
-                )}
+                <LoadingButton
+                  type="primary"
+                  name="Warehouse db"
+                  route="Warehousedb/WarehouseSelect"
+                />
 
-                {LoadingButton(
-                  "secondary",
-                  "Interview",
-                  "schedule/interview"
-                )}
+                <LoadingButton
+                  type="secondary"
+                  name="Interview"
+                  route="schedule/interview"
+                  enable={false}
+                />
 
                 <Button variant="link" onClick={signOut}>
                   Sign out
