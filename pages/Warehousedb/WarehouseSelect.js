@@ -88,7 +88,7 @@ export default function WarehouseSelect() {
 
                 {LoadingButton(
                   "secondary",
-                  "New Search",
+                  "List",
                   "../NewSearch/mainSearch"
                 )}
                 {LoadingButton(
