@@ -73,7 +73,7 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
               <div class="d-grid gap-3">
-              <LoadingButton
+                <LoadingButton
                   type="primary"
                   name="Service Docs"
                   route="ServiceDocs/ServiceSelect"
@@ -94,8 +94,20 @@ export default function dashboard() {
                   route="Warehousedb/WarehouseSelect"
                 />
 
-                <LoadingButton
+                {/* <LoadingButton
                   type="secondary"
+                  name="Machines"
+                  route="Warehousedb/WarehouseSelect"
+                />
+
+                <LoadingButton
+                  type="primary"
+                  name="Clients"
+                  route="Warehousedb/WarehouseSelect"
+                /> */}
+
+                <LoadingButton
+                  type="primary"
                   name="Interview"
                   route="schedule/interview"
                   enable={false}

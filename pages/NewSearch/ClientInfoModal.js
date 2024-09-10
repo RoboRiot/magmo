@@ -37,7 +37,7 @@ const ClientInfoModal = ({
                       <Button
                         variant="primary"
                         onClick={() => {
-                          setSelectedMachine(machine.id, machine.name, machine,OEM, machine.Modality);
+                          setSelectedMachine(machine.id, machine.name, machine.OEM, machine.Modality);
                         }}
                       >
                         Select
