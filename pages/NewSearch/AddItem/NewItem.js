@@ -201,7 +201,7 @@ export default function NewItem() {
       }
 
       console.log("Items added!");
-      // router.push("../mainSearch");
+      router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);
     }
