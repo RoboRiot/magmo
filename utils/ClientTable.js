@@ -45,7 +45,7 @@ const ClientTable = ({
                 <td>
                   <Button
                     variant="primary"
-                    onClick={() => onSelectClient(client.name)}
+                    onClick={() => onSelectClient(client.id)}
                     hide={disableSelect}
                   >
                     Select
