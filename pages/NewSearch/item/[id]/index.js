@@ -140,14 +140,18 @@ export default function DisplayItem() {
       setDescriptions(data.descriptions || []);
       setWorkOrders(data.workOrders || []);
 
-      setTheMachine(data.TheMachine);
+      if (data.TheMachine) {
+        setTheMachine(data.TheMachine);
 
-      const machinesSnapshot = await db
-        .collection("Machine")
-        .where("Model", "==", data.TheMachine.Model)
-        .get();
-      // const machineFrequency = machinesSnapshot.size;
-      setMachineFrequency(machinesSnapshot.size);
+        const machinesSnapshot = await db
+          .collection("Machine")
+          .where("Model", "==", data.TheMachine.Model)
+          .get();
+        // const machineFrequency = machinesSnapshot.size;
+        setMachineFrequency(machinesSnapshot.size);
+      } else {
+        setMachineFrequency("N/A");
+      }
 
       if (data.Machine) {
         const machineDoc = await data.Machine.get();
@@ -308,13 +312,13 @@ export default function DisplayItem() {
   async function toSend() {
     const db = firebase.firestore();
     const formattedItems = { ...items, descriptions, workOrders };
-
+    console.log("The Machine: " + TheMachine)
     if (selectedMachine && selectedMachine.id) {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
 
-    if (TheMachine && TheMachine.id) {
-      formattedItems.TheMachine = theMachine;
+    if (TheMachine && TheMachine.Model) {
+      formattedItems.TheMachine = TheMachine;
     }
 
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
@@ -407,12 +411,11 @@ export default function DisplayItem() {
     if (!items.sn) check = true;
     if (descriptions.some((desc) => !desc.description)) check = true;
     if (workOrders.some((wo) => !wo.workOrder)) check = true;
-    if(TheMachine === null){
-      //prompt user to select a machine if a machine wasnt set 
-      setMachineSelection(true)
-    }
+
     if (check) {
       handleShow();
+    } else if(TheMachine === null){
+      setMachineSelectionModal(true)
     } else {
       console.log("try submit");
       console.log(items);
@@ -707,7 +710,7 @@ export default function DisplayItem() {
        <MachineSelectionModal
         show={machineSelectionModal}
         handleClose={() => setMachineSelectionModal(false)}
-        setMachine={TheMachine}
+        setMachine={setTheMachine}
       />
 
       <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
