@@ -22,6 +22,7 @@ import ClientInfoModal from "../../ClientInfoModal";
 import ParentModal from "../../addItem/ParentModal";
 import dynamic from "next/dynamic";
 import InfoModal from "./InfoModal";
+import MachineSelectionModal from "./MachineSelectionModal";
 
 // This will only load the component on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -68,6 +69,7 @@ export default function DisplayItem() {
     pn: "",
     sn: "",
     date: "",
+    price: ""
   });
 
   const [descriptions, setDescriptions] = useState([
@@ -86,15 +88,22 @@ export default function DisplayItem() {
   const [showParentModal, setShowParentModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
+  const [TheMachine, setTheMachine] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
   const [search, setSearch] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
   const [addToWebsite, setAddToWebsite] = useState(false);
+  const [machinePick, setMachinePick] = useState(false)
+  const [freqItem, setFreqItem] = useState(0);
+  const [usagePastYear, setUsagePastYear] = useState(0);
+  const [machineFrequency, setMachineFrequency] = useState(0);
 
   useEffect(() => {
     async function fetchClientsData() {
@@ -130,9 +139,29 @@ export default function DisplayItem() {
       setItems(data);
       setDescriptions(data.descriptions || []);
       setWorkOrders(data.workOrders || []);
+
+      setTheMachine(data.TheMachine);
+
+      const machinesSnapshot = await db
+        .collection("Machine")
+        .where("Model", "==", data.TheMachine.Model)
+        .get();
+      // const machineFrequency = machinesSnapshot.size;
+      setMachineFrequency(machinesSnapshot.size);
+
       if (data.Machine) {
         const machineDoc = await data.Machine.get();
+        console.log(machineDoc.data())
         setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
+        setTheMachine(machineDoc.data());
+      }
+      if(data.CurrentMachine){
+        console.log(data)
+        const currMachineDoc = await data.CurrentMachine.get();
+        console.log("this is: " + currMachineDoc.data())
+        setSelectedCurrentMachine({ id: currMachineDoc.id, ...currMachineDoc.data() });
+        setTheMachine(currMachineDoc.data());
+        console.log(TheMachine)
       }
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
@@ -140,12 +169,70 @@ export default function DisplayItem() {
       }
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
+
+      await calculateItemFrequencyAndUsage(data.pn);
     } else {
       console.log("I wanna be here");
       router.push({
         pathname: "../AddItem/NewItem",
         query: { signal: id },
       });
+    }
+  };
+
+  const calculateItemFrequencyAndUsage = async (pn) => {
+    const db = firebase.firestore();
+    const currentDate = new Date();
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
+  
+    // Query the Test collection for items with the same pn
+    const itemsSnapshot = await db.collection("Test").where("pn", "==", pn).get();
+    console.log(itemsSnapshot)
+    setFreqItem(itemsSnapshot.size);
+    
+    // Now calculate usage in the past year based on work order dates
+    let usagePastYear = 0;
+  
+    itemsSnapshot.forEach(doc => {
+      const itemData = doc.data();
+      itemData.workOrders.forEach(workOrder => {
+        console.log("workOrder: " + workOrder)
+        const workOrderDate = new Date(workOrder.date);
+        console.log("workOrder date: " + workOrderDate)
+        if (workOrderDate >= oneYearAgo && workOrderDate <= currentDate) {
+          usagePastYear++;
+        }
+      });
+    });
+  
+    // Set global variables or state for freqItem and usagePastYear
+    console.log(`Item frequency for pn ${pn}: ${freqItem}`);
+    console.log(`Usage past year for pn ${pn}: ${usagePastYear}`);
+    setUsagePastYear(usagePastYear)
+  };
+  
+
+  const fetchMachine = async (machineId) => {
+    const db = firebase.firestore();
+    const doc = await db.collection("Machine").doc(machineId).get();
+    var mData = null;
+    if (doc.exists) {
+      setTheMachine(doc.data());
+
+      // Query to get the count of machines with the same model number
+      const modelNumber = doc.data().Model;
+
+      const machinesSnapshot = await db
+        .collection("Machine")
+        .where("Model", "==", modelNumber)
+        .get();
+      // const machineFrequency = machinesSnapshot.size;
+      setMachineFrequency(machinesSnapshot.size);
+      // Set the machine frequency globally or wherever necessary
+      console.log(
+        `Machine frequency for model number ${modelNumber}: ${machineFrequency}`
+      );
     }
   };
 
@@ -177,7 +264,7 @@ export default function DisplayItem() {
   const handleShowErr = () => setShowErr(true);
   const handleCloseSaveModal = () => setShowSaveModal(false);
   const handleShowSaveModal = () => setShowSaveModal(true);
-
+  const handleMachineSelectionModal = () => setMachineSelectionModal(false)
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
   const handleCloseWoModal = () => setShowWoModal(false);
@@ -226,6 +313,14 @@ export default function DisplayItem() {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
 
+    if (TheMachine && TheMachine.id) {
+      formattedItems.TheMachine = theMachine;
+    }
+
+    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+      formattedItems.CurrentMachine = db.collection("Machine").doc(selectedCurrentMachine.id);
+    }
+
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
@@ -243,7 +338,8 @@ export default function DisplayItem() {
             Description: descriptions[0]?.description || "",
             Images: photos.map((photo) => photo.url),
             Available: true,
-            Machine: selectedMachine?.name || "",
+            From: selectedMachine?.name || "",
+            Current: selectedCurrentMachine?.name || "",
             Modality: "MRI", // Set your default or dynamic modality here
             OEM: "Philips", // Set your default or dynamic OEM here
             PM: items.pn,
@@ -265,7 +361,8 @@ export default function DisplayItem() {
             Description: descriptions[0]?.description || "",
             Images: photos.map((photo) => photo.url),
             Available: true,
-            Machine: selectedMachine?.name || "",
+            From: selectedMachine?.name || "",
+            Current: selectedCurrentMachine?.name || "",
             Modality: "MRI", // Set your default or dynamic modality here
             OEM: "Philips", // Set your default or dynamic OEM here
             PM: items.pn,
@@ -310,7 +407,10 @@ export default function DisplayItem() {
     if (!items.sn) check = true;
     if (descriptions.some((desc) => !desc.description)) check = true;
     if (workOrders.some((wo) => !wo.workOrder)) check = true;
-
+    if(TheMachine === null){
+      //prompt user to select a machine if a machine wasnt set 
+      setMachineSelection(true)
+    }
     if (check) {
       handleShow();
     } else {
@@ -562,7 +662,13 @@ export default function DisplayItem() {
         selectedClient={selectedClient}
         machineOptions={machineOptions}
         setSelectedMachine={(id, name) => {
-          setSelectedMachine({ id, name });
+          if (machinePick) {
+            setSelectedMachine({ id, name });
+            fetchMachine(id);
+          } else {
+            setSelectedCurrentMachine({ id, name });
+            fetchMachine(id);
+          }
           handleCloseMachineModal();
         }}
       />
@@ -595,6 +701,13 @@ export default function DisplayItem() {
         show={showParentModal}
         handleClose={handleCloseParentModal}
         setSelectedParent={setSelectedParent}
+      />
+
+       {/* Modal Component */}
+       <MachineSelectionModal
+        show={machineSelectionModal}
+        handleClose={() => setMachineSelectionModal(false)}
+        setMachine={TheMachine}
       />
 
       <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
@@ -671,7 +784,12 @@ export default function DisplayItem() {
       <InfoModal
         show={showInfoModal}
         handleClose={handleCloseInfoModal}
-        itemName={itemName}
+        itemName={items.name}
+        dimensions={items.length + "," + items.width + "," + items.height}
+        price={items.price}
+        freqI={freqItem}
+        freqM={machineFrequency}
+        usage={usagePastYear}
       />
 
       <Container
@@ -731,6 +849,7 @@ export default function DisplayItem() {
                           onChange={handleChange("length")}
                         />
                       </Col>
+                      x
                       <Col>
                         <Form.Control
                           placeholder="Width"
@@ -739,6 +858,7 @@ export default function DisplayItem() {
                           onChange={handleChange("width")}
                         />
                       </Col>
+                      x
                       <Col>
                         <Form.Control
                           placeholder="Height"
@@ -747,6 +867,17 @@ export default function DisplayItem() {
                           onChange={handleChange("height")}
                         />
                       </Col>
+                    </Row>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="Price">
+                    <Row>
+                      <Form.Label>Price</Form.Label>
+                      <Form.Control
+                        placeholder="Price"
+                        type="text"
+                        value={items.price}
+                        onChange={handleChange("price")}
+                      />
                     </Row>
                   </Form.Group>
                 </Row>
@@ -845,16 +976,40 @@ export default function DisplayItem() {
                     <Col>
                       <Button
                         variant="outline-secondary"
-                        onClick={handleShowClientModal}
+                        onClick={() => {
+                          setMachinePick(true);
+                          handleShowClientModal();
+                        }}
                         className="me-2"
                       >
-                        Select Machine
+                        Select From
                       </Button>
                       {selectedMachine && (
                         <Form.Control
                           type="text"
                           placeholder="Selected Machine"
                           value={selectedMachine.name}
+                          readOnly
+                          style={{ cursor: "default", marginTop: "0.5rem" }}
+                        />
+                      )}
+                    </Col>
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setMachinePick(false);
+                          handleShowClientModal();
+                        }}
+                        className="me-2"
+                      >
+                        Select Current
+                      </Button>
+                      {selectedCurrentMachine && (
+                        <Form.Control
+                          type="text"
+                          placeholder="Selected Machine"
+                          value={selectedCurrentMachine.name}
                           readOnly
                           style={{ cursor: "default", marginTop: "0.5rem" }}
                         />
