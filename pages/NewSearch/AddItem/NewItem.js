@@ -102,6 +102,8 @@ export default function NewItem() {
   const [cameraFacing, setCameraFacing] = useState("environment");
   const [addToWebsite, setAddToWebsite] = useState(false);
   const [setID, setSetId] = useState(null);
+  const [machinePick, setMachinePick] = useState(false);
+
 
   useEffect(() => {
     if (signal) {
@@ -140,7 +142,7 @@ export default function NewItem() {
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
   const showTheMachineModal = () => setShowTheMachineModal(false);
-
+  
   const handleClientInfo = async (clientId) => {
     console.log("do we enter here?" + clientId)
     const db = firebase.firestore();
@@ -159,6 +161,15 @@ export default function NewItem() {
       console.log("checking if open")
       setMachineOptions(machines);
       handleShowMachineModal();
+    }
+  };
+
+  const fetchMachine = async (machineId) => {
+    const db = firebase.firestore();
+    const doc = await db.collection("Machine").doc(machineId).get();
+    var mData = null;
+    if (doc.exists) {
+      setTheMachine(doc.data());
     }
   };
 
@@ -459,13 +470,13 @@ export default function NewItem() {
         selectedClient={selectedClient}
         machineOptions={machineOptions}
         setSelectedMachine={(id, name) => {
-          setSelectedMachine({ id, name });
-          setTheMachine({ id, name }); // Set TheMachine when a machine is selected
-          handleCloseMachineModal();
-        }}
-        setSelectedCurrentMachine={(id, name) => {
-          setSelectedCurrentMachine({ id, name });
-          setTheMachine({ id, name });
+          if (machinePick) {
+            setSelectedMachine({ id, name });
+            fetchMachine(id);
+          } else {
+            setSelectedCurrentMachine({ id, name });
+            fetchMachine(id);
+          }
           handleCloseMachineModal();
         }}
       />
@@ -620,46 +631,60 @@ export default function NewItem() {
                     />
                   </Form.Group>
                 </Row>
-                <Row>
-                  <Form.Group as={Col} controlId="price">
-                    <Form.Label>Price</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Enter price"
-                      value={items.price}
-                      onChange={handleChange("price")}
-                    />
-                  </Form.Group>
-                </Row>
+
+                {/* Dimensions and Price Row */}
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="length">
-                    <Form.Label>Length</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Enter length"
-                      value={items.length}
-                      onChange={handleChange("length")}
-                    />
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="width">
-                    <Form.Label>Width</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Enter width"
-                      value={items.width}
-                      onChange={handleChange("width")}
-                    />
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="height">
-                    <Form.Label>Height</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Enter height"
-                      value={items.height}
-                      onChange={handleChange("height")}
-                    />
-                  </Form.Group>
+                  {/* Left side: Dimensions */}
+                  <Col>
+                    <Form.Group controlId="dimensions">
+                      <Form.Label>
+                        Dimensions (Length x Width x Height)
+                      </Form.Label>
+                      <Row>
+                        <Col>
+                          <Form.Control
+                            placeholder="Length"
+                            type="text"
+                            value={items.length}
+                            onChange={handleChange("length")}
+                          />
+                        </Col>
+                        x
+                        <Col>
+                          <Form.Control
+                            placeholder="Width"
+                            type="text"
+                            value={items.width}
+                            onChange={handleChange("width")}
+                          />
+                        </Col>
+                        x
+                        <Col>
+                          <Form.Control
+                            placeholder="Height"
+                            type="text"
+                            value={items.height}
+                            onChange={handleChange("height")}
+                          />
+                        </Col>
+                      </Row>
+                    </Form.Group>
+                  </Col>
+
+                  {/* Right side: Price */}
+                  <Col>
+                    <Form.Group controlId="price">
+                      <Form.Label>Price</Form.Label>
+                      <Form.Control
+                        placeholder="Price"
+                        type="text"
+                        value={items.price}
+                        onChange={handleChange("price")}
+                      />
+                    </Form.Group>
+                  </Col>
                 </Row>
+
                 <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                   <div className="d-flex align-items-center">
                     <Button
@@ -751,13 +776,15 @@ export default function NewItem() {
                   </Form.Group>
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
-                  <Row>
+                  {/* Machine Selection Row */}
+                  <Row className="mb-3">
                     <Col>
                       <Button
                         variant="outline-secondary"
                         onClick={() => {
                           setSelectedMachine(true);
                           handleShowClientModal();
+                          setMachinePick(true);
                         }}
                         className="me-2"
                       >
@@ -779,6 +806,7 @@ export default function NewItem() {
                         onClick={() => {
                           setSelectedCurrentMachine(true);
                           handleShowClientModal();
+                          setMachinePick(false);
                         }}
                         className="me-2"
                       >
@@ -794,10 +822,6 @@ export default function NewItem() {
                         />
                       )}
                     </Col>
-                  </Row>
-                </div>
-                <div style={{ marginBottom: "1rem" }}>
-                  <Row>
                     <Col>
                       <Button
                         variant="outline-secondary"
