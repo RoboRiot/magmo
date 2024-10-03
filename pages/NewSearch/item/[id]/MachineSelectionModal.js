@@ -3,7 +3,7 @@ import { Modal, Button, Dropdown, FormControl, Spinner } from "react-bootstrap";
 import { fetchModels } from "../../../../utils/fetchAssociations"; // Assuming you already have this
 
 export default function MachineSelectionModal({ show, handleClose, setMachine }) {
-  const [modality, setModality] = useState(null);
+  const [Modality, setModality] = useState(null);
   const [OEM, setOEM] = useState(null);
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
@@ -11,9 +11,9 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
 
   // Fetch models when Modality and OEM are selected
   useEffect(() => {
-    if (modality && OEM) {
+    if (Modality && OEM) {
       setLoadingModels(true);
-      fetchModels(OEM, modality)
+      fetchModels(OEM, Modality)
         .then((fetchedModels) => {
           setModels(fetchedModels);
           setLoadingModels(false);
@@ -23,7 +23,7 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
           setLoadingModels(false);
         });
     }
-  }, [modality, OEM]);
+  }, [Modality, OEM]);
 
   const handleModalitySelect = (selectedModality) => {
     setModality(selectedModality);
@@ -43,7 +43,7 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
   const handleSaveSelection = () => {
     if (selectedModel) {
       // Pass selected machine data back to the parent
-      setMachine({ modality, OEM, model: selectedModel });
+      setMachine({ Modality, OEM, Model: selectedModel });
       handleClose(); // Close the modal
     }
   };
@@ -57,7 +57,7 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
         <div className="mb-3">
           <Dropdown onSelect={handleModalitySelect}>
             <Dropdown.Toggle variant="outline-secondary" className="w-100">
-              {modality || "Select Modality"}
+              {Modality || "Select Modality"}
             </Dropdown.Toggle>
             <Dropdown.Menu>
               <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
@@ -66,7 +66,7 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
           </Dropdown>
         </div>
 
-        {modality && (
+        {Modality && (
           <div className="mb-3">
             <Dropdown onSelect={handleOEMSelect}>
               <Dropdown.Toggle variant="outline-secondary" className="w-100">
@@ -82,7 +82,7 @@ export default function MachineSelectionModal({ show, handleClose, setMachine })
           </div>
         )}
 
-        {modality && OEM && (
+        {Modality && OEM && (
           <div className="mb-3">
             <FormControl
               placeholder="Search models"
