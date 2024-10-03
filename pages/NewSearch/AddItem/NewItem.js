@@ -21,6 +21,7 @@ import { fetchClients } from "../../../utils/fetchAssociations";
 import ClientTable from "../../../utils/ClientTable";
 import ClientInfoModal from "../ClientInfoModal";
 import ParentModal from "./ParentModal";
+import MachineSelectionModal from "../item/[id]/MachineSelectionModal";
 
 // This will only load the component on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -60,13 +61,17 @@ function LoadingButton({ type, name, route }) {
 
 export default function NewItem() {
   const router = useRouter();
-  const { signal } = router.query;  // Retrieve the query parameter
+  const { signal } = router.query; // Retrieve the query parameter
   const { signOut } = useAuth();
   const [items, setItems] = useState({
     name: "",
     pn: "",
     sn: "",
     date: "",
+    price: "",
+    length: "",
+    width: "",
+    height: "",
   });
 
   const [descriptions, setDescriptions] = useState([
@@ -82,12 +87,15 @@ export default function NewItem() {
   const [showWoModal, setShowWoModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
+  const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
+  const [TheMachine, setTheMachine] = useState(null); // Added TheMachine state
   const [machineOptions, setMachineOptions] = useState([]);
   const [search, setSearch] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -98,8 +106,7 @@ export default function NewItem() {
   useEffect(() => {
     if (signal) {
       // Execute special behavior
-      console.log("Special behavior triggered: " + signal);
-      setSetId(signal)
+      setSetId(signal);
     }
 
     async function fetchClientsData() {
@@ -132,11 +139,12 @@ export default function NewItem() {
   };
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
+  const showTheMachineModal = () => setShowTheMachineModal(false);
 
   const handleClientInfo = async (clientId) => {
+    console.log("do we enter here?" + clientId)
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
-    console.log("testing 12345")
     if (clientDoc.exists) {
       const clientData = clientDoc.data();
       setSelectedClient(clientData);
@@ -148,7 +156,7 @@ export default function NewItem() {
         id: machineDoc.id,
         ...machineDoc.data(),
       }));
-      console.log(machines)
+      console.log("checking if open")
       setMachineOptions(machines);
       handleShowMachineModal();
     }
@@ -169,20 +177,29 @@ export default function NewItem() {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
 
+    if (TheMachine && TheMachine.Model) {
+      formattedItems.TheMachine = TheMachine;
+    }
+
+    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+      formattedItems.CurrentMachine = db
+        .collection("Machine")
+        .doc(selectedCurrentMachine.id);
+    }
+
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
 
     let customID = generateCustomID();
 
-    if(signal){
-      customID = signal
+    if (signal) {
+      customID = signal;
     }
 
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
       await uploadPhotos(customID);
-      console.log(selectedMachine)
       if (addToWebsite) {
         const partsItem = {
           Name: items.name,
@@ -191,16 +208,16 @@ export default function NewItem() {
           Description: descriptions[0]?.description || "",
           Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
           Available: true,
-          Machine: selectedMachine?.name || "",
-          Modality: selectedMachine?.Modality || "", // Set your default or dynamic modality here
-          OEM: selectedMachine?.OEM || "", // Set your default or dynamic OEM here
+          From: selectedMachine?.name || "",
+          Current: selectedCurrentMachine?.name || "",
+          Modality: "MRI", // Set your default or dynamic modality here
+          OEM: "Philips", // Set your default or dynamic OEM here
           PM: items.pn,
         };
 
         await db.collection("Parts").doc(customID).set(partsItem);
       }
 
-      console.log("Items added!");
       router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);
@@ -220,21 +237,20 @@ export default function NewItem() {
   // Handle form submission
   async function handleSubmit(event) {
     event.preventDefault();
-    console.log("enter handle submit");
-    // console.log(items);
     let check = false;
 
     if (!items.name) check = true;
     if (!items.pn) check = true;
     if (!items.sn) check = true;
+    if (!items.price) check = true; // Check for the price field
     if (descriptions.some((desc) => !desc.description)) check = true;
     if (workOrders.some((wo) => !wo.workOrder)) check = true;
 
     if (check) {
       handleShow();
+    } else if (TheMachine === null) {
+      setMachineSelectionModal(true)
     } else {
-      console.log("try submit");
-      console.log(items);
       toSend();
     }
   }
@@ -442,15 +458,21 @@ export default function NewItem() {
         handleClose={handleCloseMachineModal}
         selectedClient={selectedClient}
         machineOptions={machineOptions}
-        setSelectedMachine={(id, name, OEM, Modality) => {
-          setSelectedMachine({ id, name, OEM, Modality });
+        setSelectedMachine={(id, name) => {
+          setSelectedMachine({ id, name });
+          setTheMachine({ id, name }); // Set TheMachine when a machine is selected
+          handleCloseMachineModal();
+        }}
+        setSelectedCurrentMachine={(id, name) => {
+          setSelectedCurrentMachine({ id, name });
+          setTheMachine({ id, name });
           handleCloseMachineModal();
         }}
       />
 
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
         <Modal.Header closeButton>
-          <Modal.Title>Select Client</Modal.Title>
+          <Modal.Title>Select Machine</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <FormControl
@@ -465,12 +487,16 @@ export default function NewItem() {
               client.name.toLowerCase().includes(search.toLowerCase())
             )}
             onSelectClient={handleClientInfo}
-            onInfoClick={handleClientInfo}
             clearSelection={() => handleClientInfo(null)}
-            disableSelect={true}
           />
         </Modal.Body>
       </Modal>
+
+      <MachineSelectionModal
+        show={machineSelectionModal}
+        handleClose={() => setMachineSelectionModal(false)}
+        setMachine={setTheMachine}
+      />
 
       <ParentModal
         show={showParentModal}
@@ -556,7 +582,7 @@ export default function NewItem() {
         <div className="w-100" style={{ maxWidth: "600px" }}>
           <Card className="align-items-center justify-content-center">
             <Card.Body>
-              <h2 className="text-center mb-4">Item</h2>
+              <h2 className="text-center mb-4">Add New Item</h2>
               <Form onSubmit={handleSubmit}>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="name">
@@ -595,38 +621,46 @@ export default function NewItem() {
                   </Form.Group>
                 </Row>
                 <Row>
-                  <Form.Group as={Col} controlId="date">
-                    <Form.Label>Dimensions</Form.Label>
-                    <Row>
-                      <Col>
-                        <Form.Control
-                          placeholder="Length"
-                          type="text"
-                          value={items.length}
-                          onChange={handleChange("length")}
-                        />
-                      </Col>
-                      <Col>
-                        <Form.Control
-                          placeholder="Width"
-                          type="text"
-                          value={items.width}
-                          onChange={handleChange("width")}
-                        />
-                      </Col>
-                      <Col>
-                        <Form.Control
-                          placeholder="Height"
-                          type="text"
-                          value={items.height}
-                          onChange={handleChange("height")}
-                        />
-                      </Col>
-                    </Row>
+                  <Form.Group as={Col} controlId="price">
+                    <Form.Label>Price</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter price"
+                      value={items.price}
+                      onChange={handleChange("price")}
+                    />
+                  </Form.Group>
+                </Row>
+                <Row className="mb-3">
+                  <Form.Group as={Col} controlId="length">
+                    <Form.Label>Length</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter length"
+                      value={items.length}
+                      onChange={handleChange("length")}
+                    />
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="width">
+                    <Form.Label>Width</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter width"
+                      value={items.width}
+                      onChange={handleChange("width")}
+                    />
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="height">
+                    <Form.Label>Height</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter height"
+                      value={items.height}
+                      onChange={handleChange("height")}
+                    />
                   </Form.Group>
                 </Row>
                 <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
-                  {/* <Form.Label>Work Orders</Form.Label> */}
                   <div className="d-flex align-items-center">
                     <Button
                       variant="outline-secondary"
@@ -671,7 +705,6 @@ export default function NewItem() {
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
                   <Form.Group className="mb-3" controlId="desc">
-                    {/* <Form.Label>Description</Form.Label> */}
                     <Button
                       variant="outline-secondary"
                       onClick={listDescriptions}
@@ -722,10 +755,13 @@ export default function NewItem() {
                     <Col>
                       <Button
                         variant="outline-secondary"
-                        onClick={handleShowClientModal}
+                        onClick={() => {
+                          setSelectedMachine(true);
+                          handleShowClientModal();
+                        }}
                         className="me-2"
                       >
-                        Select Machine
+                        Select From
                       </Button>
                       {selectedMachine && (
                         <Form.Control
@@ -737,6 +773,31 @@ export default function NewItem() {
                         />
                       )}
                     </Col>
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setSelectedCurrentMachine(true);
+                          handleShowClientModal();
+                        }}
+                        className="me-2"
+                      >
+                        Select Current
+                      </Button>
+                      {selectedCurrentMachine && (
+                        <Form.Control
+                          type="text"
+                          placeholder="Selected Machine"
+                          value={selectedCurrentMachine.name}
+                          readOnly
+                          style={{ cursor: "default", marginTop: "0.5rem" }}
+                        />
+                      )}
+                    </Col>
+                  </Row>
+                </div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <Row>
                     <Col>
                       <Button
                         variant="outline-secondary"
@@ -760,20 +821,20 @@ export default function NewItem() {
                 <div style={{ marginBottom: "1rem" }}>
                   <Row>
                     <Col>
-                    <Button
-                      variant="outline-secondary"
-                      onClick={handleShowCameraModal}
-                    >
-                      Take Photo
-                    </Button>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleShowCameraModal}
+                      >
+                        Take Photo
+                      </Button>
                     </Col>
                     <Col>
-                    <Button
-                      variant={addToWebsite ? "primary" : "outline-primary"}
-                      onClick={() => setAddToWebsite((prev) => !prev)}
-                    >
-                      {addToWebsite ? "✓ Add to Website" : "Add to Website"}
-                    </Button>
+                      <Button
+                        variant={addToWebsite ? "primary" : "outline-primary"}
+                        onClick={() => setAddToWebsite((prev) => !prev)}
+                      >
+                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                      </Button>
                     </Col>
                   </Row>
                 </div>
