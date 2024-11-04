@@ -192,7 +192,7 @@ export default function NewItem() {
       formattedItems.TheMachine = TheMachine;
     }
 
-    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+    if (CurrentMachineselected && selectedCurrentMachine.id) {
       formattedItems.CurrentMachine = db
         .collection("Machine")
         .doc(selectedCurrentMachine.id);
@@ -211,19 +211,23 @@ export default function NewItem() {
     try {
       await db.collection("Test").doc(customID).set(formattedItems);
       await uploadPhotos(customID);
+      //adds to Parts collection which is what the website uses to display parts
+      //if the add to website button is pushed
       if (addToWebsite) {
         const partsItem = {
-          Name: items.name,
-          PN: items.pn,
-          SN: items.sn,
-          Description: descriptions[0]?.description || "",
+          Name: items?.name || "",
+          PN: items?.pn || "",
+          SN: items?.sn || "",
+          // Description: descriptions[0]?.description || "",
           Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
           Available: true,
           From: selectedMachine?.name || "",
-          Current: selectedCurrentMachine?.name || "",
-          Modality: "MRI", // Set your default or dynamic modality here
-          OEM: "Philips", // Set your default or dynamic OEM here
-          PM: items.pn,
+          Current: selectedMachine?.name || "",
+          Modality: selectedMachine?.Modality || "", // Set your default or dynamic modality here
+          OEM: selectedMachine?.OEM || "", // Set your default or dynamic OEM here
+          Model: selectedMachine?.Model || "", // Set your default or dynamic Model here
+          PM: items?.pn || "",
+          Sold: 0,
         };
 
         await db.collection("Parts").doc(customID).set(partsItem);

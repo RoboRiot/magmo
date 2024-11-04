@@ -333,23 +333,32 @@ export default function DisplayItem() {
       if (id) {
         await db.collection("Test").doc(id).update(formattedItems);
         await uploadPhotos(id);
-
+        //adds to Parts collection which is what the website uses to display parts
+        //if the add to website button is pushed
         if (addToWebsite) {
           const partsItem = {
-            Name: items.name,
-            PN: items.pn,
-            SN: items.sn,
-            Description: descriptions[0]?.description || "",
-            Images: photos.map((photo) => photo.url),
+            Name: items?.name || "",
+            PN: items?.pn || "",
+            SN: items?.sn || "",
+            // Description: descriptions[0]?.description || "",
+            Images: photos.map((_, index) => `Parts/${id}/${id}${index === 0 ? "" : `.${index + 1}`}`),
             Available: true,
             From: selectedMachine?.name || "",
             Current: selectedCurrentMachine?.name || "",
-            Modality: "MRI", // Set your default or dynamic modality here
-            OEM: "Philips", // Set your default or dynamic OEM here
-            PM: items.pn,
+            Modality: selectedCurrentMachine?.Modality || "", // Set your default or dynamic modality here
+            OEM: selectedCurrentMachine?.OEM || "", // Set your default or dynamic OEM here
+            Model: selectedCurrentMachine?.Model || "", // Set your default or dynamic Model here
+            PM: items?.pn || "",
+            Sold: 0,
           };
 
           await db.collection("Parts").doc(id).set(partsItem);
+        } else {
+          // Remove the item from the Parts collection if it was previously added
+          const partsDoc = await db.collection("Parts").doc(id).get();
+          if (partsDoc.exists) {
+            await db.collection("Parts").doc(id).delete();
+          }
         }
         console.log("Items updated!");
       } else {
@@ -359,20 +368,28 @@ export default function DisplayItem() {
 
         if (addToWebsite) {
           const partsItem = {
-            Name: items.name,
-            PN: items.pn,
-            SN: items.sn,
-            Description: descriptions[0]?.description || "",
-            Images: photos.map((photo) => photo.url),
+            Name: items?.name || "",
+            PN: items?.pn || "",
+            SN: items?.sn || "",
+            // Description: descriptions[0]?.description || "",
+            Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
             Available: true,
             From: selectedMachine?.name || "",
             Current: selectedCurrentMachine?.name || "",
-            Modality: "MRI", // Set your default or dynamic modality here
-            OEM: "Philips", // Set your default or dynamic OEM here
-            PM: items.pn,
+            Modality: selectedCurrentMachine?.Modality || "", // Set your default or dynamic modality here
+            OEM: selectedCurrentMachine?.OEM || "", // Set your default or dynamic OEM here
+            Model: selectedCurrentMachine?.Model || "", // Set your default or dynamic Model here
+            PM: items?.pn || "",
+            Sold: 0,
           };
 
           await db.collection("Parts").doc(customID).set(partsItem);
+        } else {
+          // Remove the item from the Parts collection if it was previously added
+          const partsDoc = await db.collection("Parts").doc(customID).get();
+          if (partsDoc.exists) {
+            await db.collection("Parts").doc(customID).delete();
+          }
         }
         console.log("Items added!");
       }
@@ -387,7 +404,7 @@ export default function DisplayItem() {
     for (let i = 0; i < photos.length; i++) {
       if (photos[i].file) {
         const photoRef = storageRef.child(
-          `Parts/${docID}/${docID}${i === 0 ? "" : `.${i + 1}`}`
+          `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
         );
         const metadata = {
           contentType: "image/png",
