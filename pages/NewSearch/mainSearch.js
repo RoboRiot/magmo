@@ -78,8 +78,8 @@ export default function MainSearch() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientButtonText, setClientButtonText] = useState("Select Option");
   const router = useRouter();
-  const labelBase = ["name", "date", "w/o", "p/n", "s/n", " "];
-  const labelBaseNames = ["name", "date", "wo", "pn", "sn", " "];
+  const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
+  const labelBaseNames = ["name", "date", "wo", "pn", "sn"];
   const sortCheckBase = [false, false, false, false, false, false];
   const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
@@ -115,40 +115,32 @@ export default function MainSearch() {
   // Filter items based on search criteria
   function searchFilter() {
     const temp = backupInfo.filter((item) => {
-      // console.log(item.machineData);
       if (item.machineData) {
         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-        if (selectedModality && item.machineData.Modality !== selectedModality)
-          return false;
-        if (selectedClient && item.machineData.Client !== selectedClient)
-          return false;
-        if (selectedModel && item.machineData.Model !== selectedModel)
-          return false;
+        if (selectedModality && item.machineData.Modality !== selectedModality) return false;
+        if (selectedClient && item.machineData.Client !== selectedClient) return false;
+        if (selectedModel && item.machineData.Model !== selectedModel) return false;
       }
-
-      if (
-        select === "Name" &&
-        item.name.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
+  
+      if (select === "Name" && item.name.toLowerCase().includes(search.toLowerCase())) return true;
       if (select === "Date") {
         const [month, day, year] = item.date.split("/");
         const reformattedDate = `${year}-${month}-${day}`;
         return reformattedDate === search;
       }
-      if (select === "Work Order" && Number(item.wo) === Number(search))
-        return true;
-      if (select === "Product Number" && Number(item.pn) === Number(search))
-        return true;
-      if (
-        select === "Description" &&
-        item.desc.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
+      if (select === "Work Order" && item.wo === search) return true;
+      if (select === "Product Number" && item.pn === search) return true;
+      if (select === "Description" && item.desc.toLowerCase().includes(search.toLowerCase())) return true;
+
+      // New condition for Item ID as a string
+      if (select === "SKU" && item.id.toLowerCase().includes(search.toLowerCase())) return true;
+  
       return false;
     });
     setInfo(temp);
   }
+  
+  
 
   // Sort items based on column
   function sortCheckAll(pos) {
@@ -182,20 +174,55 @@ export default function MainSearch() {
     router.push("item/" + id);
   };
 
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleSelectItem = (id) => {
+    setSelectedItems((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const handleShowDeleteModal = () => setShowDeleteModal(true);
+  const handleCloseDeleteModal = () => setShowDeleteModal(false);
+
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      const db = firebase.firestore();
+      const deletePromises = selectedItems.map(async (itemId) => {
+        await db.collection("Test").doc(itemId).delete();
+        await db.collection("Parts").doc(itemId).delete();
+        await deleteFromStorage(itemId);
+      });
+      await Promise.all(deletePromises);
+      setInfo(info.filter((item) => !selectedItems.includes(item.id)));
+      setSelectedItems([]);
+    } catch (error) {
+      console.error("Error deleting items:", error);
+    } finally {
+      setIsDeleting(false);
+      handleCloseDeleteModal();
+      router.reload();
+    }
+  };
+
   // Modal handlers
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
   // Delete item handler
-  const checkDelete = (event, pos, ide, name) => {
-    event.preventDefault();
-    event.stopPropagation();
-    console.log(ide);
+  const checkDelete = (event, pos, idsToDelete, name) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    console.log("Selected IDs to delete:", idsToDelete);
+    setSelectedItems(idsToDelete); // Set selected items
     setDItem(name);
-    setGPos(pos);
-    setGIde(ide);
-    handleShow();
-  };
+    setShowDeleteModal(true); // Open the modal
+};
+  
 
   const handleDelete = async () => {
     let itemId = gIde;
@@ -343,16 +370,15 @@ export default function MainSearch() {
   const deleteFromStorage = async (itemId) => {
     const storageRef = firebase.storage().ref();
     const folderRef = storageRef.child(`Parts/${itemId}/`);
-  
     try {
       const listResult = await folderRef.listAll();
       const deletePromises = listResult.items.map((item) => item.delete());
       await Promise.all(deletePromises);
-      console.log(`Deleted images from storage for item: ${itemId}`);
     } catch (error) {
       console.error("Error deleting from storage:", error);
     }
   };
+  
 
   const deleteFromPartsCollection = async (itemId) => {
     const db = firebase.firestore();
@@ -368,23 +394,26 @@ export default function MainSearch() {
   return (
     <LoggedIn>
       {isDeleting && (
-        <div className="loading-spinner-overlay">
-          <Spinner animation="border" role="status">
+        <div className="loading-overlay">
+          <Spinner animation="border" role="status" className="spinner-center">
             <span className="sr-only">Loading...</span>
           </Spinner>
         </div>
       )}
-      <Modal show={show} onHide={handleClose}>
+      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal}>
         <Modal.Header closeButton>
-          <Modal.Title>Delete</Modal.Title>
+          <Modal.Title>Confirm Deletion</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Would you like to delete "{dItem}"?</Modal.Body>
+        <Modal.Body>
+          Are you sure you want to delete {selectedItems.length} item
+          {selectedItems.length > 1 ? "s" : ""}?
+        </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={handleDelete}>
-            Yes
+          <Button variant="danger" onClick={handleDeleteSelected}>
+            Yes, delete
           </Button>
-          <Button variant="secondary" onClick={handleClose}>
-            No
+          <Button variant="secondary" onClick={handleCloseDeleteModal}>
+            Cancel
           </Button>
         </Modal.Footer>
       </Modal>
@@ -407,6 +436,7 @@ export default function MainSearch() {
             )}
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
+            isClientSearch={false}
             clearSelection={() => handleClientSelect(null)} // Clear selection handler
           />
         </Modal.Body>
@@ -443,7 +473,7 @@ export default function MainSearch() {
         <div className="w-100" style={{ maxWidth: "1200px" }}>
           <Card>
             <Card.Body>
-              <h2 className="text-center mb-4">New Search</h2>
+              <h2 className="text-center mb-4">Magmo</h2>
               <Row>
                 <Col md={4}>
                   {/* Dropdowns */}
@@ -565,11 +595,15 @@ export default function MainSearch() {
                       hoverStyle={hoverStyle}
                       sortCheckAll={sortCheckAll}
                       checkDelete={checkDelete}
+                      setShowDeleteModal={setShowDeleteModal}  // Pass the modal control to PartTable
                       isDeleting={isDeleting}
                       rowSelect={rowSelect}
                       setHoverIndex={setHoverIndex}
                       hoverIndex={hoverIndex}
+                      selectedItems={selectedItems} // New prop
+                      setSelectedItems={setSelectedItems} // New prop
                     />
+
                     <div className={styles.searchContainer}>
                       <Form className="d-flex pb-2">
                         <FormControl
@@ -627,6 +661,14 @@ export default function MainSearch() {
                             // Add this line
                           >
                             Description
+                          </NavDropdown.Item>
+                          <NavDropdown.Item
+                            onClick={() => {
+                              setSelect("SKU"); // New option for Item ID
+                              setShowListSearch("text");
+                            }}
+                          >
+                            SKU
                           </NavDropdown.Item>
                         </NavDropdown>
                         {/* <Button variant="info" onClick={searchFilter}>

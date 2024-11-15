@@ -80,11 +80,12 @@ const Client = () => {
               {selectedClient ? (
                 <>
                   <h5>Client: {selectedClient.name}</h5>
-                  <p>Location: {selectedClient.location}</p>
+                  <p>Location: {selectedClient.local}</p>
                   <Table striped bordered hover size="sm">
                     <thead>
                       <tr>
                         <th>Name</th>
+                        <th>Location</th>
                         <th>OEM</th>
                         <th>Modality</th>
                         <th>Select</th>
@@ -94,6 +95,7 @@ const Client = () => {
                       {machineOptions.map((machine) => (
                         <tr key={machine.id}>
                           <td>{machine.name}</td>
+                          <td>{machine.local}</td>
                           <td>{machine.OEM}</td>
                           <td>{machine.Modality}</td>
                           <td>

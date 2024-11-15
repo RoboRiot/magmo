@@ -11,44 +11,34 @@ const ClientInfoModal = ({
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
-        <Modal.Title>Client Machines</Modal.Title>
+        <Modal.Title>Select a Machine</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {selectedClient && (
-          <>
-            <h5>Client: {selectedClient.name}</h5>
-            <p>Location: {selectedClient.location}</p>
-            <Table striped bordered hover size="sm">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>OEM</th>
-                  <th>Modality</th>
-                  <th>Select</th>
-                </tr>
-              </thead>
-              <tbody>
-                {machineOptions.map((machine) => (
-                  <tr key={machine.id}>
-                    <td>{machine.name}</td>
-                    <td>{machine.OEM}</td>
-                    <td>{machine.Modality}</td>
-                    <td>
-                      <Button
-                        variant="primary"
-                        onClick={() => {
-                          setSelectedMachine(machine.id, machine.name, machine.OEM, machine.Modality);
-                        }}
-                      >
-                        Select
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </>
-        )}
+        <Table striped bordered hover size="sm">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Location</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody>
+            {machineOptions.map((machine) => (
+              <tr key={machine.id}>
+                <td>{machine.name}</td>
+                <td>{machine.local}</td>
+                <td>
+                  <Button
+                    variant="primary"
+                    onClick={() => setSelectedMachine(machine)}
+                  >
+                    Select
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>

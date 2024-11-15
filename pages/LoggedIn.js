@@ -1,25 +1,33 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthUserContext';
-
-import Dashboard from './dashboard'
+import { Container } from 'react-bootstrap';
 
 const LoggedIn = ({ children }) => {
-  const { authUser, loading} = useAuth();
+  const { authUser, loading } = useAuth();
   const router = useRouter();
 
-  // Listen for changes on loading and authUser, redirect if needed
+  // Redirect to login if not authenticated and loading is complete
   useEffect(() => {
-    if (!loading && !authUser)
-      router.push('/')
-  }, [authUser, loading])
+    if (!loading && !authUser) {
+      router.push('/');
+    }
+  }, [authUser, loading, router]);
 
-  return (
-    //Your logged in page
-    <>
-      {children}
-    </>
-  )
-}
+  // Display loading indicator until auth status is determined
+  if (loading) {
+    return (
+      <Container
+        className="d-flex align-items-center justify-content-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <h3>Loading...</h3>
+      </Container>
+    );
+  }
+
+  // Render the children only if user is authenticated
+  return <>{authUser && children}</>;
+};
 
 export default LoggedIn;

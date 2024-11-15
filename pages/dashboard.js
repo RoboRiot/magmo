@@ -5,6 +5,7 @@ import styles from "../styles/Home.module.css";
 import Link from "next/link";
 
 import { useAuth } from "../context/AuthUserContext";
+import { useRouter } from "next/router";
 
 import LoggedIn from "./LoggedIn";
 
@@ -61,7 +62,28 @@ function LoadingButton({ type, name, route, enable = true }) {
 
 
 export default function dashboard() {
-  const { signOut } = useAuth();
+  const { authUser, loading, signOut } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated and not still loading
+  useEffect(() => {
+    if (!loading && !authUser) {
+      router.push("/");
+    }
+  }, [authUser, loading, router]);
+
+  // Show a loading message until auth state is determined
+  if (loading || !authUser) {
+    return (
+      <Container
+        className="d-flex align-items-center justify-content-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <h3>Loading...</h3>
+      </Container>
+    );
+  }
+
   return (
     <LoggedIn>
       <Container

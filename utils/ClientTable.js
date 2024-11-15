@@ -9,6 +9,7 @@ const ClientTable = ({
   clearSelection,
   disableSelect,
   disableInfo,
+  isClientSearch,
 }) => {
   return (
     <>
@@ -37,7 +38,7 @@ const ClientTable = ({
                     variant="info"
                     onClick={() => onInfoClick(client.id, client.name)}
                   >
-                    Info
+                    {isClientSearch ? "Edit" : "Info"} 
                   </Button>
                 </td>
               )}
