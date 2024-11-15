@@ -1,17 +1,11 @@
 import { useState, useEffect } from "react";
-import Firebase from "./Firebase";
-
-// import { initializeApp } from 'firebase/app';
-// import { getFirestore, collection, getDocs } from 'firebase/firestore';
-
-// const app = initializeApp(firebaseConfig);
-// const db = getFirestore(app);
+import Firebase, { auth } from "./Firebase";
 
 const formatAuthUser = (user) => ({
   uid: user.uid,
   email: user.email,
 });
-console.log("check");
+
 export default function useFirebaseAuth() {
   const [authUser, setAuthUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,27 +27,40 @@ export default function useFirebaseAuth() {
     setAuthUser(null);
     setLoading(true);
   };
-  
-  const signInWithEmailAndPassword = (email, password) =>
-    Firebase.auth().signInWithEmailAndPassword(email, password);
-  
 
-  const createUserWithEmailAndPassword = (email, password) =>
-    Firebase.auth().createUserWithEmailAndPassword(email, password);
+  //sign in with google
+  const signInWithGoogle = () => {
+    const provider = new Firebase.auth.GoogleAuthProvider();
+    return auth
+      .signInWithPopup(provider)
+      .then((result) => {
+        const userEmail = result.user.email;
+        // Check if the email ends with the specified domain
+        if (!userEmail.endsWith("@advancedimagingparts.com")) {
+          // Log the user out if they are not from the allowed domain
+          auth.signOut();
+          throw new Error("Only @advancedimagingparts.com emails are allowed.");
+        }
+        return result.user;
+      })
+      .catch((error) => {
+        console.error("Google Sign-In Error:", error);
+        throw error;
+      });
+  };
 
-  const signOut = () => Firebase.auth().signOut().then(clear);
+  const signOut = () => auth.signOut().then(clear);
 
-  // listen for Firebase state change
+  // Listen for Firebase auth state changes
   useEffect(() => {
-    const unsubscribe = Firebase.auth().onAuthStateChanged(authStateChanged);
+    const unsubscribe = auth.onAuthStateChanged(authStateChanged);
     return () => unsubscribe();
   }, []);
 
   return {
     authUser,
     loading,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
+    signInWithGoogle,
     signOut,
   };
 }

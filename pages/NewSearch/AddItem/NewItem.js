@@ -192,7 +192,7 @@ export default function NewItem() {
       formattedItems.TheMachine = TheMachine;
     }
 
-    if (CurrentMachineselected && selectedCurrentMachine.id) {
+    if (selectedCurrentMachine && selectedCurrentMachine.id) {
       formattedItems.CurrentMachine = db
         .collection("Machine")
         .doc(selectedCurrentMachine.id);
@@ -214,6 +214,10 @@ export default function NewItem() {
       //adds to Parts collection which is what the website uses to display parts
       //if the add to website button is pushed
       if (addToWebsite) {
+        let tempMachine = (await db.collection("Machine").doc(selectedMachine.id).get()).data();
+        let tempMachineCurrent = (await db.collection("Machine").doc(selectedCurrentMachine.id).get()).data();
+        // console.log(tempMachine);
+        // console.log(tempMachineCurrent);
         const partsItem = {
           Name: items?.name || "",
           PN: items?.pn || "",
@@ -221,11 +225,11 @@ export default function NewItem() {
           // Description: descriptions[0]?.description || "",
           Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
           Available: true,
-          From: selectedMachine?.name || "",
-          Current: selectedMachine?.name || "",
-          Modality: selectedMachine?.Modality || "", // Set your default or dynamic modality here
-          OEM: selectedMachine?.OEM || "", // Set your default or dynamic OEM here
-          Model: selectedMachine?.Model || "", // Set your default or dynamic Model here
+          From: tempMachine?.name || "",
+          Current: tempMachineCurrent?.name || "",
+          Modality: tempMachineCurrent?.Modality || "", // Set your default or dynamic modality here
+          OEM: tempMachineCurrent?.OEM || "", // Set your default or dynamic OEM here
+          Model: tempMachineCurrent?.Model || "", // Set your default or dynamic Model here
           PM: items?.pn || "",
           Sold: 0,
         };

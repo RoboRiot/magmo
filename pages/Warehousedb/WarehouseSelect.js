@@ -88,11 +88,16 @@ export default function WarehouseSelect() {
 
                 {LoadingButton(
                   "secondary",
-                  "List",
+                  "Main List",
                   "../NewSearch/mainSearch"
                 )}
                 {LoadingButton(
                   "primary",
+                  "Client List",
+                  "../NewSearch/clientSearch"
+                )}
+                {LoadingButton(
+                  "secondary",
                   "Add New Item",
                   "../NewSearch/AddItem/NewItem"
                 )}

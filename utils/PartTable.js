@@ -1,7 +1,7 @@
-import React from "react";
-import { Table, Button } from "react-bootstrap";
+import React, { useState } from "react";
+import { Table, Button, Form } from "react-bootstrap";
 import { formatDate } from "./fetchAssociations";
-import styles from "../styles/PartTable.module.css"; // Ensure you have a CSS file for the part table
+import styles from "../styles/PartTable.module.css";
 
 export default function PartTable({
   info,
@@ -15,6 +15,24 @@ export default function PartTable({
   setHoverIndex,
   hoverIndex,
 }) {
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // Toggle selection of items
+  const handleSelectItem = (id) => {
+    setSelectedItems((prevSelectedItems) =>
+      prevSelectedItems.includes(id)
+        ? prevSelectedItems.filter((itemId) => itemId !== id)
+        : [...prevSelectedItems, id]
+    );
+  };
+
+  // Handle delete button click for selected items
+  const handleDeleteSelected = () => {
+    if (selectedItems.length > 0) {
+      checkDelete(null, null, selectedItems, "selected items");
+    }
+  };
+
   return (
     <div className={styles.scrollableTable}>
       <Table striped bordered hover size="sm" className="mb-0">
@@ -31,77 +49,68 @@ export default function PartTable({
                 {item}
               </th>
             ))}
+            <th style={{ textAlign: "center" }}>
+              {selectedItems.length > 0 ? (
+                <Button
+                  variant="danger"
+                  onClick={handleDeleteSelected}
+                  disabled={isDeleting}
+                  size="sm"
+                >
+                  Delete Selected ({selectedItems.length})
+                </Button>
+              ) : (
+                "select"
+              )}
+            </th>
           </tr>
         </thead>
         <tbody>
           {info.map((item, index) => (
             <tr
-              className="clickable-row"
               key={index}
-              onClick={() => rowSelect(ids[index])}
+              onClick={(e) => {
+                // Only trigger rowSelect if the target is not a checkbox
+                if (e.target.type !== "checkbox") {
+                  rowSelect(ids[index]);
+                }
+              }}
+              className="clickable-row"
             >
-              <td
-                style={{
-                  textAlign: "center",
-                  cursor: "default",
-                }}
-              >
+              <td style={{ textAlign: "center", cursor: "default" }}>
                 {item.name}
               </td>
-              <td
-                style={{
-                  textAlign: "center",
-                  cursor: "default",
-                }}
-              >
+              <td style={{ textAlign: "center", cursor: "default" }}>
                 {formatDate(item.date)}
               </td>
-              <td
-                style={{
-                  textAlign: "center",
-                  cursor: "default",
-                }}
-              >
+              <td style={{ textAlign: "center", cursor: "default" }}>
                 {item.workOrders && item.workOrders.length > 0
                   ? item.workOrders[item.workOrders.length - 1].workOrder
                   : "N/A"}
               </td>
-              <td
-                style={{
-                  textAlign: "center",
-                  cursor: "default",
-                }}
-              >
+              <td style={{ textAlign: "center", cursor: "default" }}>
                 {item.pn}
               </td>
-              <td
-                style={{
-                  textAlign: "center",
-                  cursor: "default",
-                }}
-              >
+              <td style={{ textAlign: "center", cursor: "default" }}>
                 {item.sn}
               </td>
               <td style={{ textAlign: "center" }}>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-
-                    checkDelete(e, index, ids[index], item.name);
+                <Form.Check
+                  type="checkbox"
+                  checked={selectedItems.includes(ids[index])}
+                  onChange={(e) => {
+                    e.stopPropagation(); // Prevent row click when checkbox is clicked
+                    handleSelectItem(ids[index]);
                   }}
-                  id={ids[index]}
-                  variant="danger"
-                  disabled={isDeleting}
-                >
-                  X
-                </Button>
+                  aria-label={`Select ${item.name}`}
+                />
               </td>
             </tr>
           ))}
           {info.length < 10 &&
             Array.from({ length: 10 - info.length }).map((_, index) => (
               <tr key={`empty-${index}`}>
-                <td colSpan={labels.length} style={{ textAlign: "center" }}>
+                <td colSpan={labels.length + 1} style={{ textAlign: "center" }}>
                   &nbsp;
                 </td>
               </tr>

@@ -123,8 +123,8 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   }
 
   // Row selection handler
-  const rowSelect = (id, name) => {
-    setSelectedParent({ id, name });
+  const rowSelect = (id, name, pn) => {
+    setSelectedParent({ id, name, pn });
     handleClose();
   };
 
@@ -380,7 +380,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                                 <Button
                                   variant="primary"
                                   onClick={() =>
-                                    rowSelect(ids[index], item.name)
+                                    rowSelect(ids[index], item.name, item.pn)
                                   }
                                 >
                                   Select
