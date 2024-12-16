@@ -8,6 +8,8 @@ const MachineCreationModal = ({ show, handleClose, onCreateMachine }) => {
     Modality: "",
     Model: "",
     local: "",
+    lastPM: "",
+    nextPM: "",
   });
 
   const handleChange = (field) => (event) => {
@@ -23,6 +25,8 @@ const MachineCreationModal = ({ show, handleClose, onCreateMachine }) => {
       Modality: "",
       Model: "",
       local: "",
+      lastPM: "",
+      nextPM: "",
     });
   };
 
@@ -76,6 +80,24 @@ const MachineCreationModal = ({ show, handleClose, onCreateMachine }) => {
               placeholder="Enter location"
               value={newMachine.local}
               onChange={handleChange("local")}
+            />
+          </Form.Group>
+          <Form.Group controlId="lastPM" className="mt-3">
+            <Form.Label>Last PM</Form.Label>
+            <Form.Control
+              type="date"
+              placeholder="Enter last PM date"
+              value={newMachine.lastPM}
+              onChange={handleChange("lastPM")}
+            />
+          </Form.Group>
+          <Form.Group controlId="nextPM" className="mt-3">
+            <Form.Label>next PM</Form.Label>
+            <Form.Control
+              type="date"
+              placeholder="Enter next PM date"
+              value={newMachine.nextPM}
+              onChange={handleChange("nextPM")}
             />
           </Form.Group>
         </Form>

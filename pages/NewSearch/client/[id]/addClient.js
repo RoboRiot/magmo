@@ -17,12 +17,10 @@ import MachineCreationModal from "../../MachineCreationModal";
 
 const AddClient = () => {
   const router = useRouter();
-  const { clientId } = router.query; // Get the clientId from the URL
+  const [clientId, setClientId] = useState(null);
   const [client, setClient] = useState({
     name: "",
     location: "",
-    lastPM: "",
-    nextPM: "",
   });
   const [addedMachines, setAddedMachines] = useState([]);
   const [showClientInfoModal, setShowClientInfoModal] = useState(false);
@@ -31,11 +29,18 @@ const AddClient = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchAvailableMachines();
-    if (clientId) {
-      fetchClientData(clientId);
+    const handleClientId = () => {
+      const { id } = router.query;
+      if (id) {
+        setClientId(id);
+        fetchClientData(id);
+      }
+    };
+
+    if (router.isReady) {
+      handleClientId();
     }
-  }, [clientId]);
+  }, [router.isReady, router.query]);
 
   const fetchClientData = async (id) => {
     const db = firebase.firestore();
@@ -45,9 +50,7 @@ const AddClient = () => {
         const data = doc.data();
         setClient({
           name: data.name || "",
-          location: data.location || "",
-          lastPM: data.lastPM || "",
-          nextPM: data.nextPM || "",
+          location: data.local || "",
         });
         const machineRefs = data.machines || [];
         const machines = await Promise.all(
@@ -66,7 +69,7 @@ const AddClient = () => {
     try {
       const snapshot = await db
         .collection("Machine")
-        .where("client", "==", null) // Fetch machines with an empty client field
+        .where("client", "==", null)
         .get();
       const machines = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -93,13 +96,19 @@ const AddClient = () => {
     const db = firebase.firestore();
     const machineId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
     try {
-      const machineWithId = { ...newMachine, id: machineId, client: null };
+      const machineWithId = { ...newMachine, id: machineId, client: db.collection("Client").doc(clientId) };
       await db.collection("Machine").doc(machineId).set(machineWithId);
-      setMachineOptions((prev) => [...prev, machineWithId]);
+
+      const clientRef = db.collection("Client").doc(clientId);
+      await clientRef.update({
+        machines: firebase.firestore.FieldValue.arrayUnion(db.collection("Machine").doc(machineId)),
+      });
+
       setShowMachineCreationModal(false);
+      setAddedMachines((prev) => [...prev, { id: machineId, ...newMachine }]);
     } catch (error) {
-      console.error("Error creating machine:", error);
-      setError("Failed to create machine.");
+      console.error("Error creating and adding machine:", error);
+      setError("Failed to create and add machine.");
     }
   };
 
@@ -111,19 +120,17 @@ const AddClient = () => {
     const db = firebase.firestore();
     try {
       if (clientId) {
-        // Update existing client
         await db.collection("Client").doc(clientId).update({
           ...client,
           machines: addedMachines.map((machine) => db.collection("Machine").doc(machine.id)),
         });
       } else {
-        // Add new client
         const newClientId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
         await db.collection("Client").doc(newClientId).set({
           ...client,
           machines: addedMachines.map((machine) => db.collection("Machine").doc(machine.id)),
         });
-        // Update machines with new client reference
+
         for (const machine of addedMachines) {
           await db.collection("Machine").doc(machine.id).update({
             client: db.collection("Client").doc(newClientId),
@@ -131,7 +138,7 @@ const AddClient = () => {
         }
       }
       alert("Client and machines saved successfully.");
-      router.push("../mainSearch");
+      router.push("../../clientSearch");
     } catch (error) {
       console.error("Error saving client:", error);
       setError("Failed to save client.");
@@ -169,28 +176,6 @@ const AddClient = () => {
                         placeholder="Enter location"
                         value={client.location}
                         onChange={handleChange("location")}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group controlId="lastPM">
-                      <Form.Label>Last PM</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={client.lastPM}
-                        onChange={handleChange("lastPM")}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="nextPM">
-                      <Form.Label>Next PM</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={client.nextPM}
-                        onChange={handleChange("nextPM")}
                       />
                     </Form.Group>
                   </Col>
@@ -243,13 +228,22 @@ const AddClient = () => {
                   </Col>
                 </Row>
                 <Row className="mt-4">
-                  <Col>
+                  <Col md={6}>
                     <Button
                       variant="success"
                       onClick={handleSubmit}
                       className="w-100"
                     >
                       Submit
+                    </Button>
+                  </Col>
+                  <Col md={6}>
+                    <Button
+                      variant="primary"
+                      onClick={() => router.back()}
+                      className="w-100"
+                    >
+                      Back
                     </Button>
                   </Col>
                 </Row>

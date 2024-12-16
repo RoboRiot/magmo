@@ -41,7 +41,11 @@ const Machine = () => {
         const machineData = machineDoc.data();
         setSelectedMachine(machineData);
         console.log("Machine data:", machineData);
-        fetchAssociatedParts(machineId);
+        
+        // Fetch associated parts
+        if (machineData.associatedParts) {
+          fetchAssociatedParts(machineData.associatedParts);
+        }
       } else {
         console.error("Machine not found");
         setError("Machine not found");
@@ -51,12 +55,18 @@ const Machine = () => {
       setError("Error fetching machine data");
     }
   };
-
-  const fetchAssociatedParts = async (machineId) => {
+  
+  const fetchAssociatedParts = async (associatedPartsRefs) => {
     try {
       const db = firebase.firestore();
-      const partsSnapshot = await db.collection("Test").where("Machine", "==", db.collection("Machine").doc(machineId)).get();
-      const partsData = partsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const partsPromises = associatedPartsRefs.map((ref) => ref.get());
+      const partsDocs = await Promise.all(partsPromises);
+  
+      const partsData = partsDocs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+  
       setAssociatedParts(partsData);
       console.log("Associated parts data:", partsData);
     } catch (error) {
@@ -70,13 +80,27 @@ const Machine = () => {
     router.push("../item/" + id);
   };
 
-  const formatDate = (timestamp) => {
-    if (timestamp && timestamp.seconds) {
-      const date = new Date(timestamp.seconds * 1000);
-      return date.toLocaleDateString();
+  const formatDate = (input) => {
+    let date;
+  
+    if (input && input.seconds) {
+      // Handle timestamp object with 'seconds' property
+      date = new Date(input.seconds * 1000);
+    } else if (typeof input === 'string') {
+      // Handle date string
+      date = new Date(input);
+    } else {
+      return "N/A";
     }
-    return "N/A";
+  
+    if (isNaN(date.getTime())) {
+      // Invalid date string
+      return "Invalid Date";
+    }
+  
+    return date.toLocaleDateString();
   };
+  
 
   return (
     <Container className="mt-5">
@@ -92,6 +116,8 @@ const Machine = () => {
                 <>
                   <h5>Machine: {selectedMachine.name}</h5>
                   <p>Model: {selectedMachine.Model}</p>
+                  <p>Model: {selectedMachine.Modality}</p>
+                  <p>Model: {selectedMachine.OEM}</p>
                   <p>Last PM: {formatDate(selectedMachine.lastPM)}</p>
                   <p>Next PM: {formatDate(selectedMachine.nextPM)}</p>
                   <h5>Associated Parts</h5>
@@ -124,6 +150,15 @@ const Machine = () => {
                           </td>
                         </tr>
                       ))}
+                      {/* <Col md={4}> */}
+                      <Button
+                        variant="primary"
+                        style={{ marginTop: '20px' }}
+                        onClick={() => router.back()}
+                      >
+                        back
+                      </Button>
+                    {/* </Col> */}
                     </tbody>
                   </Table>
                 </>

@@ -8,7 +8,6 @@ import {
   Row,
   Col,
   Modal,
-  InputGroup,
   FormControl,
 } from "react-bootstrap";
 import Link from "next/link";
@@ -104,7 +103,6 @@ export default function NewItem() {
   const [setID, setSetId] = useState(null);
   const [machinePick, setMachinePick] = useState(false);
 
-
   useEffect(() => {
     if (signal) {
       // Execute special behavior
@@ -141,10 +139,8 @@ export default function NewItem() {
   };
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
-  const showTheMachineModal = () => setShowTheMachineModal(false);
-  
+
   const handleClientInfo = async (clientId) => {
-    console.log("do we enter here?" + clientId)
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
     if (clientDoc.exists) {
@@ -158,7 +154,6 @@ export default function NewItem() {
         id: machineDoc.id,
         ...machineDoc.data(),
       }));
-      console.log("checking if open")
       setMachineOptions(machines);
       handleShowMachineModal();
     }
@@ -167,10 +162,21 @@ export default function NewItem() {
   const fetchMachine = async (machineId) => {
     const db = firebase.firestore();
     const doc = await db.collection("Machine").doc(machineId).get();
-    var mData = null;
     if (doc.exists) {
       setTheMachine(doc.data());
     }
+  };
+
+  const handleSetSelectedMachine = (selMachina) => {
+    console.log(selMachina);
+    if (machinePick) {
+      setSelectedMachine({ id: selMachina.id, name: selMachina.name });
+      fetchMachine(selMachina.id);
+    } else {
+      setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
+      fetchMachine(selMachina.id);
+    }
+    handleCloseMachineModal();
   };
 
   // Function to generate custom document ID
@@ -182,54 +188,92 @@ export default function NewItem() {
   // Function to send item data to Firestore
   async function toSend() {
     const db = firebase.firestore();
-    const formattedItems = { ...items, descriptions, workOrders };
-
-    if (selectedMachine && selectedMachine.id) {
-      formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
-    }
-
-    if (TheMachine && TheMachine.Model) {
-      formattedItems.TheMachine = TheMachine;
-    }
-
-    if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      formattedItems.CurrentMachine = db
-        .collection("Machine")
-        .doc(selectedCurrentMachine.id);
-    }
-
-    if (selectedParent && selectedParent.id) {
-      formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
-    }
-
     let customID = generateCustomID();
 
     if (signal) {
       customID = signal;
     }
 
+    const formattedItems = { ...items, descriptions, workOrders };
+
+    // Handle Machine Reference
+    if (selectedMachine && selectedMachine.id) {
+      const machineRef = db.collection("Machine").doc(selectedMachine.id);
+      formattedItems.Machine = machineRef;
+    }
+
+    // Handle TheMachine Data
+    if (TheMachine && TheMachine.Model) {
+      formattedItems.TheMachine = TheMachine;
+    }
+
+    // Handle CurrentMachine Reference
+    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+      const currentMachineRef = db
+        .collection("Machine")
+        .doc(selectedCurrentMachine.id);
+      formattedItems.CurrentMachine = currentMachineRef;
+    }
+
+    // Handle Parent Reference
+    if (selectedParent && selectedParent.id) {
+      formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
+    }
+
     try {
+      // Save the new item document
       await db.collection("Test").doc(customID).set(formattedItems);
+
+      // Upload photos to storage
       await uploadPhotos(customID);
-      //adds to Parts collection which is what the website uses to display parts
-      //if the add to website button is pushed
+
+      // Update the Machine's associatedParts array to include this new item
+      if (selectedMachine && selectedMachine.id) {
+        const machineRef = db.collection("Machine").doc(selectedMachine.id);
+        await machineRef.update({
+          associatedParts: firebase.firestore.FieldValue.arrayUnion(
+            db.collection("Test").doc(customID)
+          ),
+        });
+      }
+
+      // Optionally, update the CurrentMachine's associatedParts array
+      if (selectedCurrentMachine && selectedCurrentMachine.id) {
+        const currentMachineRef = db
+          .collection("Machine")
+          .doc(selectedCurrentMachine.id);
+        await currentMachineRef.update({
+          associatedParts: firebase.firestore.FieldValue.arrayUnion(
+            db.collection("Test").doc(customID)
+          ),
+        });
+      }
+
+      // Add to Parts collection if 'Add to Website' is checked
       if (addToWebsite) {
-        let tempMachine = (await db.collection("Machine").doc(selectedMachine.id).get()).data();
-        let tempMachineCurrent = (await db.collection("Machine").doc(selectedCurrentMachine.id).get()).data();
-        // console.log(tempMachine);
-        // console.log(tempMachineCurrent);
+        let tempMachine = (
+          await db.collection("Machine").doc(selectedMachine.id).get()
+        ).data();
+        let tempMachineCurrent = (
+          await db.collection("Machine").doc(selectedCurrentMachine.id).get()
+        ).data();
+
         const partsItem = {
           Name: items?.name || "",
           PN: items?.pn || "",
           SN: items?.sn || "",
-          // Description: descriptions[0]?.description || "",
-          Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
+          Images: photos.map(
+            (_, index) =>
+              `Parts/${customID}/${customID}${
+                index === 0 ? "" : `.${index + 1}`
+              }`
+          ),
           Available: true,
           From: tempMachine?.name || "",
           Current: tempMachineCurrent?.name || "",
-          Modality: tempMachineCurrent?.Modality || "", // Set your default or dynamic modality here
-          OEM: tempMachineCurrent?.OEM || "", // Set your default or dynamic OEM here
-          Model: tempMachineCurrent?.Model || "", // Set your default or dynamic Model here
+          Modality: tempMachineCurrent?.Modality || "",
+          OEM: tempMachineCurrent?.OEM || "",
+          Model: tempMachineCurrent?.Model || "",
           PM: items?.pn || "",
           Sold: 0,
         };
@@ -237,6 +281,7 @@ export default function NewItem() {
         await db.collection("Parts").doc(customID).set(partsItem);
       }
 
+      // Redirect to main search page after successful submission
       router.push("../mainSearch");
     } catch (error) {
       console.error("Error updating data: ", error);
@@ -268,7 +313,7 @@ export default function NewItem() {
     if (check) {
       handleShow();
     } else if (TheMachine === null) {
-      setMachineSelectionModal(true)
+      setMachineSelectionModal(true);
     } else {
       toSend();
     }
@@ -477,16 +522,7 @@ export default function NewItem() {
         handleClose={handleCloseMachineModal}
         selectedClient={selectedClient}
         machineOptions={machineOptions}
-        setSelectedMachine={(id, name) => {
-          if (machinePick) {
-            setSelectedMachine({ id, name });
-            fetchMachine(id);
-          } else {
-            setSelectedCurrentMachine({ id, name });
-            fetchMachine(id);
-          }
-          handleCloseMachineModal();
-        }}
+        setSelectedMachine={handleSetSelectedMachine}
       />
 
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
@@ -790,7 +826,6 @@ export default function NewItem() {
                       <Button
                         variant="outline-secondary"
                         onClick={() => {
-                          setSelectedMachine(true);
                           handleShowClientModal();
                           setMachinePick(true);
                         }}
@@ -812,7 +847,6 @@ export default function NewItem() {
                       <Button
                         variant="outline-secondary"
                         onClick={() => {
-                          setSelectedCurrentMachine(true);
                           handleShowClientModal();
                           setMachinePick(false);
                         }}
