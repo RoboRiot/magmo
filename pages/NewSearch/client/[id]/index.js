@@ -110,6 +110,13 @@ const Client = () => {
                           </td>
                         </tr>
                       ))}
+                      <Button
+                        variant="primary"
+                        style={{ marginTop: '20px' }}
+                        onClick={() => router.back()}
+                      >
+                        back
+                      </Button>
                     </tbody>
                   </Table>
                 </>

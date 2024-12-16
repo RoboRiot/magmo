@@ -69,7 +69,7 @@ export default function DisplayItem() {
     pn: "",
     sn: "",
     date: "",
-    price: ""
+    price: "",
   });
 
   const [descriptions, setDescriptions] = useState([
@@ -100,7 +100,7 @@ export default function DisplayItem() {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
   const [addToWebsite, setAddToWebsite] = useState(false);
-  const [machinePick, setMachinePick] = useState(false)
+  const [machinePick, setMachinePick] = useState(false);
   const [freqItem, setFreqItem] = useState(0);
   const [usagePastYear, setUsagePastYear] = useState(0);
   const [machineFrequency, setMachineFrequency] = useState(0);
@@ -155,17 +155,20 @@ export default function DisplayItem() {
 
       if (data.Machine) {
         const machineDoc = await data.Machine.get();
-        console.log(machineDoc.data())
+        console.log(machineDoc.data());
         setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
         setTheMachine(machineDoc.data());
       }
-      if(data.CurrentMachine){
-        console.log(data)
+      if (data.CurrentMachine) {
+        console.log(data);
         const currMachineDoc = await data.CurrentMachine.get();
-        console.log("this is: " + currMachineDoc.data())
-        setSelectedCurrentMachine({ id: currMachineDoc.id, ...currMachineDoc.data() });
+        console.log("this is: " + currMachineDoc.data());
+        setSelectedCurrentMachine({
+          id: currMachineDoc.id,
+          ...currMachineDoc.data(),
+        });
         setTheMachine(currMachineDoc.data());
-        console.log(TheMachine)
+        console.log(TheMachine);
       }
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
@@ -189,54 +192,51 @@ export default function DisplayItem() {
     const currentDate = new Date();
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
-  
+
     // Query the Test collection for items with the same pn
-    const itemsSnapshot = await db.collection("Test").where("pn", "==", pn).get();
-    console.log(itemsSnapshot)
+    const itemsSnapshot = await db
+      .collection("Test")
+      .where("pn", "==", pn)
+      .get();
+    console.log(itemsSnapshot);
     setFreqItem(itemsSnapshot.size);
-    
+
     // Now calculate usage in the past year based on work order dates
     let usagePastYear = 0;
-  
-    itemsSnapshot.forEach(doc => {
+
+    itemsSnapshot.forEach((doc) => {
       const itemData = doc.data();
-      itemData.workOrders.forEach(workOrder => {
-        console.log("workOrder: " + workOrder)
+      itemData.workOrders.forEach((workOrder) => {
+        console.log("workOrder: " + workOrder);
         const workOrderDate = new Date(workOrder.date);
-        console.log("workOrder date: " + workOrderDate)
+        console.log("workOrder date: " + workOrderDate);
         if (workOrderDate >= oneYearAgo && workOrderDate <= currentDate) {
           usagePastYear++;
         }
       });
     });
-  
+
     // Set global variables or state for freqItem and usagePastYear
     console.log(`Item frequency for pn ${pn}: ${freqItem}`);
     console.log(`Usage past year for pn ${pn}: ${usagePastYear}`);
-    setUsagePastYear(usagePastYear)
+    setUsagePastYear(usagePastYear);
   };
-  
 
   const fetchMachine = async (machineId) => {
     const db = firebase.firestore();
     const doc = await db.collection("Machine").doc(machineId).get();
-    var mData = null;
     if (doc.exists) {
-      setTheMachine(doc.data());
+      const machineData = doc.data();
+      setTheMachine(machineData);
 
-      // Query to get the count of machines with the same model number
-      const modelNumber = doc.data().Model;
-
+      // Update machine frequency
       const machinesSnapshot = await db
         .collection("Machine")
-        .where("Model", "==", modelNumber)
+        .where("Model", "==", machineData.Model)
         .get();
-      // const machineFrequency = machinesSnapshot.size;
       setMachineFrequency(machinesSnapshot.size);
-      // Set the machine frequency globally or wherever necessary
-      console.log(
-        `Machine frequency for model number ${modelNumber}: ${machineFrequency}`
-      );
+    } else {
+      console.error("Machine not found");
     }
   };
 
@@ -268,7 +268,7 @@ export default function DisplayItem() {
   const handleShowErr = () => setShowErr(true);
   const handleCloseSaveModal = () => setShowSaveModal(false);
   const handleShowSaveModal = () => setShowSaveModal(true);
-  const handleMachineSelectionModal = () => setMachineSelectionModal(false)
+  const handleMachineSelectionModal = () => setMachineSelectionModal(false);
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
   const handleCloseWoModal = () => setShowWoModal(false);
@@ -312,17 +312,16 @@ export default function DisplayItem() {
   async function toSend() {
     const db = firebase.firestore();
     const formattedItems = { ...items, descriptions, workOrders };
-    console.log("The Machine: " + TheMachine)
+
+    // Attach references for selected machines
     if (selectedMachine && selectedMachine.id) {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
 
-    if (TheMachine && TheMachine.Model) {
-      formattedItems.TheMachine = TheMachine;
-    }
-
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      formattedItems.CurrentMachine = db.collection("Machine").doc(selectedCurrentMachine.id);
+      formattedItems.CurrentMachine = db
+        .collection("Machine")
+        .doc(selectedCurrentMachine.id);
     }
 
     if (selectedParent && selectedParent.id) {
@@ -331,73 +330,75 @@ export default function DisplayItem() {
 
     try {
       if (id) {
+        // Update the item document in Firestore
         await db.collection("Test").doc(id).update(formattedItems);
-        await uploadPhotos(id);
-        //adds to Parts collection which is what the website uses to display parts
-        //if the add to website button is pushed
-        if (addToWebsite) {
-          const partsItem = {
-            Name: items?.name || "",
-            PN: items?.pn || "",
-            SN: items?.sn || "",
-            // Description: descriptions[0]?.description || "",
-            Images: photos.map((_, index) => `Parts/${id}/${id}${index === 0 ? "" : `.${index + 1}`}`),
-            Available: true,
-            From: selectedMachine?.name || "",
-            Current: selectedCurrentMachine?.name || "",
-            Modality: selectedCurrentMachine?.Modality || "", // Set your default or dynamic modality here
-            OEM: selectedCurrentMachine?.OEM || "", // Set your default or dynamic OEM here
-            Model: selectedCurrentMachine?.Model || "", // Set your default or dynamic Model here
-            PM: items?.pn || "",
-            Sold: 0,
-          };
 
-          await db.collection("Parts").doc(id).set(partsItem);
-        } else {
-          // Remove the item from the Parts collection if it was previously added
-          const partsDoc = await db.collection("Parts").doc(id).get();
-          if (partsDoc.exists) {
-            await db.collection("Parts").doc(id).delete();
-          }
+        // Update `associatedParts` for the selected machine
+        if (selectedMachine && selectedMachine.id) {
+          const machineRef = db.collection("Machine").doc(selectedMachine.id);
+          await machineRef.update({
+            associatedParts: firebase.firestore.FieldValue.arrayUnion(
+              db.collection("Test").doc(id)
+            ),
+          });
         }
-        console.log("Items updated!");
+
+        // Update `associatedParts` for the current machine
+        if (selectedCurrentMachine && selectedCurrentMachine.id) {
+          const currentMachineRef = db
+            .collection("Machine")
+            .doc(selectedCurrentMachine.id);
+          await currentMachineRef.update({
+            associatedParts: firebase.firestore.FieldValue.arrayUnion(
+              db.collection("Test").doc(id)
+            ),
+          });
+        }
       } else {
+        // If creating a new item, generate a custom ID
         const customID = generateCustomID();
         await db.collection("Test").doc(customID).set(formattedItems);
-        await uploadPhotos(customID);
 
-        if (addToWebsite) {
-          const partsItem = {
-            Name: items?.name || "",
-            PN: items?.pn || "",
-            SN: items?.sn || "",
-            // Description: descriptions[0]?.description || "",
-            Images: photos.map((_, index) => `Parts/${customID}/${customID}${index === 0 ? "" : `.${index + 1}`}`),
-            Available: true,
-            From: selectedMachine?.name || "",
-            Current: selectedCurrentMachine?.name || "",
-            Modality: selectedCurrentMachine?.Modality || "", // Set your default or dynamic modality here
-            OEM: selectedCurrentMachine?.OEM || "", // Set your default or dynamic OEM here
-            Model: selectedCurrentMachine?.Model || "", // Set your default or dynamic Model here
-            PM: items?.pn || "",
-            Sold: 0,
-          };
-
-          await db.collection("Parts").doc(customID).set(partsItem);
-        } else {
-          // Remove the item from the Parts collection if it was previously added
-          const partsDoc = await db.collection("Parts").doc(customID).get();
-          if (partsDoc.exists) {
-            await db.collection("Parts").doc(customID).delete();
-          }
+        // Add to the selected machine's `associatedParts`
+        if (selectedMachine && selectedMachine.id) {
+          const machineRef = db.collection("Machine").doc(selectedMachine.id);
+          await machineRef.update({
+            associatedParts: firebase.firestore.FieldValue.arrayUnion(
+              db.collection("Test").doc(customID)
+            ),
+          });
         }
-        console.log("Items added!");
+
+        // Add to the current machine's `associatedParts`
+        if (selectedCurrentMachine && selectedCurrentMachine.id) {
+          const currentMachineRef = db
+            .collection("Machine")
+            .doc(selectedCurrentMachine.id);
+          await currentMachineRef.update({
+            associatedParts: firebase.firestore.FieldValue.arrayUnion(
+              db.collection("Test").doc(customID)
+            ),
+          });
+        }
       }
-      handleShowSaveModal(); // Show the save confirmation modal
+
+      console.log("Item saved and associatedParts updated!");
     } catch (error) {
-      console.error("Error updating data: ", error);
+      console.error("Error saving data:", error);
     }
   }
+
+  const handleSetSelectedMachine = (selMachina) => {
+    console.log(selMachina);
+    if (machinePick) {
+      setSelectedMachine({ id: selMachina.id, name: selMachina.name });
+      fetchMachine(selMachina.id);
+    } else {
+      setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
+      fetchMachine(selMachina.id);
+    }
+    handleCloseMachineModal();
+  };
 
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
@@ -431,8 +432,8 @@ export default function DisplayItem() {
 
     if (check) {
       handleShow();
-    } else if(TheMachine === null){
-      setMachineSelectionModal(true)
+    } else if (TheMachine === null) {
+      setMachineSelectionModal(true);
     } else {
       console.log("try submit");
       console.log(items);
@@ -676,7 +677,7 @@ export default function DisplayItem() {
         </Modal.Body>
       </Modal>
 
-      <ClientInfoModal
+      {/* <ClientInfoModal
         show={showMachineModal}
         handleClose={handleCloseMachineModal}
         selectedClient={selectedClient}
@@ -691,6 +692,14 @@ export default function DisplayItem() {
           }
           handleCloseMachineModal();
         }}
+      /> */}
+
+      <ClientInfoModal
+        show={showMachineModal}
+        handleClose={handleCloseMachineModal}
+        selectedClient={selectedClient}
+        machineOptions={machineOptions}
+        setSelectedMachine={handleSetSelectedMachine}
       />
 
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
@@ -723,8 +732,8 @@ export default function DisplayItem() {
         setSelectedParent={setSelectedParent}
       />
 
-       {/* Modal Component */}
-       <MachineSelectionModal
+      {/* Modal Component */}
+      <MachineSelectionModal
         show={machineSelectionModal}
         handleClose={() => setMachineSelectionModal(false)}
         setMachine={setTheMachine}
