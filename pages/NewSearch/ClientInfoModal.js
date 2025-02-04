@@ -5,7 +5,7 @@ const ClientInfoModal = ({
   show,
   handleClose,
   selectedClient,
-  machineOptions,
+  machineOptions = [],
   setSelectedMachine,
 }) => {
   return (
