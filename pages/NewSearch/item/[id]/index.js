@@ -1,3 +1,4 @@
+// index.js
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
@@ -10,6 +11,7 @@ import {
   Modal,
   InputGroup,
   FormControl,
+  Collapse,
 } from "react-bootstrap";
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthUserContext";
@@ -70,7 +72,15 @@ export default function DisplayItem() {
     sn: "",
     date: "",
     price: "",
+    status: "",
+    length: "",
+    width: "",
+    height: "",
   });
+
+  // These arrays will be populated from firebase – no hard-coded values.
+  const [pnOptions, setPnOptions] = useState([]);
+  const [snOptions, setSnOptions] = useState([]);
 
   const [descriptions, setDescriptions] = useState([
     { description: "", date: "" },
@@ -104,7 +114,13 @@ export default function DisplayItem() {
   const [freqItem, setFreqItem] = useState(0);
   const [usagePastYear, setUsagePastYear] = useState(0);
   const [machineFrequency, setMachineFrequency] = useState(0);
+  // State for the extra (dimensions/price) section.
+  const [showExtra, setShowExtra] = useState(false);
+  // State for the local warehouse location inputs.
+  const [localLocFrom, setLocalLocFrom] = useState("");
+  const [localLocCurrent, setLocalLocCurrent] = useState("");
 
+  // Fetch clients data.
   useEffect(() => {
     async function fetchClientsData() {
       try {
@@ -115,14 +131,30 @@ export default function DisplayItem() {
         console.error("Error fetching clients: ", error);
       }
     }
-
     fetchClientsData();
+  }, []);
+
+  // Fetch PN and SN options from Firestore.
+  useEffect(() => {
+    async function fetchPnSn() {
+      const db = firebase.firestore();
+      const snapshot = await db.collection("Test").get();
+      let pnSet = new Set();
+      let snSet = new Set();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.pn) pnSet.add(data.pn);
+        if (data.sn) snSet.add(data.sn);
+      });
+      setPnOptions([...pnSet]);
+      setSnOptions([...snSet]);
+    }
+    fetchPnSn();
   }, []);
 
   useEffect(() => {
     if (id) {
       fetchData();
-      // consolelog(data)
     }
   }, [id]);
 
@@ -142,12 +174,10 @@ export default function DisplayItem() {
 
       if (data.TheMachine) {
         setTheMachine(data.TheMachine);
-
         const machinesSnapshot = await db
           .collection("Machine")
           .where("Model", "==", data.TheMachine.Model)
           .get();
-        // const machineFrequency = machinesSnapshot.size;
         setMachineFrequency(machinesSnapshot.size);
       } else {
         setMachineFrequency("N/A");
@@ -160,15 +190,12 @@ export default function DisplayItem() {
         setTheMachine(machineDoc.data());
       }
       if (data.CurrentMachine) {
-        console.log(data);
         const currMachineDoc = await data.CurrentMachine.get();
-        console.log("this is: " + currMachineDoc.data());
         setSelectedCurrentMachine({
           id: currMachineDoc.id,
           ...currMachineDoc.data(),
         });
         setTheMachine(currMachineDoc.data());
-        console.log(TheMachine);
       }
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
@@ -176,10 +203,8 @@ export default function DisplayItem() {
       }
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
-
       await calculateItemFrequencyAndUsage(data.pn);
     } else {
-      console.log("I wanna be here");
       router.push({
         pathname: "../AddItem/NewItem",
         query: { signal: id },
@@ -193,32 +218,22 @@ export default function DisplayItem() {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
 
-    // Query the Test collection for items with the same pn
     const itemsSnapshot = await db
       .collection("Test")
       .where("pn", "==", pn)
       .get();
-    console.log(itemsSnapshot);
     setFreqItem(itemsSnapshot.size);
 
-    // Now calculate usage in the past year based on work order dates
     let usagePastYear = 0;
-
     itemsSnapshot.forEach((doc) => {
       const itemData = doc.data();
       itemData.workOrders.forEach((workOrder) => {
-        console.log("workOrder: " + workOrder);
         const workOrderDate = new Date(workOrder.date);
-        console.log("workOrder date: " + workOrderDate);
         if (workOrderDate >= oneYearAgo && workOrderDate <= currentDate) {
           usagePastYear++;
         }
       });
     });
-
-    // Set global variables or state for freqItem and usagePastYear
-    console.log(`Item frequency for pn ${pn}: ${freqItem}`);
-    console.log(`Usage past year for pn ${pn}: ${usagePastYear}`);
     setUsagePastYear(usagePastYear);
   };
 
@@ -228,8 +243,6 @@ export default function DisplayItem() {
     if (doc.exists) {
       const machineData = doc.data();
       setTheMachine(machineData);
-
-      // Update machine frequency
       const machinesSnapshot = await db
         .collection("Machine")
         .where("Model", "==", machineData.Model)
@@ -283,6 +296,7 @@ export default function DisplayItem() {
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
 
+  // When a client is selected from the client table, fetch its machines and open the machine modal.
   const handleClientInfo = async (clientId) => {
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
@@ -302,18 +316,22 @@ export default function DisplayItem() {
     }
   };
 
-  // Function to generate custom document ID
+  // Generate custom document ID if needed.
   const generateCustomID = () => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     return `AIS${randomNum}`;
   };
 
-  // Function to send item data to Firestore
+  // Send item data to Firestore.
   async function toSend() {
     const db = firebase.firestore();
     const formattedItems = { ...items, descriptions, workOrders };
 
-    // Attach references for selected machines
+    // Include new fields.
+    formattedItems.status = items.status;
+    formattedItems.localLocFrom = localLocFrom;
+    formattedItems.localLocCurrent = localLocCurrent;
+
     if (selectedMachine && selectedMachine.id) {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
@@ -330,10 +348,7 @@ export default function DisplayItem() {
 
     try {
       if (id) {
-        // Update the item document in Firestore
         await db.collection("Test").doc(id).update(formattedItems);
-
-        // Update `associatedParts` for the selected machine
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
           await machineRef.update({
@@ -342,8 +357,6 @@ export default function DisplayItem() {
             ),
           });
         }
-
-        // Update `associatedParts` for the current machine
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
           const currentMachineRef = db
             .collection("Machine")
@@ -355,11 +368,8 @@ export default function DisplayItem() {
           });
         }
       } else {
-        // If creating a new item, generate a custom ID
         const customID = generateCustomID();
         await db.collection("Test").doc(customID).set(formattedItems);
-
-        // Add to the selected machine's `associatedParts`
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
           await machineRef.update({
@@ -368,8 +378,6 @@ export default function DisplayItem() {
             ),
           });
         }
-
-        // Add to the current machine's `associatedParts`
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
           const currentMachineRef = db
             .collection("Machine")
@@ -381,7 +389,6 @@ export default function DisplayItem() {
           });
         }
       }
-
       console.log("Item saved and associatedParts updated!");
     } catch (error) {
       console.error("Error saving data:", error);
@@ -389,7 +396,6 @@ export default function DisplayItem() {
   }
 
   const handleSetSelectedMachine = (selMachina) => {
-    console.log(selMachina);
     if (machinePick) {
       setSelectedMachine({ id: selMachina.id, name: selMachina.name });
       fetchMachine(selMachina.id);
@@ -417,11 +423,9 @@ export default function DisplayItem() {
     }
   };
 
-  // Handle form submission
+  // Handle form submission.
   async function handleSubmit(event) {
     event.preventDefault();
-    console.log("enter handle submit");
-    console.log(items);
     let check = false;
 
     if (!items.name) check = true;
@@ -435,13 +439,11 @@ export default function DisplayItem() {
     } else if (TheMachine === null) {
       setMachineSelectionModal(true);
     } else {
-      console.log("try submit");
-      console.log(items);
       toSend();
     }
   }
 
-  // Handlers for input changes
+  // Handlers for input changes.
   const handleChange = (field) => (event) => {
     const value = event.target ? event.target.value : event.value;
     setItems((prevItems) => ({ ...prevItems, [field]: value }));
@@ -532,12 +534,10 @@ export default function DisplayItem() {
     }, "image/png");
   };
 
-  //More info modal
-
+  // More info modal.
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [itemName, setItemName] = useState("");
 
-  // Function to fetch the item data and show modal
   const handleShowInfoModal = async () => {
     const db = firebase.firestore();
     try {
@@ -677,23 +677,7 @@ export default function DisplayItem() {
         </Modal.Body>
       </Modal>
 
-      {/* <ClientInfoModal
-        show={showMachineModal}
-        handleClose={handleCloseMachineModal}
-        selectedClient={selectedClient}
-        machineOptions={machineOptions}
-        setSelectedMachine={(id, name) => {
-          if (machinePick) {
-            setSelectedMachine({ id, name });
-            fetchMachine(id);
-          } else {
-            setSelectedCurrentMachine({ id, name });
-            fetchMachine(id);
-          }
-          handleCloseMachineModal();
-        }}
-      /> */}
-
+      {/* Machine selection modal (after selecting a client) */}
       <ClientInfoModal
         show={showMachineModal}
         handleClose={handleCloseMachineModal}
@@ -702,6 +686,7 @@ export default function DisplayItem() {
         setSelectedMachine={handleSetSelectedMachine}
       />
 
+      {/* Client selection modal – note: removed disableSelect to allow clicking */}
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
         <Modal.Header closeButton>
           <Modal.Title>Select Client</Modal.Title>
@@ -721,7 +706,6 @@ export default function DisplayItem() {
             onSelectClient={handleClientInfo}
             onInfoClick={handleClientInfo}
             clearSelection={() => handleClientInfo(null)}
-            disableSelect={true}
           />
         </Modal.Body>
       </Modal>
@@ -732,7 +716,6 @@ export default function DisplayItem() {
         setSelectedParent={setSelectedParent}
       />
 
-      {/* Modal Component */}
       <MachineSelectionModal
         show={machineSelectionModal}
         handleClose={() => setMachineSelectionModal(false)}
@@ -830,6 +813,7 @@ export default function DisplayItem() {
             <Card.Body>
               <h2 className="text-center mb-4">Item</h2>
               <Form onSubmit={handleSubmit}>
+                {/* Row for Name and Product Number */}
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="name">
                     <Form.Label>Name</Form.Label>
@@ -843,19 +827,32 @@ export default function DisplayItem() {
                     <Form.Label>Product Number</Form.Label>
                     <Form.Control
                       type="text"
+                      list="pnList"
                       value={items.pn}
                       onChange={handleChange("pn")}
                     />
+                    <datalist id="pnList">
+                      {pnOptions.map((option, index) => (
+                        <option key={index} value={option} />
+                      ))}
+                    </datalist>
                   </Form.Group>
                 </Row>
+                {/* Row for Serial Number and Date */}
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="sn">
                     <Form.Label>Serial Number</Form.Label>
                     <Form.Control
                       type="text"
+                      list="snList"
                       value={items.sn}
                       onChange={handleChange("sn")}
                     />
+                    <datalist id="snList">
+                      {snOptions.map((option, index) => (
+                        <option key={index} value={option} />
+                      ))}
+                    </datalist>
                   </Form.Group>
                   <Form.Group as={Col} controlId="date">
                     <Form.Label>Date</Form.Label>
@@ -866,50 +863,22 @@ export default function DisplayItem() {
                     />
                   </Form.Group>
                 </Row>
-                <Row>
-                  <Form.Group as={Col} controlId="dimensions">
-                    <Form.Label>Dimensions</Form.Label>
-                    <Row>
-                      <Col>
-                        <Form.Control
-                          placeholder="Length"
-                          type="text"
-                          value={items.length}
-                          onChange={handleChange("length")}
-                        />
-                      </Col>
-                      x
-                      <Col>
-                        <Form.Control
-                          placeholder="Width"
-                          type="text"
-                          value={items.width}
-                          onChange={handleChange("width")}
-                        />
-                      </Col>
-                      x
-                      <Col>
-                        <Form.Control
-                          placeholder="Height"
-                          type="text"
-                          value={items.height}
-                          onChange={handleChange("height")}
-                        />
-                      </Col>
-                    </Row>
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="Price">
-                    <Row>
-                      <Form.Label>Price</Form.Label>
-                      <Form.Control
-                        placeholder="Price"
-                        type="text"
-                        value={items.price}
-                        onChange={handleChange("price")}
-                      />
-                    </Row>
+                {/* New row for Status */}
+                <Row className="mb-3">
+                  <Form.Group as={Col} controlId="status">
+                    <Form.Label>Status</Form.Label>
+                    <Form.Select
+                      value={items.status || ""}
+                      onChange={handleChange("status")}
+                    >
+                      <option value="">Select status</option>
+                      <option value="Good">Good</option>
+                      <option value="Bad">Bad</option>
+                      <option value="Unknown">Unknown</option>
+                    </Form.Select>
                   </Form.Group>
                 </Row>
+                {/* Work Orders and Descriptions Section */}
                 <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                   <div className="d-flex align-items-center">
                     <Button
@@ -1000,6 +969,7 @@ export default function DisplayItem() {
                     />
                   </Form.Group>
                 </div>
+                {/* Machine selection row with local loc inputs (if applicable) */}
                 <div style={{ marginBottom: "1rem" }}>
                   <Row>
                     <Col>
@@ -1014,13 +984,30 @@ export default function DisplayItem() {
                         Select From
                       </Button>
                       {selectedMachine && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Selected Machine"
-                          value={selectedMachine.name}
-                          readOnly
-                          style={{ cursor: "default", marginTop: "0.5rem" }}
-                        />
+                        <>
+                          <Form.Control
+                            type="text"
+                            placeholder="Selected Machine"
+                            value={selectedMachine.name}
+                            readOnly
+                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                          />
+                          {(selectedMachine.name === "SoCalWarehouse" ||
+                            selectedMachine.name === "NorCalWarehouse") && (
+                            <Form.Group controlId="localLocFrom" className="mt-2">
+                              <Form.Label>Local Loc</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={localLocFrom}
+                                onChange={(e) =>
+                                  setLocalLocFrom(e.target.value)
+                                }
+                                // pattern="[A-Za-z]\\d[A-Za-z]\\d"
+                                // title="Format: LetterNumberLetterNumber (e.g., E1A2)"
+                              />
+                            </Form.Group>
+                          )}
+                        </>
                       )}
                     </Col>
                     <Col>
@@ -1035,13 +1022,34 @@ export default function DisplayItem() {
                         Select Current
                       </Button>
                       {selectedCurrentMachine && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Selected Machine"
-                          value={selectedCurrentMachine.name}
-                          readOnly
-                          style={{ cursor: "default", marginTop: "0.5rem" }}
-                        />
+                        <>
+                          <Form.Control
+                            type="text"
+                            placeholder="Selected Machine"
+                            value={selectedCurrentMachine.name}
+                            readOnly
+                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                          />
+                          {(selectedCurrentMachine.name === "SoCalWarehouse" ||
+                            selectedCurrentMachine.name === "NorCalWarehouse") && (
+                            <Form.Group
+                              controlId="localLocCurrent"
+                              className="mt-2"
+                            >
+                              <Form.Label>Local Loc</Form.Label>
+                              <Form.Control
+                                type="text"
+                                placeholder="E1A2"
+                                value={localLocCurrent}
+                                onChange={(e) =>
+                                  setLocalLocCurrent(e.target.value)
+                                }
+                                pattern="[A-Za-z]\\d[A-Za-z]\\d"
+                                title="Format: LetterNumberLetterNumber (e.g., E1A2)"
+                              />
+                            </Form.Group>
+                          )}
+                        </>
                       )}
                     </Col>
                     <Col>
@@ -1079,7 +1087,9 @@ export default function DisplayItem() {
                         variant={addToWebsite ? "primary" : "outline-primary"}
                         onClick={() => setAddToWebsite((prev) => !prev)}
                       >
-                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                        {addToWebsite
+                          ? "✓ Add to Website"
+                          : "Add to Website"}
                       </Button>
                     </Col>
                   </Row>
@@ -1108,7 +1118,66 @@ export default function DisplayItem() {
                     </div>
                   ))}
                 </div>
-
+                {/* Extra Section Toggle as a Centered Transparent Arrow */}
+                <div style={{ textAlign: "center", margin: "1rem 0" }}>
+                  <Button
+                    variant="link"
+                    style={{
+                      textDecoration: "none",
+                      color: "black",
+                      fontSize: "24px",
+                    }}
+                    onClick={() => setShowExtra(!showExtra)}
+                  >
+                    ▼
+                  </Button>
+                </div>
+                <Collapse in={showExtra}>
+                  <div id="extra-collapse" className="mt-3">
+                    <Row>
+                      <Form.Group as={Col} controlId="dimensions">
+                        <Form.Label>Dimensions</Form.Label>
+                        <Row>
+                          <Col>
+                            <Form.Control
+                              placeholder="Length"
+                              type="text"
+                              value={items.length}
+                              onChange={handleChange("length")}
+                            />
+                          </Col>
+                          x
+                          <Col>
+                            <Form.Control
+                              placeholder="Width"
+                              type="text"
+                              value={items.width}
+                              onChange={handleChange("width")}
+                            />
+                          </Col>
+                          x
+                          <Col>
+                            <Form.Control
+                              placeholder="Height"
+                              type="text"
+                              value={items.height}
+                              onChange={handleChange("height")}
+                            />
+                          </Col>
+                        </Row>
+                      </Form.Group>
+                      <Form.Group as={Col} controlId="Price">
+                        <Form.Label>Price</Form.Label>
+                        <Form.Control
+                          placeholder="Price"
+                          type="text"
+                          value={items.price}
+                          onChange={handleChange("price")}
+                        />
+                      </Form.Group>
+                    </Row>
+                  </div>
+                </Collapse>
                 <div>
                   <Button
                     variant="primary"
@@ -1117,7 +1186,6 @@ export default function DisplayItem() {
                   >
                     Save
                   </Button>
-
                   <Button
                     variant="secondary"
                     onClick={handleShowInfoModal}
@@ -1125,7 +1193,6 @@ export default function DisplayItem() {
                   >
                     More Info
                   </Button>
-
                   <LoadingButton
                     type="primary"
                     name="Back"

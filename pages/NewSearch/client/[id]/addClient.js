@@ -54,7 +54,9 @@ const AddClient = () => {
         });
         const machineRefs = data.machines || [];
         const machines = await Promise.all(
-          machineRefs.map((ref) => ref.get().then((doc) => ({ id: doc.id, ...doc.data() })))
+          machineRefs.map((ref) =>
+            ref.get().then((doc) => ({ id: doc.id, ...doc.data() }))
+          )
         );
         setAddedMachines(machines);
       }
@@ -96,12 +98,18 @@ const AddClient = () => {
     const db = firebase.firestore();
     const machineId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
     try {
-      const machineWithId = { ...newMachine, id: machineId, client: db.collection("Client").doc(clientId) };
+      const machineWithId = {
+        ...newMachine,
+        id: machineId,
+        client: db.collection("Client").doc(clientId),
+      };
       await db.collection("Machine").doc(machineId).set(machineWithId);
 
       const clientRef = db.collection("Client").doc(clientId);
       await clientRef.update({
-        machines: firebase.firestore.FieldValue.arrayUnion(db.collection("Machine").doc(machineId)),
+        machines: firebase.firestore.FieldValue.arrayUnion(
+          db.collection("Machine").doc(machineId)
+        ),
       });
 
       setShowMachineCreationModal(false);
@@ -120,15 +128,23 @@ const AddClient = () => {
     const db = firebase.firestore();
     try {
       if (clientId) {
-        await db.collection("Client").doc(clientId).update({
-          ...client,
-          machines: addedMachines.map((machine) => db.collection("Machine").doc(machine.id)),
-        });
+        // Use set with merge to update an existing client (or create it if it doesn't exist)
+        await db.collection("Client").doc(clientId).set(
+          {
+            ...client,
+            machines: addedMachines.map((machine) =>
+              db.collection("Machine").doc(machine.id)
+            ),
+          },
+          { merge: true }
+        );
       } else {
         const newClientId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
         await db.collection("Client").doc(newClientId).set({
           ...client,
-          machines: addedMachines.map((machine) => db.collection("Machine").doc(machine.id)),
+          machines: addedMachines.map((machine) =>
+            db.collection("Machine").doc(machine.id)
+          ),
         });
 
         for (const machine of addedMachines) {
