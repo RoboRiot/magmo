@@ -101,6 +101,11 @@ export default function WarehouseSelect() {
                   "Add New Item",
                   "../NewSearch/AddItem/NewItem"
                 )}
+                {LoadingButton(
+                  "secondary",
+                  "Test Print",
+                  "../NewSearch/TestPrint"
+                )}
 
                 <Form className="d-flex">
                   <FormControl
