@@ -10,10 +10,10 @@ const ClientInfoModal = ({
   setSelectedMachine,
 }) => {
   // Add warehouse options here
-  const warehouseOptions = [
-    { id: "warehouse-socal", name: "SoCalWarehouse", local: "" },
-    { id: "warehouse-norcal", name: "NorCalWarehouse", local: "" },
-  ];
+  // const warehouseOptions = [
+  //   { id: "warehouse-socal", name: "SoCalWarehouse", local: "" },
+  //   { id: "warehouse-norcal", name: "NorCalWarehouse", local: "" },
+  // ];
 
   return (
     <Modal show={show} onHide={handleClose}>
@@ -44,7 +44,7 @@ const ClientInfoModal = ({
                 </td>
               </tr>
             ))}
-            {warehouseOptions.map((warehouse) => (
+            {/* {warehouseOptions.map((warehouse) => (
               <tr key={warehouse.id}>
                 <td>{warehouse.name}</td>
                 <td>{"Warehouse"}</td>
@@ -57,7 +57,7 @@ const ClientInfoModal = ({
                   </Button>
                 </td>
               </tr>
-            ))}
+            ))} */}
           </tbody>
         </Table>
       </Modal.Body>

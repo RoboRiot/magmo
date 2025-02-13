@@ -1,4 +1,3 @@
-// index.js
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
@@ -23,7 +22,7 @@ import ClientTable from "../../../../utils/ClientTable";
 import ClientInfoModal from "../../ClientInfoModal";
 import ParentModal from "../../addItem/ParentModal";
 import dynamic from "next/dynamic";
-import InfoModal from "./InfoModal";
+import InfoModal from "../../InfoModal";
 import MachineSelectionModal from "./MachineSelectionModal";
 
 // This will only load the component on the client-side.
@@ -82,9 +81,7 @@ export default function DisplayItem() {
   const [pnOptions, setPnOptions] = useState([]);
   const [snOptions, setSnOptions] = useState([]);
 
-  const [descriptions, setDescriptions] = useState([
-    { description: "", date: "" },
-  ]);
+  const [descriptions, setDescriptions] = useState([{ description: "", date: "" }]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
   const [photos, setPhotos] = useState([]);
@@ -171,7 +168,15 @@ export default function DisplayItem() {
       setItems(data);
       setDescriptions(data.descriptions || []);
       setWorkOrders(data.workOrders || []);
-
+      
+      // Set local location fields if they exist in Firestore data
+      if (data.localLocFrom) {
+        setLocalLocFrom(data.localLocFrom);
+      }
+      if (data.localLocCurrent) {
+        setLocalLocCurrent(data.localLocCurrent);
+      }
+      
       if (data.TheMachine) {
         setTheMachine(data.TheMachine);
         const machinesSnapshot = await db
@@ -322,7 +327,6 @@ export default function DisplayItem() {
     return `AIS${randomNum}`;
   };
 
-  // Send item data to Firestore.
   async function toSend() {
     const db = firebase.firestore();
     const formattedItems = { ...items, descriptions, workOrders };
@@ -349,57 +353,78 @@ export default function DisplayItem() {
     try {
       if (id) {
         await db.collection("Test").doc(id).update(formattedItems);
+
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
-          await machineRef.update({
-            associatedParts: firebase.firestore.FieldValue.arrayUnion(
-              db.collection("Test").doc(id)
-            ),
-          });
+          const machineDoc = await machineRef.get();
+          if (machineDoc.exists) {
+            await machineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(id)
+              ),
+            });
+          }
         }
+
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
           const currentMachineRef = db
             .collection("Machine")
             .doc(selectedCurrentMachine.id);
-          await currentMachineRef.update({
-            associatedParts: firebase.firestore.FieldValue.arrayUnion(
-              db.collection("Test").doc(id)
-            ),
-          });
+          const currentMachineDoc = await currentMachineRef.get();
+          if (currentMachineDoc.exists) {
+            await currentMachineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(id)
+              ),
+            });
+          }
         }
       } else {
         const customID = generateCustomID();
         await db.collection("Test").doc(customID).set(formattedItems);
+
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
-          await machineRef.update({
-            associatedParts: firebase.firestore.FieldValue.arrayUnion(
-              db.collection("Test").doc(customID)
-            ),
-          });
+          const machineDoc = await machineRef.get();
+          if (machineDoc.exists) {
+            await machineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(customID)
+              ),
+            });
+          }
         }
+
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
           const currentMachineRef = db
             .collection("Machine")
             .doc(selectedCurrentMachine.id);
-          await currentMachineRef.update({
-            associatedParts: firebase.firestore.FieldValue.arrayUnion(
-              db.collection("Test").doc(customID)
-            ),
-          });
+          const currentMachineDoc = await currentMachineRef.get();
+          if (currentMachineDoc.exists) {
+            await currentMachineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(customID)
+              ),
+            });
+          }
         }
       }
       console.log("Item saved and associatedParts updated!");
+      // Show the notification modal once the update is successful.
+      handleShowSaveModal();
     } catch (error) {
       console.error("Error saving data:", error);
     }
   }
 
+  // When a machine is selected from the modal:
   const handleSetSelectedMachine = (selMachina) => {
     if (machinePick) {
+      // For "From" selection
       setSelectedMachine({ id: selMachina.id, name: selMachina.name });
       fetchMachine(selMachina.id);
     } else {
+      // For "Current" selection
       setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
       fetchMachine(selMachina.id);
     }
@@ -686,7 +711,7 @@ export default function DisplayItem() {
         setSelectedMachine={handleSetSelectedMachine}
       />
 
-      {/* Client selection modal – note: removed disableSelect to allow clicking */}
+      {/* Client selection modal */}
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
         <Modal.Header closeButton>
           <Modal.Title>Select Client</Modal.Title>
@@ -992,18 +1017,15 @@ export default function DisplayItem() {
                             readOnly
                             style={{ cursor: "default", marginTop: "0.5rem" }}
                           />
-                          {(selectedMachine.name === "SoCalWarehouse" ||
-                            selectedMachine.name === "NorCalWarehouse") && (
+                          {["socalwarehouse", "norcalwarehouse", "interior"].includes(
+                            selectedMachine.name.toLowerCase()
+                          ) && (
                             <Form.Group controlId="localLocFrom" className="mt-2">
                               <Form.Label>Local Loc</Form.Label>
                               <Form.Control
                                 type="text"
                                 value={localLocFrom}
-                                onChange={(e) =>
-                                  setLocalLocFrom(e.target.value)
-                                }
-                                // pattern="[A-Za-z]\\d[A-Za-z]\\d"
-                                // title="Format: LetterNumberLetterNumber (e.g., E1A2)"
+                                onChange={(e) => setLocalLocFrom(e.target.value)}
                               />
                             </Form.Group>
                           )}
@@ -1030,22 +1052,16 @@ export default function DisplayItem() {
                             readOnly
                             style={{ cursor: "default", marginTop: "0.5rem" }}
                           />
-                          {(selectedCurrentMachine.name === "SoCalWarehouse" ||
-                            selectedCurrentMachine.name === "NorCalWarehouse") && (
-                            <Form.Group
-                              controlId="localLocCurrent"
-                              className="mt-2"
-                            >
+                          {["socalwarehouse", "norcalwarehouse", "interior"].includes(
+                            selectedCurrentMachine.name.toLowerCase()
+                          ) && (
+                            <Form.Group controlId="localLocCurrent" className="mt-2">
                               <Form.Label>Local Loc</Form.Label>
                               <Form.Control
                                 type="text"
                                 placeholder="E1A2"
                                 value={localLocCurrent}
-                                onChange={(e) =>
-                                  setLocalLocCurrent(e.target.value)
-                                }
-                                pattern="[A-Za-z]\\d[A-Za-z]\\d"
-                                title="Format: LetterNumberLetterNumber (e.g., E1A2)"
+                                onChange={(e) => setLocalLocCurrent(e.target.value)}
                               />
                             </Form.Group>
                           )}
@@ -1087,9 +1103,7 @@ export default function DisplayItem() {
                         variant={addToWebsite ? "primary" : "outline-primary"}
                         onClick={() => setAddToWebsite((prev) => !prev)}
                       >
-                        {addToWebsite
-                          ? "✓ Add to Website"
-                          : "Add to Website"}
+                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                       </Button>
                     </Col>
                   </Row>
@@ -1109,16 +1123,30 @@ export default function DisplayItem() {
                           marginRight: "10px",
                         }}
                       />
-                      <Button
-                        variant="danger"
-                        onClick={() => removePhoto(index)}
-                      >
+                      <Button variant="danger" onClick={() => removePhoto(index)}>
                         X
                       </Button>
                     </div>
                   ))}
                 </div>
                 {/* Extra Section Toggle as a Centered Transparent Arrow */}
+                <div>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    style={{ marginRight: "1rem" }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleShowInfoModal}
+                    style={{ marginRight: "1rem" }}
+                  >
+                    More Info
+                  </Button>
+                  <LoadingButton type="primary" name="Back" route="NewSearch/mainSearch" />
+                </div>
                 <div style={{ textAlign: "center", margin: "1rem 0" }}>
                   <Button
                     variant="link"
@@ -1178,27 +1206,6 @@ export default function DisplayItem() {
                     </Row>
                   </div>
                 </Collapse>
-                <div>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    style={{ marginRight: "1rem" }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleShowInfoModal}
-                    style={{ marginRight: "1rem" }}
-                  >
-                    More Info
-                  </Button>
-                  <LoadingButton
-                    type="primary"
-                    name="Back"
-                    route="NewSearch/mainSearch"
-                  />
-                </div>
               </Form>
             </Card.Body>
           </Card>

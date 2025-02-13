@@ -87,42 +87,41 @@ export default function MainSearch() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [gPos, setGPos] = useState(null);
   const [gIde, setGIde] = useState(null);
-
   const [isDeleting, setIsDeleting] = useState(false);
-
 
   // Fetch data on component mount and route change
   useEffect(() => {
     fetchData();
   }, [router.route]);
 
-  // Handle data fetching and set states accordingly
   async function fetchData() {
     if (router.query.inputText && router.query.selectedType) {
       setSelect(router.query.selectedType);
       setSearch(router.query.inputText);
     }
-
     const data = await fetchPartsWithMachineData();
     setInfo(data);
     setBackupInfo(data);
     setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
   }
 
-  // Handle search input changes
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
-  // Filter items based on search criteria
   function searchFilter() {
     const temp = backupInfo.filter((item) => {
       if (item.machineData) {
         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-        if (selectedModality && item.machineData.Modality !== selectedModality) return false;
-        if (selectedClient && item.machineData.Client !== selectedClient) return false;
+        if (selectedModality && item.machineData.Modality !== selectedModality)
+          return false;
+        if (selectedClient && item.machineData.Client !== selectedClient)
+          return false;
         if (selectedModel && item.machineData.Model !== selectedModel) return false;
       }
-  
-      if (select === "Name" && item.name.toLowerCase().includes(search.toLowerCase())) return true;
+      if (
+        select === "Name" &&
+        item.name.toLowerCase().includes(search.toLowerCase())
+      )
+        return true;
       if (select === "Date") {
         const [month, day, year] = item.date.split("/");
         const reformattedDate = `${year}-${month}-${day}`;
@@ -130,19 +129,18 @@ export default function MainSearch() {
       }
       if (select === "Work Order" && item.wo === search) return true;
       if (select === "Product Number" && item.pn === search) return true;
-      if (select === "Description" && item.desc.toLowerCase().includes(search.toLowerCase())) return true;
-
-      // New condition for Item ID as a string
-      if (select === "SKU" && item.id.toLowerCase().includes(search.toLowerCase())) return true;
-  
+      if (
+        select === "Description" &&
+        item.desc.toLowerCase().includes(search.toLowerCase())
+      )
+        return true;
+      if (select === "SKU" && item.id.toLowerCase().includes(search.toLowerCase()))
+        return true;
       return false;
     });
     setInfo(temp);
   }
-  
-  
 
-  // Sort items based on column
   function sortCheckAll(pos) {
     const sortedInfo = [...info].sort((a, b) => {
       if (pos === 0 || pos === 5) {
@@ -152,10 +150,8 @@ export default function MainSearch() {
       }
       if (pos === 1) {
         return sortCheck[pos]
-          ? Date.parse(b[labelBaseNames[pos]]) -
-              Date.parse(a[labelBaseNames[pos]])
-          : Date.parse(a[labelBaseNames[pos]]) -
-              Date.parse(b[labelBaseNames[pos]]);
+          ? Date.parse(b[labelBaseNames[pos]]) - Date.parse(a[labelBaseNames[pos]])
+          : Date.parse(a[labelBaseNames[pos]]) - Date.parse(b[labelBaseNames[pos]]);
       }
       return sortCheck[pos]
         ? Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]])
@@ -169,17 +165,26 @@ export default function MainSearch() {
     );
   }
 
-  // Row selection handler
-  const rowSelect = (id) => {
-    router.push("item/" + id);
+  const rowSelect = (item) => { 
+    console.log(info[0])
+    console.log(info[item])
+    if (item && item.id) {
+      console.log("Selected item ID:", info[item]);
+      // Use item.id for subsequent actions
+    } else {
+      console.error("Unable to determine the selected item’s ID: ", info[item]);
+    }
   };
+  
 
   const [selectedItems, setSelectedItems] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleSelectItem = (id) => {
     setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((itemId) => itemId !== id)
+        : [...prev, id]
     );
   };
 
@@ -207,50 +212,37 @@ export default function MainSearch() {
     }
   };
 
-  // Modal handlers
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
-  // Delete item handler
   const checkDelete = (event, pos, idsToDelete, name) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
     console.log("Selected IDs to delete:", idsToDelete);
-    setSelectedItems(idsToDelete); // Set selected items
+    setSelectedItems(idsToDelete);
     setDItem(name);
-    setShowDeleteModal(true); // Open the modal
-};
-  
+    setShowDeleteModal(true);
+  };
 
   const handleDelete = async () => {
     let itemId = gIde;
     try {
-      setIsDeleting(true);  // Show the loading spinner
-  
-      // Delete from Firestore Test collection
+      setIsDeleting(true);
       const db = firebase.firestore();
       await db.collection("Test").doc(itemId).delete();
-  
-      // Delete from Firestore Parts collection
       await deleteFromPartsCollection(itemId);
-  
-      // Delete images from Firebase Storage
       await deleteFromStorage(itemId);
-  
-      // Remove the item from the UI list
       setInfo(info.filter((_, i) => gPos !== i));
-      console.log(`Deleted item from Firestore and Storage: ${itemId}`);
+      console.log(`Deleted item: ${itemId}`);
     } catch (error) {
       console.error("Error deleting item:", error);
     } finally {
-      setIsDeleting(false);  // Hide the loading spinner
+      setIsDeleting(false);
     }
     handleClose();
   };
-  
-  
 
   const hoverStyle = (index) => ({
     backgroundColor: hoverIndex === index ? "#ddd" : "transparent",
@@ -258,7 +250,6 @@ export default function MainSearch() {
     cursor: "default",
   });
 
-  // Dropdown handlers
   const [dropdown1Text, setDropdown1Text] = useState("Select Option");
   const [dropdown2Text, setDropdown2Text] = useState("Select Option");
 
@@ -286,28 +277,24 @@ export default function MainSearch() {
     searchFilter();
   }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]);
 
-  // Fetch clients and show modal
   const handleClientClick = async () => {
     const clientsData = await fetchClients(selectedOEM, selectedModality);
     setClients(clientsData);
-    setClientSearchTerm(""); // Reset search term
+    setClientSearchTerm("");
     setShowClientModal(true);
   };
 
-  // Client selection handler
   const handleClientSelect = (clientName) => {
     setClientButtonText(clientName || "Select Option");
     setSelectedClient(clientName || null);
     setShowClientModal(false);
   };
 
-  // Client info handler
   const handleClientInfo = (clientId, clientName) => {
     console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
     router.push("client/" + clientId);
   };
 
-  // Clear client selection handler
   const handleClearClientSelection = () => {
     setClientButtonText("Select Option");
     setSelectedClient(null);
@@ -315,40 +302,29 @@ export default function MainSearch() {
     searchFilter();
   };
 
-  // Modal Handlers
-  // Add new state for models
   const [models, setModels] = useState([]);
   const [showModelModal, setShowModelModal] = useState(false);
   const [modelButtonText, setModelButtonText] = useState("Select Option");
 
-  // Fetch models and show modal
   const handleModelClick = async () => {
-    const modelsData = await fetchModels(
-      selectedOEM,
-      selectedModality,
-      selectedClient
-    );
+    const modelsData = await fetchModels(selectedOEM, selectedModality, selectedClient);
     setModels(modelsData);
-    setModelSearchTerm(""); // Reset search term
+    setModelSearchTerm("");
     setShowModelModal(true);
   };
 
-  // Model selection handler
   const handleModelSelect = (modelName) => {
     setModelButtonText(modelName || "Select Option");
     setSelectedModel(modelName || null);
     setShowModelModal(false);
   };
 
-  // Clear model selection handler
   const handleClearModelSelection = () => {
     setModelButtonText("Select Option");
     setSelectedModel(null);
     setShowModelModal(false);
     searchFilter();
   };
-
-  // Add these handlers in the relevant section of your MainSearch component
 
   const handleWarehouseClick = () => {
     setClientButtonText(CLIENT_WAREHOUSE);
@@ -365,8 +341,6 @@ export default function MainSearch() {
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [modelSearchTerm, setModelSearchTerm] = useState("");
 
-  //deleting item
-
   const deleteFromStorage = async (itemId) => {
     const storageRef = firebase.storage().ref();
     const folderRef = storageRef.child(`Parts/${itemId}/`);
@@ -378,7 +352,6 @@ export default function MainSearch() {
       console.error("Error deleting from storage:", error);
     }
   };
-  
 
   const deleteFromPartsCollection = async (itemId) => {
     const db = firebase.firestore();
@@ -389,7 +362,6 @@ export default function MainSearch() {
       console.error("Error deleting from Parts collection:", error);
     }
   };
-  
 
   return (
     <LoggedIn>
@@ -437,7 +409,7 @@ export default function MainSearch() {
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
             isClientSearch={false}
-            clearSelection={() => handleClientSelect(null)} // Clear selection handler
+            clearSelection={() => handleClientSelect(null)}
           />
         </Modal.Body>
       </Modal>
@@ -461,7 +433,7 @@ export default function MainSearch() {
                 : false
             )}
             onSelectModel={handleModelSelect}
-            clearSelection={() => handleModelSelect(null)} // Clear selection handler
+            clearSelection={() => handleModelSelect(null)}
           />
         </Modal.Body>
       </Modal>
@@ -527,58 +499,36 @@ export default function MainSearch() {
                     </InputGroup>
                   </div>
 
-                  {/* Divider */}
                   <div className={styles.divider}></div>
 
                   {/* Buttons */}
                   <div>
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Client</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        onClick={handleClientClick}
-                      >
+                      <Button variant="outline-secondary" className="w-100" onClick={handleClientClick}>
                         {clientButtonText}
                       </Button>
                     </InputGroup>
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Client-2</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        disabled
-                      >
+                      <Button variant="outline-secondary" className="w-100" disabled>
                         Select Option
                       </Button>
                     </InputGroup>
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Model</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        onClick={handleModelClick}
-                      >
+                      <Button variant="outline-secondary" className="w-100" onClick={handleModelClick}>
                         {modelButtonText}
                       </Button>
                     </InputGroup>
-                    {/* Divider */}
                     <div className={styles.divider}></div>
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Warehouse</InputGroup.Text>
                       <div className={styles.buttonGroup}>
-                        <Button
-                          variant="outline-secondary"
-                          className={styles.flexButton}
-                          onClick={handleWarehouseClick}
-                        >
+                        <Button variant="outline-secondary" className={styles.flexButton} onClick={handleWarehouseClick}>
                           Warehouse
                         </Button>
-                        <Button
-                          variant="outline-secondary"
-                          className={styles.flexButton}
-                          onClick={handleUnassignedClick}
-                        >
+                        <Button variant="outline-secondary" className={styles.flexButton} onClick={handleUnassignedClick}>
                           Unassigned
                         </Button>
                       </div>
@@ -595,13 +545,13 @@ export default function MainSearch() {
                       hoverStyle={hoverStyle}
                       sortCheckAll={sortCheckAll}
                       checkDelete={checkDelete}
-                      setShowDeleteModal={setShowDeleteModal}  // Pass the modal control to PartTable
+                      setShowDeleteModal={setShowDeleteModal}
                       isDeleting={isDeleting}
                       rowSelect={rowSelect}
                       setHoverIndex={setHoverIndex}
                       hoverIndex={hoverIndex}
-                      selectedItems={selectedItems} // New prop
-                      setSelectedItems={setSelectedItems} // New prop
+                      selectedItems={selectedItems}
+                      setSelectedItems={setSelectedItems}
                     />
 
                     <div className={styles.searchContainer}>
@@ -623,69 +573,34 @@ export default function MainSearch() {
                           onMouseLeave={() => setShowList(false)}
                           style={{ marginTop: "-5px" }}
                         >
-                          <NavDropdown.Item
-                            onClick={() =>
-                              setSelect("Name") & setShowListSearch("text")
-                            }
-                          >
+                          <NavDropdown.Item onClick={() => setSelect("Name") & setShowListSearch("text")}>
                             Name
                           </NavDropdown.Item>
-                          <NavDropdown.Item
-                            onClick={() =>
-                              setSelect("Date") & setShowListSearch("date")
-                            }
-                          >
+                          <NavDropdown.Item onClick={() => setSelect("Date") & setShowListSearch("date")}>
                             Date
                           </NavDropdown.Item>
-                          <NavDropdown.Item
-                            onClick={() =>
-                              setSelect("Work Order") &
-                              setShowListSearch("number")
-                            }
-                          >
+                          <NavDropdown.Item onClick={() => setSelect("Work Order") & setShowListSearch("number")}>
                             Work Order
                           </NavDropdown.Item>
-                          <NavDropdown.Item
-                            onClick={() =>
-                              setSelect("Product Number") &
-                              setShowListSearch("number")
-                            }
-                          >
+                          <NavDropdown.Item onClick={() => setSelect("Product Number") & setShowListSearch("number")}>
                             Product Number
                           </NavDropdown.Item>
-                          <NavDropdown.Item
-                            onClick={() =>
-                              setSelect("Description") &
-                              setShowListSearch("text")
-                            }
-                            // Add this line
-                          >
+                          <NavDropdown.Item onClick={() => setSelect("Description") & setShowListSearch("text")}>
                             Description
                           </NavDropdown.Item>
                           <NavDropdown.Item
                             onClick={() => {
-                              setSelect("SKU"); // New option for Item ID
+                              setSelect("SKU");
                               setShowListSearch("text");
                             }}
                           >
                             SKU
                           </NavDropdown.Item>
                         </NavDropdown>
-                        {/* <Button variant="info" onClick={searchFilter}>
-                          Search
-                        </Button> */}
                       </Form>
                       <div className="d-flex justify-content-between">
-                        <LoadingButton
-                          type="secondary"
-                          name="Add New Item"
-                          route="NewSearch/AddItem/NewItem"
-                        />
-                        <LoadingButton
-                          type="primary"
-                          name="Back"
-                          route="Warehousedb/WarehouseSelect"
-                        />
+                        <LoadingButton type="secondary" name="Add New Item" route="NewSearch/AddItem/NewItem" />
+                        <LoadingButton type="primary" name="Back" route="Warehousedb/WarehouseSelect" />
                       </div>
                     </div>
                   </div>
