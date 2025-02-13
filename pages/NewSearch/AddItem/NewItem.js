@@ -9,6 +9,7 @@ import {
   Col,
   Modal,
   FormControl,
+  Collapse,
 } from "react-bootstrap";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -21,30 +22,28 @@ import ClientTable from "../../../utils/ClientTable";
 import ClientInfoModal from "../ClientInfoModal";
 import ParentModal from "./ParentModal";
 import MachineSelectionModal from "../item/[id]/MachineSelectionModal";
+import InfoModal from "../InfoModal";
 
-// This will only load the component on the client-side.
+// Load BarcodeScannerComponent only on the client-side.
 const BarcodeScannerComponent = dynamic(
   () => import("react-qr-barcode-scanner"),
   { ssr: false }
 );
 
-// Simulates a network request delay
+// Simulate network delay.
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-// Custom LoadingButton component
+// Custom LoadingButton component.
 function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState(false);
-
   useEffect(() => {
     if (isLoading) {
       simulateNetworkRequest().then(() => setLoading(false));
     }
   }, [isLoading]);
-
   const handleClick = () => setLoading(true);
-
   return (
     <Link href={`/${route}`}>
       <a
@@ -60,72 +59,217 @@ function LoadingButton({ type, name, route }) {
 
 export default function NewItem() {
   const router = useRouter();
-  const { signal } = router.query; // Retrieve the query parameter
   const { signOut } = useAuth();
+  const { id } = router.query;
+  // Main item state including new "status" field.
   const [items, setItems] = useState({
     name: "",
     pn: "",
     sn: "",
     date: "",
     price: "",
+    status: "",
     length: "",
     width: "",
     height: "",
   });
+  // New local location states.
+  const [localLocFrom, setLocalLocFrom] = useState("");
+  const [localLocCurrent, setLocalLocCurrent] = useState("");
 
-  const [descriptions, setDescriptions] = useState([
-    { description: "", date: "" },
-  ]);
+  // Other states.
+  const [pnOptions, setPnOptions] = useState([]);
+  const [snOptions, setSnOptions] = useState([]);
+  const [descriptions, setDescriptions] = useState([{ description: "", date: "" }]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [show, setShow] = useState(false);
   const [showErr, setShowErr] = useState(false);
-  const [Err, setErr] = useState("N/A");
+  const [Err, setErr] = useState("Missing required field: Name and Description");
   const [showDescModal, setShowDescModal] = useState(false);
   const [showWoModal, setShowWoModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
-  const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
-  const [TheMachine, setTheMachine] = useState(null); // Added TheMachine state
+  const [TheMachine, setTheMachine] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
   const [search, setSearch] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
   const [addToWebsite, setAddToWebsite] = useState(false);
-  const [setID, setSetId] = useState(null);
   const [machinePick, setMachinePick] = useState(false);
+  const [freqItem, setFreqItem] = useState(0);
+  const [usagePastYear, setUsagePastYear] = useState(0);
+  const [machineFrequency, setMachineFrequency] = useState(0);
+  // For extra dimensions/price section collapse.
+  const [showExtra, setShowExtra] = useState(false);
 
+  // Fetch clients data.
   useEffect(() => {
-    if (signal) {
-      // Execute special behavior
-      setSetId(signal);
-    }
-
     async function fetchClientsData() {
       try {
         const clientsData = await fetchClients();
+        console.log(clientsData);
         setClients(clientsData);
       } catch (error) {
         console.error("Error fetching clients: ", error);
       }
     }
-
     fetchClientsData();
   }, []);
 
+  // Fetch PN and SN options.
+  useEffect(() => {
+    async function fetchPnSn() {
+      const db = firebase.firestore();
+      const snapshot = await db.collection("Test").get();
+      let pnSet = new Set();
+      let snSet = new Set();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.pn) pnSet.add(data.pn);
+        if (data.sn) snSet.add(data.sn);
+      });
+      setPnOptions([...pnSet]);
+      setSnOptions([...snSet]);
+    }
+    fetchPnSn();
+  }, []);
+
+  // Fetch item data if id exists.
+  useEffect(() => {
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
+
+  const fetchData = async () => {
+    const db = firebase.firestore();
+    const doc = await db.collection("Test").doc(id).get();
+    if (doc.exists) {
+      const data = doc.data();
+      // Convert Firestore date to ISO string.
+      if (data.date && data.date.seconds) {
+        data.date = new Date(data.date.seconds * 1000).toISOString().split("T")[0];
+      }
+      setItems(data);
+      setDescriptions(data.descriptions || []);
+      setWorkOrders(data.workOrders || []);
+      // Load local location fields if present.
+      if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
+      if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
+      if (data.TheMachine) {
+        setTheMachine(data.TheMachine);
+        const machinesSnapshot = await db
+          .collection("Machine")
+          .where("Model", "==", data.TheMachine.Model)
+          .get();
+        setMachineFrequency(machinesSnapshot.size);
+      } else {
+        setMachineFrequency("N/A");
+      }
+      if (data.Machine) {
+        const machineDoc = await data.Machine.get();
+        console.log(machineDoc.data());
+        setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
+        setTheMachine(machineDoc.data());
+      }
+      if (data.CurrentMachine) {
+        const currMachineDoc = await data.CurrentMachine.get();
+        setSelectedCurrentMachine({
+          id: currMachineDoc.id,
+          ...currMachineDoc.data(),
+        });
+        setTheMachine(currMachineDoc.data());
+      }
+      if (data.Parent) {
+        const parentDoc = await data.Parent.get();
+        setSelectedParent({ id: parentDoc.id, ...parentDoc.data() });
+      }
+      await fetchPhotos(id);
+      await checkIfAddedToWebsite(id);
+      await calculateItemFrequencyAndUsage(data.pn);
+    } else {
+      router.push({
+        pathname: "../AddItem/NewItem",
+        query: { signal: id },
+      });
+    }
+  };
+
+  const calculateItemFrequencyAndUsage = async (pn) => {
+    const db = firebase.firestore();
+    const currentDate = new Date();
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
+    const itemsSnapshot = await db.collection("Test").where("pn", "==", pn).get();
+    setFreqItem(itemsSnapshot.size);
+    let usagePastYear = 0;
+    itemsSnapshot.forEach((doc) => {
+      const itemData = doc.data();
+      itemData.workOrders.forEach((workOrder) => {
+        const workOrderDate = new Date(workOrder.date);
+        if (workOrderDate >= oneYearAgo && workOrderDate <= currentDate) {
+          usagePastYear++;
+        }
+      });
+    });
+    setUsagePastYear(usagePastYear);
+  };
+
+  const fetchMachine = async (machineId) => {
+    const db = firebase.firestore();
+    const doc = await db.collection("Machine").doc(machineId).get();
+    if (doc.exists) {
+      const machineData = doc.data();
+      setTheMachine(machineData);
+      const machinesSnapshot = await db
+        .collection("Machine")
+        .where("Model", "==", machineData.Model)
+        .get();
+      setMachineFrequency(machinesSnapshot.size);
+    } else {
+      console.error("Machine not found");
+    }
+  };
+
+  const fetchPhotos = async (docID) => {
+    const storageRef = firebase.storage().ref();
+    const listRef = storageRef.child(`Parts/${docID}`);
+    try {
+      const res = await listRef.listAll();
+      const urls = await Promise.all(res.items.map((item) => item.getDownloadURL()));
+      setPhotos(urls.map((url) => ({ url, file: null })));
+    } catch (error) {
+      console.error("Error fetching photos: ", error);
+    }
+  };
+
+  const checkIfAddedToWebsite = async (docID) => {
+    const db = firebase.firestore();
+    const partsDoc = await db.collection("Parts").doc(docID).get();
+    if (partsDoc.exists) {
+      setAddToWebsite(true);
+    }
+  };
+
+  // Modal handlers.
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const handleCloseErr = () => setShowErr(false);
   const handleShowErr = () => setShowErr(true);
-
+  const handleCloseSaveModal = () => setShowSaveModal(false);
+  const handleShowSaveModal = () => setShowSaveModal(true);
+  const handleMachineSelectionModal = () => setMachineSelectionModal(false);
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
   const handleCloseWoModal = () => setShowWoModal(false);
@@ -146,9 +290,7 @@ export default function NewItem() {
     if (clientDoc.exists) {
       const clientData = clientDoc.data();
       setSelectedClient(clientData);
-      const machinePromises = clientData.machines.map((machineRef) =>
-        machineRef.get()
-      );
+      const machinePromises = clientData.machines.map((machineRef) => machineRef.get());
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
         id: machineDoc.id,
@@ -159,158 +301,118 @@ export default function NewItem() {
     }
   };
 
-  const fetchMachine = async (machineId) => {
-    const db = firebase.firestore();
-    const doc = await db.collection("Machine").doc(machineId).get();
-    if (doc.exists) {
-      setTheMachine(doc.data());
-    }
+  const generateCustomID = () => {
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    return `AIS${randomNum}`;
   };
 
+  async function toSend() {
+    const db = firebase.firestore();
+    const formattedItems = { ...items, descriptions, workOrders };
+    // Include local location fields.
+    formattedItems.localLocFrom = localLocFrom;
+    formattedItems.localLocCurrent = localLocCurrent;
+    // Handle Machine Reference.
+    if (selectedMachine && selectedMachine.id) {
+      formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
+    }
+    // Handle TheMachine data.
+    if (TheMachine && TheMachine.Model) {
+      formattedItems.TheMachine = TheMachine;
+    }
+    // Handle CurrentMachine Reference.
+    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+      const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+      formattedItems.CurrentMachine = currentMachineRef;
+    }
+    // Handle Parent Reference.
+    if (selectedParent && selectedParent.id) {
+      formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
+    }
+    try {
+      if (id) {
+        await db.collection("Test").doc(id).update(formattedItems);
+        if (selectedMachine && selectedMachine.id) {
+          const machineRef = db.collection("Machine").doc(selectedMachine.id);
+          const machineDoc = await machineRef.get();
+          if (machineDoc.exists) {
+            await machineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(db.collection("Test").doc(id)),
+            });
+          }
+        }
+        if (selectedCurrentMachine && selectedCurrentMachine.id) {
+          const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+          const currentMachineDoc = await currentMachineRef.get();
+          if (currentMachineDoc.exists) {
+            await currentMachineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(db.collection("Test").doc(id)),
+            });
+          }
+        }
+      } else {
+        const customID = generateCustomID();
+        await db.collection("Test").doc(customID).set(formattedItems);
+        if (selectedMachine && selectedMachine.id) {
+          const machineRef = db.collection("Machine").doc(selectedMachine.id);
+          const machineDoc = await machineRef.get();
+          if (machineDoc.exists) {
+            await machineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(db.collection("Test").doc(customID)),
+            });
+          }
+        }
+        if (selectedCurrentMachine && selectedCurrentMachine.id) {
+          const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+          const currentMachineDoc = await currentMachineRef.get();
+          if (currentMachineDoc.exists) {
+            await currentMachineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(db.collection("Test").doc(customID)),
+            });
+          }
+        }
+      }
+      console.log("Item saved and associatedParts updated!");
+      handleShowSaveModal();
+      router.push("../mainSearch");
+    } catch (error) {
+      console.error("Error saving data:", error);
+    }
+  }
+
   const handleSetSelectedMachine = (selMachina) => {
-    console.log(selMachina);
     if (machinePick) {
+      // "Select From" selection.
       setSelectedMachine({ id: selMachina.id, name: selMachina.name });
       fetchMachine(selMachina.id);
     } else {
+      // "Select Current" selection.
       setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
       fetchMachine(selMachina.id);
     }
     handleCloseMachineModal();
   };
 
-  // Function to generate custom document ID
-  const generateCustomID = () => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    return `AIS${randomNum}`;
-  };
-
-  // Function to send item data to Firestore
-  async function toSend() {
-    const db = firebase.firestore();
-    let customID = generateCustomID();
-
-    if (signal) {
-      customID = signal;
-    }
-
-    const formattedItems = { ...items, descriptions, workOrders };
-
-    // Handle Machine Reference
-    if (selectedMachine && selectedMachine.id) {
-      const machineRef = db.collection("Machine").doc(selectedMachine.id);
-      formattedItems.Machine = machineRef;
-    }
-
-    // Handle TheMachine Data
-    if (TheMachine && TheMachine.Model) {
-      formattedItems.TheMachine = TheMachine;
-    }
-
-    // Handle CurrentMachine Reference
-    if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      const currentMachineRef = db
-        .collection("Machine")
-        .doc(selectedCurrentMachine.id);
-      formattedItems.CurrentMachine = currentMachineRef;
-    }
-
-    // Handle Parent Reference
-    if (selectedParent && selectedParent.id) {
-      formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
-    }
-
-    try {
-      // Save the new item document
-      await db.collection("Test").doc(customID).set(formattedItems);
-
-      // Upload photos to storage
-      await uploadPhotos(customID);
-
-      // Update the Machine's associatedParts array to include this new item
-      if (selectedMachine && selectedMachine.id) {
-        const machineRef = db.collection("Machine").doc(selectedMachine.id);
-        await machineRef.update({
-          associatedParts: firebase.firestore.FieldValue.arrayUnion(
-            db.collection("Test").doc(customID)
-          ),
-        });
-      }
-
-      // Optionally, update the CurrentMachine's associatedParts array
-      if (selectedCurrentMachine && selectedCurrentMachine.id) {
-        const currentMachineRef = db
-          .collection("Machine")
-          .doc(selectedCurrentMachine.id);
-        await currentMachineRef.update({
-          associatedParts: firebase.firestore.FieldValue.arrayUnion(
-            db.collection("Test").doc(customID)
-          ),
-        });
-      }
-
-      // Add to Parts collection if 'Add to Website' is checked
-      if (addToWebsite) {
-        let tempMachine = (
-          await db.collection("Machine").doc(selectedMachine.id).get()
-        ).data();
-        let tempMachineCurrent = (
-          await db.collection("Machine").doc(selectedCurrentMachine.id).get()
-        ).data();
-
-        const partsItem = {
-          Name: items?.name || "",
-          PN: items?.pn || "",
-          SN: items?.sn || "",
-          Images: photos.map(
-            (_, index) =>
-              `Parts/${customID}/${customID}${
-                index === 0 ? "" : `.${index + 1}`
-              }`
-          ),
-          Available: true,
-          From: tempMachine?.name || "",
-          Current: tempMachineCurrent?.name || "",
-          Modality: tempMachineCurrent?.Modality || "",
-          OEM: tempMachineCurrent?.OEM || "",
-          Model: tempMachineCurrent?.Model || "",
-          PM: items?.pn || "",
-          Sold: 0,
-        };
-
-        await db.collection("Parts").doc(customID).set(partsItem);
-      }
-
-      // Redirect to main search page after successful submission
-      router.push("../mainSearch");
-    } catch (error) {
-      console.error("Error updating data: ", error);
-    }
-  }
-
-  const uploadPhotos = async (customID) => {
+  const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
     for (let i = 0; i < photos.length; i++) {
-      const photoRef = storageRef.child(
-        `Parts/${customID}/${customID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
-      );
-      await photoRef.put(photos[i]);
+      if (photos[i].file) {
+        const photoRef = storageRef.child(
+          `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
+        );
+        const metadata = { contentType: "image/png" };
+        await photoRef.put(photos[i].file, metadata);
+        const url = await photoRef.getDownloadURL();
+        photos[i].url = url;
+      }
     }
   };
 
-  // Handle form submission
+  // Only require "Name" and "Description" fields.
   async function handleSubmit(event) {
     event.preventDefault();
-    let check = false;
-
-    if (!items.name) check = true;
-    if (!items.pn) check = true;
-    if (!items.sn) check = true;
-    if (!items.price) check = true; // Check for the price field
-    if (descriptions.some((desc) => !desc.description)) check = true;
-    if (workOrders.some((wo) => !wo.workOrder)) check = true;
-
-    if (check) {
+    // Validate only required fields.
+    if (!items.name || (selectedDesc === null || !descriptions[selectedDesc]?.description)) {
       handleShow();
     } else if (TheMachine === null) {
       setMachineSelectionModal(true);
@@ -319,7 +421,6 @@ export default function NewItem() {
     }
   }
 
-  // Handlers for input changes
   const handleChange = (field) => (event) => {
     const value = event.target ? event.target.value : event.value;
     setItems((prevItems) => ({ ...prevItems, [field]: value }));
@@ -380,7 +481,10 @@ export default function NewItem() {
   };
 
   const savePhoto = () => {
-    setPhotos((prevPhotos) => [...prevPhotos, capturedPhoto]);
+    setPhotos((prevPhotos) => [
+      ...prevPhotos,
+      { file: capturedPhoto, url: URL.createObjectURL(capturedPhoto) },
+    ]);
     setCapturedPhoto(null);
     handleCloseCameraModal();
   };
@@ -407,19 +511,41 @@ export default function NewItem() {
     }, "image/png");
   };
 
+  // More info modal.
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [itemName, setItemName] = useState("");
+  const handleShowInfoModal = async () => {
+    const db = firebase.firestore();
+    try {
+      const doc = await db.collection("Test").doc(id).get();
+      if (doc.exists) {
+        const data = doc.data();
+        setItemName(data.name || "N/A");
+        setShowInfoModal(true);
+      } else {
+        console.error("Item not found");
+      }
+    } catch (error) {
+      console.error("Error fetching item info:", error);
+    }
+  };
+  const handleCloseInfoModal = () => setShowInfoModal(false);
+
   return (
     <LoggedIn>
+      {/* Error Modal */}
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Missing field</Modal.Body>
+        <Modal.Body>Missing required field: Name and Description</Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleClose}>
             Ok
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* Error Modal for other errors */}
       <Modal show={showErr} onHide={handleCloseErr}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
@@ -431,7 +557,20 @@ export default function NewItem() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* Save Confirmation Modal */}
+      <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Save Confirmation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Data has been saved successfully.</Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleCloseSaveModal}>
+            Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
+      {/* Descriptions Modal */}
       <Modal show={showDescModal} onHide={handleCloseDescModal}>
         <Modal.Header closeButton>
           <Modal.Title>Descriptions</Modal.Title>
@@ -450,12 +589,7 @@ export default function NewItem() {
               >
                 <div className="d-flex justify-content-between">
                   <span>{desc.description || "Description"}</span>
-                  <span
-                    style={{
-                      borderLeft: "1px solid #ccc",
-                      paddingLeft: "10px",
-                    }}
-                  >
+                  <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
                     {desc.date || "Date"}
                   </span>
                 </div>
@@ -468,6 +602,7 @@ export default function NewItem() {
         </Modal.Body>
       </Modal>
 
+      {/* Work Orders Modal */}
       <Modal show={showWoModal} onHide={handleCloseWoModal}>
         <Modal.Header closeButton>
           <Modal.Title>Work Orders</Modal.Title>
@@ -517,6 +652,7 @@ export default function NewItem() {
         </Modal.Body>
       </Modal>
 
+      {/* Machine Selection Modal */}
       <ClientInfoModal
         show={showMachineModal}
         handleClose={handleCloseMachineModal}
@@ -525,6 +661,7 @@ export default function NewItem() {
         setSelectedMachine={handleSetSelectedMachine}
       />
 
+      {/* Client Selection Modal */}
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
         <Modal.Header closeButton>
           <Modal.Title>Select Machine</Modal.Title>
@@ -547,39 +684,35 @@ export default function NewItem() {
         </Modal.Body>
       </Modal>
 
-      <MachineSelectionModal
-        show={machineSelectionModal}
-        handleClose={() => setMachineSelectionModal(false)}
-        setMachine={setTheMachine}
-      />
-
       <ParentModal
         show={showParentModal}
         handleClose={handleCloseParentModal}
         setSelectedParent={setSelectedParent}
       />
 
+      <MachineSelectionModal
+        show={machineSelectionModal}
+        handleClose={() => setMachineSelectionModal(false)}
+        setMachine={setTheMachine}
+      />
+
+      {/* Camera Modal */}
       <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
         <Modal.Header closeButton>
           <Modal.Title>Take a Photo</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="camera">
-            {!capturedPhoto && (
+            {!capturedPhoto ? (
               <BarcodeScannerComponent
                 width="100%"
                 height={300}
                 onUpdate={handleCapture}
                 facingMode={cameraFacing}
               />
-            )}
-            {capturedPhoto && (
+            ) : (
               <div className="photo-preview">
-                <img
-                  src={URL.createObjectURL(capturedPhoto)}
-                  alt="captured"
-                  style={{ width: "100%" }}
-                />
+                <img src={URL.createObjectURL(capturedPhoto)} alt="captured" style={{ width: "100%" }} />
               </div>
             )}
           </div>
@@ -616,10 +749,7 @@ export default function NewItem() {
             </>
           ) : (
             <>
-              <Button
-                variant="secondary"
-                onClick={() => setCapturedPhoto(null)}
-              >
+              <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
                 Retake
               </Button>
               <Button variant="primary" onClick={savePhoto}>
@@ -630,112 +760,64 @@ export default function NewItem() {
         </Modal.Footer>
       </Modal>
 
-      <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
-      >
+      {/* Info Modal */}
+      <InfoModal
+        show={showInfoModal}
+        handleClose={handleCloseInfoModal}
+        itemName={items.name}
+        dimensions={`${items.length},${items.width},${items.height}`}
+        price={items.price}
+        freqI={freqItem}
+        freqM={machineFrequency}
+        usage={usagePastYear}
+      />
+
+      {/* Main Form */}
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
         <div className="w-100" style={{ maxWidth: "600px" }}>
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Add New Item</h2>
               <Form onSubmit={handleSubmit}>
+                {/* Row for Name and Product Number */}
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="name">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={items.name}
-                      onChange={handleChange("name")}
-                    />
+                    <Form.Control type="text" value={items.name} onChange={handleChange("name")} />
                   </Form.Group>
                   <Form.Group as={Col} controlId="pn">
                     <Form.Label>Product Number</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={items.pn}
-                      onChange={handleChange("pn")}
-                    />
+                    <Form.Control type="text" value={items.pn} onChange={handleChange("pn")} />
                   </Form.Group>
                 </Row>
+                {/* Row for Serial Number and Date */}
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="sn">
                     <Form.Label>Serial Number</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={items.sn}
-                      onChange={handleChange("sn")}
-                    />
+                    <Form.Control type="text" value={items.sn} onChange={handleChange("sn")} />
                   </Form.Group>
                   <Form.Group as={Col} controlId="date">
                     <Form.Label>Date</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={items.date}
-                      onChange={handleChange("date")}
-                    />
+                    <Form.Control type="date" value={items.date} onChange={handleChange("date")} />
                   </Form.Group>
                 </Row>
-
-                {/* Dimensions and Price Row */}
+                {/* New row for Status */}
                 <Row className="mb-3">
-                  {/* Left side: Dimensions */}
-                  <Col>
-                    <Form.Group controlId="dimensions">
-                      <Form.Label>
-                        Dimensions (Length x Width x Height)
-                      </Form.Label>
-                      <Row>
-                        <Col>
-                          <Form.Control
-                            placeholder="Length"
-                            type="text"
-                            value={items.length}
-                            onChange={handleChange("length")}
-                          />
-                        </Col>
-                        x
-                        <Col>
-                          <Form.Control
-                            placeholder="Width"
-                            type="text"
-                            value={items.width}
-                            onChange={handleChange("width")}
-                          />
-                        </Col>
-                        x
-                        <Col>
-                          <Form.Control
-                            placeholder="Height"
-                            type="text"
-                            value={items.height}
-                            onChange={handleChange("height")}
-                          />
-                        </Col>
-                      </Row>
-                    </Form.Group>
-                  </Col>
-
-                  {/* Right side: Price */}
-                  <Col>
-                    <Form.Group controlId="price">
-                      <Form.Label>Price</Form.Label>
-                      <Form.Control
-                        placeholder="Price"
-                        type="text"
-                        value={items.price}
-                        onChange={handleChange("price")}
-                      />
-                    </Form.Group>
-                  </Col>
+                  <Form.Group as={Col} controlId="status">
+                    <Form.Label>Status</Form.Label>
+                    <Form.Select value={items.status || ""} onChange={handleChange("status")}>
+                      <option value="">Select status</option>
+                      <option value="Good">Good</option>
+                      <option value="Bad">Bad</option>
+                      <option value="Unknown">Unknown</option>
+                    </Form.Select>
+                  </Form.Group>
                 </Row>
-
+                
+                {/* Work Orders and Descriptions Section */}
                 <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                   <div className="d-flex align-items-center">
-                    <Button
-                      variant="outline-secondary"
-                      onClick={handleShowWoModal}
-                      className="me-2"
-                    >
+                    <Button variant="outline-secondary" onClick={handleShowWoModal} className="me-2">
                       Manage Work Orders
                     </Button>
                     {workOrders.length > 0 && (
@@ -774,53 +856,33 @@ export default function NewItem() {
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
                   <Form.Group className="mb-3" controlId="desc">
-                    <Button
-                      variant="outline-secondary"
-                      onClick={listDescriptions}
-                      className="mb-2 me-2"
-                    >
+                    <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
                       List Descriptions
                     </Button>
                     <Form.Control
                       as="textarea"
                       rows={3}
                       placeholder="Enter description"
-                      value={
-                        selectedDesc !== null
-                          ? descriptions[selectedDesc].description
-                          : ""
-                      }
+                      value={selectedDesc !== null ? descriptions[selectedDesc].description : ""}
                       onChange={(e) =>
                         selectedDesc !== null &&
-                        handleDescriptionChange(
-                          selectedDesc,
-                          "description",
-                          e.target.value
-                        )
+                        handleDescriptionChange(selectedDesc, "description", e.target.value)
                       }
                       style={{ marginBottom: "0.5rem" }}
                     />
                     <Form.Control
                       type="date"
-                      value={
-                        selectedDesc !== null
-                          ? descriptions[selectedDesc].date
-                          : ""
-                      }
+                      value={selectedDesc !== null ? descriptions[selectedDesc].date : ""}
                       onChange={(e) =>
                         selectedDesc !== null &&
-                        handleDescriptionChange(
-                          selectedDesc,
-                          "date",
-                          e.target.value
-                        )
+                        handleDescriptionChange(selectedDesc, "date", e.target.value)
                       }
                       style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
                     />
                   </Form.Group>
                 </div>
+                {/* Machine Selection Row with Local Loc Inputs */}
                 <div style={{ marginBottom: "1rem" }}>
-                  {/* Machine Selection Row */}
                   <Row className="mb-3">
                     <Col>
                       <Button
@@ -834,13 +896,23 @@ export default function NewItem() {
                         Select From
                       </Button>
                       {selectedMachine && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Selected Machine"
-                          value={selectedMachine.name}
-                          readOnly
-                          style={{ cursor: "default", marginTop: "0.5rem" }}
-                        />
+                        <>
+                          <Form.Control
+                            type="text"
+                            placeholder="Selected Machine"
+                            value={selectedMachine.name}
+                            readOnly
+                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                          />
+                          {["socalwarehouse", "norcalwarehouse", "interior"].includes(
+                            selectedMachine.name.toLowerCase()
+                          ) && (
+                            <Form.Group controlId="localLocFrom" className="mt-2">
+                              <Form.Label>Local Loc</Form.Label>
+                              <Form.Control type="text" value={localLocFrom} onChange={(e) => setLocalLocFrom(e.target.value)} />
+                            </Form.Group>
+                          )}
+                        </>
                       )}
                     </Col>
                     <Col>
@@ -855,21 +927,32 @@ export default function NewItem() {
                         Select Current
                       </Button>
                       {selectedCurrentMachine && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Selected Machine"
-                          value={selectedCurrentMachine.name}
-                          readOnly
-                          style={{ cursor: "default", marginTop: "0.5rem" }}
-                        />
+                        <>
+                          <Form.Control
+                            type="text"
+                            placeholder="Selected Machine"
+                            value={selectedCurrentMachine.name}
+                            readOnly
+                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                          />
+                          {["socalwarehouse", "norcalwarehouse", "interior"].includes(
+                            selectedCurrentMachine.name.toLowerCase()
+                          ) && (
+                            <Form.Group controlId="localLocCurrent" className="mt-2">
+                              <Form.Label>Local Loc</Form.Label>
+                              <Form.Control
+                                type="text"
+                                placeholder="E1A2"
+                                value={localLocCurrent}
+                                onChange={(e) => setLocalLocCurrent(e.target.value)}
+                              />
+                            </Form.Group>
+                          )}
+                        </>
                       )}
                     </Col>
                     <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={handleShowParentModal}
-                        className="me-2"
-                      >
+                      <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
                         Select Parent
                       </Button>
                       {selectedParent && (
@@ -887,10 +970,7 @@ export default function NewItem() {
                 <div style={{ marginBottom: "1rem" }}>
                   <Row>
                     <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={handleShowCameraModal}
-                      >
+                      <Button variant="outline-secondary" onClick={handleShowCameraModal}>
                         Take Photo
                       </Button>
                     </Col>
@@ -906,43 +986,56 @@ export default function NewItem() {
                 </div>
                 <div className="mt-3 d-flex flex-wrap">
                   {photos.map((photo, index) => (
-                    <div
-                      key={index}
-                      className="d-flex flex-column align-items-center mb-2 me-2"
-                    >
+                    <div key={index} className="d-flex flex-column align-items-center mb-2 me-2">
                       <img
                         src={URL.createObjectURL(photo)}
                         alt={`Photo ${index + 1}`}
-                        style={{
-                          width: "100px",
-                          height: "100px",
-                          marginRight: "10px",
-                        }}
+                        style={{ width: "100px", height: "100px", marginRight: "10px" }}
                       />
-                      <Button
-                        variant="danger"
-                        onClick={() => removePhoto(index)}
-                      >
+                      <Button variant="danger" onClick={() => removePhoto(index)}>
                         X
                       </Button>
                     </div>
                   ))}
                 </div>
-
                 <div>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    style={{ marginRight: "1rem" }}
-                  >
+                  <Button variant="primary" type="submit" style={{ marginRight: "1rem" }}>
                     Submit
                   </Button>
+                  <LoadingButton type="secondary" name="Back" route="NewSearch/mainSearch" />
 
-                  <LoadingButton
-                    type="secondary"
-                    name="Back"
-                    route="NewSearch/mainSearch"
-                  />
+                  <div style={{ textAlign: "center", margin: "1rem 0" }}>
+                    <Button variant="link" style={{ textDecoration: "none", color: "black", fontSize: "24px" }} onClick={() => setShowExtra(!showExtra)}>
+                      ▼
+                    </Button>
+                  </div>
+                  {/* Extra Section: Dimensions and Price in a Collapsible Block */}
+                  <Collapse in={showExtra}>
+                    <div id="extra-collapse" className="mt-3">
+                      <Row>
+                        <Form.Group as={Col} controlId="dimensions">
+                          <Form.Label>Dimensions (L x W x H)</Form.Label>
+                          <Row>
+                            <Col>
+                              <Form.Control placeholder="Length" type="text" value={items.length} onChange={handleChange("length")} />
+                            </Col>
+                            x
+                            <Col>
+                              <Form.Control placeholder="Width" type="text" value={items.width} onChange={handleChange("width")} />
+                            </Col>
+                            x
+                            <Col>
+                              <Form.Control placeholder="Height" type="text" value={items.height} onChange={handleChange("height")} />
+                            </Col>
+                          </Row>
+                        </Form.Group>
+                        <Form.Group as={Col} controlId="price">
+                          <Form.Label>Price</Form.Label>
+                          <Form.Control placeholder="Price" type="text" value={items.price} onChange={handleChange("price")} />
+                        </Form.Group>
+                      </Row>
+                    </div>
+                  </Collapse>
                 </div>
               </Form>
             </Card.Body>

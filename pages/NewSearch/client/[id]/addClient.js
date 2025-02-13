@@ -94,6 +94,8 @@ const AddClient = () => {
     setShowClientInfoModal(false);
   };
 
+  // When creating a new machine, if a client exists (edit mode) use set with merge
+  // so that if the client document doesn't exist yet it gets created.
   const handleCreateMachine = async (newMachine) => {
     const db = firebase.firestore();
     const machineId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
@@ -101,16 +103,23 @@ const AddClient = () => {
       const machineWithId = {
         ...newMachine,
         id: machineId,
-        client: db.collection("Client").doc(clientId),
+        // Only set the client if clientId exists; otherwise, leave it null.
+        client: clientId ? db.collection("Client").doc(clientId) : null,
       };
       await db.collection("Machine").doc(machineId).set(machineWithId);
 
-      const clientRef = db.collection("Client").doc(clientId);
-      await clientRef.update({
-        machines: firebase.firestore.FieldValue.arrayUnion(
-          db.collection("Machine").doc(machineId)
-        ),
-      });
+      // If editing an existing client, update its machines array using set with merge.
+      if (clientId) {
+        const clientRef = db.collection("Client").doc(clientId);
+        await clientRef.set(
+          {
+            machines: firebase.firestore.FieldValue.arrayUnion(
+              db.collection("Machine").doc(machineId)
+            ),
+          },
+          { merge: true }
+        );
+      }
 
       setShowMachineCreationModal(false);
       setAddedMachines((prev) => [...prev, { id: machineId, ...newMachine }]);
@@ -128,7 +137,7 @@ const AddClient = () => {
     const db = firebase.firestore();
     try {
       if (clientId) {
-        // Use set with merge to update an existing client (or create it if it doesn't exist)
+        // Update existing client
         await db.collection("Client").doc(clientId).set(
           {
             ...client,
@@ -139,6 +148,7 @@ const AddClient = () => {
           { merge: true }
         );
       } else {
+        // Create new client
         const newClientId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
         await db.collection("Client").doc(newClientId).set({
           ...client,
@@ -147,6 +157,7 @@ const AddClient = () => {
           ),
         });
 
+        // Update each machine's client field after client creation
         for (const machine of addedMachines) {
           await db.collection("Machine").doc(machine.id).update({
             client: db.collection("Client").doc(newClientId),
@@ -269,6 +280,7 @@ const AddClient = () => {
         </Col>
       </Row>
 
+      {/* Modal to add an existing machine */}
       <ClientInfoModal
         show={showClientInfoModal}
         handleClose={() => setShowClientInfoModal(false)}
@@ -276,6 +288,7 @@ const AddClient = () => {
         setSelectedMachine={handleAddMachine}
       />
 
+      {/* Modal to create a new machine */}
       <MachineCreationModal
         show={showMachineCreationModal}
         handleClose={() => setShowMachineCreationModal(false)}
