@@ -72,7 +72,7 @@ export default function PartTable({
               onClick={(e) => {
                 // Only trigger rowSelect if the target is not a checkbox
                 if (e.target.type !== "checkbox") {
-                  rowSelect(ids[index]);
+                  rowSelect(item);
                 }
               }}
               className="clickable-row"
