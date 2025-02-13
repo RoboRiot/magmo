@@ -29,8 +29,10 @@ import PartTable from "../../utils/PartTable";
 import styles from "../../styles/MainSearch.module.css";
 import firebase from "../../context/Firebase";
 
-const CLIENT_WAREHOUSE = "igor-house";
-const CLIENT_UNASSIGNED = "unassigned";
+// Predefined warehouse client IDs and display names
+const SOCAL_CLIENT_ID = "AIS17182";
+const NORCAL_CLIENT_ID = "AIS25097";
+const UNASSIGNED_CLIENT_ID = "AIS00404";
 
 // Simulates a network request delay
 function simulateNetworkRequest() {
@@ -73,10 +75,17 @@ export default function MainSearch() {
   const [search, setSearch] = useState("");
   const [selectedOEM, setSelectedOEM] = useState(null);
   const [selectedModality, setSelectedModality] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null);
+  // Replace the old single client state with two sets:
+  const [selectedClientFrom, setSelectedClientFrom] = useState(null);
+  const [clientFromButtonText, setClientFromButtonText] = useState("Select Option");
+  const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+  const [clientCurrentButtonText, setClientCurrentButtonText] = useState("Select Option");
+
   const [clients, setClients] = useState([]);
   const [showClientModal, setShowClientModal] = useState(false);
-  const [clientButtonText, setClientButtonText] = useState("Select Option");
+  // This state tells the modal which client box is being updated: "from" or "current"
+  const [clientSelectionType, setClientSelectionType] = useState(null);
+
   const router = useRouter();
   const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
   const labelBaseNames = ["name", "date", "wo", "pn", "sn"];
@@ -107,39 +116,121 @@ export default function MainSearch() {
 
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
-  function searchFilter() {
-    const temp = backupInfo.filter((item) => {
-      if (item.machineData) {
-        if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-        if (selectedModality && item.machineData.Modality !== selectedModality)
-          return false;
-        if (selectedClient && item.machineData.Client !== selectedClient)
-          return false;
-        if (selectedModel && item.machineData.Model !== selectedModel) return false;
-      }
-      if (
-        select === "Name" &&
-        item.name.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
-      if (select === "Date") {
-        const [month, day, year] = item.date.split("/");
-        const reformattedDate = `${year}-${month}-${day}`;
-        return reformattedDate === search;
-      }
-      if (select === "Work Order" && item.wo === search) return true;
-      if (select === "Product Number" && item.pn === search) return true;
-      if (
-        select === "Description" &&
-        item.desc.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
-      if (select === "SKU" && item.id.toLowerCase().includes(search.toLowerCase()))
-        return true;
-      return false;
-    });
-    setInfo(temp);
-  }
+  // Asynchronous filter function that loops through backupInfo and,
+  // for each item, fetches its Machine and CurrentMachine documents,
+  // then compares the client id (from machineData.client.id) to the selected client.
+  useEffect(() => {
+    async function filterParts() {
+      console.log(
+        "filterParts called with selectedClientFrom:",
+        selectedClientFrom,
+        "selectedClientCurrent:",
+        selectedClientCurrent
+      );
+      const filtered = await Promise.all(
+        backupInfo.map(async (item) => {
+          let passes = true;
+          // Check OEM, Modality, and Model from machineData (if available)
+          if (item.machineData) {
+            if (selectedOEM && item.machineData.OEM !== selectedOEM) passes = false;
+            if (selectedModality && item.machineData.Modality !== selectedModality)
+              passes = false;
+            if (selectedModel && item.machineData.Model !== selectedModel) passes = false;
+          }
+          // For Client From: use the part’s Machine reference
+          if (passes && selectedClientFrom) {
+            if (!item.Machine) {
+              console.log(`Item ${item.id} has no Machine reference.`);
+              passes = false;
+            } else {
+              try {
+                const machineSnap = await item.Machine.get();
+                if (!machineSnap.exists) {
+                  console.log(`Item ${item.id} Machine document does not exist.`);
+                  passes = false;
+                } else {
+                  const machineData = machineSnap.data();
+                  if (!machineData.client) {
+                    console.log(`Item ${item.id} Machine has no client reference.`);
+                    passes = false;
+                  } else {
+                    // Get the client id from the DocumentReference
+                    const clientFromId = machineData.client.id;
+                    console.log(
+                      `Item ${item.id}: fetched Client From id = ${clientFromId}, selectedClientFrom = ${selectedClientFrom}`
+                    );
+                    if (clientFromId !== selectedClientFrom) passes = false;
+                  }
+                }
+              } catch (error) {
+                console.error(`Error fetching Machine for item ${item.id}:`, error);
+                passes = false;
+              }
+            }
+          }
+          // For Client Current: use the part’s CurrentMachine reference
+          if (passes && selectedClientCurrent) {
+            if (!item.CurrentMachine) {
+              console.log(`Item ${item.id} has no CurrentMachine reference.`);
+              passes = false;
+            } else {
+              try {
+                const currentMachineSnap = await item.CurrentMachine.get();
+                if (!currentMachineSnap.exists) {
+                  console.log(`Item ${item.id} CurrentMachine document does not exist.`);
+                  passes = false;
+                } else {
+                  const currentMachineData = currentMachineSnap.data();
+                  if (!currentMachineData.client) {
+                    console.log(`Item ${item.id} CurrentMachine has no client reference.`);
+                    passes = false;
+                  } else {
+                    const clientCurrentId = currentMachineData.client.id;
+                    console.log(
+                      `Item ${item.id}: fetched Client Current id = ${clientCurrentId}, selectedClientCurrent = ${selectedClientCurrent}`
+                    );
+                    if (clientCurrentId !== selectedClientCurrent) passes = false;
+                  }
+                }
+              } catch (error) {
+                console.error(`Error fetching CurrentMachine for item ${item.id}:`, error);
+                passes = false;
+              }
+            }
+          }
+          // If search text is not empty, apply additional filtering
+          if (passes && search !== "") {
+            if (select === "Name" && !item.name.toLowerCase().includes(search.toLowerCase()))
+              passes = false;
+            if (select === "Date") {
+              const [month, day, year] = item.date.split("/");
+              const reformattedDate = `${year}-${month}-${day}`;
+              if (reformattedDate !== search) passes = false;
+            }
+            if (select === "Work Order" && item.wo !== search) passes = false;
+            if (select === "Product Number" && item.pn !== search) passes = false;
+            if (select === "Description" && !item.desc.toLowerCase().includes(search.toLowerCase()))
+              passes = false;
+            if (select === "SKU" && !item.id.toLowerCase().includes(search.toLowerCase()))
+              passes = false;
+          }
+          return passes ? item : null;
+        })
+      );
+      const filteredResults = filtered.filter((item) => item !== null);
+      console.log("Filtered result count:", filteredResults.length);
+      setInfo(filteredResults);
+    }
+    filterParts();
+  }, [
+    selectedOEM,
+    selectedModality,
+    selectedClientFrom,
+    selectedClientCurrent,
+    selectedModel,
+    search,
+    backupInfo,
+  ]);
 
   function sortCheckAll(pos) {
     const sortedInfo = [...info].sort((a, b) => {
@@ -165,26 +256,21 @@ export default function MainSearch() {
     );
   }
 
-  const rowSelect = (item) => { 
-    console.log(info[0])
-    console.log(info[item])
+  const rowSelect = (item) => {
     if (item && item.id) {
-      console.log("Selected item ID:", info[item]);
-      // Use item.id for subsequent actions
+      console.log("Selected item:", item);
+      router.push("./item/" + item.id);
     } else {
-      console.error("Unable to determine the selected item’s ID: ", info[item]);
+      console.error("Unable to determine the selected item’s ID: ", item);
     }
   };
-  
 
   const [selectedItems, setSelectedItems] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleSelectItem = (id) => {
     setSelectedItems((prev) =>
-      prev.includes(id)
-        ? prev.filter((itemId) => itemId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
   };
 
@@ -273,10 +359,10 @@ export default function MainSearch() {
     }
   };
 
-  useEffect(() => {
-    searchFilter();
-  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]);
-
+  // --------------------
+  // CLIENT SELECTION HANDLING
+  // --------------------
+  // This function fetches clients and opens the client modal.
   const handleClientClick = async () => {
     const clientsData = await fetchClients(selectedOEM, selectedModality);
     setClients(clientsData);
@@ -284,9 +370,38 @@ export default function MainSearch() {
     setShowClientModal(true);
   };
 
-  const handleClientSelect = (clientName) => {
-    setClientButtonText(clientName || "Select Option");
-    setSelectedClient(clientName || null);
+  // When a client is selected in the modal, we now assume the parameter is a client ID.
+  // If the passed value is null, we clear the selection.
+  const handleClientSelect = async (clientId) => {
+    console.log("User selected client id:", clientId);
+    if (!clientId) {
+      if (clientSelectionType === "from") {
+        setClientFromButtonText("Select Option");
+        setSelectedClientFrom(null);
+      } else if (clientSelectionType === "current") {
+        setClientCurrentButtonText("Select Option");
+        setSelectedClientCurrent(null);
+      }
+      setShowClientModal(false);
+      return;
+    }
+    try {
+      const clientSnap = await firebase.firestore().collection("Client").doc(clientId).get();
+      if (clientSnap.exists) {
+        const clientData = clientSnap.data();
+        if (clientSelectionType === "from") {
+          setClientFromButtonText(clientData.name);
+          setSelectedClientFrom(clientId);
+        } else if (clientSelectionType === "current") {
+          setClientCurrentButtonText(clientData.name);
+          setSelectedClientCurrent(clientId);
+        }
+      } else {
+        console.error("No client document found for id:", clientId);
+      }
+    } catch (error) {
+      console.error("Error fetching client data:", error);
+    }
     setShowClientModal(false);
   };
 
@@ -296,18 +411,29 @@ export default function MainSearch() {
   };
 
   const handleClearClientSelection = () => {
-    setClientButtonText("Select Option");
-    setSelectedClient(null);
+    if (clientSelectionType === "from") {
+      setClientFromButtonText("Select Option");
+      setSelectedClientFrom(null);
+    } else if (clientSelectionType === "current") {
+      setClientCurrentButtonText("Select Option");
+      setSelectedClientCurrent(null);
+    }
     setShowClientModal(false);
-    searchFilter();
   };
 
+  // --------------------
+  // MODEL SELECTION HANDLING
+  // --------------------
   const [models, setModels] = useState([]);
   const [showModelModal, setShowModelModal] = useState(false);
   const [modelButtonText, setModelButtonText] = useState("Select Option");
 
   const handleModelClick = async () => {
-    const modelsData = await fetchModels(selectedOEM, selectedModality, selectedClient);
+    const modelsData = await fetchModels(
+      selectedOEM,
+      selectedModality,
+      selectedClientFrom
+    );
     setModels(modelsData);
     setModelSearchTerm("");
     setShowModelModal(true);
@@ -323,19 +449,27 @@ export default function MainSearch() {
     setModelButtonText("Select Option");
     setSelectedModel(null);
     setShowModelModal(false);
-    searchFilter();
   };
 
-  const handleWarehouseClick = () => {
-    setClientButtonText(CLIENT_WAREHOUSE);
-    setSelectedClient(CLIENT_WAREHOUSE);
-    searchFilter();
+  // --------------------
+  // WAREHOUSE BUTTONS (for Client Current)
+  // --------------------
+  const handleSoCalWarehouseClick = () => {
+    setClientCurrentButtonText("SoCal Warehouse");
+    setSelectedClientCurrent(SOCAL_CLIENT_ID);
+    console.log("Warehouse button clicked: setting Client Current to", SOCAL_CLIENT_ID);
   };
 
-  const handleUnassignedClick = () => {
-    setClientButtonText(CLIENT_UNASSIGNED);
-    setSelectedClient(CLIENT_UNASSIGNED);
-    searchFilter();
+  const handleNorCalWarehouseClick = () => {
+    setClientCurrentButtonText("NorCal Warehouse");
+    setSelectedClientCurrent(NORCAL_CLIENT_ID);
+    console.log("Warehouse button clicked: setting Client Current to", NORCAL_CLIENT_ID);
+  };
+
+  const handleWarehouseUnassignedClick = () => {
+    setClientCurrentButtonText("Unassigned");
+    setSelectedClientCurrent(UNASSIGNED_CLIENT_ID);
+    console.log("Warehouse button clicked: setting Client Current to", UNASSIGNED_CLIENT_ID);
   };
 
   const [clientSearchTerm, setClientSearchTerm] = useState("");
@@ -392,7 +526,9 @@ export default function MainSearch() {
 
       <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Select Client</Modal.Title>
+          <Modal.Title>
+            Select {clientSelectionType === "from" ? "Client From" : "Client Current"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <FormControl
@@ -501,34 +637,71 @@ export default function MainSearch() {
 
                   <div className={styles.divider}></div>
 
-                  {/* Buttons */}
+                  {/* Client selection boxes */}
                   <div>
                     <InputGroup className="mb-3">
-                      <InputGroup.Text>Client</InputGroup.Text>
-                      <Button variant="outline-secondary" className="w-100" onClick={handleClientClick}>
-                        {clientButtonText}
+                      <InputGroup.Text>Client From</InputGroup.Text>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        onClick={() => {
+                          setClientSelectionType("from");
+                          handleClientClick();
+                        }}
+                      >
+                        {clientFromButtonText}
                       </Button>
                     </InputGroup>
                     <InputGroup className="mb-3">
-                      <InputGroup.Text>Client-2</InputGroup.Text>
-                      <Button variant="outline-secondary" className="w-100" disabled>
-                        Select Option
+                      <InputGroup.Text>Client Current</InputGroup.Text>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        onClick={() => {
+                          setClientSelectionType("current");
+                          handleClientClick();
+                        }}
+                      >
+                        {clientCurrentButtonText}
                       </Button>
                     </InputGroup>
+
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Model</InputGroup.Text>
-                      <Button variant="outline-secondary" className="w-100" onClick={handleModelClick}>
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100"
+                        onClick={handleModelClick}
+                      >
                         {modelButtonText}
                       </Button>
                     </InputGroup>
+
                     <div className={styles.divider}></div>
+
+                    {/* Warehouse buttons for Client Current */}
                     <InputGroup className="mb-3">
                       <InputGroup.Text>Warehouse</InputGroup.Text>
                       <div className={styles.buttonGroup}>
-                        <Button variant="outline-secondary" className={styles.flexButton} onClick={handleWarehouseClick}>
-                          Warehouse
+                        <Button
+                          variant="outline-secondary"
+                          className={styles.flexButton}
+                          onClick={handleSoCalWarehouseClick}
+                        >
+                          SoCal Warehouse
                         </Button>
-                        <Button variant="outline-secondary" className={styles.flexButton} onClick={handleUnassignedClick}>
+                        <Button
+                          variant="outline-secondary"
+                          className={styles.flexButton}
+                          onClick={handleNorCalWarehouseClick}
+                        >
+                          NorCal Warehouse
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          className={styles.flexButton}
+                          onClick={handleWarehouseUnassignedClick}
+                        >
                           Unassigned
                         </Button>
                       </div>
@@ -573,19 +746,19 @@ export default function MainSearch() {
                           onMouseLeave={() => setShowList(false)}
                           style={{ marginTop: "-5px" }}
                         >
-                          <NavDropdown.Item onClick={() => setSelect("Name") & setShowListSearch("text")}>
+                          <NavDropdown.Item onClick={() => { setSelect("Name"); setShowListSearch("text"); }}>
                             Name
                           </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => setSelect("Date") & setShowListSearch("date")}>
+                          <NavDropdown.Item onClick={() => { setSelect("Date"); setShowListSearch("date"); }}>
                             Date
                           </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => setSelect("Work Order") & setShowListSearch("number")}>
+                          <NavDropdown.Item onClick={() => { setSelect("Work Order"); setShowListSearch("number"); }}>
                             Work Order
                           </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => setSelect("Product Number") & setShowListSearch("number")}>
+                          <NavDropdown.Item onClick={() => { setSelect("Product Number"); setShowListSearch("number"); }}>
                             Product Number
                           </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => setSelect("Description") & setShowListSearch("text")}>
+                          <NavDropdown.Item onClick={() => { setSelect("Description"); setShowListSearch("text"); }}>
                             Description
                           </NavDropdown.Item>
                           <NavDropdown.Item
