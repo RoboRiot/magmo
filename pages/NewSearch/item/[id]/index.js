@@ -10,7 +10,9 @@ import {
   Modal,
   FormControl,
   Collapse,
+  InputGroup,
 } from "react-bootstrap";
+
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthUserContext";
 import firebase from "../../../../context/Firebase";
@@ -126,15 +128,25 @@ export default function DisplayItem() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [itemName, setItemName] = useState("");
 
-  // Auto-populate OEM, modality, and model when TheMachine updates.
+  const [machineFieldsInitialized, setMachineFieldsInitialized] = useState(false);
+
   useEffect(() => {
-    if (TheMachine) {
-      // Check both lowercase and uppercase keys.
-      setOem(TheMachine.oem || TheMachine.OEM || "");
-      setModality(TheMachine.modality || TheMachine.Modality || "");
-      setModel(TheMachine.model || TheMachine.Model || "");
+    if (
+      !machineFieldsInitialized &&
+      (TheMachine || selectedCurrentMachine || selectedMachine)
+    ) {
+      const updatedFields = updateMachineFields(
+        TheMachine,
+        selectedCurrentMachine,
+        selectedMachine
+      );
+      setOem(updatedFields.oem);
+      setModality(updatedFields.modality);
+      setModel(updatedFields.model);
+      setMachineFieldsInitialized(true);
     }
-  }, [TheMachine]);
+  }, [TheMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
+
 
   // Fetch clients data.
   useEffect(() => {
@@ -166,11 +178,7 @@ export default function DisplayItem() {
       const snArray = [...snSet];
       setPnOptions(pnArray);
       setSnOptions(snArray);
-      setItems((prev) => ({
-        ...prev,
-        pn: pnArray,
-        sn: snArray,
-      }));
+
     }
     fetchPnSn();
   }, []);
@@ -185,57 +193,81 @@ export default function DisplayItem() {
     const db = firebase.firestore();
     const doc = await db.collection("Test").doc(id).get();
     if (doc.exists) {
+      console.log("test");
       const data = doc.data();
-      setItems(data);
+      const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
+      const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
+      setItems({
+        ...data,
+        pn: normalizedPN,
+        sn: normalizedSN,
+      });
       setDescriptions(data.descriptions || []);
       setWorkOrders(data.workOrders || []);
-
-      if (data.localLocFrom) {
-        setLocalLocFrom(data.localLocFrom);
-      }
-      if (data.localLocCurrent) {
-        setLocalLocCurrent(data.localLocCurrent);
+      if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
+      if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
+      if (data.DOM) {
+        setDOM(data.DOM);
       }
 
-      if (data.TheMachine) {
-        setTheMachine(data.TheMachine);
-        // Check both lowercase and uppercase keys.
-        if (!oem) setOem(data.TheMachine.oem || data.TheMachine.OEM || "");
-        if (!modality) setModality(data.TheMachine.modality || data.TheMachine.Modality || "");
-        if (!model) setModel(data.TheMachine.model || data.TheMachine.Model || "");
-        const machinesSnapshot = await db
-          .collection("Machine")
-          .where("Model", "==", data.TheMachine.Model || data.TheMachine.model)
-          .get();
-        setMachineFrequency(machinesSnapshot.size);
+      // Retrieve stored machine (from the Test document)
+      const storedMachine = data.TheMachine || null;
+      if (storedMachine) {
+        console.log("TheMachine data:", storedMachine);
+        const modelValue = storedMachine.Model || storedMachine.model;
+        console.log("Model value:", modelValue);
+        if (modelValue) {
+          const machinesSnapshot = await db
+            .collection("Machine")
+            .where("Model", "==", modelValue)
+            .get();
+          setMachineFrequency(machinesSnapshot.size);
+        } else {
+          console.warn("Model value is undefined; skipping query");
+          setMachineFrequency("N/A");
+        }
       } else {
         setMachineFrequency("N/A");
       }
 
+      // Retrieve the "select from" machine (if any)
+      let fromMachine = null;
       if (data.Machine) {
         const machineDoc = await data.Machine.get();
-        console.log(machineDoc.data());
+        console.log("From Machine data:", machineDoc.data());
         setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
-        setTheMachine(machineDoc.data());
-        if (!oem) setOem(machineDoc.data().oem || machineDoc.data().OEM || "");
-        if (!modality) setModality(machineDoc.data().modality || machineDoc.data().Modality || "");
-        if (!model) setModel(machineDoc.data().model || machineDoc.data().Model || "");
+        fromMachine = machineDoc.data();
+        // Remove individual field updates here if present.
       }
+
+      // Retrieve the "select current" machine (if any)
+      let currentMachine = null;
       if (data.CurrentMachine) {
         const currMachineDoc = await data.CurrentMachine.get();
+        console.log("Current Machine data:", currMachineDoc.data());
         setSelectedCurrentMachine({
           id: currMachineDoc.id,
           ...currMachineDoc.data(),
         });
-        setTheMachine(currMachineDoc.data());
-        if (!oem) setOem(currMachineDoc.data().oem || currMachineDoc.data().OEM || "");
-        if (!modality) setModality(currMachineDoc.data().modality || currMachineDoc.data().Modality || "");
-        if (!model) setModel(currMachineDoc.data().model || currMachineDoc.data().Model || "");
+        currentMachine = currMachineDoc.data();
+        // Remove individual field updates here if present.
       }
+
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
         setSelectedParent({ id: parentDoc.id, ...parentDoc.data() });
       }
+
+      // ---- PRIORITY AUTO‑POPULATION (run only once) ----
+      // Here we calculate the final values for OEM, modality, and model.
+      // (If none of the sources have a valid value, the field will remain blank.)
+      const updatedFields = updateMachineFields(storedMachine, currentMachine, fromMachine);
+      setOem(updatedFields.oem);
+      setModality(updatedFields.modality);
+      setModel(updatedFields.model);
+      // ---------------------------------------------------
+
+      console.log("TESTESTEST");
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
       await calculateItemFrequencyAndUsage(data.pn);
@@ -246,6 +278,33 @@ export default function DisplayItem() {
       });
     }
   };
+
+
+  // Returns the value for a given field from the highest-priority source that is not blank or "N/A"
+  function getPriorityMachineField(field, theMachine, currentMachine, fromMachine) {
+    if (theMachine && theMachine[field] && theMachine[field] !== "N/A" && theMachine[field].trim() !== "") {
+      return theMachine[field];
+    }
+    if (currentMachine && currentMachine[field] && currentMachine[field] !== "N/A" && currentMachine[field].trim() !== "") {
+      return currentMachine[field];
+    }
+    if (fromMachine && fromMachine[field] && fromMachine[field] !== "N/A" && fromMachine[field].trim() !== "") {
+      return fromMachine[field];
+    }
+    return "";
+  }
+
+  // Returns an object with updated fields for OEM, modality, and model based on priority.
+  function updateMachineFields(theMachine, currentMachine, fromMachine) {
+    return {
+      oem: getPriorityMachineField("oem", theMachine, currentMachine, fromMachine),
+      modality: getPriorityMachineField("modality", theMachine, currentMachine, fromMachine),
+      model: getPriorityMachineField("model", theMachine, currentMachine, fromMachine),
+    };
+  }
+
+
+
 
   const calculateItemFrequencyAndUsage = async (pn) => {
     const db = firebase.firestore();
@@ -294,6 +353,7 @@ export default function DisplayItem() {
     try {
       const res = await listRef.listAll();
       const urls = await Promise.all(res.items.map((item) => item.getDownloadURL()));
+      console.log("Fetched photo URLs:", urls); // <-- Add console log here
       setPhotos(urls.map((url) => ({ url, file: null })));
     } catch (error) {
       console.error("Error fetching photos: ", error);
@@ -353,21 +413,52 @@ export default function DisplayItem() {
     return [selectedValue, ...newArr];
   };
 
-  // When user selects a PN from the dropdown.
-  const handlePnSelect = (e) => {
-    const selected = e.target.value;
-    const newArray = reorderArray(pnOptions, selected);
-    setPnOptions(newArray);
-    setItems((prev) => ({ ...prev, pn: newArray }));
-  };
+  const [addingNewPn, setAddingNewPn] = useState(false);
+const [newPn, setNewPn] = useState("");
 
-  // When user selects a SN from the dropdown.
-  const handleSnSelect = (e) => {
-    const selected = e.target.value;
-    const newArray = reorderArray(snOptions, selected);
-    setSnOptions(newArray);
-    setItems((prev) => ({ ...prev, sn: newArray }));
-  };
+const [addingNewSn, setAddingNewSn] = useState(false);
+const [newSn, setNewSn] = useState("");
+
+const handlePnSelect = (e) => {
+  const selected = e.target.value;
+  // For simplicity, update the first PN element to the selected value.
+  setItems((prev) => {
+    let updatedPn = Array.isArray(prev.pn) ? [...prev.pn] : [];
+    updatedPn[0] = selected;
+    return { ...prev, pn: updatedPn };
+  });
+};
+
+const handleSnSelect = (e) => {
+  const selected = e.target.value;
+  setItems((prev) => {
+    let updatedSn = Array.isArray(prev.sn) ? [...prev.sn] : [];
+    updatedSn[0] = selected;
+    return { ...prev, sn: updatedSn };
+  });
+};
+
+const handleAddNewPn = () => {
+  if (newPn.trim() !== "") {
+    setItems((prev) => ({
+      ...prev,
+      pn: [...prev.pn, newPn.trim()],
+    }));
+  }
+  setNewPn("");
+  setAddingNewPn(false);
+};
+
+const handleAddNewSn = () => {
+  if (newSn.trim() !== "") {
+    setItems((prev) => ({
+      ...prev,
+      sn: [...prev.sn, newSn.trim()],
+    }));
+  }
+  setNewSn("");
+  setAddingNewSn(false);
+};
 
   // Generate custom document ID if needed.
   const generateCustomID = () => {
@@ -377,36 +468,27 @@ export default function DisplayItem() {
 
   async function toSend() {
     const db = firebase.firestore();
-    // Merge new OEM, modality, model, and DOM values into TheMachine.
-    let machineData = {};
-    if (TheMachine) {
-      machineData = { ...TheMachine };
-    }
-    // Prioritize user inputs.
-    if (oem.trim() !== "") machineData.oem = oem;
-    if (modality.trim() !== "") machineData.modality = modality;
-    if (model.trim() !== "") machineData.model = model;
-    
-    // If TheMachine exists but these fields are blank, populate them.
-    if (!oem && TheMachine && (TheMachine.oem || TheMachine.OEM))
-      setOem(TheMachine.oem || TheMachine.OEM);
-    if (!modality && TheMachine && (TheMachine.modality || TheMachine.Modality))
-      setModality(TheMachine.modality || TheMachine.Modality);
-    if (!model && TheMachine && (TheMachine.model || TheMachine.Model))
-      setModel(TheMachine.model || TheMachine.Model);
-    
+
+    // Always use the current state values for OEM, modality, and model.
+    // If you need to preserve other properties from TheMachine, you can spread them,
+    // but then override these three fields with the state values.
+    const machineData = {
+      ...(TheMachine || {}), // preserve extra fields if needed
+      oem: oem,            // force updated state value
+      modality: modality,  // force updated state value
+      model: model,        // force updated state value
+    };
+
     const formattedItems = { ...items, descriptions, workOrders };
-    // Remove date field from formattedItems since it's no longer used.
+    // Remove any unused fields.
     delete formattedItems.date;
-    // Add new fields.
     formattedItems.status = items.status;
-    formattedItems.DOM = DOM; // New Date of Manufacture field.
+    formattedItems.DOM = DOM; // Date of Manufacture
     formattedItems.localLocFrom = localLocFrom;
     formattedItems.localLocCurrent = localLocCurrent;
-    // Overwrite TheMachine data if available.
-    if (Object.keys(machineData).length > 0) {
-      formattedItems.TheMachine = machineData;
-    }
+
+    // Always update TheMachine field with the new machineData
+    formattedItems.TheMachine = machineData;
 
     if (selectedMachine && selectedMachine.id) {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
@@ -420,9 +502,10 @@ export default function DisplayItem() {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
 
+    let docId = id;
     try {
-      if (id) {
-        await db.collection("Test").doc(id).update(formattedItems);
+      if (docId) {
+        await db.collection("Test").doc(docId).update(formattedItems);
 
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
@@ -430,7 +513,7 @@ export default function DisplayItem() {
           if (machineDoc.exists) {
             await machineRef.update({
               associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(id)
+                db.collection("Test").doc(docId)
               ),
             });
           }
@@ -442,14 +525,14 @@ export default function DisplayItem() {
           if (currentMachineDoc.exists) {
             await currentMachineRef.update({
               associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(id)
+                db.collection("Test").doc(docId)
               ),
             });
           }
         }
       } else {
-        const customID = generateCustomID();
-        await db.collection("Test").doc(customID).set(formattedItems);
+        docId = generateCustomID();
+        await db.collection("Test").doc(docId).set(formattedItems);
 
         if (selectedMachine && selectedMachine.id) {
           const machineRef = db.collection("Machine").doc(selectedMachine.id);
@@ -457,7 +540,7 @@ export default function DisplayItem() {
           if (machineDoc.exists) {
             await machineRef.update({
               associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(customID)
+                db.collection("Test").doc(docId)
               ),
             });
           }
@@ -469,18 +552,22 @@ export default function DisplayItem() {
           if (currentMachineDoc.exists) {
             await currentMachineRef.update({
               associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(customID)
+                db.collection("Test").doc(docId)
               ),
             });
           }
         }
       }
+      // Upload any new photos to Firebase Storage.
+      await uploadPhotos(docId);
       console.log("Item saved and associatedParts updated!");
       handleShowSaveModal();
     } catch (error) {
       console.error("Error saving data:", error);
     }
   }
+
+
 
   // When a machine is selected from the modal.
   const handleSetSelectedMachine = (selMachina) => {
@@ -496,6 +583,7 @@ export default function DisplayItem() {
 
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
+    // Loop over photos and if a photo has a local file, upload it.
     for (let i = 0; i < photos.length; i++) {
       if (photos[i].file) {
         const photoRef = storageRef.child(
@@ -512,7 +600,6 @@ export default function DisplayItem() {
   };
 
   // NEW: Function to handle printing the label.
-  // It collects required fields and sends a POST request to the Python server.
   const handlePrint = async () => {
     if (!items.name) {
       alert("Missing name");
@@ -521,7 +608,6 @@ export default function DisplayItem() {
     console.log(selectedClient);
     const payload = {
       name: items.name,
-      // Send PN and SN as arrays; Python will use the first element.
       pn: items.pn,
       sn: items.sn,
       wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
@@ -532,7 +618,7 @@ export default function DisplayItem() {
       DOM: DOM,
       oem: oem,
       modality: modality,
-      model: model
+      model: model,
     };
 
     try {
@@ -548,25 +634,17 @@ export default function DisplayItem() {
     }
   };
 
-  // Handle form submission.
   async function handleSubmit(event) {
     event.preventDefault();
-    let check = false;
-
-    if (!items.name) check = true;
-    if (!items.pn.length) check = true;
-    if (!items.sn.length) check = true;
-    if (descriptions.some((desc) => !desc.description)) check = true;
-    if (workOrders.some((wo) => !wo.workOrder)) check = true;
-
-    if (check) {
-      handleShow();
-    } else if (TheMachine === null) {
-      setMachineSelectionModal(true);
+    // Only check that the Name field is filled out.
+    if (!items.name) {
+      handleShow(); // This shows the "missing field" modal.
     } else {
       toSend();
     }
   }
+
+
 
   // Handlers for input changes.
   const handleChange = (field) => (event) => {
@@ -644,10 +722,10 @@ export default function DisplayItem() {
   const mostRecentWorkOrder =
     workOrders && workOrders.length > 0
       ? workOrders.reduce((latest, current) => {
-          const latestDate = new Date(latest.date);
-          const currentDate = new Date(current.date);
-          return currentDate > latestDate ? current : latest;
-        }, workOrders[0])
+        const latestDate = new Date(latest.date);
+        const currentDate = new Date(current.date);
+        return currentDate > latestDate ? current : latest;
+      }, workOrders[0])
       : {};
 
   const capturePhoto = () => {
@@ -679,6 +757,37 @@ export default function DisplayItem() {
   };
 
   const handleCloseInfoModal = () => setShowInfoModal(false);
+
+  const handlePnChange = (index, value) => {
+    setItems(prev => {
+      const newPn = [...prev.pn];
+      newPn[index] = value;
+      return { ...prev, pn: newPn };
+    });
+  };
+
+  const addPn = () => {
+    setItems(prev => ({
+      ...prev,
+      pn: [...prev.pn, ""]
+    }));
+  };
+
+  const handleSnChange = (index, value) => {
+    setItems(prev => {
+      const newSn = [...prev.sn];
+      newSn[index] = value;
+      return { ...prev, sn: newSn };
+    });
+  };
+
+  const addSn = () => {
+    setItems(prev => ({
+      ...prev,
+      sn: [...prev.sn, ""]
+    }));
+  };
+
 
   return (
     <LoggedIn>
@@ -936,68 +1045,108 @@ export default function DisplayItem() {
               <Form onSubmit={handleSubmit}>
                 {/* Row for Name and PN */}
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="name">
-                    <Form.Label>Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={items.name}
-                      onChange={handleChange("name")}
-                    />
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="pn">
-                    <Form.Label>Product Number</Form.Label>
-                    {Array.isArray(items.pn) && items.pn.length > 0 ? (
-                      <Form.Select value={items.pn[0]} onChange={handlePnSelect}>
-                        {pnOptions.map((option, index) => (
-                          <option key={index} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    ) : (
+                  <Col>
+                    <Form.Group controlId="name">
+                      <Form.Label>Name</Form.Label>
                       <Form.Control
                         type="text"
-                        value={items.pn}
-                        onChange={handleChange("pn")}
+                        value={items.name}
+                        onChange={handleChange("name")}
                       />
-                    )}
-                  </Form.Group>
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group controlId="pn">
+                      <Form.Label>Product Number</Form.Label>
+                      <InputGroup>
+                        <Form.Select
+                          value={items.pn[0]} // default selected value is the first element
+                          onChange={(e) => handlePnSelect(e)}
+                        >
+                          {items.pn.map((pnValue, index) => (
+                            <option key={index} value={pnValue}>
+                              {pnValue}
+                            </option>
+                          ))}
+                        </Form.Select>
+                        <InputGroup.Text>
+                          <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>+</Button>
+                        </InputGroup.Text>
+                      </InputGroup>
+                      {addingNewPn && (
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter new PN"
+                          value={newPn}
+                          onChange={(e) => setNewPn(e.target.value)}
+                          onBlur={handleAddNewPn}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleAddNewPn();
+                            }
+                          }}
+                        />
+                      )}
+                    </Form.Group>
+                  </Col>
                 </Row>
+
                 {/* Row for SN */}
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="sn">
-                    <Form.Label>Serial Number</Form.Label>
-                    {Array.isArray(items.sn) && items.sn.length > 0 ? (
-                      <Form.Select value={items.sn[0]} onChange={handleSnSelect}>
-                        {snOptions.map((option, index) => (
-                          <option key={index} value={option}>
-                            {option}
-                          </option>
-                        ))}
+                  <Col>
+                    <Form.Group controlId="sn">
+                      <Form.Label>Serial Number</Form.Label>
+                      <InputGroup>
+                        <Form.Select
+                          value={items.sn[0]} // default selected value
+                          onChange={(e) => handleSnSelect(e)}
+                        >
+                          {items.sn.map((snValue, index) => (
+                            <option key={index} value={snValue}>
+                              {snValue}
+                            </option>
+                          ))}
+                        </Form.Select>
+                        <InputGroup.Text>
+                          <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>+</Button>
+                        </InputGroup.Text>
+                      </InputGroup>
+                      {addingNewSn && (
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter new SN"
+                          value={newSn}
+                          onChange={(e) => setNewSn(e.target.value)}
+                          onBlur={handleAddNewSn}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleAddNewSn();
+                            }
+                          }}
+                        />
+                      )}
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group controlId="status">
+                      <Form.Label>Status</Form.Label>
+                      <Form.Select
+                        value={items.status || ""}
+                        onChange={handleChange("status")}
+                      >
+                        <option value="">Select status</option>
+                        <option value="Good">Good</option>
+                        <option value="Bad">Bad</option>
+                        <option value="Unknown">Unknown</option>
                       </Form.Select>
-                    ) : (
-                      <Form.Control
-                        type="text"
-                        value={items.sn}
-                        onChange={handleChange("sn")}
-                      />
-                    )}
-                  </Form.Group>
+                    </Form.Group>
+                  </Col>
                 </Row>
+
+
                 {/* New Row for Status and OEM, Modality, Model */}
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="status">
-                    <Form.Label>Status</Form.Label>
-                    <Form.Select
-                      value={items.status || ""}
-                      onChange={handleChange("status")}
-                    >
-                      <option value="">Select status</option>
-                      <option value="Good">Good</option>
-                      <option value="Bad">Bad</option>
-                      <option value="Unknown">Unknown</option>
-                    </Form.Select>
-                  </Form.Group>
+
                   <Col>
                     <Form.Label>OEM</Form.Label>
                     <Form.Control
@@ -1096,15 +1245,15 @@ export default function DisplayItem() {
                           {["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(
                             selectedMachine.name.toLowerCase()
                           ) && (
-                            <Form.Group controlId="localLocFrom" className="mt-2">
-                              <Form.Label>Local Loc</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={localLocFrom}
-                                onChange={(e) => setLocalLocFrom(e.target.value)}
-                              />
-                            </Form.Group>
-                          )}
+                              <Form.Group controlId="localLocFrom" className="mt-2">
+                                <Form.Label>Local Loc</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  value={localLocFrom}
+                                  onChange={(e) => setLocalLocFrom(e.target.value)}
+                                />
+                              </Form.Group>
+                            )}
                         </>
                       )}
                     </Col>
@@ -1131,16 +1280,16 @@ export default function DisplayItem() {
                           {["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(
                             selectedCurrentMachine.name.toLowerCase()
                           ) && (
-                            <Form.Group controlId="localLocCurrent" className="mt-2">
-                              <Form.Label>Local Loc</Form.Label>
-                              <Form.Control
-                                type="text"
-                                placeholder="E1A2"
-                                value={localLocCurrent}
-                                onChange={(e) => setLocalLocCurrent(e.target.value)}
-                              />
-                            </Form.Group>
-                          )}
+                              <Form.Group controlId="localLocCurrent" className="mt-2">
+                                <Form.Label>Local Loc</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  placeholder="E1A2"
+                                  value={localLocCurrent}
+                                  onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                />
+                              </Form.Group>
+                            )}
                         </>
                       )}
                     </Col>
@@ -1184,6 +1333,48 @@ export default function DisplayItem() {
                     </Col>
                   </Row>
                 </div>
+
+                {/* New: Photo Gallery Section */}
+                {photos && photos.length > 0 && (
+                  <div
+                    className="photo-gallery"
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    {photos.map((photo, index) => (
+                      <div
+                        key={index}
+                        style={{ position: "relative", width: "100px", height: "100px" }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={`Photo ${index + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        {photo.file && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              right: 0,
+                              padding: "0 5px",
+                            }}
+                            onClick={() => removePhoto(index)}
+                          >
+                            x
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="mt-3 d-flex flex-wrap align-items-center">
                   <Button
                     variant="primary"
