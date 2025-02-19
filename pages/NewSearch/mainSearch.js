@@ -34,6 +34,7 @@ const SOCAL_CLIENT_ID = "AIS17182";
 const NORCAL_CLIENT_ID = "AIS25097";
 const UNASSIGNED_CLIENT_ID = "AIS00404";
 
+
 // Simulates a network request delay
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -97,6 +98,7 @@ export default function MainSearch() {
   const [gPos, setGPos] = useState(null);
   const [gIde, setGIde] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
 
   // Fetch data on component mount and route change
   useEffect(() => {
@@ -269,9 +271,10 @@ export default function MainSearch() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleSelectItem = (id) => {
-    setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
-    );
+    setSelectedItems((prev) => {
+      const newSelection = prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+      console.log("Selected items:", newSelection);
+    });
   };
 
   const handleShowDeleteModal = () => setShowDeleteModal(true);
@@ -279,14 +282,31 @@ export default function MainSearch() {
 
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
+    const db = firebase.firestore();
     try {
-      const db = firebase.firestore();
-      const deletePromises = selectedItems.map(async (itemId) => {
-        await db.collection("Test").doc(itemId).delete();
-        await db.collection("Parts").doc(itemId).delete();
-        await deleteFromStorage(itemId);
-      });
-      await Promise.all(deletePromises);
+      // Loop over each selected item one at a time
+      for (const itemId of selectedItems) {
+        console.log(itemId)
+        try {
+          // Delete from "Test" collection
+          await db.collection("Test").doc(itemId).delete();
+        } catch (err) {
+          console.error(`Error deleting document ${itemId} from Test:`, err);
+        }
+        try {
+          // Delete from "Parts" collection
+          await db.collection("Parts").doc(itemId).delete();
+        } catch (err) {
+          console.error(`Error deleting document ${itemId} from Parts:`, err);
+        }
+        try {
+          // Delete associated photos from storage
+          await deleteFromStorage(itemId);
+        } catch (err) {
+          console.error(`Error deleting storage for ${itemId}:`, err);
+        }
+      }
+      // Update local state by filtering out the deleted items
       setInfo(info.filter((item) => !selectedItems.includes(item.id)));
       setSelectedItems([]);
     } catch (error) {
@@ -294,9 +314,11 @@ export default function MainSearch() {
     } finally {
       setIsDeleting(false);
       handleCloseDeleteModal();
-      router.reload();
+      // Optionally, reload the page
+      // router.reload();
     }
   };
+
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -312,23 +334,23 @@ export default function MainSearch() {
     setShowDeleteModal(true);
   };
 
-  const handleDelete = async () => {
-    let itemId = gIde;
-    try {
-      setIsDeleting(true);
-      const db = firebase.firestore();
-      await db.collection("Test").doc(itemId).delete();
-      await deleteFromPartsCollection(itemId);
-      await deleteFromStorage(itemId);
-      setInfo(info.filter((_, i) => gPos !== i));
-      console.log(`Deleted item: ${itemId}`);
-    } catch (error) {
-      console.error("Error deleting item:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-    handleClose();
-  };
+  // const handleDelete = async () => {
+  //   let itemId = gIde;
+  //   try {
+  //     setIsDeleting(true);
+  //     const db = firebase.firestore();
+  //     await db.collection("Test").doc(itemId).delete();
+  //     await deleteFromPartsCollection(itemId);
+  //     await deleteFromStorage(itemId);
+  //     setInfo(info.filter((_, i) => gPos !== i));
+  //     console.log(`Deleted item: ${itemId}`);
+  //   } catch (error) {
+  //     console.error("Error deleting item:", error);
+  //   } finally {
+  //     setIsDeleting(false);
+  //   }
+  //   handleClose();
+  // };
 
   const hoverStyle = (index) => ({
     backgroundColor: hoverIndex === index ? "#ddd" : "transparent",
@@ -718,14 +740,14 @@ export default function MainSearch() {
                       hoverStyle={hoverStyle}
                       sortCheckAll={sortCheckAll}
                       checkDelete={checkDelete}
-                      setShowDeleteModal={setShowDeleteModal}
                       isDeleting={isDeleting}
                       rowSelect={rowSelect}
                       setHoverIndex={setHoverIndex}
                       hoverIndex={hoverIndex}
-                      selectedItems={selectedItems}
-                      setSelectedItems={setSelectedItems}
+                      selectedItems={selectedItems}         // Pass selectedItems state
+                      setSelectedItems={setSelectedItems}   // Pass its setter
                     />
+
 
                     <div className={styles.searchContainer}>
                       <Form className="d-flex pb-2">
