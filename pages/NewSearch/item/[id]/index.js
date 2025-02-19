@@ -1,17 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import {
-  Form,
-  Button,
-  Card,
-  Container,
-  Row,
-  Col,
-  Modal,
-  FormControl,
-  Collapse,
-  InputGroup,
-} from "react-bootstrap";
+import { Form, Button, Card, Container, Row, Col, Modal, FormControl, Collapse, InputGroup, ButtonGroup } from "react-bootstrap";
+
 
 import Link from "next/link";
 import { useAuth } from "../../../../context/AuthUserContext";
@@ -414,51 +404,51 @@ export default function DisplayItem() {
   };
 
   const [addingNewPn, setAddingNewPn] = useState(false);
-const [newPn, setNewPn] = useState("");
+  const [newPn, setNewPn] = useState("");
 
-const [addingNewSn, setAddingNewSn] = useState(false);
-const [newSn, setNewSn] = useState("");
+  const [addingNewSn, setAddingNewSn] = useState(false);
+  const [newSn, setNewSn] = useState("");
 
-const handlePnSelect = (e) => {
-  const selected = e.target.value;
-  // For simplicity, update the first PN element to the selected value.
-  setItems((prev) => {
-    let updatedPn = Array.isArray(prev.pn) ? [...prev.pn] : [];
-    updatedPn[0] = selected;
-    return { ...prev, pn: updatedPn };
-  });
-};
+  const handlePnSelect = (e) => {
+    const selected = e.target.value;
+    // For simplicity, update the first PN element to the selected value.
+    setItems((prev) => {
+      let updatedPn = Array.isArray(prev.pn) ? [...prev.pn] : [];
+      updatedPn[0] = selected;
+      return { ...prev, pn: updatedPn };
+    });
+  };
 
-const handleSnSelect = (e) => {
-  const selected = e.target.value;
-  setItems((prev) => {
-    let updatedSn = Array.isArray(prev.sn) ? [...prev.sn] : [];
-    updatedSn[0] = selected;
-    return { ...prev, sn: updatedSn };
-  });
-};
+  const handleSnSelect = (e) => {
+    const selected = e.target.value;
+    setItems((prev) => {
+      let updatedSn = Array.isArray(prev.sn) ? [...prev.sn] : [];
+      updatedSn[0] = selected;
+      return { ...prev, sn: updatedSn };
+    });
+  };
 
-const handleAddNewPn = () => {
-  if (newPn.trim() !== "") {
-    setItems((prev) => ({
-      ...prev,
-      pn: [...prev.pn, newPn.trim()],
-    }));
-  }
-  setNewPn("");
-  setAddingNewPn(false);
-};
+  const handleAddNewPn = () => {
+    if (newPn.trim() !== "") {
+      setItems((prev) => ({
+        ...prev,
+        pn: [...prev.pn, newPn.trim()],
+      }));
+    }
+    setNewPn("");
+    setAddingNewPn(false);
+  };
 
-const handleAddNewSn = () => {
-  if (newSn.trim() !== "") {
-    setItems((prev) => ({
-      ...prev,
-      sn: [...prev.sn, newSn.trim()],
-    }));
-  }
-  setNewSn("");
-  setAddingNewSn(false);
-};
+  const handleAddNewSn = () => {
+    if (newSn.trim() !== "") {
+      setItems((prev) => ({
+        ...prev,
+        sn: [...prev.sn, newSn.trim()],
+      }));
+    }
+    setNewSn("");
+    setAddingNewSn(false);
+  };
 
   // Generate custom document ID if needed.
   const generateCustomID = () => {
@@ -482,7 +472,7 @@ const handleAddNewSn = () => {
     const formattedItems = { ...items, descriptions, workOrders };
     // Remove any unused fields.
     delete formattedItems.date;
-    formattedItems.status = items.status;
+    formattedItems.status = items.status || "";
     formattedItems.DOM = DOM; // Date of Manufacture
     formattedItems.localLocFrom = localLocFrom;
     formattedItems.localLocCurrent = localLocCurrent;
@@ -567,19 +557,31 @@ const handleAddNewSn = () => {
     }
   }
 
+  // Add these near your other useState calls
+  const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
+  const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
 
 
   // When a machine is selected from the modal.
-  const handleSetSelectedMachine = (selMachina) => {
+  const handleSetSelectedMachine = (selMachine) => {
+    // Condition: if the machine name (lowercased) is one of these values.
+    const condition = (name) =>
+      ["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(name.toLowerCase());
     if (machinePick) {
-      setSelectedMachine({ id: selMachina.id, name: selMachina.name });
-      fetchMachine(selMachina.id);
+      // "Select From" branch:
+      setSelectedMachine({ id: selMachine.id, name: selMachine.name });
+      fetchMachine(selMachine.id);
+      setShowLocalLocFrom(condition(selMachine.name));
     } else {
-      setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
-      fetchMachine(selMachina.id);
+      // "Select Current" branch:
+      setSelectedCurrentMachine({ id: selMachine.id, name: selMachine.name });
+      fetchMachine(selMachine.id);
+      setShowLocalLocCurrent(condition(selMachine.name));
     }
     handleCloseMachineModal();
   };
+
+
 
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
@@ -605,24 +607,50 @@ const handleAddNewSn = () => {
       alert("Missing name");
       return;
     }
-    console.log(selectedClient);
+  
+    let clientName = "";
+  
+    // Check if the Machine field exists and is a Firestore document reference
+    if (items.Machine && typeof items.Machine.get === "function") {
+      try {
+        const machineDoc = await items.Machine.get();
+        if (machineDoc.exists) {
+          const machineData = machineDoc.data();
+          // Check if the machine document has a client reference
+          if (machineData.client && typeof machineData.client.get === "function") {
+            const clientDoc = await machineData.client.get();
+            if (clientDoc.exists) {
+              clientName = clientDoc.data().name || "";
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching machine or client:", error);
+      }
+    } else {
+      console.warn("No Machine reference available in the item");
+    }
+  
     const payload = {
       name: items.name,
       pn: items.pn,
       sn: items.sn,
       wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
-      client: selectedClient ? selectedClient.name : "",
+      client: clientName, // Use the client name retrieved from the machine's client field
       status: items.status,
       local_sn: id,
       descriptions: descriptions,
+      date: items.date,
       DOM: DOM,
       oem: oem,
       modality: modality,
       model: model,
     };
-
+  
+    console.log("Payload for printing:", payload);
+    // Uncomment and update the endpoint if you are ready to send the payload
     try {
-      const response = await fetch("https://776f-174-76-22-138.ngrok-free.app/print-label", {
+      const response = await fetch("https://4b62-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -633,6 +661,7 @@ const handleAddNewSn = () => {
       console.error("Error printing label:", error);
     }
   };
+  
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -788,6 +817,30 @@ const handleAddNewSn = () => {
     }));
   };
 
+  const browseInputRef = useRef(null);
+
+  const handleBrowsePhotos = () => {
+    if (browseInputRef.current) {
+      browseInputRef.current.click();
+    }
+  };
+
+  const handleFilesSelected = (e) => {
+    const files = e.target.files;
+    if (files.length) {
+      const newPhotos = [];
+      for (let i = 0; i < files.length; i++) {
+        newPhotos.push({
+          file: files[i],
+          url: URL.createObjectURL(files[i]),
+        });
+      }
+      setPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
+    }
+    // Reset the input value so the same file can be chosen again if needed.
+    e.target.value = "";
+  };
+
 
   return (
     <LoggedIn>
@@ -909,8 +962,40 @@ const handleAddNewSn = () => {
           </Button>
         </Modal.Body>
       </Modal>
+      {/* Descriptions Modal */}
+      <Modal show={showDescModal} onHide={handleCloseDescModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Descriptions</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Button variant="primary" className="mb-3" onClick={addDescription}>
+            Add Description
+          </Button>
+          {descriptions.map((desc, index) => (
+            <Row key={index} className="mb-3">
+              <Button
+                variant="outline-secondary"
+                className="w-100"
+                onClick={() => selectDescription(index)}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="d-flex justify-content-between">
+                  <span>{desc.description || "Description"}</span>
+                  <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
+                    {desc.date || "Date"}
+                  </span>
+                </div>
+              </Button>
+            </Row>
+          ))}
+          <Button variant="primary" onClick={handleCloseDescModal}>
+            OK
+          </Button>
+        </Modal.Body>
+      </Modal>
 
-      {/* Machine selection modal (after selecting a client) */}
+
+      { }
       <ClientInfoModal
         show={showMachineModal}
         handleClose={handleCloseMachineModal}
@@ -1220,8 +1305,31 @@ const handleAddNewSn = () => {
                   </div>
                 </div>
                 {/* Machine selection row with local loc inputs (if applicable) */}
+                {/* Description Editing */}
                 <div style={{ marginBottom: "1rem" }}>
-                  <Row>
+                  <Form.Group controlId="desc">
+                    <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
+                      List Descriptions
+                    </Button>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      placeholder="Enter description"
+                      value={descriptions[selectedDesc]?.description || ""}
+                      onChange={(e) => handleDescriptionChange(selectedDesc, "description", e.target.value)}
+                      style={{ marginBottom: "0.5rem" }}
+                    />
+                    <Form.Control
+                      type="date"
+                      value={descriptions[selectedDesc]?.date || ""}
+                      onChange={(e) => handleDescriptionChange(selectedDesc, "date", e.target.value)}
+                      style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
+                    />
+                  </Form.Group>
+                </div>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <Row className="mb-3">
                     <Col>
                       <Button
                         variant="outline-secondary"
@@ -1240,20 +1348,18 @@ const handleAddNewSn = () => {
                             placeholder="Selected Machine"
                             value={selectedMachine.name}
                             readOnly
-                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                            style={{ marginTop: "0.5rem" }}
                           />
-                          {["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(
-                            selectedMachine.name.toLowerCase()
-                          ) && (
-                              <Form.Group controlId="localLocFrom" className="mt-2">
-                                <Form.Label>Local Loc</Form.Label>
-                                <Form.Control
-                                  type="text"
-                                  value={localLocFrom}
-                                  onChange={(e) => setLocalLocFrom(e.target.value)}
-                                />
-                              </Form.Group>
-                            )}
+                          {showLocalLocFrom && (
+                            <Form.Group controlId="localLocFrom" className="mt-2">
+                              <Form.Label>Local Loc (From)</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={localLocFrom}
+                                onChange={(e) => setLocalLocFrom(e.target.value)}
+                              />
+                            </Form.Group>
+                          )}
                         </>
                       )}
                     </Col>
@@ -1275,30 +1381,23 @@ const handleAddNewSn = () => {
                             placeholder="Selected Machine"
                             value={selectedCurrentMachine.name}
                             readOnly
-                            style={{ cursor: "default", marginTop: "0.5rem" }}
+                            style={{ marginTop: "0.5rem" }}
                           />
-                          {["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(
-                            selectedCurrentMachine.name.toLowerCase()
-                          ) && (
-                              <Form.Group controlId="localLocCurrent" className="mt-2">
-                                <Form.Label>Local Loc</Form.Label>
-                                <Form.Control
-                                  type="text"
-                                  placeholder="E1A2"
-                                  value={localLocCurrent}
-                                  onChange={(e) => setLocalLocCurrent(e.target.value)}
-                                />
-                              </Form.Group>
-                            )}
+                          {showLocalLocCurrent && (
+                            <Form.Group controlId="localLocCurrent" className="mt-2">
+                              <Form.Label>Local Loc (Current)</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={localLocCurrent}
+                                onChange={(e) => setLocalLocCurrent(e.target.value)}
+                              />
+                            </Form.Group>
+                          )}
                         </>
                       )}
                     </Col>
                     <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={handleShowParentModal}
-                        className="me-2"
-                      >
+                      <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
                         Select Parent
                       </Button>
                       {selectedParent && (
@@ -1307,31 +1406,40 @@ const handleAddNewSn = () => {
                           placeholder="Selected Parent"
                           value={selectedParent.name}
                           readOnly
-                          style={{ cursor: "default", marginTop: "0.5rem" }}
+                          style={{ marginTop: "0.5rem" }}
                         />
                       )}
                     </Col>
                   </Row>
+
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
-                  <Row>
-                    <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={handleShowCameraModal}
-                      >
-                        Take Photo
-                      </Button>
+                  <Row className="mb-3">
+                    <Col xs={6}>
+                      <ButtonGroup>
+                        <Button variant="outline-secondary" onClick={handleShowCameraModal}>
+                          Take Photo
+                        </Button>
+                        <Button variant="outline-secondary" onClick={handleBrowsePhotos}>
+                          Browse
+                        </Button>
+                      </ButtonGroup>
                     </Col>
-                    <Col>
-                      <Button
-                        variant={addToWebsite ? "primary" : "outline-primary"}
-                        onClick={() => setAddToWebsite((prev) => !prev)}
-                      >
+                    <Col xs={6}>
+                      <Button variant={addToWebsite ? "primary" : "outline-primary"} onClick={() => setAddToWebsite((prev) => !prev)}>
                         {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                       </Button>
                     </Col>
                   </Row>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    ref={browseInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFilesSelected}
+                  />
+
                 </div>
 
                 {/* New: Photo Gallery Section */}

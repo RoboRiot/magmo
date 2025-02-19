@@ -14,8 +14,10 @@ export default function PartTable({
   rowSelect,
   setHoverIndex,
   hoverIndex,
+  selectedItems,
+  setSelectedItems,
 }) {
-  const [selectedItems, setSelectedItems] = useState([]);
+  // const [selectedItems, setSelectedItems] = useState([]);
 
   // Toggle selection of items
   const handleSelectItem = (id) => {
@@ -97,10 +99,15 @@ export default function PartTable({
               <td style={{ textAlign: "center" }}>
                 <Form.Check
                   type="checkbox"
-                  checked={selectedItems.includes(ids[index])}
+                  checked={selectedItems.includes(item.id)}
                   onChange={(e) => {
                     e.stopPropagation(); // Prevent row click when checkbox is clicked
-                    handleSelectItem(ids[index]);
+                    // Toggle selection using item.id directly
+                    setSelectedItems((prevSelectedItems) =>
+                      prevSelectedItems.includes(item.id)
+                        ? prevSelectedItems.filter((id) => id !== item.id)
+                        : [...prevSelectedItems, item.id]
+                    );
                   }}
                   aria-label={`Select ${item.name}`}
                 />
