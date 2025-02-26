@@ -10,7 +10,8 @@ const LoggedIn = ({ children }) => {
   // Redirect to login if not authenticated and loading is complete
   useEffect(() => {
     if (!loading && !authUser) {
-      router.push('/');
+      // router.push('/');
+      console.log("the user is not logged in!!")
     }
   }, [authUser, loading, router]);
 

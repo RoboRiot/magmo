@@ -11,7 +11,7 @@ import { useRouter } from "next/router";
 import { fetchClients } from "../../../../utils/fetchAssociations";
 import ClientTable from "../../../../utils/ClientTable";
 import ClientInfoModal from "../../ClientInfoModal";
-import ParentModal from "../../addItem/ParentModal";
+import ParentModal from "../../AddItem/ParentModal";
 import dynamic from "next/dynamic";
 import InfoModal from "../../InfoModal";
 import MachineSelectionModal from "./MachineSelectionModal";
@@ -650,7 +650,7 @@ export default function DisplayItem() {
     console.log("Payload for printing:", payload);
     // Uncomment and update the endpoint if you are ready to send the payload
     try {
-      const response = await fetch("https://4b62-174-76-22-138.ngrok-free.app/print-label", {
+      const response = await fetch("https://cc7e-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -843,7 +843,8 @@ export default function DisplayItem() {
 
 
   return (
-    <LoggedIn>
+    // <LoggedIn>
+    <div>
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
@@ -1587,6 +1588,9 @@ export default function DisplayItem() {
           </Card>
         </div>
       </Container>
-    </LoggedIn>
+      </div>
+    // </LoggedIn>
   );
 }
+
+// export default dynamic(() => Promise.resolve(DisplayItem), { ssr: false });

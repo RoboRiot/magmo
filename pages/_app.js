@@ -24,3 +24,29 @@ function MyApp({ Component, pageProps }) {
 }
 
 export default MyApp
+
+// pages/_app.js
+// import React, { useEffect } from "react";
+// import "bootstrap/dist/css/bootstrap.min.css";
+// import '../styles/global.css';
+// import Layout from '../components/Layout';
+// import { AuthUserProvider } from '../context/AuthUserContext';
+// import ProtectedRoute from '../components/ProtectedRoute';
+
+// function MyApp({ Component, pageProps }) {
+//   useEffect(() => {
+//     require("bootstrap/dist/js/bootstrap.bundle.min.js");
+//   }, []);
+
+//   return (
+//     <AuthUserProvider>
+//       <Layout>
+//         <ProtectedRoute>
+//           <Component {...pageProps} />
+//         </ProtectedRoute>
+//       </Layout>
+//     </AuthUserProvider>
+//   );
+// }
+
+// export default MyApp;

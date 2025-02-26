@@ -68,7 +68,8 @@ export default function dashboard() {
   // Redirect to login if not authenticated and not still loading
   useEffect(() => {
     if (!loading && !authUser) {
-      router.push("/");
+      // router.push("/");
+      console.log("user noy logged in also should not be here")
     }
   }, [authUser, loading, router]);
 
