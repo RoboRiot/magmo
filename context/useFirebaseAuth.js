@@ -52,7 +52,15 @@ export default function useFirebaseAuth() {
   const signOut = () => auth.signOut().then(clear);
 
   // Listen for Firebase auth state changes
+  // useEffect(() => {
+  //   const unsubscribe = auth.onAuthStateChanged(authStateChanged);
+  //   return () => unsubscribe();
+  // }, []);
   useEffect(() => {
+    auth.setPersistence(Firebase.auth.Auth.Persistence.LOCAL)
+      .catch((error) => {
+        console.error("Error setting persistence:", error);
+      });
     const unsubscribe = auth.onAuthStateChanged(authStateChanged);
     return () => unsubscribe();
   }, []);
