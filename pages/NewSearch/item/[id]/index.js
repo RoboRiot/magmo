@@ -610,7 +610,7 @@ export default function DisplayItem() {
   
     let clientName = "";
   
-    // Check if the Machine field exists and is a Firestore document reference
+    // Attempt to fetch client name from the Machine document reference
     if (items.Machine && typeof items.Machine.get === "function") {
       try {
         const machineDoc = await items.Machine.get();
@@ -631,12 +631,29 @@ export default function DisplayItem() {
       console.warn("No Machine reference available in the item");
     }
   
+    // Fallback: if no client name was found from the Machine document, check items.client
+    if (!clientName && items.client) {
+      if (typeof items.client.get === "function") {
+        try {
+          const clientDoc = await items.client.get();
+          if (clientDoc.exists) {
+            clientName = clientDoc.data().name || "";
+          }
+        } catch (error) {
+          console.error("Error fetching client from items.client:", error);
+        }
+      } else {
+        // If items.client is not a Firestore document reference, assume it's a string
+        clientName = items.client;
+      }
+    }
+  
     const payload = {
       name: items.name,
       pn: items.pn,
       sn: items.sn,
       wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
-      client: clientName, // Use the client name retrieved from the machine's client field
+      client: clientName,
       status: items.status,
       local_sn: id,
       descriptions: descriptions,
@@ -648,7 +665,6 @@ export default function DisplayItem() {
     };
   
     console.log("Payload for printing:", payload);
-    // Uncomment and update the endpoint if you are ready to send the payload
     try {
       const response = await fetch("https://cc7e-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
@@ -661,6 +677,7 @@ export default function DisplayItem() {
       console.error("Error printing label:", error);
     }
   };
+  
   
 
   async function handleSubmit(event) {
