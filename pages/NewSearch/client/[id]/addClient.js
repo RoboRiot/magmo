@@ -156,21 +156,25 @@ const AddClient = () => {
             db.collection("Machine").doc(machine.id)
           ),
         });
-
-        // Update each machine's client field after client creation
-        for (const machine of addedMachines) {
-          await db.collection("Machine").doc(machine.id).update({
-            client: db.collection("Client").doc(newClientId),
-          });
-        }
+        // (Update machines with the new client reference as needed.)
+        clientId = newClientId;
       }
       alert("Client and machines saved successfully.");
-      router.push("../../clientSearch");
+
+      // Check if we came from an item; if so, route back to that item page.
+      if (router.query.from === "item" && router.query.itemId) {
+        router.push(`/NewSearch/item/${router.query.itemId}`);
+      } else if(router.query.from === "addItem" && router.query.itemId){
+        router.push("AddItem/NewItem");
+      } else {
+        router.push("../../clientSearch");
+      }
     } catch (error) {
       console.error("Error saving client:", error);
       setError("Failed to save client.");
     }
   };
+
 
   return (
     <Container className="mt-5">

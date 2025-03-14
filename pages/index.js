@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Card, Container, Alert } from 'react-bootstrap';
 import styles from "../styles/Home.module.css";
 
@@ -8,15 +8,45 @@ import { useRouter } from 'next/router';
 
 export default function Home() {
   const [error, setError] = useState("");
-  const { signInWithGoogle } = useAuth();
+  const { authUser, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Ensure we are on the client side
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // If auth status is known and the user is already logged in, redirect them.
+  useEffect(() => {
+    if (hasMounted && !loading && authUser) {
+      const destination = router.query.redirect || "/NewSearch/mainSearch";
+
+      if (router.pathname !== destination) {
+        // console.log("destination", destination);
+        router.push({ pathname: destination, query: {} });
+      } else {
+        router.reload();
+      }
+    }
+  }, [hasMounted, authUser, loading, router]);
+
+  if (!hasMounted) return null; // Prevent rendering until mounted
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
     setError("");
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      // Use the "redirect" query param if available, otherwise default to mainSearch.
+      const destination = router.query.redirect || "/NewSearch/mainSearch";
+
+      if (router.pathname !== destination) {
+        // console.log("destination", destination);
+        router.push({ pathname: destination, query: {} });
+      } else {
+        router.reload();
+      }
     } catch (err) {
       setError("Failed to log in with Google");
     }

@@ -607,9 +607,9 @@ export default function DisplayItem() {
       alert("Missing name");
       return;
     }
-  
+
     let clientName = "";
-  
+
     // Attempt to fetch client name from the Machine document reference
     if (items.Machine && typeof items.Machine.get === "function") {
       try {
@@ -630,7 +630,7 @@ export default function DisplayItem() {
     } else {
       console.warn("No Machine reference available in the item");
     }
-  
+
     // Fallback: if no client name was found from the Machine document, check items.client
     if (!clientName && items.client) {
       if (typeof items.client.get === "function") {
@@ -647,7 +647,7 @@ export default function DisplayItem() {
         clientName = items.client;
       }
     }
-  
+
     const payload = {
       name: items.name,
       pn: items.pn,
@@ -663,10 +663,10 @@ export default function DisplayItem() {
       modality: modality,
       model: model,
     };
-  
+
     console.log("Payload for printing:", payload);
     try {
-      const response = await fetch("https://cc7e-174-76-22-138.ngrok-free.app/print-label", {
+      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -677,8 +677,8 @@ export default function DisplayItem() {
       console.error("Error printing label:", error);
     }
   };
-  
-  
+
+
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -858,756 +858,846 @@ export default function DisplayItem() {
     e.target.value = "";
   };
 
+  const [currentPnIndex, setCurrentPnIndex] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [currentSnIndex, setCurrentSnIndex] = useState(0);
+  const [showSnDropdown, setShowSnDropdown] = useState(false);
+
+  const handleAddNewClient = () => {
+    // Generate a random client number as part of the URL.
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    // When pushing, include a query parameter (from=item) and the current item id if available.
+    router.push(`../client/AIS${randomNum}/addClient?from=item&itemId=${id || ''}`);
+    // router.push(`../client/AIS${randomNum}/addClient`)
+
+  };
 
   return (
-    // <LoggedIn>
-    <div>
-      <Modal show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Error</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Missing field</Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={handleClose}>
-            Ok
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showErr} onHide={handleCloseErr}>
-        <Modal.Header closeButton>
-          <Modal.Title>Error</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>{Err}</Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={handleCloseErr}>
-            Ok
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Save Confirmation</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Data has been saved successfully.</Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={handleCloseSaveModal}>
-            Ok
-          </Button>
-        </Modal.Footer>
-      </Modal>
+    <LoggedIn>
+      <div>
+        <Modal show={show} onHide={handleClose}>
+          <Modal.Header closeButton>
+            <Modal.Title>Error</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>Missing field</Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={handleClose}>
+              Ok
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showErr} onHide={handleCloseErr}>
+          <Modal.Header closeButton>
+            <Modal.Title>Error</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>{Err}</Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={handleCloseErr}>
+              Ok
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Save Confirmation</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>Data has been saved successfully.</Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={handleCloseSaveModal}>
+              Ok
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
-      <Modal show={showDescModal} onHide={handleCloseDescModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Descriptions</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Button variant="primary" className="mb-3" onClick={addDescription}>
-            Add Description
-          </Button>
-          {descriptions.map((desc, index) => (
-            <Row key={index} className="mb-3">
-              <Button
-                variant="outline-secondary"
-                className="w-100"
-                onClick={() => selectDescription(index)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="d-flex justify-content-between">
-                  <span>{desc.description || "Description"}</span>
-                  <span
-                    style={{
-                      borderLeft: "1px solid #ccc",
-                      paddingLeft: "10px",
-                    }}
-                  >
-                    {desc.date || "Date"}
-                  </span>
-                </div>
-              </Button>
-            </Row>
-          ))}
-          <Button variant="primary" onClick={handleCloseDescModal}>
-            OK
-          </Button>
-        </Modal.Body>
-      </Modal>
-
-      <Modal show={showWoModal} onHide={handleCloseWoModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Work Orders</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Button
-            variant="primary"
-            className="mb-3"
-            onClick={addWorkOrder}
-            style={{ marginBottom: "1rem" }}
-          >
-            Add Work Order
-          </Button>
-          {workOrders.map((wo, index) => (
-            <Row key={index} className="mb-3">
-              <Col>
-                <Form.Control
-                  type="text"
-                  placeholder="Work Order"
-                  value={wo.workOrder}
-                  onChange={(e) =>
-                    handleWorkOrderChange(index, "workOrder", e.target.value)
-                  }
-                  style={{ marginBottom: "0.5rem" }}
-                />
-              </Col>
-              <Col>
-                <Form.Control
-                  type="date"
-                  placeholder="Date"
-                  value={wo.date}
-                  onChange={(e) =>
-                    handleWorkOrderChange(index, "date", e.target.value)
-                  }
-                />
-              </Col>
-              <Col>
-                <Button variant="danger" onClick={() => removeWorkOrder(index)}>
-                  Remove
+        <Modal show={showDescModal} onHide={handleCloseDescModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Descriptions</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Button variant="primary" className="mb-3" onClick={addDescription}>
+              Add Description
+            </Button>
+            {descriptions.map((desc, index) => (
+              <Row key={index} className="mb-3">
+                <Button
+                  variant="outline-secondary"
+                  className="w-100"
+                  onClick={() => selectDescription(index)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="d-flex justify-content-between">
+                    <span>{desc.description || "Description"}</span>
+                    <span
+                      style={{
+                        borderLeft: "1px solid #ccc",
+                        paddingLeft: "10px",
+                      }}
+                    >
+                      {desc.date || "Date"}
+                    </span>
+                  </div>
                 </Button>
-              </Col>
-            </Row>
-          ))}
-          <Button variant="primary" onClick={handleCloseWoModal}>
-            OK
-          </Button>
-        </Modal.Body>
-      </Modal>
-      {/* Descriptions Modal */}
-      <Modal show={showDescModal} onHide={handleCloseDescModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Descriptions</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Button variant="primary" className="mb-3" onClick={addDescription}>
-            Add Description
-          </Button>
-          {descriptions.map((desc, index) => (
-            <Row key={index} className="mb-3">
-              <Button
-                variant="outline-secondary"
-                className="w-100"
-                onClick={() => selectDescription(index)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="d-flex justify-content-between">
-                  <span>{desc.description || "Description"}</span>
-                  <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
-                    {desc.date || "Date"}
-                  </span>
-                </div>
-              </Button>
-            </Row>
-          ))}
-          <Button variant="primary" onClick={handleCloseDescModal}>
-            OK
-          </Button>
-        </Modal.Body>
-      </Modal>
+              </Row>
+            ))}
+            <Button variant="primary" onClick={handleCloseDescModal}>
+              OK
+            </Button>
+          </Modal.Body>
+        </Modal>
+
+        <Modal show={showWoModal} onHide={handleCloseWoModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Work Orders</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Button
+              variant="primary"
+              className="mb-3"
+              onClick={addWorkOrder}
+              style={{ marginBottom: "1rem" }}
+            >
+              Add Work Order
+            </Button>
+            {workOrders.map((wo, index) => (
+              <Row key={index} className="mb-3">
+                <Col>
+                  <Form.Control
+                    type="text"
+                    placeholder="Work Order"
+                    value={wo.workOrder}
+                    onChange={(e) =>
+                      handleWorkOrderChange(index, "workOrder", e.target.value)
+                    }
+                    style={{ marginBottom: "0.5rem" }}
+                  />
+                </Col>
+                <Col>
+                  <Form.Control
+                    type="date"
+                    placeholder="Date"
+                    value={wo.date}
+                    onChange={(e) =>
+                      handleWorkOrderChange(index, "date", e.target.value)
+                    }
+                  />
+                </Col>
+                <Col>
+                  <Button variant="danger" onClick={() => removeWorkOrder(index)}>
+                    Remove
+                  </Button>
+                </Col>
+              </Row>
+            ))}
+            <Button variant="primary" onClick={handleCloseWoModal}>
+              OK
+            </Button>
+          </Modal.Body>
+        </Modal>
+        {/* Descriptions Modal */}
+        <Modal show={showDescModal} onHide={handleCloseDescModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Descriptions</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Button variant="primary" className="mb-3" onClick={addDescription}>
+              Add Description
+            </Button>
+            {descriptions.map((desc, index) => (
+              <Row key={index} className="mb-3">
+                <Button
+                  variant="outline-secondary"
+                  className="w-100"
+                  onClick={() => selectDescription(index)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="d-flex justify-content-between">
+                    <span>{desc.description || "Description"}</span>
+                    <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
+                      {desc.date || "Date"}
+                    </span>
+                  </div>
+                </Button>
+              </Row>
+            ))}
+            <Button variant="primary" onClick={handleCloseDescModal}>
+              OK
+            </Button>
+          </Modal.Body>
+        </Modal>
 
 
-      { }
-      <ClientInfoModal
-        show={showMachineModal}
-        handleClose={handleCloseMachineModal}
-        selectedClient={selectedClient}
-        machineOptions={machineOptions}
-        setSelectedMachine={handleSetSelectedMachine}
-      />
+        { }
+        <ClientInfoModal
+          show={showMachineModal}
+          handleClose={handleCloseMachineModal}
+          selectedClient={selectedClient}
+          machineOptions={machineOptions}
+          setSelectedMachine={handleSetSelectedMachine}
+        />
 
-      {/* Client selection modal */}
-      <Modal show={showClientModal} onHide={handleCloseClientModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Select Client</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <FormControl
-            type="text"
-            placeholder="Search by name"
-            className="mb-3"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <ClientTable
-            clients={clients.filter((client) =>
-              client.name.toLowerCase().includes(search.toLowerCase())
-            )}
-            onSelectClient={handleClientInfo}
-            onInfoClick={handleClientInfo}
-            clearSelection={() => handleClientInfo(null)}
-          />
-        </Modal.Body>
-      </Modal>
+        {/* Client selection modal */}
+        <Modal show={showClientModal} onHide={handleCloseClientModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Select Client</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <FormControl
+              type="text"
+              placeholder="Search by name"
+              className="mb-3"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ClientTable
+              clients={clients.filter((client) =>
+                client.name.toLowerCase().includes(search.toLowerCase())
+              )}
+              onSelectClient={handleClientInfo}
+              onInfoClick={handleClientInfo}
+              clearSelection={() => handleClientInfo(null)}
+              onAddClient={handleAddNewClient} // new prop
+            />
+          </Modal.Body>
+        </Modal>
 
-      <ParentModal
-        show={showParentModal}
-        handleClose={handleCloseParentModal}
-        setSelectedParent={setSelectedParent}
-      />
 
-      <MachineSelectionModal
-        show={machineSelectionModal}
-        handleClose={() => setMachineSelectionModal(false)}
-        setMachine={setTheMachine}
-      />
 
-      <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Take a Photo</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="camera">
-            {!capturedPhoto && (
-              <BarcodeScannerComponent
-                width="100%"
-                height={300}
-                onUpdate={handleCapture}
-                facingMode={cameraFacing}
-              />
-            )}
-            {capturedPhoto && (
-              <div className="photo-preview">
-                <img
-                  src={URL.createObjectURL(capturedPhoto)}
-                  alt="captured"
-                  style={{ width: "100%" }}
+        <ParentModal
+          show={showParentModal}
+          handleClose={handleCloseParentModal}
+          setSelectedParent={setSelectedParent}
+        />
+
+        <MachineSelectionModal
+          show={machineSelectionModal}
+          handleClose={() => setMachineSelectionModal(false)}
+          setMachine={setTheMachine}
+        />
+
+        <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Take a Photo</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="camera">
+              {!capturedPhoto && (
+                <BarcodeScannerComponent
+                  width="100%"
+                  height={300}
+                  onUpdate={handleCapture}
+                  facingMode={cameraFacing}
                 />
-              </div>
+              )}
+              {capturedPhoto && (
+                <div className="photo-preview">
+                  <img
+                    src={URL.createObjectURL(capturedPhoto)}
+                    alt="captured"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              )}
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            {!capturedPhoto ? (
+              <>
+                <Button
+                  onClick={capturePhoto}
+                  style={{
+                    borderRadius: "50%",
+                    width: "60px",
+                    height: "60px",
+                    position: "absolute",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    bottom: "10px",
+                  }}
+                >
+                  📷
+                </Button>
+                <Button
+                  onClick={() =>
+                    setCameraFacing((prev) =>
+                      prev === "environment" ? "user" : "environment"
+                    )
+                  }
+                >
+                  Flip Camera
+                </Button>
+                <Button variant="secondary" onClick={handleCloseCameraModal}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
+                  Retake
+                </Button>
+                <Button variant="primary" onClick={savePhoto}>
+                  OK
+                </Button>
+              </>
             )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {!capturedPhoto ? (
-            <>
-              <Button
-                onClick={capturePhoto}
-                style={{
-                  borderRadius: "50%",
-                  width: "60px",
-                  height: "60px",
-                  position: "absolute",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  bottom: "10px",
-                }}
-              >
-                📷
-              </Button>
-              <Button
-                onClick={() =>
-                  setCameraFacing((prev) =>
-                    prev === "environment" ? "user" : "environment"
-                  )
-                }
-              >
-                Flip Camera
-              </Button>
-              <Button variant="secondary" onClick={handleCloseCameraModal}>
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
-                Retake
-              </Button>
-              <Button variant="primary" onClick={savePhoto}>
-                OK
-              </Button>
-            </>
-          )}
-        </Modal.Footer>
-      </Modal>
+          </Modal.Footer>
+        </Modal>
 
-      <InfoModal
-        show={showInfoModal}
-        handleClose={handleCloseInfoModal}
-        itemName={items.name}
-        dimensions={items.length + "," + items.width + "," + items.height}
-        price={items.price}
-        freqI={freqItem}
-        freqM={machineFrequency}
-        usage={usagePastYear}
-      />
+        <InfoModal
+          show={showInfoModal}
+          handleClose={handleCloseInfoModal}
+          itemName={items.name}
+          dimensions={items.length + "," + items.width + "," + items.height}
+          price={items.price}
+          freqI={freqItem}
+          freqM={machineFrequency}
+          usage={usagePastYear}
+        />
 
-      <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
-      >
-        <div className="w-100" style={{ maxWidth: "600px" }}>
-          <Card className="align-items-center justify-content-center">
-            <Card.Body>
-              <h2 className="text-center mb-4">Item</h2>
-              <Form onSubmit={handleSubmit}>
-                {/* Row for Name and PN */}
-                <Row className="mb-3">
-                  <Col>
-                    <Form.Group controlId="name">
-                      <Form.Label>Name</Form.Label>
+        <Container
+          className="d-flex align-items-center justify-content-center"
+          style={{ minHeight: "100vh" }}
+        >
+          <div className="w-100" style={{ maxWidth: "600px" }}>
+            <Card className="align-items-center justify-content-center">
+              <Card.Body>
+                <h2 className="text-center mb-4">Item</h2>
+                <Form onSubmit={handleSubmit}>
+                  {/* Row for Name and PN */}
+                  <Row className="mb-3">
+                    <Col>
+                      <Form.Group controlId="name">
+                        <Form.Label>Name</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={items.name}
+                          onChange={handleChange("name")}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col>
+                      <Form.Group controlId="pn">
+                        <Form.Label>Product Number</Form.Label>
+                        <div style={{ position: "relative" }}>
+                          <InputGroup>
+                            {/* Editable input field displaying the current PN */}
+                            <Form.Control
+                              type="text"
+                              value={items.pn[currentPnIndex] || ""}
+                              onChange={(e) => handlePnChange(currentPnIndex, e.target.value)}
+                            />
+                            {/* Arrow button to toggle dropdown */}
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowDropdown(!showDropdown)}
+                            >
+                              &#9662;
+                            </Button>
+                            {/* Plus button to add a new PN */}
+                            <InputGroup.Text>
+                              <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>
+                                +
+                              </Button>
+                            </InputGroup.Text>
+                          </InputGroup>
+                          {/* Dropdown list showing only the current item's PN options */}
+                          {showDropdown && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                right: 0,
+                                backgroundColor: "white",
+                                border: "1px solid #ccc",
+                                zIndex: 1000,
+                                maxHeight: "150px",
+                                overflowY: "auto",
+                              }}
+                            >
+                              {items.pn.map((pnOption, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{ padding: "8px", cursor: "pointer" }}
+                                  onClick={() => {
+                                    setCurrentPnIndex(idx);
+                                    setShowDropdown(false);
+                                  }}
+                                >
+                                  {pnOption}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Input for adding a new PN, if triggered */}
+                        {addingNewPn && (
+                          <Form.Control
+                            type="text"
+                            placeholder="Enter new PN"
+                            value={newPn}
+                            onChange={(e) => setNewPn(e.target.value)}
+                            onBlur={handleAddNewPn}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleAddNewPn();
+                              }
+                            }}
+                          />
+                        )}
+                      </Form.Group>
+
+                    </Col>
+                  </Row>
+                  {/* Row for SN */}
+                  <Row className="mb-3">
+                    <Col>
+                      <Form.Group controlId="sn">
+                        <Form.Label>Serial Number</Form.Label>
+                        <div style={{ position: "relative" }}>
+                          <InputGroup>
+                            {/* Inline editable input showing the currently selected SN */}
+                            <Form.Control
+                              type="text"
+                              value={items.sn[currentSnIndex] || ""}
+                              onChange={(e) => handleSnChange(currentSnIndex, e.target.value)}
+                            />
+                            {/* Arrow button to toggle SN dropdown */}
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowSnDropdown(!showSnDropdown)}
+                            >
+                              &#9662;
+                            </Button>
+                            {/* Plus button to add a new SN */}
+                            <InputGroup.Text>
+                              <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>
+                                +
+                              </Button>
+                            </InputGroup.Text>
+                          </InputGroup>
+                          {/* Dropdown list for SN options */}
+                          {showSnDropdown && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                right: 0,
+                                backgroundColor: "white",
+                                border: "1px solid #ccc",
+                                zIndex: 1000,
+                                maxHeight: "150px",
+                                overflowY: "auto",
+                              }}
+                            >
+                              {items.sn.map((snOption, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{ padding: "8px", cursor: "pointer" }}
+                                  onClick={() => {
+                                    setCurrentSnIndex(idx);
+                                    setShowSnDropdown(false);
+                                  }}
+                                >
+                                  {snOption}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Input for adding a completely new SN */}
+                        {addingNewSn && (
+                          <Form.Control
+                            type="text"
+                            placeholder="Enter new SN"
+                            value={newSn}
+                            onChange={(e) => setNewSn(e.target.value)}
+                            onBlur={handleAddNewSn}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleAddNewSn();
+                              }
+                            }}
+                          />
+                        )}
+                      </Form.Group>
+                    </Col>
+                    <Col>
+                      <Form.Group controlId="status">
+                        <Form.Label>Status</Form.Label>
+                        <Form.Select
+                          value={items.status || ""}
+                          onChange={handleChange("status")}
+                        >
+                          <option value="">Select status</option>
+                          <option value="Good">Good</option>
+                          <option value="Bad">Bad</option>
+                          <option value="Unknown">Unknown</option>
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+
+                  {/* New Row for Status and OEM, Modality, Model */}
+                  <Row className="mb-3">
+
+                    <Col>
+                      <Form.Label>OEM</Form.Label>
                       <Form.Control
                         type="text"
-                        value={items.name}
-                        onChange={handleChange("name")}
+                        placeholder="OEM"
+                        value={oem}
+                        onChange={(e) => setOem(e.target.value)}
+                      />
+                    </Col>
+                    <Col>
+                      <Form.Label>Modality</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Modality"
+                        value={modality}
+                        onChange={(e) => setModality(e.target.value)}
+                      />
+                    </Col>
+                    <Col>
+                      <Form.Label>Model</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Model"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                      />
+                    </Col>
+                  </Row>
+                  {/* Work Orders and Descriptions Section */}
+                  <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
+                    <div className="d-flex align-items-center">
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleShowWoModal}
+                        className="me-2"
+                      >
+                        Manage Work Orders
+                      </Button>
+                      {workOrders.length > 0 && (
+                        <div className="d-flex flex-column align-items-start">
+                          <Form.Label>Work Order</Form.Label>
+                          <Form.Control
+                            type="text"
+                            placeholder="Most Recent Work Order"
+                            value={mostRecentWorkOrder.workOrder}
+                            onChange={(e) =>
+                              handleWorkOrderChange(
+                                workOrders.indexOf(mostRecentWorkOrder),
+                                "workOrder",
+                                e.target.value
+                              )
+                            }
+                            style={{ marginBottom: "0.5rem" }}
+                          />
+                          <Form.Label>Date</Form.Label>
+                          <Form.Control
+                            type="date"
+                            placeholder="Work Order Date"
+                            value={mostRecentWorkOrder.date}
+                            onChange={(e) =>
+                              handleWorkOrderChange(
+                                workOrders.indexOf(mostRecentWorkOrder),
+                                "date",
+                                e.target.value
+                              )
+                            }
+                            style={{ marginBottom: "0.5rem" }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Machine selection row with local loc inputs (if applicable) */}
+                  {/* Description Editing */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <Form.Group controlId="desc">
+                      <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
+                        List Descriptions
+                      </Button>
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        placeholder="Enter description"
+                        value={descriptions[selectedDesc]?.description || ""}
+                        onChange={(e) => handleDescriptionChange(selectedDesc, "description", e.target.value)}
+                        style={{ marginBottom: "0.5rem" }}
+                      />
+                      <Form.Control
+                        type="date"
+                        value={descriptions[selectedDesc]?.date || ""}
+                        onChange={(e) => handleDescriptionChange(selectedDesc, "date", e.target.value)}
+                        style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
                       />
                     </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group controlId="pn">
-                      <Form.Label>Product Number</Form.Label>
-                      <InputGroup>
-                        <Form.Select
-                          value={items.pn[0]} // default selected value is the first element
-                          onChange={(e) => handlePnSelect(e)}
-                        >
-                          {items.pn.map((pnValue, index) => (
-                            <option key={index} value={pnValue}>
-                              {pnValue}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <InputGroup.Text>
-                          <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>+</Button>
-                        </InputGroup.Text>
-                      </InputGroup>
-                      {addingNewPn && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter new PN"
-                          value={newPn}
-                          onChange={(e) => setNewPn(e.target.value)}
-                          onBlur={handleAddNewPn}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleAddNewPn();
-                            }
-                          }}
-                        />
-                      )}
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                {/* Row for SN */}
-                <Row className="mb-3">
-                  <Col>
-                    <Form.Group controlId="sn">
-                      <Form.Label>Serial Number</Form.Label>
-                      <InputGroup>
-                        <Form.Select
-                          value={items.sn[0]} // default selected value
-                          onChange={(e) => handleSnSelect(e)}
-                        >
-                          {items.sn.map((snValue, index) => (
-                            <option key={index} value={snValue}>
-                              {snValue}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <InputGroup.Text>
-                          <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>+</Button>
-                        </InputGroup.Text>
-                      </InputGroup>
-                      {addingNewSn && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter new SN"
-                          value={newSn}
-                          onChange={(e) => setNewSn(e.target.value)}
-                          onBlur={handleAddNewSn}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleAddNewSn();
-                            }
-                          }}
-                        />
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group controlId="status">
-                      <Form.Label>Status</Form.Label>
-                      <Form.Select
-                        value={items.status || ""}
-                        onChange={handleChange("status")}
-                      >
-                        <option value="">Select status</option>
-                        <option value="Good">Good</option>
-                        <option value="Bad">Bad</option>
-                        <option value="Unknown">Unknown</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-
-                {/* New Row for Status and OEM, Modality, Model */}
-                <Row className="mb-3">
-
-                  <Col>
-                    <Form.Label>OEM</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="OEM"
-                      value={oem}
-                      onChange={(e) => setOem(e.target.value)}
-                    />
-                  </Col>
-                  <Col>
-                    <Form.Label>Modality</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Modality"
-                      value={modality}
-                      onChange={(e) => setModality(e.target.value)}
-                    />
-                  </Col>
-                  <Col>
-                    <Form.Label>Model</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Model"
-                      value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                    />
-                  </Col>
-                </Row>
-                {/* Work Orders and Descriptions Section */}
-                <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
-                  <div className="d-flex align-items-center">
-                    <Button
-                      variant="outline-secondary"
-                      onClick={handleShowWoModal}
-                      className="me-2"
-                    >
-                      Manage Work Orders
-                    </Button>
-                    {workOrders.length > 0 && (
-                      <div className="d-flex flex-column align-items-start">
-                        <Form.Label>Work Order</Form.Label>
-                        <Form.Control
-                          type="text"
-                          placeholder="Most Recent Work Order"
-                          value={mostRecentWorkOrder.workOrder}
-                          onChange={(e) =>
-                            handleWorkOrderChange(
-                              workOrders.indexOf(mostRecentWorkOrder),
-                              "workOrder",
-                              e.target.value
-                            )
-                          }
-                          style={{ marginBottom: "0.5rem" }}
-                        />
-                        <Form.Label>Date</Form.Label>
-                        <Form.Control
-                          type="date"
-                          placeholder="Work Order Date"
-                          value={mostRecentWorkOrder.date}
-                          onChange={(e) =>
-                            handleWorkOrderChange(
-                              workOrders.indexOf(mostRecentWorkOrder),
-                              "date",
-                              e.target.value
-                            )
-                          }
-                          style={{ marginBottom: "0.5rem" }}
-                        />
-                      </div>
-                    )}
                   </div>
-                </div>
-                {/* Machine selection row with local loc inputs (if applicable) */}
-                {/* Description Editing */}
-                <div style={{ marginBottom: "1rem" }}>
-                  <Form.Group controlId="desc">
-                    <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
-                      List Descriptions
-                    </Button>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      placeholder="Enter description"
-                      value={descriptions[selectedDesc]?.description || ""}
-                      onChange={(e) => handleDescriptionChange(selectedDesc, "description", e.target.value)}
-                      style={{ marginBottom: "0.5rem" }}
-                    />
-                    <Form.Control
-                      type="date"
-                      value={descriptions[selectedDesc]?.date || ""}
-                      onChange={(e) => handleDescriptionChange(selectedDesc, "date", e.target.value)}
-                      style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
-                    />
-                  </Form.Group>
-                </div>
 
-                <div style={{ marginBottom: "1rem" }}>
-                  <Row className="mb-3">
-                    <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={() => {
-                          setMachinePick(true);
-                          handleShowClientModal();
-                        }}
-                        className="me-2"
-                      >
-                        Select From
-                      </Button>
-                      {selectedMachine && (
-                        <>
-                          <Form.Control
-                            type="text"
-                            placeholder="Selected Machine"
-                            value={selectedMachine.name}
-                            readOnly
-                            style={{ marginTop: "0.5rem" }}
-                          />
-                          {showLocalLocFrom && (
-                            <Form.Group controlId="localLocFrom" className="mt-2">
-                              <Form.Label>Local Loc (From)</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={localLocFrom}
-                                onChange={(e) => setLocalLocFrom(e.target.value)}
-                              />
-                            </Form.Group>
-                          )}
-                        </>
-                      )}
-                    </Col>
-                    <Col>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={() => {
-                          setMachinePick(false);
-                          handleShowClientModal();
-                        }}
-                        className="me-2"
-                      >
-                        Select Current
-                      </Button>
-                      {selectedCurrentMachine && (
-                        <>
-                          <Form.Control
-                            type="text"
-                            placeholder="Selected Machine"
-                            value={selectedCurrentMachine.name}
-                            readOnly
-                            style={{ marginTop: "0.5rem" }}
-                          />
-                          {showLocalLocCurrent && (
-                            <Form.Group controlId="localLocCurrent" className="mt-2">
-                              <Form.Label>Local Loc (Current)</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={localLocCurrent}
-                                onChange={(e) => setLocalLocCurrent(e.target.value)}
-                              />
-                            </Form.Group>
-                          )}
-                        </>
-                      )}
-                    </Col>
-                    <Col>
-                      <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
-                        Select Parent
-                      </Button>
-                      {selectedParent && (
-                        <Form.Control
-                          type="text"
-                          placeholder="Selected Parent"
-                          value={selectedParent.name}
-                          readOnly
-                          style={{ marginTop: "0.5rem" }}
-                        />
-                      )}
-                    </Col>
-                  </Row>
-
-                </div>
-                <div style={{ marginBottom: "1rem" }}>
-                  <Row className="mb-3">
-                    <Col xs={6}>
-                      <ButtonGroup>
-                        <Button variant="outline-secondary" onClick={handleShowCameraModal}>
-                          Take Photo
+                  <div style={{ marginBottom: "1rem" }}>
+                    <Row className="mb-3">
+                      <Col>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => {
+                            setMachinePick(true);
+                            handleShowClientModal();
+                          }}
+                          className="me-2"
+                        >
+                          Select From
                         </Button>
-                        <Button variant="outline-secondary" onClick={handleBrowsePhotos}>
-                          Browse
-                        </Button>
-                      </ButtonGroup>
-                    </Col>
-                    <Col xs={6}>
-                      <Button variant={addToWebsite ? "primary" : "outline-primary"} onClick={() => setAddToWebsite((prev) => !prev)}>
-                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
-                      </Button>
-                    </Col>
-                  </Row>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    ref={browseInputRef}
-                    style={{ display: "none" }}
-                    onChange={handleFilesSelected}
-                  />
-
-                </div>
-
-                {/* New: Photo Gallery Section */}
-                {photos && photos.length > 0 && (
-                  <div
-                    className="photo-gallery"
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "10px",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    {photos.map((photo, index) => (
-                      <div
-                        key={index}
-                        style={{ position: "relative", width: "100px", height: "100px" }}
-                      >
-                        <img
-                          src={photo.url}
-                          alt={`Photo ${index + 1}`}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                        {photo.file && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              right: 0,
-                              padding: "0 5px",
-                            }}
-                            onClick={() => removePhoto(index)}
-                          >
-                            x
-                          </Button>
+                        {selectedMachine && (
+                          <>
+                            <Form.Control
+                              type="text"
+                              placeholder="Selected Machine"
+                              value={selectedMachine.name}
+                              readOnly
+                              style={{ marginTop: "0.5rem" }}
+                            />
+                            {showLocalLocFrom && (
+                              <Form.Group controlId="localLocFrom" className="mt-2">
+                                <Form.Label>Local Loc (From)</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  value={localLocFrom}
+                                  onChange={(e) => setLocalLocFrom(e.target.value)}
+                                />
+                              </Form.Group>
+                            )}
+                          </>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </Col>
+                      <Col>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => {
+                            setMachinePick(false);
+                            handleShowClientModal();
+                          }}
+                          className="me-2"
+                        >
+                          Select Current
+                        </Button>
+                        {selectedCurrentMachine && (
+                          <>
+                            <Form.Control
+                              type="text"
+                              placeholder="Selected Machine"
+                              value={selectedCurrentMachine.name}
+                              readOnly
+                              style={{ marginTop: "0.5rem" }}
+                            />
+                            {showLocalLocCurrent && (
+                              <Form.Group controlId="localLocCurrent" className="mt-2">
+                                <Form.Label>Local Loc (Current)</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  value={localLocCurrent}
+                                  onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                />
+                              </Form.Group>
+                            )}
+                          </>
+                        )}
+                      </Col>
+                      <Col>
+                        <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
+                          Select Parent
+                        </Button>
+                        {selectedParent && (
+                          <Form.Control
+                            type="text"
+                            placeholder="Selected Parent"
+                            value={selectedParent.name}
+                            readOnly
+                            style={{ marginTop: "0.5rem" }}
+                          />
+                        )}
+                      </Col>
+                    </Row>
 
-                <div className="mt-3 d-flex flex-wrap align-items-center">
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    style={{ marginRight: "1rem" }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleShowInfoModal}
-                    style={{ marginRight: "1rem" }}
-                  >
-                    More Info
-                  </Button>
-                  <LoadingButton
-                    type="primary"
-                    name="Back"
-                    route="NewSearch/mainSearch"
-                  />
-                  {/* Print Label button aligned to the right */}
-                  <Button
-                    variant="info"
-                    onClick={handlePrint}
-                    style={{ marginLeft: "auto" }}
-                  >
-                    Print Label
-                  </Button>
-                </div>
-                <div style={{ textAlign: "center", margin: "1rem 0" }}>
-                  <Button
-                    variant="link"
-                    style={{
-                      textDecoration: "none",
-                      color: "black",
-                      fontSize: "24px",
-                    }}
-                    onClick={() => setShowExtra(!showExtra)}
-                  >
-                    ▼
-                  </Button>
-                </div>
-                <Collapse in={showExtra}>
-                  <div id="extra-collapse" className="mt-3">
-                    <Row>
-                      <Form.Group as={Col} controlId="dimensions">
-                        <Form.Label>Dimensions</Form.Label>
-                        <Row>
-                          <Col>
-                            <Form.Control
-                              placeholder="Length"
-                              type="text"
-                              value={items.length}
-                              onChange={handleChange("length")}
-                            />
-                          </Col>
-                          x
-                          <Col>
-                            <Form.Control
-                              placeholder="Width"
-                              type="text"
-                              value={items.width}
-                              onChange={handleChange("width")}
-                            />
-                          </Col>
-                          x
-                          <Col>
-                            <Form.Control
-                              placeholder="Height"
-                              type="text"
-                              value={items.height}
-                              onChange={handleChange("height")}
-                            />
-                          </Col>
-                        </Row>
-                      </Form.Group>
-                      <Form.Group as={Col} controlId="Price">
-                        <Form.Label>Price</Form.Label>
-                        <Form.Control
-                          placeholder="Price"
-                          type="text"
-                          value={items.price}
-                          onChange={handleChange("price")}
-                        />
-                      </Form.Group>
-                    </Row>
-                    <Row className="mt-3">
-                      <Form.Group as={Col} controlId="DOM">
-                        <Form.Label>DOM</Form.Label>
-                        <Form.Control
-                          placeholder="Date of Manufacture"
-                          type="date"
-                          value={DOM}
-                          onChange={(e) => setDOM(e.target.value)}
-                        />
-                      </Form.Group>
-                    </Row>
                   </div>
-                </Collapse>
-              </Form>
-            </Card.Body>
-          </Card>
-        </div>
-      </Container>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <Row className="mb-3">
+                      <Col xs={6}>
+                        <ButtonGroup>
+                          <Button variant="outline-secondary" onClick={handleShowCameraModal}>
+                            Take Photo
+                          </Button>
+                          <Button variant="outline-secondary" onClick={handleBrowsePhotos}>
+                            Browse
+                          </Button>
+                        </ButtonGroup>
+                      </Col>
+                      <Col xs={6}>
+                        <Button variant={addToWebsite ? "primary" : "outline-primary"} onClick={() => setAddToWebsite((prev) => !prev)}>
+                          {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                        </Button>
+                      </Col>
+                    </Row>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      ref={browseInputRef}
+                      style={{ display: "none" }}
+                      onChange={handleFilesSelected}
+                    />
+
+                  </div>
+
+                  {/* New: Photo Gallery Section */}
+                  {photos && photos.length > 0 && (
+                    <div
+                      className="photo-gallery"
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      {photos.map((photo, index) => (
+                        <div
+                          key={index}
+                          style={{ position: "relative", width: "100px", height: "100px" }}
+                        >
+                          <img
+                            src={photo.url}
+                            alt={`Photo ${index + 1}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                          {photo.file && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                padding: "0 5px",
+                              }}
+                              onClick={() => removePhoto(index)}
+                            >
+                              x
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 d-flex flex-wrap align-items-center">
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      style={{ marginRight: "1rem" }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={handleShowInfoModal}
+                      style={{ marginRight: "1rem" }}
+                    >
+                      More Info
+                    </Button>
+                    <LoadingButton
+                      type="primary"
+                      name="Back"
+                      route="NewSearch/mainSearch"
+                    />
+                    {/* Print Label button aligned to the right */}
+                    <Button
+                      variant="info"
+                      onClick={handlePrint}
+                      style={{ marginLeft: "auto" }}
+                    >
+                      Print Label
+                    </Button>
+                  </div>
+                  <div style={{ textAlign: "center", margin: "1rem 0" }}>
+                    <Button
+                      variant="link"
+                      style={{
+                        textDecoration: "none",
+                        color: "black",
+                        fontSize: "24px",
+                      }}
+                      onClick={() => setShowExtra(!showExtra)}
+                    >
+                      ▼
+                    </Button>
+                  </div>
+                  <Collapse in={showExtra}>
+                    <div id="extra-collapse" className="mt-3">
+                      <Row>
+                        <Form.Group as={Col} controlId="dimensions">
+                          <Form.Label>Dimensions</Form.Label>
+                          <Row>
+                            <Col>
+                              <Form.Control
+                                placeholder="Length"
+                                type="text"
+                                value={items.length}
+                                onChange={handleChange("length")}
+                              />
+                            </Col>
+                            x
+                            <Col>
+                              <Form.Control
+                                placeholder="Width"
+                                type="text"
+                                value={items.width}
+                                onChange={handleChange("width")}
+                              />
+                            </Col>
+                            x
+                            <Col>
+                              <Form.Control
+                                placeholder="Height"
+                                type="text"
+                                value={items.height}
+                                onChange={handleChange("height")}
+                              />
+                            </Col>
+                          </Row>
+                        </Form.Group>
+                        <Form.Group as={Col} controlId="Price">
+                          <Form.Label>Price</Form.Label>
+                          <Form.Control
+                            placeholder="Price"
+                            type="text"
+                            value={items.price}
+                            onChange={handleChange("price")}
+                          />
+                        </Form.Group>
+                      </Row>
+                      <Row className="mt-3">
+                        <Form.Group as={Col} controlId="DOM">
+                          <Form.Label>DOM</Form.Label>
+                          <Form.Control
+                            placeholder="Date of Manufacture"
+                            type="date"
+                            value={DOM}
+                            onChange={(e) => setDOM(e.target.value)}
+                          />
+                        </Form.Group>
+                      </Row>
+                    </div>
+                  </Collapse>
+                </Form>
+              </Card.Body>
+            </Card>
+          </div>
+        </Container>
       </div>
-    // </LoggedIn>
+    </LoggedIn>
   );
 }
-
-// export default dynamic(() => Promise.resolve(DisplayItem), { ssr: false });
