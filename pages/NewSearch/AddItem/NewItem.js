@@ -494,11 +494,6 @@ export default function NewItem() {
     }
   }
 
-  const generateCustomID = () => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    return `AIS${randomNum}`;
-  };
-
   // -------------------- Info Modal Handlers (unchanged)
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [itemName, setItemName] = useState("");
@@ -555,30 +550,41 @@ export default function NewItem() {
     setShowCameraModal(true);
   };
 
+  const generateCustomID = () => {
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    return `AIS${randomNum}`;
+  };
+  
   const handlePrint = async () => {
     if (!items.name) {
       alert("Missing name");
       return;
     }
+    
+    // In addItem mode, there is no existing id so generate one
+    const printId = generateCustomID();
+  
     const payload = {
       name: items.name,
       pn: items.pn,
       sn: items.sn,
       wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
       status: items.status,
-      local_sn: id,
+      local_sn: printId, // Use the generated custom ID
       descriptions: descriptions,
+      date: items.date || new Date().toISOString().split("T")[0],
       DOM: DOM,
       oem: oem,
       modality: modality,
-      model: model
+      model: model,
     };
-
+  
+    console.log("Payload for printing:", payload);
     try {
-      const response = await fetch("https://your-endpoint-here/print-label", {
+      const response = await fetch("https://cc7e-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const result = await response.json();
       console.log("Print result:", result);
@@ -586,6 +592,7 @@ export default function NewItem() {
       console.error("Error printing label:", error);
     }
   };
+  
 
   const handleAddNewPn = () => {
     if (newPn.trim() !== "") {
@@ -673,9 +680,17 @@ export default function NewItem() {
     handleCloseMachineModal();
   };
 
+  const [currentPnIndex, setCurrentPnIndex] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [currentSnIndex, setCurrentSnIndex] = useState(0);
+  const [showSnDropdown, setShowSnDropdown] = useState(false);
 
-
-
+  const handleAddNewClient = () => {
+    // Generate a random client number as part of the URL.
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    // When pushing, include a query parameter (from=item) and the current item id if available.
+    router.push(`/NewSearch/client/AIS${randomNum}/addClient?from=addItem`);
+  };
 
   return (
     <LoggedIn>
@@ -805,12 +820,17 @@ export default function NewItem() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <ClientTable
-            clients={clients.filter((client) => client.name.toLowerCase().includes(search.toLowerCase()))}
+            clients={clients.filter((client) =>
+              client.name.toLowerCase().includes(search.toLowerCase())
+            )}
             onSelectClient={handleClientInfo}
+            onInfoClick={handleClientInfo}
             clearSelection={() => handleClientInfo(null)}
+            onAddClient={handleAddNewClient} // new prop
           />
         </Modal.Body>
       </Modal>
+
       <ParentModal show={showParentModal} handleClose={handleCloseParentModal} setSelectedParent={setSelectedParent} />
       <MachineSelectionModal show={machineSelectionModal} handleClose={() => setMachineSelectionModal(false)} setMachine={setTheMachine} />
       {/* Camera Modal */}
@@ -930,148 +950,144 @@ export default function NewItem() {
                   <Col>
                     <Form.Group controlId="pn">
                       <Form.Label>Product Number</Form.Label>
-                      {editingPn ? (
-                        // Show a text input so the user can type the first PN.
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter product number"
-                          value={newPn}
-                          onChange={(e) => setNewPn(e.target.value)}
-                          onBlur={() => {
-                            if (newPn.trim() !== "") {
-                              // Update items with the new PN at index 0.
-                              setItems((prev) => {
-                                const newArray = [...prev.pn];
-                                newArray[0] = newPn.trim();
-                                return { ...prev, pn: newArray };
-                              });
-                            }
-                            setEditingPn(false);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (newPn.trim() !== "") {
-                                setItems((prev) => {
-                                  const newArray = [...prev.pn];
-                                  newArray[0] = newPn.trim();
-                                  return { ...prev, pn: newArray };
-                                });
-                              }
-                              setEditingPn(false);
-                            }
-                          }}
-                        />
-                      ) : (
-                        // Once a value exists or editing is done, show the dropdown.
+                      <div style={{ position: "relative" }}>
                         <InputGroup>
-                          <Form.Select
-                            value={items.pn[0]}
-                            onChange={(e) => handlePnSelect(e)}
+                          {/* Editable input field displaying the current PN */}
+                          <Form.Control
+                            type="text"
+                            value={items.pn[currentPnIndex] || ""}
+                            onChange={(e) => handlePnChange(currentPnIndex, e.target.value)}
+                          />
+                          {/* Arrow button to toggle dropdown */}
+                          <Button
+                            variant="outline-secondary"
+                            onClick={() => setShowDropdown(!showDropdown)}
                           >
-                            {items.pn.map((pnValue, index) => (
-                              <option key={index} value={pnValue}>
-                                {pnValue}
-                              </option>
-                            ))}
-                          </Form.Select>
+                            &#9662;
+                          </Button>
+                          {/* Plus button to add a new PN */}
                           <InputGroup.Text>
-                            <Button
-                              variant="outline-secondary"
-                              onClick={() => {
-                                // When clicking plus, allow the user to add another PN.
-                                setAddingNewPn(true);
-                              }}
-                            >
+                            <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>
                               +
                             </Button>
                           </InputGroup.Text>
                         </InputGroup>
-                      )}
+                        {/* Dropdown list showing only the current item's PN options */}
+                        {showDropdown && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "100%",
+                              left: 0,
+                              right: 0,
+                              backgroundColor: "white",
+                              border: "1px solid #ccc",
+                              zIndex: 1000,
+                              maxHeight: "150px",
+                              overflowY: "auto",
+                            }}
+                          >
+                            {items.pn.map((pnOption, idx) => (
+                              <div
+                                key={idx}
+                                style={{ padding: "8px", cursor: "pointer" }}
+                                onClick={() => {
+                                  setCurrentPnIndex(idx);
+                                  setShowDropdown(false);
+                                }}
+                              >
+                                {pnOption}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Input for adding a new PN, if triggered */}
                       {addingNewPn && (
                         <Form.Control
                           type="text"
                           placeholder="Enter new PN"
-                          value={newPn} // you can use a separate state if you wish; here using the same is acceptable if you reset after adding.
+                          value={newPn}
                           onChange={(e) => setNewPn(e.target.value)}
-                          onBlur={() => {
-                            handleAddNewPn();
-                          }}
+                          onBlur={handleAddNewPn}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
-                              e.preventDefault();
                               handleAddNewPn();
                             }
                           }}
                         />
                       )}
                     </Form.Group>
+
                   </Col>
                 </Row>
-
-
-                { }
+                {/* Row for SN */}
                 <Row className="mb-3">
                   <Col>
                     <Form.Group controlId="sn">
                       <Form.Label>Serial Number</Form.Label>
-                      {editingSn ? (
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter serial number"
-                          value={newSn}
-                          onChange={(e) => setNewSn(e.target.value)}
-                          onBlur={() => {
-                            if (newSn.trim() !== "") {
-                              setItems((prev) => {
-                                const newArray = [...prev.sn];
-                                newArray[0] = newSn.trim();
-                                return { ...prev, sn: newArray };
-                              });
-                            }
-                            setEditingSn(false);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (newSn.trim() !== "") {
-                                setItems((prev) => {
-                                  const newArray = [...prev.sn];
-                                  newArray[0] = newSn.trim();
-                                  return { ...prev, sn: newArray };
-                                });
-                              }
-                              setEditingSn(false);
-                            }
-                          }}
-                        />
-                      ) : (
+                      <div style={{ position: "relative" }}>
                         <InputGroup>
-                          <Form.Select
-                            value={items.sn[0]}
-                            onChange={(e) => handleSnSelect(e)}
+                          {/* Inline editable input showing the currently selected SN */}
+                          <Form.Control
+                            type="text"
+                            value={items.sn[currentSnIndex] || ""}
+                            onChange={(e) => handleSnChange(currentSnIndex, e.target.value)}
+                          />
+                          {/* Arrow button to toggle SN dropdown */}
+                          <Button
+                            variant="outline-secondary"
+                            onClick={() => setShowSnDropdown(!showSnDropdown)}
                           >
-                            {items.sn.map((snValue, index) => (
-                              <option key={index} value={snValue}>
-                                {snValue}
-                              </option>
-                            ))}
-                          </Form.Select>
+                            &#9662;
+                          </Button>
+                          {/* Plus button to add a new SN */}
                           <InputGroup.Text>
-                            <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>+</Button>
+                            <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>
+                              +
+                            </Button>
                           </InputGroup.Text>
                         </InputGroup>
-                      )}
+                        {/* Dropdown list for SN options */}
+                        {showSnDropdown && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "100%",
+                              left: 0,
+                              right: 0,
+                              backgroundColor: "white",
+                              border: "1px solid #ccc",
+                              zIndex: 1000,
+                              maxHeight: "150px",
+                              overflowY: "auto",
+                            }}
+                          >
+                            {items.sn.map((snOption, idx) => (
+                              <div
+                                key={idx}
+                                style={{ padding: "8px", cursor: "pointer" }}
+                                onClick={() => {
+                                  setCurrentSnIndex(idx);
+                                  setShowSnDropdown(false);
+                                }}
+                              >
+                                {snOption}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Input for adding a completely new SN */}
                       {addingNewSn && (
                         <Form.Control
                           type="text"
                           placeholder="Enter new SN"
                           value={newSn}
                           onChange={(e) => setNewSn(e.target.value)}
-                          onBlur={() => handleAddNewSn()}
+                          onBlur={handleAddNewSn}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
-                              e.preventDefault();
                               handleAddNewSn();
                             }
                           }}

@@ -18,7 +18,7 @@ export default function useFirebaseAuth() {
     }
 
     setLoading(true);
-    var formattedUser = formatAuthUser(authState);
+    const formattedUser = formatAuthUser(authState);
     setAuthUser(formattedUser);
     setLoading(false);
   };
@@ -58,12 +58,15 @@ export default function useFirebaseAuth() {
   // }, []);
   useEffect(() => {
     auth.setPersistence(Firebase.auth.Auth.Persistence.LOCAL)
-      .catch((error) => {
-        console.error("Error setting persistence:", error);
-      });
-    const unsubscribe = auth.onAuthStateChanged(authStateChanged);
-    return () => unsubscribe();
+      .then(() => {
+        // Now set up the listener
+        const unsubscribe = auth.onAuthStateChanged(authStateChanged);
+        return () => unsubscribe();
+      })
+      .catch(error => console.error("Error setting persistence:", error));
   }, []);
+
+
 
   return {
     authUser,
