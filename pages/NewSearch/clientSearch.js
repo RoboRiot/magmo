@@ -125,7 +125,7 @@ const ClientPage = () => {
               </Row>
               <ClientTable
                 clients={clients.filter((client) =>
-                  client.name
+                  (client.name || "")
                     .toLowerCase()
                     .includes(clientSearchTerm.toLowerCase())
                 )}

@@ -26,6 +26,8 @@ import ParentModal from "./ParentModal";
 import MachineSelectionModal from "../item/[id]/MachineSelectionModal";
 import InfoModal from "../InfoModal";
 
+
+
 // Load BarcodeScannerComponent only on the client-side.
 const BarcodeScannerComponent = dynamic(
   () => import("react-qr-barcode-scanner"),
@@ -63,13 +65,15 @@ export default function NewItem() {
   const [items, setItems] = useState({
     name: "",
     pn: [""],
-    sn: [""],
+    sn: [""],          // This will be overridden on submit.
+    localSN: "",       // NEW FIELD: holds user input for a local serial number.
     price: "",
     status: "",
     length: "",
     width: "",
     height: ""
   });
+  
 
   const [editingPn, setEditingPn] = useState(true);
   // const [newPn, setNewPn] = useState(""); // for the input value when editing
@@ -133,6 +137,10 @@ export default function NewItem() {
   // For browsing photos.
   const browseInputRef = useRef(null);
 
+  if (!router.isReady) {
+    return null; // or a loading indicator
+  }
+
   // -------------------- Since this is "add" mode, we do not fetch an existing document.
   // However, we still fetch global PN and SN options and clients for selection.
   useEffect(() => {
@@ -181,7 +189,14 @@ export default function NewItem() {
   }, [TheMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
 
 
+  const [signal, setSignal] = useState(null);
 
+  useEffect(() => {
+    if (router.isReady) {
+      setSignal(router.query.signal || null);
+    }
+  }, [router.isReady, router.query.signal]);
+  
 
   // -------------------- Handlers for PN and SN dropdowns
 
@@ -451,26 +466,24 @@ export default function NewItem() {
 
   async function toSend() {
     const db = firebase.firestore();
+
+    // Merge item data with descriptions and work orders.
     const formattedItems = { ...items, descriptions, workOrders };
 
-    // Automatically set "date" to the current date (as ISO string) for this new item.
+    // Set current date and other fields.
     formattedItems.date = new Date().toISOString().split("T")[0];
-
-    // Rename the user-entered date input to DOM.
     formattedItems.DOM = DOM;
     formattedItems.localLocFrom = localLocFrom;
     formattedItems.localLocCurrent = localLocCurrent;
 
-    // Include TheMachine if available.
+    // Include machine data as before.
     const machineData = {
-      ...(TheMachine || {}), // include any existing properties from TheMachine
-      oem: oem,             // override with the current OEM field
-      modality: modality,   // override with the current Modality field
-      model: model,         // override with the current Model field
+      ...(TheMachine || {}),
+      oem: oem,
+      modality: modality,
+      model: model,
     };
-
     formattedItems.TheMachine = machineData;
-
     if (selectedMachine && selectedMachine.id) {
       formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
     }
@@ -481,12 +494,29 @@ export default function NewItem() {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
 
+    // --- LOCAL SN LOGIC ---
+    // Determine the localSN value to use for the document id and field.
+    let chosenLocalSN;
+    if (router.query.signal) {
+      console.log("Using URL signal as localSN:", router.query.signal);
+      chosenLocalSN = router.query.signal;
+    } else if (items.localSN && items.localSN.trim() !== "") {
+      console.log("Using user provided localSN:", items.localSN);
+      chosenLocalSN = items.localSN;
+    } else {
+      chosenLocalSN = generateCustomID();
+      console.log("No URL or user localSN provided; using generated localSN:", chosenLocalSN);
+    }
+    // Save the chosen value in a field called localSN.
+    formattedItems.localSN = chosenLocalSN;
+    // Do not modify formattedItems.sn – that remains from the SN field.
+    // ----------------------------
+
     try {
-      const customID = generateCustomID();
-      await db.collection("Test").doc(customID).set(formattedItems);
-      // Update associated parts in Machine documents if needed…
-      await uploadPhotos(customID);
-      console.log("Item saved and associatedParts updated!");
+      // Use chosenLocalSN as the document id.
+      await db.collection("Test").doc(chosenLocalSN).set(formattedItems);
+      await uploadPhotos(chosenLocalSN);
+      console.log("Item saved with localSN (doc id):", chosenLocalSN);
       handleShowSaveModal();
       router.push("../mainSearch");
     } catch (error) {
@@ -1370,9 +1400,20 @@ export default function NewItem() {
                         <Form.Label>DOM (Date of Manufacture)</Form.Label>
                         <Form.Control placeholder="Enter DOM" type="date" value={DOM} onChange={(e) => setDOM(e.target.value)} />
                       </Form.Group>
+                      {/* NEW: Local SN input */}
+                      <Form.Group as={Col} controlId="localSN">
+                        <Form.Label>Local SN</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter Local SN"
+                          value={items.localSN || ""}
+                          onChange={handleChange("localSN")}
+                        />
+                      </Form.Group>
                     </Row>
                   </div>
                 </Collapse>
+
               </Form>
             </Card.Body>
           </Card>
