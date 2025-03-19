@@ -70,7 +70,6 @@ export default function DisplayItem() {
   const { id } = router.query;
   const [items, setItems] = useState({
     name: "",
-    // Store PN and SN as arrays; default to empty arrays.
     pn: [],
     sn: [],
     price: "",
@@ -78,9 +77,10 @@ export default function DisplayItem() {
     length: "",
     width: "",
     height: "",
-    poNumber: "", 
+    poNumber: "",
     trackingNumber: "",
-  });
+    localSN: "", // NEW: localSN field added here
+  });  
 
   // These arrays will be populated from Firebase.
   const [pnOptions, setPnOptions] = useState([]);
@@ -479,7 +479,7 @@ export default function DisplayItem() {
     formattedItems.localLocCurrent = localLocCurrent || "";
     // Include PO Number explicitly.
     formattedItems.poNumber = items.poNumber || "";
-    formattedItems.trackingNumber = items.trackingNumber || ""; 
+    formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = machineData || {};
     formattedItems.addedToWebsite = addToWebsite;
 
@@ -488,7 +488,9 @@ export default function DisplayItem() {
     }
 
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      formattedItems.CurrentMachine = db.collection("Machine").doc(selectedCurrentMachine.id);
+      formattedItems.CurrentMachine = db
+        .collection("Machine")
+        .doc(selectedCurrentMachine.id);
     }
 
     if (selectedParent && selectedParent.id) {
@@ -498,33 +500,80 @@ export default function DisplayItem() {
     let docId = id;
     try {
       if (docId) {
-        await db.collection("Test").doc(docId).update(formattedItems);
+        // Check if a localSN is provided and if it differs from the current docId.
+        const newDocId =
+          items.localSN && items.localSN.trim() !== ""
+            ? items.localSN.trim()
+            : docId;
+        if (docId !== newDocId) {
+          // Migrate: Create a new document with the newDocId.
+          await db.collection("Test").doc(newDocId).set(formattedItems);
 
-        if (selectedMachine && selectedMachine.id) {
-          const machineRef = db.collection("Machine").doc(selectedMachine.id);
-          const machineDoc = await machineRef.get();
-          if (machineDoc.exists) {
-            await machineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
+          if (selectedMachine && selectedMachine.id) {
+            const machineRef = db.collection("Machine").doc(selectedMachine.id);
+            const machineDoc = await machineRef.get();
+            if (machineDoc.exists) {
+              await machineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(newDocId)
+                ),
+              });
+            }
           }
-        }
 
-        if (selectedCurrentMachine && selectedCurrentMachine.id) {
-          const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
-          const currentMachineDoc = await currentMachineRef.get();
-          if (currentMachineDoc.exists) {
-            await currentMachineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
+          if (selectedCurrentMachine && selectedCurrentMachine.id) {
+            const currentMachineRef = db
+              .collection("Machine")
+              .doc(selectedCurrentMachine.id);
+            const currentMachineDoc = await currentMachineRef.get();
+            if (currentMachineDoc.exists) {
+              await currentMachineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(newDocId)
+                ),
+              });
+            }
+          }
+          // Delete the old document.
+          await db.collection("Test").doc(docId).delete();
+          // Set docId to the new document ID.
+          docId = newDocId;
+        } else {
+          // If the localSN hasn't changed, simply update the existing document.
+          await db.collection("Test").doc(docId).update(formattedItems);
+
+          if (selectedMachine && selectedMachine.id) {
+            const machineRef = db.collection("Machine").doc(selectedMachine.id);
+            const machineDoc = await machineRef.get();
+            if (machineDoc.exists) {
+              await machineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(docId)
+                ),
+              });
+            }
+          }
+
+          if (selectedCurrentMachine && selectedCurrentMachine.id) {
+            const currentMachineRef = db
+              .collection("Machine")
+              .doc(selectedCurrentMachine.id);
+            const currentMachineDoc = await currentMachineRef.get();
+            if (currentMachineDoc.exists) {
+              await currentMachineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(docId)
+                ),
+              });
+            }
           }
         }
       } else {
-        docId = generateCustomID();
+        // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
+        docId =
+          items.localSN && items.localSN.trim() !== ""
+            ? items.localSN.trim()
+            : generateCustomID();
         await db.collection("Test").doc(docId).set(formattedItems);
 
         if (selectedMachine && selectedMachine.id) {
@@ -540,7 +589,9 @@ export default function DisplayItem() {
         }
 
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
-          const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+          const currentMachineRef = db
+            .collection("Machine")
+            .doc(selectedCurrentMachine.id);
           const currentMachineDoc = await currentMachineRef.get();
           if (currentMachineDoc.exists) {
             await currentMachineRef.update({
@@ -554,11 +605,17 @@ export default function DisplayItem() {
       // Upload any new photos to Firebase Storage.
       await uploadPhotos(docId);
       console.log("Item saved and associatedParts updated!");
+
+      // Redirect to the new URL using the new document id.
+      router.push(`/NewSearch/item/${docId}`);
+
+      // Optionally, you can also show a save confirmation modal:
       handleShowSaveModal();
     } catch (error) {
       console.error("Error saving data:", error);
     }
   }
+  
 
   // Additional state for local warehouse location inputs.
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
@@ -950,7 +1007,12 @@ export default function DisplayItem() {
                 >
                   <div className="d-flex justify-content-between">
                     <span>{desc.description || "Description"}</span>
-                    <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
+                    <span
+                      style={{
+                        borderLeft: "1px solid #ccc",
+                        paddingLeft: "10px",
+                      }}
+                    >
                       {desc.date || "Date"}
                     </span>
                   </div>
@@ -1000,7 +1062,10 @@ export default function DisplayItem() {
                   />
                 </Col>
                 <Col>
-                  <Button variant="danger" onClick={() => removeWorkOrder(index)}>
+                  <Button
+                    variant="danger"
+                    onClick={() => removeWorkOrder(index)}
+                  >
                     Remove
                   </Button>
                 </Col>
@@ -1035,9 +1100,7 @@ export default function DisplayItem() {
             <ClientTable
               clients={clients.filter((client) =>
                 (client.name || "").toLowerCase().includes(search.toLowerCase())
-              )
-
-              }
+              )}
               onSelectClient={handleClientInfo}
               onInfoClick={handleClientInfo}
               clearSelection={() => handleClientInfo(null)}
@@ -1115,7 +1178,10 @@ export default function DisplayItem() {
               </>
             ) : (
               <>
-                <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setCapturedPhoto(null)}
+                >
                   Retake
                 </Button>
                 <Button variant="primary" onClick={savePhoto}>
@@ -1151,7 +1217,11 @@ export default function DisplayItem() {
                     <Col>
                       <Form.Group controlId="name">
                         <Form.Label>Name</Form.Label>
-                        <Form.Control type="text" value={items.name} onChange={handleChange("name")} />
+                        <Form.Control
+                          type="text"
+                          value={items.name}
+                          onChange={handleChange("name")}
+                        />
                       </Form.Group>
                     </Col>
                     <Col>
@@ -1162,13 +1232,21 @@ export default function DisplayItem() {
                             <Form.Control
                               type="text"
                               value={items.pn[currentPnIndex] || ""}
-                              onChange={(e) => handlePnChange(currentPnIndex, e.target.value)}
+                              onChange={(e) =>
+                                handlePnChange(currentPnIndex, e.target.value)
+                              }
                             />
-                            <Button variant="outline-secondary" onClick={() => setShowDropdown(!showDropdown)}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowDropdown(!showDropdown)}
+                            >
                               &#9662;
                             </Button>
                             <InputGroup.Text>
-                              <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>
+                              <Button
+                                variant="outline-secondary"
+                                onClick={() => setAddingNewPn(true)}
+                              >
                                 +
                               </Button>
                             </InputGroup.Text>
@@ -1209,7 +1287,9 @@ export default function DisplayItem() {
                             value={newPn}
                             onChange={(e) => setNewPn(e.target.value)}
                             onBlur={handleAddNewPn}
-                            onKeyDown={(e) => e.key === "Enter" && handleAddNewPn()}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleAddNewPn()
+                            }
                           />
                         )}
                       </Form.Group>
@@ -1225,13 +1305,21 @@ export default function DisplayItem() {
                             <Form.Control
                               type="text"
                               value={items.sn[currentSnIndex] || ""}
-                              onChange={(e) => handleSnChange(currentSnIndex, e.target.value)}
+                              onChange={(e) =>
+                                handleSnChange(currentSnIndex, e.target.value)
+                              }
                             />
-                            <Button variant="outline-secondary" onClick={() => setShowSnDropdown(!showSnDropdown)}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowSnDropdown(!showSnDropdown)}
+                            >
                               &#9662;
                             </Button>
                             <InputGroup.Text>
-                              <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>
+                              <Button
+                                variant="outline-secondary"
+                                onClick={() => setAddingNewSn(true)}
+                              >
                                 +
                               </Button>
                             </InputGroup.Text>
@@ -1272,7 +1360,9 @@ export default function DisplayItem() {
                             value={newSn}
                             onChange={(e) => setNewSn(e.target.value)}
                             onBlur={handleAddNewSn}
-                            onKeyDown={(e) => e.key === "Enter" && handleAddNewSn()}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleAddNewSn()
+                            }
                           />
                         )}
                       </Form.Group>
@@ -1280,7 +1370,10 @@ export default function DisplayItem() {
                     <Col>
                       <Form.Group controlId="status">
                         <Form.Label>Status</Form.Label>
-                        <Form.Select value={items.status || ""} onChange={handleChange("status")}>
+                        <Form.Select
+                          value={items.status || ""}
+                          onChange={handleChange("status")}
+                        >
                           <option value="">Select status</option>
                           <option value="Good">Good</option>
                           <option value="Bad">Bad</option>
@@ -1293,21 +1386,40 @@ export default function DisplayItem() {
                   <Row className="mb-3">
                     <Col>
                       <Form.Label>OEM</Form.Label>
-                      <Form.Control type="text" placeholder="OEM" value={oem} onChange={(e) => setOem(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="OEM"
+                        value={oem}
+                        onChange={(e) => setOem(e.target.value)}
+                      />
                     </Col>
                     <Col>
                       <Form.Label>Modality</Form.Label>
-                      <Form.Control type="text" placeholder="Modality" value={modality} onChange={(e) => setModality(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="Modality"
+                        value={modality}
+                        onChange={(e) => setModality(e.target.value)}
+                      />
                     </Col>
                     <Col>
                       <Form.Label>Model</Form.Label>
-                      <Form.Control type="text" placeholder="Model" value={model} onChange={(e) => setModel(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="Model"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                      />
                     </Col>
                   </Row>
                   {/* Work Orders and Inline Description Section */}
                   <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                     <div className="d-flex align-items-center">
-                      <Button variant="outline-secondary" onClick={handleShowWoModal} className="me-2">
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleShowWoModal}
+                        className="me-2"
+                      >
                         Manage Work Orders
                       </Button>
                       {workOrders.length > 0 && (
@@ -1345,7 +1457,11 @@ export default function DisplayItem() {
                     </div>
                     <div style={{ marginBottom: "1rem" }}>
                       <Form.Group controlId="desc">
-                        <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
+                        <Button
+                          variant="outline-secondary"
+                          onClick={listDescriptions}
+                          className="mb-2 me-2"
+                        >
                           List Descriptions
                         </Button>
                         <Form.Control
@@ -1353,14 +1469,29 @@ export default function DisplayItem() {
                           rows={3}
                           placeholder="Enter description"
                           value={descriptions[selectedDesc]?.description || ""}
-                          onChange={(e) => handleDescriptionChange(selectedDesc, "description", e.target.value)}
+                          onChange={(e) =>
+                            handleDescriptionChange(
+                              selectedDesc,
+                              "description",
+                              e.target.value
+                            )
+                          }
                           style={{ marginBottom: "0.5rem" }}
                         />
                         <Form.Control
                           type="date"
                           value={descriptions[selectedDesc]?.date || ""}
-                          onChange={(e) => handleDescriptionChange(selectedDesc, "date", e.target.value)}
-                          style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
+                          onChange={(e) =>
+                            handleDescriptionChange(
+                              selectedDesc,
+                              "date",
+                              e.target.value
+                            )
+                          }
+                          style={{
+                            marginTop: "0.5rem",
+                            marginBottom: "0.5rem",
+                          }}
                         />
                       </Form.Group>
                     </div>
@@ -1389,12 +1520,17 @@ export default function DisplayItem() {
                               style={{ marginTop: "0.5rem" }}
                             />
                             {showLocalLocFrom && (
-                              <Form.Group controlId="localLocFrom" className="mt-2">
+                              <Form.Group
+                                controlId="localLocFrom"
+                                className="mt-2"
+                              >
                                 <Form.Label>Local Loc (From)</Form.Label>
                                 <Form.Control
                                   type="text"
                                   value={localLocFrom}
-                                  onChange={(e) => setLocalLocFrom(e.target.value)}
+                                  onChange={(e) =>
+                                    setLocalLocFrom(e.target.value)
+                                  }
                                 />
                               </Form.Group>
                             )}
@@ -1422,12 +1558,17 @@ export default function DisplayItem() {
                               style={{ marginTop: "0.5rem" }}
                             />
                             {showLocalLocCurrent && (
-                              <Form.Group controlId="localLocCurrent" className="mt-2">
+                              <Form.Group
+                                controlId="localLocCurrent"
+                                className="mt-2"
+                              >
                                 <Form.Label>Local Loc (Current)</Form.Label>
                                 <Form.Control
                                   type="text"
                                   value={localLocCurrent}
-                                  onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                  onChange={(e) =>
+                                    setLocalLocCurrent(e.target.value)
+                                  }
                                 />
                               </Form.Group>
                             )}
@@ -1435,7 +1576,11 @@ export default function DisplayItem() {
                         )}
                       </Col>
                       <Col>
-                        <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
+                        <Button
+                          variant="outline-secondary"
+                          onClick={handleShowParentModal}
+                          className="me-2"
+                        >
                           Select Parent
                         </Button>
                         {selectedParent && (
@@ -1455,24 +1600,46 @@ export default function DisplayItem() {
                     <Row className="mb-3">
                       <Col xs={6}>
                         <ButtonGroup>
-                          <Button variant="outline-secondary" onClick={handleShowCameraModal}>
+                          <Button
+                            variant="outline-secondary"
+                            onClick={handleShowCameraModal}
+                          >
                             Take Photo
                           </Button>
-                          <Button variant="outline-secondary" onClick={handleBrowsePhotos}>
+                          <Button
+                            variant="outline-secondary"
+                            onClick={handleBrowsePhotos}
+                          >
                             Browse
                           </Button>
                         </ButtonGroup>
                       </Col>
                       <Col xs={6}>
-                        <Button variant="warning" onClick={handleBluefolderButton} style={{ marginLeft: "0.5rem" }}>
+                        <Button
+                          disabled={true}
+                          variant="secondary"
+                          onClick={handleBluefolderButton}
+                          style={{ marginLeft: "0.5rem" }}
+                        >
                           BlueFolder
                         </Button>
-                        <Button variant={addToWebsite ? "primary" : "outline-primary"} onClick={() => setAddToWebsite((prev) => !prev)}>
+
+                        <Button
+                          variant={addToWebsite ? "primary" : "outline-primary"}
+                          onClick={() => setAddToWebsite((prev) => !prev)}
+                        >
                           {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                         </Button>
                       </Col>
                     </Row>
-                    <input type="file" accept="image/*" multiple ref={browseInputRef} style={{ display: "none" }} onChange={handleFilesSelected} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      ref={browseInputRef}
+                      style={{ display: "none" }}
+                      onChange={handleFilesSelected}
+                    />
                   </div>
                   {/* Photo Gallery */}
                   {photos && photos.length > 0 && (
@@ -1486,13 +1653,33 @@ export default function DisplayItem() {
                       }}
                     >
                       {photos.map((photo, index) => (
-                        <div key={index} style={{ position: "relative", width: "100px", height: "100px" }}>
-                          <img src={photo.url} alt={`Photo ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <div
+                          key={index}
+                          style={{
+                            position: "relative",
+                            width: "100px",
+                            height: "100px",
+                          }}
+                        >
+                          <img
+                            src={photo.url}
+                            alt={`Photo ${index + 1}`}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
                           {photo.file && (
                             <Button
                               variant="danger"
                               size="sm"
-                              style={{ position: "absolute", top: 0, right: 0, padding: "0 5px" }}
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                padding: "0 5px",
+                              }}
                               onClick={() => removePhoto(index)}
                             >
                               x
@@ -1504,19 +1691,43 @@ export default function DisplayItem() {
                   )}
                   {/* Action Buttons */}
                   <div className="mt-3 d-flex flex-wrap align-items-center">
-                    <Button variant="primary" type="submit" style={{ marginRight: "1rem" }}>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      style={{ marginRight: "1rem" }}
+                    >
                       Save
                     </Button>
-                    <Button variant="secondary" onClick={handleShowInfoModal} style={{ marginRight: "1rem" }}>
+                    <Button
+                      variant="secondary"
+                      onClick={handleShowInfoModal}
+                      style={{ marginRight: "1rem" }}
+                    >
                       More Info
                     </Button>
-                    <LoadingButton type="primary" name="Back" route="NewSearch/mainSearch" />
-                    <Button variant="info" onClick={handlePrint} style={{ marginLeft: "auto" }}>
+                    <LoadingButton
+                      type="primary"
+                      name="Back"
+                      route="NewSearch/mainSearch"
+                    />
+                    <Button
+                      variant="info"
+                      onClick={handlePrint}
+                      style={{ marginLeft: "auto" }}
+                    >
                       Print Label
                     </Button>
                   </div>
                   <div style={{ textAlign: "center", margin: "1rem 0" }}>
-                    <Button variant="link" style={{ textDecoration: "none", color: "black", fontSize: "24px" }} onClick={() => setShowExtra(!showExtra)}>
+                    <Button
+                      variant="link"
+                      style={{
+                        textDecoration: "none",
+                        color: "black",
+                        fontSize: "24px",
+                      }}
+                      onClick={() => setShowExtra(!showExtra)}
+                    >
                       ▼
                     </Button>
                   </div>
@@ -1525,12 +1736,29 @@ export default function DisplayItem() {
                       <Row>
                         <Form.Group as={Col} controlId="dimensions">
                           <Form.Label>Dimensions</Form.Label>
-                          <div style={{ display: "flex", alignItems: "center" }}>
-                            <Form.Control placeholder="Length" type="text" value={items.length} onChange={handleChange("length")} />
+                          <div
+                            style={{ display: "flex", alignItems: "center" }}
+                          >
+                            <Form.Control
+                              placeholder="Length"
+                              type="text"
+                              value={items.length}
+                              onChange={handleChange("length")}
+                            />
                             <span style={{ padding: "0 5px" }}>x</span>
-                            <Form.Control placeholder="Width" type="text" value={items.width} onChange={handleChange("width")} />
+                            <Form.Control
+                              placeholder="Width"
+                              type="text"
+                              value={items.width}
+                              onChange={handleChange("width")}
+                            />
                             <span style={{ padding: "0 5px" }}>x</span>
-                            <Form.Control placeholder="Height" type="text" value={items.height} onChange={handleChange("height")} />
+                            <Form.Control
+                              placeholder="Height"
+                              type="text"
+                              value={items.height}
+                              onChange={handleChange("height")}
+                            />
                           </div>
                         </Form.Group>
                         <Form.Group as={Col} controlId="trackingNumber">
@@ -1573,6 +1801,17 @@ export default function DisplayItem() {
                           />
                         </Form.Group>
                       </Row>
+                      <Row className="mt-3">
+                        <Form.Group as={Col} controlId="localSN">
+                          <Form.Label>Local SN</Form.Label>
+                          <Form.Control
+                            type="text"
+                            placeholder="Enter Local SN"
+                            value={items.localSN || ""}
+                            onChange={handleChange("localSN")}
+                          />
+                        </Form.Group>
+                      </Row>
                     </div>
                   </Collapse>
                 </Form>
@@ -1589,10 +1828,19 @@ export default function DisplayItem() {
         <Modal.Body>
           <div className="camera">
             {!capturedPhoto ? (
-              <BarcodeScannerComponent width="100%" height={300} onUpdate={handleCapture} facingMode={cameraFacing} />
+              <BarcodeScannerComponent
+                width="100%"
+                height={300}
+                onUpdate={handleCapture}
+                facingMode={cameraFacing}
+              />
             ) : (
               <div className="photo-preview">
-                <img src={URL.createObjectURL(capturedPhoto)} alt="captured" style={{ width: "100%" }} />
+                <img
+                  src={URL.createObjectURL(capturedPhoto)}
+                  alt="captured"
+                  style={{ width: "100%" }}
+                />
               </div>
             )}
           </div>
@@ -1614,7 +1862,13 @@ export default function DisplayItem() {
               >
                 📷
               </Button>
-              <Button onClick={() => setCameraFacing((prev) => (prev === "environment" ? "user" : "environment"))}>
+              <Button
+                onClick={() =>
+                  setCameraFacing((prev) =>
+                    prev === "environment" ? "user" : "environment"
+                  )
+                }
+              >
                 Flip Camera
               </Button>
               <Button variant="secondary" onClick={handleCloseCameraModal}>
@@ -1623,7 +1877,10 @@ export default function DisplayItem() {
             </>
           ) : (
             <>
-              <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
+              <Button
+                variant="secondary"
+                onClick={() => setCapturedPhoto(null)}
+              >
                 Retake
               </Button>
               <Button variant="primary" onClick={savePhoto}>
