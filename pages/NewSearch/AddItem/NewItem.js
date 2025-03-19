@@ -11,7 +11,8 @@ import {
   FormControl,
   Collapse,
   InputGroup,
-  ButtonGroup
+  ButtonGroup,
+  Spinner,
 } from "react-bootstrap";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -69,6 +70,7 @@ export default function NewItem() {
     localSN: "",       // NEW FIELD: holds user input for a local serial number.
     price: "",
     status: "",
+    poNumber: "",
     length: "",
     width: "",
     height: ""
@@ -136,6 +138,10 @@ export default function NewItem() {
 
   // For browsing photos.
   const browseInputRef = useRef(null);
+
+// Inside your NewItem component:
+  const [loading, setLoading] = useState(false);
+
 
   if (!router.isReady) {
     return null; // or a loading indicator
@@ -460,9 +466,17 @@ export default function NewItem() {
     if (!items.name || !descriptions[0]?.description) {
       handleShow();
     } else {
-      toSend();
+      setLoading(true); // start loading before async work
+      try {
+        await toSend();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false); // end loading after async work completes
+      }
     }
   }
+  
 
   async function toSend() {
     const db = firebase.firestore();
@@ -777,7 +791,12 @@ export default function NewItem() {
               >
                 <div className="d-flex justify-content-between">
                   <span>{desc.description || "Description"}</span>
-                  <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
+                  <span
+                    style={{
+                      borderLeft: "1px solid #ccc",
+                      paddingLeft: "10px",
+                    }}
+                  >
                     {desc.date || "Date"}
                   </span>
                 </div>
@@ -794,7 +813,12 @@ export default function NewItem() {
           <Modal.Title>Work Orders</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Button variant="primary" className="mb-3" onClick={addWorkOrder} style={{ marginBottom: "1rem" }}>
+          <Button
+            variant="primary"
+            className="mb-3"
+            onClick={addWorkOrder}
+            style={{ marginBottom: "1rem" }}
+          >
             Add Work Order
           </Button>
           {workOrders.map((wo, index) => (
@@ -804,7 +828,9 @@ export default function NewItem() {
                   type="text"
                   placeholder="Work Order"
                   value={wo.workOrder}
-                  onChange={(e) => handleWorkOrderChange(index, "workOrder", e.target.value)}
+                  onChange={(e) =>
+                    handleWorkOrderChange(index, "workOrder", e.target.value)
+                  }
                   style={{ marginBottom: "0.5rem" }}
                 />
               </Col>
@@ -813,7 +839,9 @@ export default function NewItem() {
                   type="date"
                   placeholder="Date"
                   value={wo.date}
-                  onChange={(e) => handleWorkOrderChange(index, "date", e.target.value)}
+                  onChange={(e) =>
+                    handleWorkOrderChange(index, "date", e.target.value)
+                  }
                 />
               </Col>
               <Col>
@@ -861,8 +889,16 @@ export default function NewItem() {
         </Modal.Body>
       </Modal>
 
-      <ParentModal show={showParentModal} handleClose={handleCloseParentModal} setSelectedParent={setSelectedParent} />
-      <MachineSelectionModal show={machineSelectionModal} handleClose={() => setMachineSelectionModal(false)} setMachine={setTheMachine} />
+      <ParentModal
+        show={showParentModal}
+        handleClose={handleCloseParentModal}
+        setSelectedParent={setSelectedParent}
+      />
+      <MachineSelectionModal
+        show={machineSelectionModal}
+        handleClose={() => setMachineSelectionModal(false)}
+        setMachine={setTheMachine}
+      />
       {/* Camera Modal */}
       <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
         <Modal.Header closeButton>
@@ -871,10 +907,19 @@ export default function NewItem() {
         <Modal.Body>
           <div className="camera">
             {!capturedPhoto ? (
-              <BarcodeScannerComponent width="100%" height={300} onUpdate={handleCapture} facingMode={cameraFacing} />
+              <BarcodeScannerComponent
+                width="100%"
+                height={300}
+                onUpdate={handleCapture}
+                facingMode={cameraFacing}
+              />
             ) : (
               <div className="photo-preview">
-                <img src={URL.createObjectURL(capturedPhoto)} alt="captured" style={{ width: "100%" }} />
+                <img
+                  src={URL.createObjectURL(capturedPhoto)}
+                  alt="captured"
+                  style={{ width: "100%" }}
+                />
               </div>
             )}
           </div>
@@ -891,12 +936,18 @@ export default function NewItem() {
                   position: "absolute",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  bottom: "10px"
+                  bottom: "10px",
                 }}
               >
                 📷
               </Button>
-              <Button onClick={() => setCameraFacing((prev) => (prev === "environment" ? "user" : "environment"))}>
+              <Button
+                onClick={() =>
+                  setCameraFacing((prev) =>
+                    prev === "environment" ? "user" : "environment"
+                  )
+                }
+              >
                 Flip Camera
               </Button>
               <Button variant="secondary" onClick={handleCloseCameraModal}>
@@ -905,7 +956,10 @@ export default function NewItem() {
             </>
           ) : (
             <>
-              <Button variant="secondary" onClick={() => setCapturedPhoto(null)}>
+              <Button
+                variant="secondary"
+                onClick={() => setCapturedPhoto(null)}
+              >
                 Retake
               </Button>
               <Button variant="primary" onClick={savePhoto}>
@@ -934,7 +988,12 @@ export default function NewItem() {
               >
                 <div className="d-flex justify-content-between">
                   <span>{desc.description || "Description"}</span>
-                  <span style={{ borderLeft: "1px solid #ccc", paddingLeft: "10px" }}>
+                  <span
+                    style={{
+                      borderLeft: "1px solid #ccc",
+                      paddingLeft: "10px",
+                    }}
+                  >
                     {desc.date || "Date"}
                   </span>
                 </div>
@@ -958,8 +1017,32 @@ export default function NewItem() {
         freqM={machineFrequency}
         usage={usagePastYear}
       />
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(5px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999, // Make sure it's above everything else
+          }}
+        >
+          <Spinner animation="border" variant="primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      )}
       {/* Main Form */}
-      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+      <Container
+        className="d-flex align-items-center justify-content-center"
+        style={{ minHeight: "100vh" }}
+      >
         <div className="w-100" style={{ maxWidth: "600px" }}>
           <Card className="align-items-center justify-content-center">
             <Card.Body>
@@ -986,7 +1069,9 @@ export default function NewItem() {
                           <Form.Control
                             type="text"
                             value={items.pn[currentPnIndex] || ""}
-                            onChange={(e) => handlePnChange(currentPnIndex, e.target.value)}
+                            onChange={(e) =>
+                              handlePnChange(currentPnIndex, e.target.value)
+                            }
                           />
                           {/* Arrow button to toggle dropdown */}
                           <Button
@@ -997,7 +1082,10 @@ export default function NewItem() {
                           </Button>
                           {/* Plus button to add a new PN */}
                           <InputGroup.Text>
-                            <Button variant="outline-secondary" onClick={() => setAddingNewPn(true)}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setAddingNewPn(true)}
+                            >
                               +
                             </Button>
                           </InputGroup.Text>
@@ -1048,7 +1136,6 @@ export default function NewItem() {
                         />
                       )}
                     </Form.Group>
-
                   </Col>
                 </Row>
                 {/* Row for SN */}
@@ -1062,7 +1149,9 @@ export default function NewItem() {
                           <Form.Control
                             type="text"
                             value={items.sn[currentSnIndex] || ""}
-                            onChange={(e) => handleSnChange(currentSnIndex, e.target.value)}
+                            onChange={(e) =>
+                              handleSnChange(currentSnIndex, e.target.value)
+                            }
                           />
                           {/* Arrow button to toggle SN dropdown */}
                           <Button
@@ -1073,7 +1162,10 @@ export default function NewItem() {
                           </Button>
                           {/* Plus button to add a new SN */}
                           <InputGroup.Text>
-                            <Button variant="outline-secondary" onClick={() => setAddingNewSn(true)}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setAddingNewSn(true)}
+                            >
                               +
                             </Button>
                           </InputGroup.Text>
@@ -1141,32 +1233,50 @@ export default function NewItem() {
                   </Col>
                 </Row>
 
-
                 {/* Row for OEM, Modality, Model */}
                 <Row className="mb-3">
                   <Col>
                     <Form.Group controlId="oem">
                       <Form.Label>OEM</Form.Label>
-                      <Form.Control type="text" placeholder="OEM" value={oem} onChange={(e) => setOem(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="OEM"
+                        value={oem}
+                        onChange={(e) => setOem(e.target.value)}
+                      />
                     </Form.Group>
                   </Col>
                   <Col>
                     <Form.Group controlId="modality">
                       <Form.Label>Modality</Form.Label>
-                      <Form.Control type="text" placeholder="Modality" value={modality} onChange={(e) => setModality(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="Modality"
+                        value={modality}
+                        onChange={(e) => setModality(e.target.value)}
+                      />
                     </Form.Group>
                   </Col>
                   <Col>
                     <Form.Group controlId="model">
                       <Form.Label>Model</Form.Label>
-                      <Form.Control type="text" placeholder="Model" value={model} onChange={(e) => setModel(e.target.value)} />
+                      <Form.Control
+                        type="text"
+                        placeholder="Model"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                      />
                     </Form.Group>
                   </Col>
                 </Row>
                 {/* Work Orders and Descriptions Section */}
                 <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
                   <div className="d-flex align-items-center">
-                    <Button variant="outline-secondary" onClick={handleShowWoModal} className="me-2">
+                    <Button
+                      variant="outline-secondary"
+                      onClick={handleShowWoModal}
+                      className="me-2"
+                    >
                       Manage Work Orders
                     </Button>
                     {workOrders.length > 0 && (
@@ -1206,7 +1316,11 @@ export default function NewItem() {
                 {/* Description Editing */}
                 <div style={{ marginBottom: "1rem" }}>
                   <Form.Group controlId="desc">
-                    <Button variant="outline-secondary" onClick={listDescriptions} className="mb-2 me-2">
+                    <Button
+                      variant="outline-secondary"
+                      onClick={listDescriptions}
+                      className="mb-2 me-2"
+                    >
                       List Descriptions
                     </Button>
                     <Form.Control
@@ -1214,13 +1328,25 @@ export default function NewItem() {
                       rows={3}
                       placeholder="Enter description"
                       value={descriptions[selectedDesc]?.description || ""}
-                      onChange={(e) => handleDescriptionChange(selectedDesc, "description", e.target.value)}
+                      onChange={(e) =>
+                        handleDescriptionChange(
+                          selectedDesc,
+                          "description",
+                          e.target.value
+                        )
+                      }
                       style={{ marginBottom: "0.5rem" }}
                     />
                     <Form.Control
                       type="date"
                       value={descriptions[selectedDesc]?.date || ""}
-                      onChange={(e) => handleDescriptionChange(selectedDesc, "date", e.target.value)}
+                      onChange={(e) =>
+                        handleDescriptionChange(
+                          selectedDesc,
+                          "date",
+                          e.target.value
+                        )
+                      }
                       style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
                     />
                   </Form.Group>
@@ -1249,12 +1375,17 @@ export default function NewItem() {
                             style={{ marginTop: "0.5rem" }}
                           />
                           {showLocalLocFrom && (
-                            <Form.Group controlId="localLocFrom" className="mt-2">
+                            <Form.Group
+                              controlId="localLocFrom"
+                              className="mt-2"
+                            >
                               <Form.Label>Local Loc (From)</Form.Label>
                               <Form.Control
                                 type="text"
                                 value={localLocFrom}
-                                onChange={(e) => setLocalLocFrom(e.target.value)}
+                                onChange={(e) =>
+                                  setLocalLocFrom(e.target.value)
+                                }
                               />
                             </Form.Group>
                           )}
@@ -1282,22 +1413,30 @@ export default function NewItem() {
                             style={{ marginTop: "0.5rem" }}
                           />
                           {showLocalLocCurrent && (
-                            <Form.Group controlId="localLocCurrent" className="mt-2">
+                            <Form.Group
+                              controlId="localLocCurrent"
+                              className="mt-2"
+                            >
                               <Form.Label>Local Loc (Current)</Form.Label>
                               <Form.Control
                                 type="text"
                                 value={localLocCurrent}
-                                onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                onChange={(e) =>
+                                  setLocalLocCurrent(e.target.value)
+                                }
                               />
                             </Form.Group>
                           )}
                         </>
                       )}
-
                     </Col>
 
                     <Col>
-                      <Button variant="outline-secondary" onClick={handleShowParentModal} className="me-2">
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleShowParentModal}
+                        className="me-2"
+                      >
                         Select Parent
                       </Button>
                       {selectedParent && (
@@ -1317,16 +1456,25 @@ export default function NewItem() {
                   <Row className="mb-3">
                     <Col xs={6}>
                       <ButtonGroup>
-                        <Button variant="outline-secondary" onClick={handleShowCameraModal}>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={handleShowCameraModal}
+                        >
                           Take Photo
                         </Button>
-                        <Button variant="outline-secondary" onClick={handleBrowsePhotos}>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={handleBrowsePhotos}
+                        >
                           Browse
                         </Button>
                       </ButtonGroup>
                     </Col>
                     <Col xs={6}>
-                      <Button variant={addToWebsite ? "primary" : "outline-primary"} onClick={() => setAddToWebsite((prev) => !prev)}>
+                      <Button
+                        variant={addToWebsite ? "primary" : "outline-primary"}
+                        onClick={() => setAddToWebsite((prev) => !prev)}
+                      >
                         {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                       </Button>
                     </Col>
@@ -1343,10 +1491,36 @@ export default function NewItem() {
                 {/* Photo Gallery */}
                 <div className="mt-3 d-flex flex-wrap">
                   {photos.map((photo, index) => (
-                    <div key={index} className="d-flex flex-column align-items-center mb-2 me-2" style={{ width: "100px", height: "100px", position: "relative" }}>
-                      <img src={photo.url} alt={`Photo ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div
+                      key={index}
+                      className="d-flex flex-column align-items-center mb-2 me-2"
+                      style={{
+                        width: "100px",
+                        height: "100px",
+                        position: "relative",
+                      }}
+                    >
+                      <img
+                        src={photo.url}
+                        alt={`Photo ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
                       {photo.file && (
-                        <Button variant="danger" size="sm" style={{ position: "absolute", top: 0, right: 0, padding: "0 5px" }} onClick={() => removePhoto(index)}>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            padding: "0 5px",
+                          }}
+                          onClick={() => removePhoto(index)}
+                        >
                           X
                         </Button>
                       )}
@@ -1357,17 +1531,36 @@ export default function NewItem() {
 
                 {/* Submit Row */}
                 <div className="mt-3 d-flex flex-wrap align-items-center">
-                  <Button variant="primary" type="submit" style={{ marginRight: "1rem" }}>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    style={{ marginRight: "1rem" }}
+                  >
                     Save
                   </Button>
-                  <LoadingButton type="secondary" name="Back" route="NewSearch/mainSearch" />
-                  <Button variant="info" onClick={handlePrint} style={{ marginLeft: "auto" }}>
+                  <LoadingButton
+                    type="secondary"
+                    name="Back"
+                    route="NewSearch/mainSearch"
+                  />
+                  <Button
+                    variant="info"
+                    onClick={handlePrint}
+                    style={{ marginLeft: "auto" }}
+                  >
                     Print Label
                   </Button>
-
                 </div>
                 <div style={{ textAlign: "center", margin: "1rem 0" }}>
-                  <Button variant="link" style={{ textDecoration: "none", color: "black", fontSize: "24px" }} onClick={() => setShowExtra(!showExtra)}>
+                  <Button
+                    variant="link"
+                    style={{
+                      textDecoration: "none",
+                      color: "black",
+                      fontSize: "24px",
+                    }}
+                    onClick={() => setShowExtra(!showExtra)}
+                  >
                     ▼
                   </Button>
                 </div>
@@ -1378,27 +1571,52 @@ export default function NewItem() {
                         <Form.Label>Dimensions (L x W x H)</Form.Label>
                         <Row>
                           <Col>
-                            <Form.Control placeholder="Length" type="text" value={items.length} onChange={handleChange("length")} />
+                            <Form.Control
+                              placeholder="Length"
+                              type="text"
+                              value={items.length}
+                              onChange={handleChange("length")}
+                            />
                           </Col>
                           x
                           <Col>
-                            <Form.Control placeholder="Width" type="text" value={items.width} onChange={handleChange("width")} />
+                            <Form.Control
+                              placeholder="Width"
+                              type="text"
+                              value={items.width}
+                              onChange={handleChange("width")}
+                            />
                           </Col>
                           x
                           <Col>
-                            <Form.Control placeholder="Height" type="text" value={items.height} onChange={handleChange("height")} />
+                            <Form.Control
+                              placeholder="Height"
+                              type="text"
+                              value={items.height}
+                              onChange={handleChange("height")}
+                            />
                           </Col>
                         </Row>
                       </Form.Group>
                       <Form.Group as={Col} controlId="price">
                         <Form.Label>Price</Form.Label>
-                        <Form.Control placeholder="Price" type="text" value={items.price} onChange={handleChange("price")} />
+                        <Form.Control
+                          placeholder="Price"
+                          type="text"
+                          value={items.price}
+                          onChange={handleChange("price")}
+                        />
                       </Form.Group>
                     </Row>
                     <Row className="mt-3">
                       <Form.Group as={Col} controlId="DOM">
                         <Form.Label>DOM (Date of Manufacture)</Form.Label>
-                        <Form.Control placeholder="Enter DOM" type="date" value={DOM} onChange={(e) => setDOM(e.target.value)} />
+                        <Form.Control
+                          placeholder="Enter DOM"
+                          type="date"
+                          value={DOM}
+                          onChange={(e) => setDOM(e.target.value)}
+                        />
                       </Form.Group>
                       {/* NEW: Local SN input */}
                       <Form.Group as={Col} controlId="localSN">
@@ -1411,9 +1629,19 @@ export default function NewItem() {
                         />
                       </Form.Group>
                     </Row>
+                    <Row>
+                      <Form.Group as={Col} controlId="poNumber">
+                        <Form.Label>PO Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="PO Number"
+                          value={items.poNumber || ""}
+                          onChange={handleChange("poNumber")}
+                        />
+                      </Form.Group>
+                    </Row>
                   </div>
                 </Collapse>
-
               </Form>
             </Card.Body>
           </Card>
