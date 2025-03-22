@@ -100,6 +100,7 @@ export default function DisplayItem() {
   const [showParentModal, setShowParentModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -368,7 +369,9 @@ export default function DisplayItem() {
   const handleCloseErr = () => setShowErr(false);
   const handleShowErr = () => setShowErr(true);
   const handleCloseSaveModal = () => setShowSaveModal(false);
+  const handleClosePrintModal = () => setShowPrintModal(false);
   const handleShowSaveModal = () => setShowSaveModal(true);
+  const handleShowPrintModal = () => setShowPrintModal(true);
   const handleMachineSelectionModal = () => setMachineSelectionModal(false);
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
@@ -472,11 +475,11 @@ export default function DisplayItem() {
 
     const formattedItems = { ...items, descriptions, workOrders };
     // Remove any unused fields.
-    delete formattedItems.date;
     formattedItems.status = items.status || "";
     formattedItems.DOM = DOM; // Date of Manufacture
     formattedItems.localLocFrom = localLocFrom || "";
     formattedItems.localLocCurrent = localLocCurrent || "";
+    formattedItems.date = items.date || "";
     // Include PO Number explicitly.
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
@@ -685,7 +688,7 @@ export default function DisplayItem() {
     } else {
       console.warn("No Machine reference available in the item");
     }
-
+    console.log(clientName, ":", items.client)
     // Fallback: if no client name was found, check items.client.
     if (!clientName && items.client) {
       if (typeof items.client.get === "function") {
@@ -716,6 +719,7 @@ export default function DisplayItem() {
       oem: oem,
       modality: modality,
       model: model,
+      poNumber: items.poNumber,
     };
 
     console.log("Payload for printing:", payload);
@@ -726,7 +730,13 @@ export default function DisplayItem() {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
-      console.log("Print result:", result);
+      console.log("Print result:", result.status);
+      
+      if (result.status.includes("successfully.")) {
+        handleShowPrintModal();
+      } else {
+        console.error("Error printing label:", result.error);
+      }
     } catch (error) {
       console.error("Error printing label:", error);
     }
@@ -933,11 +943,12 @@ export default function DisplayItem() {
       status: items.status,
       description: descriptions[selectedDesc]?.description || "",
       workOrder: currentWorkOrder,
+      localsn: items.localSN || "",
     };
   
     try {
       // Replace with your ngrok URL and appropriate endpoint path (e.g., /api/bluefolder)
-      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/api/bluefolder", {
+      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/bluefolder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -984,6 +995,17 @@ export default function DisplayItem() {
           <Modal.Body>Data has been saved successfully.</Modal.Body>
           <Modal.Footer>
             <Button variant="primary" onClick={handleCloseSaveModal}>
+              Ok
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showPrintModal} onHide={handleClosePrintModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Print Confirmation</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>Info has been sent to print.</Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={handleClosePrintModal}>
               Ok
             </Button>
           </Modal.Footer>
@@ -1616,10 +1638,10 @@ export default function DisplayItem() {
                       </Col>
                       <Col xs={6}>
                         <Button
-                          disabled={true}
+                          
                           variant="secondary"
                           onClick={handleBluefolderButton}
-                          style={{ marginLeft: "0.5rem" }}
+                          style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
                         >
                           BlueFolder
                         </Button>
