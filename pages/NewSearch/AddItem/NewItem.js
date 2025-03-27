@@ -73,7 +73,8 @@ export default function NewItem() {
     poNumber: "",
     length: "",
     width: "",
-    height: ""
+    height: "",
+    visible: true,
   });
   
 

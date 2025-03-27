@@ -4,6 +4,7 @@ module.exports = {
   future: {
     webpack5: true
   },
+  trailingSlash: false, // add this line
   webpack: (config) => {
     // Bypass Terser
     config.optimization.minimize = false;
