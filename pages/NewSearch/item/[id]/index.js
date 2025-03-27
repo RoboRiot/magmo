@@ -308,7 +308,9 @@ export default function DisplayItem() {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
 
-    const itemsSnapshot = await db.collection("Test").where("pn", "==", pn).get();
+    const normalizedPN = pn !== undefined ? pn : "";
+    const itemsSnapshot = await db.collection("Test").where("pn", "==", normalizedPN).get();
+
     setFreqItem(itemsSnapshot.size);
 
     let usagePastYear = 0;

@@ -31,6 +31,7 @@ export default function useFirebaseAuth() {
   //sign in with google
   const signInWithGoogle = () => {
     const provider = new Firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     return auth
       .signInWithPopup(provider)
       .then((result) => {

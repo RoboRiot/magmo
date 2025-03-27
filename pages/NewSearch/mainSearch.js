@@ -131,6 +131,10 @@ export default function MainSearch() {
       );
       const filtered = await Promise.all(
         backupInfo.map(async (item) => {
+          if (!item.visible) {
+            return null;
+          }
+          
           let passes = true;
           // Check OEM, Modality, and Model from machineData (if available)
           if (item.machineData) {

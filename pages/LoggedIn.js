@@ -1,21 +1,23 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../context/AuthUserContext';
-import { Container } from 'react-bootstrap';
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "../context/AuthUserContext";
+import { Container } from "react-bootstrap";
 
 const LoggedIn = ({ children }) => {
   const { authUser, loading } = useAuth();
   const router = useRouter();
 
-  // Redirect to login if not authenticated and loading is complete
+  // Redirect only after a short delay if authUser remains null.
   useEffect(() => {
-    if (!loading && !authUser) {
-      // Pass the intended destination in the query string
-      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+    if (!loading && authUser === null) {
+      // Set a delay (e.g. 500ms) to give Firebase Auth a chance to rehydrate.
+      const timer = setTimeout(() => {
+        router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      }, 800);
+      return () => clearTimeout(timer);
     }
   }, [authUser, loading, router]);
 
-  // Display loading indicator until auth status is determined
   if (loading) {
     return (
       <Container
@@ -27,7 +29,6 @@ const LoggedIn = ({ children }) => {
     );
   }
 
-  // Render the children only if user is authenticated
   return <>{authUser && children}</>;
 };
 
