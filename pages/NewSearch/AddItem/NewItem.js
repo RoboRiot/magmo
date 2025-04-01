@@ -74,6 +74,7 @@ export default function NewItem() {
     length: "",
     width: "",
     height: "",
+    arrival_date: "",  // NEW FIELD: Arrival Date
     visible: true,
   });
   
@@ -382,21 +383,35 @@ export default function NewItem() {
 
   // -------------------- Machine Selection (unchanged)
   const handleClientInfo = async (clientId) => {
+    // Clear any previously selected machine/local loc for the branch
+    if (machinePick) {
+      setSelectedMachine(null);
+      setShowLocalLocFrom(false);
+    } else {
+      setSelectedCurrentMachine(null);
+      setShowLocalLocCurrent(false);
+    }
+    
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
     if (clientDoc.exists) {
       const clientData = clientDoc.data();
-      setSelectedClient(clientData);
+      if (machinePick) {
+        setSelectedClientFrom({ id: clientDoc.id, ...clientData });
+      } else {
+        setSelectedClientCurrent({ id: clientDoc.id, ...clientData });
+      }
+      // Fetch machines for this client:
       const machinePromises = clientData.machines.map((machineRef) => machineRef.get());
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
         id: machineDoc.id,
-        ...machineDoc.data()
+        ...machineDoc.data(),
       }));
       setMachineOptions(machines);
-      handleShowMachineModal();
+      handleCloseClientModal();
     }
-  };
+  };  
 
   const fetchMachine = async (machineId) => {
     const db = firebase.firestore();
@@ -480,64 +495,170 @@ export default function NewItem() {
   
 
   async function toSend() {
+    const { id } = router.query; // Ensure id is defined (it may be undefined for a new item)
     const db = firebase.firestore();
-
-    // Merge item data with descriptions and work orders.
-    const formattedItems = { ...items, descriptions, workOrders };
-
-    // Set current date and other fields.
-    formattedItems.date = new Date().toISOString().split("T")[0];
-    formattedItems.DOM = DOM;
-    formattedItems.localLocFrom = localLocFrom;
-    formattedItems.localLocCurrent = localLocCurrent;
-
-    // Include machine data as before.
+  
+    // Always use the current state values for OEM, modality, and model.
     const machineData = {
       ...(TheMachine || {}),
       oem: oem,
       modality: modality,
       model: model,
     };
-    formattedItems.TheMachine = machineData;
+  
+    const formattedItems = { ...items, descriptions, workOrders };
+    // Remove any unused fields.
+    formattedItems.status = items.status || "";
+    formattedItems.DOM = DOM; // Date of Manufacture
+    formattedItems.localLocFrom = localLocFrom || "";
+    formattedItems.localLocCurrent = localLocCurrent || "";
+    formattedItems.date = items.date || "";
+    formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
+    formattedItems.poNumber = items.poNumber || "";
+    formattedItems.trackingNumber = items.trackingNumber || "";
+    formattedItems.TheMachine = machineData || {};
+    formattedItems.addedToWebsite = addToWebsite;
+  
+    // Clean pn and sn arrays to replace undefined values with an empty string.
+    formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
+    formattedItems.sn = (items.sn || []).map(value => value === undefined ? "" : value);
+  
+    // Set machine references for each branch.
     if (selectedMachine && selectedMachine.id) {
-      formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
+      formattedItems.MachineFrom = db.collection("Machine").doc(selectedMachine.id);
     }
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      formattedItems.CurrentMachine = db.collection("Machine").doc(selectedCurrentMachine.id);
+      formattedItems.MachineCurrent = db.collection("Machine").doc(selectedCurrentMachine.id);
     }
+  
+    // ***** NEW: Set client references for each branch *****
+    if (selectedClientFrom && selectedClientFrom.id) {
+      formattedItems.ClientFrom = db.collection("Client").doc(selectedClientFrom.id);
+    }
+    if (selectedClientCurrent && selectedClientCurrent.id) {
+      formattedItems.ClientCurrent = db.collection("Client").doc(selectedClientCurrent.id);
+    }
+    // ******************************************************
+  
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
-
+  
     // --- LOCAL SN LOGIC ---
-    // Determine the localSN value to use for the document id and field.
-    let chosenLocalSN;
-    if (router.query.signal) {
-      console.log("Using URL signal as localSN:", router.query.signal);
-      chosenLocalSN = router.query.signal;
-    } else if (items.localSN && items.localSN.trim() !== "") {
-      console.log("Using user provided localSN:", items.localSN);
-      chosenLocalSN = items.localSN;
-    } else {
-      chosenLocalSN = generateCustomID();
-      console.log("No URL or user localSN provided; using generated localSN:", chosenLocalSN);
-    }
-    // Save the chosen value in a field called localSN.
-    formattedItems.localSN = chosenLocalSN;
-    // Do not modify formattedItems.sn – that remains from the SN field.
-    // ----------------------------
-
+    let docId = id || null;
     try {
-      // Use chosenLocalSN as the document id.
-      await db.collection("Test").doc(chosenLocalSN).set(formattedItems);
-      await uploadPhotos(chosenLocalSN);
-      console.log("Item saved with localSN (doc id):", chosenLocalSN);
+      if (docId) {
+        // Check if a localSN is provided and if it differs from the current docId.
+        const newDocId =
+          items.localSN && items.localSN.trim() !== ""
+            ? items.localSN.trim()
+            : docId;
+        if (docId !== newDocId) {
+          // Migrate: Create a new document with the newDocId.
+          await db.collection("Test").doc(newDocId).set(formattedItems);
+  
+          if (selectedMachine && selectedMachine.id) {
+            const machineRef = db.collection("Machine").doc(selectedMachine.id);
+            const machineDoc = await machineRef.get();
+            if (machineDoc.exists) {
+              await machineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(newDocId)
+                ),
+              });
+            }
+          }
+  
+          if (selectedCurrentMachine && selectedCurrentMachine.id) {
+            const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+            const currentMachineDoc = await currentMachineRef.get();
+            if (currentMachineDoc.exists) {
+              await currentMachineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(newDocId)
+                ),
+              });
+            }
+          }
+          // Delete the old document.
+          await db.collection("Test").doc(docId).delete();
+          // Set docId to the new document ID.
+          docId = newDocId;
+        } else {
+          // Deep-clean the formattedItems to remove any undefined nested values.
+          const cleanFormattedItems = shallowClean(formattedItems);
+          await db.collection("Test").doc(docId).update(cleanFormattedItems);
+  
+          if (selectedMachine && selectedMachine.id) {
+            const machineRef = db.collection("Machine").doc(selectedMachine.id);
+            const machineDoc = await machineRef.get();
+            if (machineDoc.exists) {
+              await machineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(docId)
+                ),
+              });
+            }
+          }
+  
+          if (selectedCurrentMachine && selectedCurrentMachine.id) {
+            const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+            const currentMachineDoc = await currentMachineRef.get();
+            if (currentMachineDoc.exists) {
+              await currentMachineRef.update({
+                associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                  db.collection("Test").doc(docId)
+                ),
+              });
+            }
+          }
+        }
+      } else {
+        // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
+        docId =
+          items.localSN && items.localSN.trim() !== ""
+            ? items.localSN.trim()
+            : generateCustomID();
+        await db.collection("Test").doc(docId).set(formattedItems);
+  
+        if (selectedMachine && selectedMachine.id) {
+          const machineRef = db.collection("Machine").doc(selectedMachine.id);
+          const machineDoc = await machineRef.get();
+          if (machineDoc.exists) {
+            await machineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(docId)
+              ),
+            });
+          }
+        }
+  
+        if (selectedCurrentMachine && selectedCurrentMachine.id) {
+          const currentMachineRef = db.collection("Machine").doc(selectedCurrentMachine.id);
+          const currentMachineDoc = await currentMachineRef.get();
+          if (currentMachineDoc.exists) {
+            await currentMachineRef.update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(docId)
+              ),
+            });
+          }
+        }
+      }
+      // Upload any new photos to Firebase Storage.
+      await uploadPhotos(docId);
+      console.log("Item saved and associatedParts updated!");
+  
+      // Redirect to the new URL using the new document id.
+      router.push(`/NewSearch/item/${docId}`);
+  
+      // Optionally, show a save confirmation modal.
       handleShowSaveModal();
-      router.push("../mainSearch");
     } catch (error) {
       console.error("Error saving data:", error);
     }
   }
+  
 
   // -------------------- Info Modal Handlers (unchanged)
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -558,19 +679,6 @@ export default function NewItem() {
     }
   };
   const handleCloseInfoModal = () => setShowInfoModal(false);
-
-  // const handleSetSelectedMachine = (selMachina) => {
-  //   if (machinePick) {
-  //     // "Select From" scenario.
-  //     setSelectedMachine({ id: selMachina.id, name: selMachina.name });
-  //     fetchMachine(selMachina.id);
-  //   } else {
-  //     // "Select Current" scenario.
-  //     setSelectedCurrentMachine({ id: selMachina.id, name: selMachina.name });
-  //     fetchMachine(selMachina.id);
-  //   }
-  //   handleCloseMachineModal();
-  // };
 
   const handleCloseCameraModal = () => {
     setShowCameraModal(false);
@@ -707,24 +815,42 @@ export default function NewItem() {
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
   const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
 
-  const handleSetSelectedMachine = (selMachine) => {
-    // Condition: if the machine name (lowercased) is one of these values.
-    const condition = (name) =>
-      ["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(name.toLowerCase());
-    if (machinePick) {
-      // "Select From" branch:
-      setSelectedMachine({ id: selMachine.id, name: selMachine.name });
-      fetchMachine(selMachine.id);
-      setShowLocalLocFrom(condition(selMachine.name));
-    } else {
-      // "Select Current" branch:
-      setSelectedCurrentMachine({ id: selMachine.id, name: selMachine.name });
-      fetchMachine(selMachine.id);
-      setShowLocalLocCurrent(condition(selMachine.name));
-    }
-    handleCloseMachineModal();
+  // const handleSetSelectedMachine = (selMachine) => {
+  //   // Condition: if the machine name (lowercased) is one of these values.
+  //   const condition = (name) =>
+  //     ["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(name.toLowerCase());
+  //   if (machinePick) {
+  //     // "Select From" branch:
+  //     setSelectedMachine({ id: selMachine.id, name: selMachine.name });
+  //     fetchMachine(selMachine.id);
+  //     setShowLocalLocFrom(condition(selMachine.name));
+  //   } else {
+  //     // "Select Current" branch:
+  //     setSelectedCurrentMachine({ id: selMachine.id, name: selMachine.name });
+  //     fetchMachine(selMachine.id);
+  //     setShowLocalLocCurrent(condition(selMachine.name));
+  //   }
+  //   handleCloseMachineModal();
+  // };
+  const condition = (name) => {
+    return name && name.toLowerCase() === "interior socal";
   };
-
+  
+  const handleSetSelectedMachine = (machine) => {
+    const condition = (name) => name && name.toLowerCase() === "interior socal";
+    if (machinePick) {
+      setSelectedMachine({ id: machine.id, name: machine.name });
+      // For "from", show the local loc input if condition met.
+      setShowLocalLocFrom(condition(machine.name));
+    } else {
+      setSelectedCurrentMachine({ id: machine.id, name: machine.name });
+      // For "current", you might also want a local loc input:
+      setShowLocalLocCurrent(condition(machine.name));
+    }
+    fetchMachine(machine.id);
+    setShowMachineModal(false);
+  };
+  
   const [currentPnIndex, setCurrentPnIndex] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const [currentSnIndex, setCurrentSnIndex] = useState(0);
@@ -737,9 +863,20 @@ export default function NewItem() {
     router.push(`/NewSearch/client/AIS${randomNum}/addClient?from=addItem`);
   };
 
+  const [showMachineSelect, setShowMachineSelect] = useState(false);
+
+  const [selectedClientFrom, setSelectedClientFrom] = useState(null);
+  const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+
   return (
     <LoggedIn>
       {/* Error Modal */}
+      <MachineSelectionModal
+        show={machineSelectionModal}
+        handleClose={() => setMachineSelectionModal(false)}
+        setMachine={handleSetSelectedMachine}
+        machineOptions={machineOptions}  // if your modal needs the list of machines
+      />
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
@@ -865,7 +1002,6 @@ export default function NewItem() {
         machineOptions={machineOptions}
         setSelectedMachine={handleSetSelectedMachine}
       />
-      {/* Client Selection Modal */}
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
         <Modal.Header closeButton>
           <Modal.Title>Select Client</Modal.Title>
@@ -1366,32 +1502,37 @@ export default function NewItem() {
                       >
                         Select From
                       </Button>
-                      {selectedMachine && (
-                        <>
-                          <Form.Control
-                            type="text"
-                            placeholder="Selected Machine"
-                            value={selectedMachine.name}
-                            readOnly
-                            style={{ marginTop: "0.5rem" }}
-                          />
-                          {showLocalLocFrom && (
-                            <Form.Group
-                              controlId="localLocFrom"
-                              className="mt-2"
+                      {selectedClientFrom && (
+                        <div style={{ border: "1px solid #ccc", padding: "0.75rem", borderRadius: "4px", marginBottom: "1rem" }}>
+                          <p><strong>Selected Client (From):</strong> {selectedClientFrom.name}</p>
+                          <div style={{ marginTop: "0.5rem" }}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowMachineModal(true)}
                             >
-                              <Form.Label>Local Loc (From)</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={localLocFrom}
-                                onChange={(e) =>
-                                  setLocalLocFrom(e.target.value)
-                                }
-                              />
-                            </Form.Group>
-                          )}
-                        </>
+                              Select Machine for {selectedClientFrom.name}
+                            </Button>
+                            {selectedMachine && (
+                              <>
+                                <p style={{ marginTop: "0.5rem" }}>
+                                  <strong>Selected Machine (From):</strong> {selectedMachine.name}
+                                </p>
+                                {showLocalLocFrom && (
+                                  <Form.Group controlId="localLocFrom" className="mt-2">
+                                    <Form.Label>Local Loc (From)</Form.Label>
+                                    <Form.Control
+                                      type="text"
+                                      value={localLocFrom}
+                                      onChange={(e) => setLocalLocFrom(e.target.value)}
+                                    />
+                                  </Form.Group>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
                       )}
+
                     </Col>
                     <Col>
                       <Button
@@ -1404,34 +1545,38 @@ export default function NewItem() {
                       >
                         Select Current
                       </Button>
-                      {selectedCurrentMachine && (
-                        <>
-                          <Form.Control
-                            type="text"
-                            placeholder="Selected Machine"
-                            value={selectedCurrentMachine.name}
-                            readOnly
-                            style={{ marginTop: "0.5rem" }}
-                          />
-                          {showLocalLocCurrent && (
-                            <Form.Group
-                              controlId="localLocCurrent"
-                              className="mt-2"
+                      {selectedClientCurrent && (
+                        <div style={{ border: "1px solid #ccc", padding: "0.75rem", borderRadius: "4px", marginBottom: "1rem" }}>
+                          <p><strong>Selected Client (Current):</strong> {selectedClientCurrent.name}</p>
+                          <div style={{ marginTop: "0.5rem" }}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => setShowMachineModal(true)}
                             >
-                              <Form.Label>Local Loc (Current)</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={localLocCurrent}
-                                onChange={(e) =>
-                                  setLocalLocCurrent(e.target.value)
-                                }
-                              />
-                            </Form.Group>
-                          )}
-                        </>
+                              Select Machine for {selectedClientCurrent.name}
+                            </Button>
+                            {selectedCurrentMachine && (
+                              <>
+                                <p style={{ marginTop: "0.5rem" }}>
+                                  <strong>Selected Machine (Current):</strong> {selectedCurrentMachine.name}
+                                </p>
+                                {showLocalLocCurrent && (
+                                  <Form.Group controlId="localLocCurrent" className="mt-2">
+                                    <Form.Label>Local Loc (Current)</Form.Label>
+                                    <Form.Control
+                                      type="text"
+                                      value={localLocCurrent}
+                                      onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                    />
+                                  </Form.Group>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
                       )}
-                    </Col>
 
+                    </Col>
                     <Col>
                       <Button
                         variant="outline-secondary"
@@ -1638,6 +1783,17 @@ export default function NewItem() {
                           placeholder="PO Number"
                           value={items.poNumber || ""}
                           onChange={handleChange("poNumber")}
+                        />
+                      </Form.Group>
+                      <Form.Group as={Col} controlId="arrivalDate">
+                        <Form.Label>Arrival Date</Form.Label>
+                        <Form.Control
+                          placeholder="Enter Arrival Date"
+                          type="date"
+                          value={items.arrival_date}
+                          onChange={(e) =>
+                            setItems((prev) => ({ ...prev, arrival_date: e.target.value }))
+                          }
                         />
                       </Form.Group>
                     </Row>
