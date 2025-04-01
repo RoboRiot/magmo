@@ -75,6 +75,42 @@ const Machine = () => {
     }
   };
 
+  const handlePrintMulti = async () => {
+    // Create your payload with the mapped items.
+    // Replace 'associatedParts' with your actual variable containing the list.
+    const payload = {
+      items: associatedParts.map(part => ({
+        name: part.name,
+        date: part.date, // Ensure your part has a 'date' field.
+        poNumber: part.poNumber || "",
+        OEM: part.TheMachine ? part.TheMachine.oem || "" : "",
+        modality: part.TheMachine ? part.TheMachine.modality || "" : "",
+        model: part.TheMachine ? part.TheMachine.model || "" : "",
+        local_sn: part.id, // Using document id as the local serial number.
+        description: part.description ||
+          (part.descriptions && part.descriptions.length > 0
+            ? part.descriptions[0].description
+            : "")
+      })),
+      test_print: true, // Hard-coded here if you want to test printing one item
+      index: 1          // Hard-coded index (1-based)
+    };
+
+    try {
+      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/print_multi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      console.log("Print multi result:", result.status);
+    } catch (error) {
+      console.error("Error printing multiple labels:", error);
+    }
+  };
+  
+  
+
   const handleSelectPart = (id, name) => {
     console.log(`Selected part ID: ${id}, Name: ${name}`);
     router.push("../item/" + id);
@@ -150,6 +186,13 @@ const Machine = () => {
                           </td>
                         </tr>
                       ))}
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: "center", paddingTop: "20px" }}>
+                          <Button variant="secondary" onClick={handlePrintMulti}>
+                            Print All Items
+                          </Button>
+                        </td>
+                      </tr>
                       {/* <Col md={4}> */}
                       <Button
                         variant="primary"

@@ -80,6 +80,8 @@ export default function DisplayItem() {
     poNumber: "",
     trackingNumber: "",
     localSN: "", // NEW: localSN field added here
+    arrival_date: "",  // NEW FIELD: Arrival Date
+    visible: true,
   });  
 
   // These arrays will be populated from Firebase.
@@ -135,22 +137,18 @@ export default function DisplayItem() {
 
   const [machineFieldsInitialized, setMachineFieldsInitialized] = useState(false);
 
+  const [storedMachine, setStoredMachine] = useState(null);
+
+
   useEffect(() => {
-    if (
-      !machineFieldsInitialized &&
-      (TheMachine || selectedCurrentMachine || selectedMachine)
-    ) {
-      const updatedFields = updateMachineFields(
-        TheMachine,
-        selectedCurrentMachine,
-        selectedMachine
-      );
+    if (!machineFieldsInitialized && (TheMachine || selectedCurrentMachine || selectedMachine)) {
+      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
       setOem(updatedFields.oem);
       setModality(updatedFields.modality);
       setModel(updatedFields.model);
       setMachineFieldsInitialized(true);
     }
-  }, [TheMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
+  }, [storedMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
 
   // Fetch clients data.
   useEffect(() => {
@@ -218,43 +216,72 @@ export default function DisplayItem() {
       }
 
       // Retrieve stored machine (from the Test document)
-      const storedMachine = data.TheMachine || null;
-      if (storedMachine) {
-        console.log("TheMachine data:", storedMachine);
-        const modelValue = storedMachine.Model || storedMachine.model;
-        if (modelValue) {
-          const machinesSnapshot = await db
-            .collection("Machine")
-            .where("Model", "==", modelValue)
-            .get();
-          setMachineFrequency(machinesSnapshot.size);
-        } else {
-          setMachineFrequency("N/A");
-        }
-      } else {
-        setMachineFrequency("N/A");
-      }
+      // const storedMachine = data.TheMachine || null;
+      // if (storedMachine) {
+      //   console.log("TheMachine data:", storedMachine);
+      //   const modelValue = storedMachine.Model || storedMachine.model;
+      //   if (modelValue) {
+      //     const machinesSnapshot = await db
+      //       .collection("Machine")
+      //       .where("Model", "==", modelValue)
+      //       .get();
+      //     setMachineFrequency(machinesSnapshot.size);
+      //   } else {
+      //     setMachineFrequency("N/A");
+      //   }
+      // } else {
+      //   setMachineFrequency("N/A");
+      // }
 
       // Retrieve the "select from" machine (if any)
-      let fromMachine = null;
-      if (data.Machine) {
-        const machineDoc = await data.Machine.get();
-        console.log("From Machine data:", machineDoc.data());
-        setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
-        fromMachine = machineDoc.data();
+      // let fromMachine = null;
+      // if (data.Machine) {
+      //   const machineDoc = await data.Machine.get();
+      //   console.log("From Machine data:", machineDoc.data());
+      //   setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
+      //   fromMachine = machineDoc.data();
+      // }
+
+      // // Retrieve the "select current" machine (if any)
+      // let currentMachine = null;
+      // if (data.CurrentMachine) {
+      //   const currMachineDoc = await data.CurrentMachine.get();
+      //   console.log("Current Machine data:", currMachineDoc.data());
+      //   setSelectedCurrentMachine({
+      //     id: currMachineDoc.id,
+      //     ...currMachineDoc.data(),
+      //   });
+      //   currentMachine = currMachineDoc.data();
+      // }
+      // --- NEW: Fetch client references ---
+
+      if (data.ClientFrom) {
+        const clientFromDoc = await data.ClientFrom.get();
+        if (clientFromDoc.exists) {
+          setSelectedClientFrom({ id: clientFromDoc.id, ...clientFromDoc.data() });
+        }
+      }
+      if (data.ClientCurrent) {
+        const clientCurrentDoc = await data.ClientCurrent.get();
+        if (clientCurrentDoc.exists) {
+          setSelectedClientCurrent({ id: clientCurrentDoc.id, ...clientCurrentDoc.data() });
+        }
       }
 
-      // Retrieve the "select current" machine (if any)
-      let currentMachine = null;
-      if (data.CurrentMachine) {
-        const currMachineDoc = await data.CurrentMachine.get();
-        console.log("Current Machine data:", currMachineDoc.data());
-        setSelectedCurrentMachine({
-          id: currMachineDoc.id,
-          ...currMachineDoc.data(),
-        });
-        currentMachine = currMachineDoc.data();
+      // --- Update machine references (if using new fields) ---
+      if (data.MachineFrom) {
+        const machineFromDoc = await data.MachineFrom.get();
+        if (machineFromDoc.exists) {
+          setSelectedMachine({ id: machineFromDoc.id, ...machineFromDoc.data() });
+        }
       }
+      if (data.MachineCurrent) {
+        const machineCurrentDoc = await data.MachineCurrent.get();
+        if (machineCurrentDoc.exists) {
+          setSelectedCurrentMachine({ id: machineCurrentDoc.id, ...machineCurrentDoc.data() });
+        }
+      }
+      setStoredMachine(data.TheMachine || null);
 
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
@@ -262,12 +289,11 @@ export default function DisplayItem() {
       }
 
       // Priority auto‑population of machine fields.
-      const updatedFields = updateMachineFields(storedMachine, currentMachine, fromMachine);
+      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
       setOem(updatedFields.oem);
       setModality(updatedFields.modality);
       setModel(updatedFields.model);
 
-      console.log("TESTESTEST");
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
       await calculateItemFrequencyAndUsage(data.pn);
@@ -391,11 +417,25 @@ export default function DisplayItem() {
 
   // When a client is selected from the client table.
   const handleClientInfo = async (clientId) => {
+    // Clear any previously selected machine and local loc info for this branch.
+    if (machinePick) {
+      setSelectedMachine(null);
+      setShowLocalLocFrom(false);
+    } else {
+      setSelectedCurrentMachine(null);
+      setShowLocalLocCurrent(false);
+    }
+    
     const db = firebase.firestore();
     const clientDoc = await db.collection("Client").doc(clientId).get();
     if (clientDoc.exists) {
-      const clientData = clientDoc.data();
-      setSelectedClient(clientData);
+      const clientData = { id: clientDoc.id, ...clientDoc.data() };
+      if (machinePick) {
+        setSelectedClientFrom(clientData);
+      } else {
+        setSelectedClientCurrent(clientData);
+      }
+      // Fetch machines for this client:
       const machinePromises = clientData.machines.map((machineRef) => machineRef.get());
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
@@ -403,9 +443,11 @@ export default function DisplayItem() {
         ...machineDoc.data(),
       }));
       setMachineOptions(machines);
-      handleShowMachineModal();
+      // Close the client modal
+      handleCloseClientModal();
     }
   };
+  
 
   // Reordering function for dropdowns.
   const reorderArray = (arr, selectedValue) => {
@@ -464,6 +506,17 @@ export default function DisplayItem() {
     return `AIS${randomNum}`;
   };
 
+  function shallowClean(obj) {
+    const newObj = {};
+    for (const key in obj) {
+      console.log(key, obj[key]);
+      if (obj.hasOwnProperty(key)) {
+        newObj[key] = (obj[key] === undefined ? "" : obj[key]);
+      }
+    }
+    return newObj;
+  }
+
   async function toSend() {
     const db = firebase.firestore();
 
@@ -482,24 +535,34 @@ export default function DisplayItem() {
     formattedItems.localLocFrom = localLocFrom || "";
     formattedItems.localLocCurrent = localLocCurrent || "";
     formattedItems.date = items.date || "";
-    // Include PO Number explicitly.
+    formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = machineData || {};
     formattedItems.addedToWebsite = addToWebsite;
 
+    // Clean pn and sn arrays to replace undefined values with an empty string.
+    formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
+    formattedItems.sn = (items.sn || []).map(value => value === undefined ? "" : value);
+
     if (selectedMachine && selectedMachine.id) {
-      formattedItems.Machine = db.collection("Machine").doc(selectedMachine.id);
+      formattedItems.MachineFrom = db.collection("Machine").doc(selectedMachine.id);
     }
-
+    
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
-      formattedItems.CurrentMachine = db
-        .collection("Machine")
-        .doc(selectedCurrentMachine.id);
-    }
-
+      formattedItems.MachineCurrent = db.collection("Machine").doc(selectedCurrentMachine.id);
+    }    
+    
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
+    }
+
+    // NEW: Set separate client references.
+    if (selectedClientFrom && selectedClientFrom.id) {
+      formattedItems.ClientFrom = db.collection("Client").doc(selectedClientFrom.id);
+    }
+    if (selectedClientCurrent && selectedClientCurrent.id) {
+      formattedItems.ClientCurrent = db.collection("Client").doc(selectedClientCurrent.id);
     }
 
     let docId = id;
@@ -544,8 +607,9 @@ export default function DisplayItem() {
           // Set docId to the new document ID.
           docId = newDocId;
         } else {
-          // If the localSN hasn't changed, simply update the existing document.
-          await db.collection("Test").doc(docId).update(formattedItems);
+          // Deep-clean the formattedItems to remove any undefined nested values.
+          const cleanFormattedItems = shallowClean(formattedItems);
+          await db.collection("Test").doc(docId).update(cleanFormattedItems);
 
           if (selectedMachine && selectedMachine.id) {
             const machineRef = db.collection("Machine").doc(selectedMachine.id);
@@ -619,31 +683,26 @@ export default function DisplayItem() {
     } catch (error) {
       console.error("Error saving data:", error);
     }
-  }
-  
+  }  
 
   // Additional state for local warehouse location inputs.
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
   const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
 
   // When a machine is selected from the modal.
-  const handleSetSelectedMachine = (selMachine) => {
-    const condition = (name) => {
-      if (!name) return false;
-      return ["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(name.toLowerCase());
-    };
-
+  const handleSetSelectedMachine = (machine) => {
+    const condition = (name) => name && name.toLowerCase() === "interior socal";
     if (machinePick) {
-      setSelectedMachine({ id: selMachine.id, name: selMachine.name });
-      fetchMachine(selMachine.id);
-      setShowLocalLocFrom(condition(selMachine.name));
+      setSelectedMachine({ id: machine.id, name: machine.name });
+      setShowLocalLocFrom(condition(machine.name));
     } else {
-      setSelectedCurrentMachine({ id: selMachine.id, name: selMachine.name });
-      fetchMachine(selMachine.id);
-      setShowLocalLocCurrent(condition(selMachine.name));
+      setSelectedCurrentMachine({ id: machine.id, name: machine.name });
+      setShowLocalLocCurrent(condition(machine.name));
     }
-    handleCloseMachineModal();
-  };
+    fetchMachine(machine.id);
+    // Close the machine modal (assuming you're using showMachineModal to control it)
+    setShowMachineModal(false);
+  };  
 
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
@@ -722,6 +781,7 @@ export default function DisplayItem() {
       modality: modality,
       model: model,
       poNumber: items.poNumber,
+      arrival_date: items.arrival_date, // NEW: Include arrival_date
     };
 
     console.log("Payload for printing:", payload);
@@ -964,7 +1024,10 @@ export default function DisplayItem() {
     }
   };
   
-  
+  // New states for separate client selections:
+const [selectedClientFrom, setSelectedClientFrom] = useState(null);
+const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+
   return (
     <LoggedIn>
       <div>
@@ -1534,31 +1597,34 @@ export default function DisplayItem() {
                         >
                           Select From
                         </Button>
-                        {selectedMachine && (
-                          <>
-                            <Form.Control
-                              type="text"
-                              placeholder="Selected Machine"
-                              value={selectedMachine.name}
-                              readOnly
-                              style={{ marginTop: "0.5rem" }}
-                            />
-                            {showLocalLocFrom && (
-                              <Form.Group
-                                controlId="localLocFrom"
-                                className="mt-2"
-                              >
-                                <Form.Label>Local Loc (From)</Form.Label>
-                                <Form.Control
-                                  type="text"
-                                  value={localLocFrom}
-                                  onChange={(e) =>
-                                    setLocalLocFrom(e.target.value)
-                                  }
-                                />
-                              </Form.Group>
-                            )}
-                          </>
+                        {selectedClientFrom && (
+                          <div style={{ border: "1px solid #ccc", padding: "0.75rem", borderRadius: "4px", marginBottom: "1rem" }}>
+                            <p>
+                              <strong>Selected Client (From):</strong> {selectedClientFrom.name}
+                            </p>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <Button variant="outline-secondary" onClick={() => setShowMachineModal(true)}>
+                                Select Machine for {selectedClientFrom.name}
+                              </Button>
+                              {selectedMachine && (
+                                <>
+                                  <p style={{ marginTop: "0.5rem" }}>
+                                    <strong>Selected Machine (From):</strong> {selectedMachine.name}
+                                  </p>
+                                  {showLocalLocFrom && (
+                                    <Form.Group controlId="localLocFrom" className="mt-2">
+                                      <Form.Label>Local Loc (From)</Form.Label>
+                                      <Form.Control
+                                        type="text"
+                                        value={localLocFrom}
+                                        onChange={(e) => setLocalLocFrom(e.target.value)}
+                                      />
+                                    </Form.Group>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </Col>
                       <Col>
@@ -1572,31 +1638,34 @@ export default function DisplayItem() {
                         >
                           Select Current
                         </Button>
-                        {selectedCurrentMachine && (
-                          <>
-                            <Form.Control
-                              type="text"
-                              placeholder="Selected Machine"
-                              value={selectedCurrentMachine.name}
-                              readOnly
-                              style={{ marginTop: "0.5rem" }}
-                            />
-                            {showLocalLocCurrent && (
-                              <Form.Group
-                                controlId="localLocCurrent"
-                                className="mt-2"
-                              >
-                                <Form.Label>Local Loc (Current)</Form.Label>
-                                <Form.Control
-                                  type="text"
-                                  value={localLocCurrent}
-                                  onChange={(e) =>
-                                    setLocalLocCurrent(e.target.value)
-                                  }
-                                />
-                              </Form.Group>
-                            )}
-                          </>
+                        {selectedClientCurrent && (
+                          <div style={{ border: "1px solid #ccc", padding: "0.75rem", borderRadius: "4px", marginBottom: "1rem" }}>
+                            <p>
+                              <strong>Selected Client (Current):</strong> {selectedClientCurrent.name}
+                            </p>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <Button variant="outline-secondary" onClick={() => setShowMachineModal(true)}>
+                                Select Machine for {selectedClientCurrent.name}
+                              </Button>
+                              {selectedCurrentMachine && (
+                                <>
+                                  <p style={{ marginTop: "0.5rem" }}>
+                                    <strong>Selected Machine (Current):</strong> {selectedCurrentMachine.name}
+                                  </p>
+                                  {showLocalLocCurrent && (
+                                    <Form.Group controlId="localLocCurrent" className="mt-2">
+                                      <Form.Label>Local Loc (Current)</Form.Label>
+                                      <Form.Control
+                                        type="text"
+                                        value={localLocCurrent}
+                                        onChange={(e) => setLocalLocCurrent(e.target.value)}
+                                      />
+                                    </Form.Group>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </Col>
                       <Col>
@@ -1833,6 +1902,17 @@ export default function DisplayItem() {
                             placeholder="Enter Local SN"
                             value={items.localSN || ""}
                             onChange={handleChange("localSN")}
+                          />
+                        </Form.Group>
+                        <Form.Group as={Col} controlId="arrivalDate">
+                          <Form.Label>Arrival Date</Form.Label>
+                          <Form.Control
+                            placeholder="Enter Arrival Date"
+                            type="date"
+                            value={items.arrival_date}
+                            onChange={(e) =>
+                              setItems((prev) => ({ ...prev, arrival_date: e.target.value }))
+                            }
                           />
                         </Form.Group>
                       </Row>
