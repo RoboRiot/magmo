@@ -190,6 +190,38 @@ export default function DisplayItem() {
     }
   }, [id]);
 
+  async function resolveClientFromMachine(machineRef, setClient, setMachine, isFrom = true) {
+    const machineDoc = await machineRef.get();
+    if (machineDoc.exists) {
+      const machineData = machineDoc.data();
+      setMachine({ id: machineDoc.id, ...machineData });
+      
+      // Determine if the machine is "interior socal"
+      const isSocalInterior = machineData.name && machineData.name.toLowerCase() === "interior socal";
+      if (isSocalInterior) {
+        if (isFrom) {
+          setShowLocalLocFrom(true);
+        } else {
+          setShowLocalLocCurrent(true);
+        }
+      } else {
+        // Optionally clear the flag if it is not "interior socal"
+        if (isFrom) {
+          setShowLocalLocFrom(false);
+        } else {
+          setShowLocalLocCurrent(false);
+        }
+      }
+      
+      if (machineData.client && typeof machineData.client.get === "function") {
+        const clientDoc = await machineData.client.get();
+        if (clientDoc.exists) {
+          setClient({ id: clientDoc.id, ...clientDoc.data() });
+        }
+      }
+    }
+  }  
+  
   const fetchData = async () => {
     const db = firebase.firestore();
     const doc = await db.collection("Test").doc(id).get();
@@ -215,46 +247,6 @@ export default function DisplayItem() {
         setItems((prev) => ({ ...prev, poNumber: data.poNumber }));
       }
 
-      // Retrieve stored machine (from the Test document)
-      // const storedMachine = data.TheMachine || null;
-      // if (storedMachine) {
-      //   console.log("TheMachine data:", storedMachine);
-      //   const modelValue = storedMachine.Model || storedMachine.model;
-      //   if (modelValue) {
-      //     const machinesSnapshot = await db
-      //       .collection("Machine")
-      //       .where("Model", "==", modelValue)
-      //       .get();
-      //     setMachineFrequency(machinesSnapshot.size);
-      //   } else {
-      //     setMachineFrequency("N/A");
-      //   }
-      // } else {
-      //   setMachineFrequency("N/A");
-      // }
-
-      // Retrieve the "select from" machine (if any)
-      // let fromMachine = null;
-      // if (data.Machine) {
-      //   const machineDoc = await data.Machine.get();
-      //   console.log("From Machine data:", machineDoc.data());
-      //   setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
-      //   fromMachine = machineDoc.data();
-      // }
-
-      // // Retrieve the "select current" machine (if any)
-      // let currentMachine = null;
-      // if (data.CurrentMachine) {
-      //   const currMachineDoc = await data.CurrentMachine.get();
-      //   console.log("Current Machine data:", currMachineDoc.data());
-      //   setSelectedCurrentMachine({
-      //     id: currMachineDoc.id,
-      //     ...currMachineDoc.data(),
-      //   });
-      //   currentMachine = currMachineDoc.data();
-      // }
-      // --- NEW: Fetch client references ---
-
       if (data.ClientFrom) {
         const clientFromDoc = await data.ClientFrom.get();
         if (clientFromDoc.exists) {
@@ -267,6 +259,15 @@ export default function DisplayItem() {
           setSelectedClientCurrent({ id: clientCurrentDoc.id, ...clientCurrentDoc.data() });
         }
       }
+      
+      if (!data.ClientFrom && data.Machine && typeof data.Machine.get === "function") {
+        console.log("Entered resolveClientFromMachine for Machine (old style for From)");
+        await resolveClientFromMachine(data.Machine, setSelectedClientFrom, setSelectedMachine, true);
+      }
+      if (!data.ClientCurrent && data.CurrentMachine && typeof data.CurrentMachine.get === "function") {
+        console.log("Entered resolveClientFromMachine for CurrentMachine (old style for Current)");
+        await resolveClientFromMachine(data.CurrentMachine, setSelectedClientCurrent, setSelectedCurrentMachine, false);
+      }      
 
       // --- Update machine references (if using new fields) ---
       if (data.MachineFrom) {
@@ -282,6 +283,23 @@ export default function DisplayItem() {
         }
       }
       setStoredMachine(data.TheMachine || null);
+
+      console.log( "SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine);
+      // Show local loc inputs if applicable
+      // if (
+      //   selectedMachine &&
+      //   selectedMachine.name &&
+      //   selectedMachine.name.toLowerCase() === "interior socal"
+      // ) {
+      //   setShowLocalLocFrom(true);
+      // }
+      // if (
+      //   selectedCurrentMachine &&
+      //   selectedCurrentMachine.name &&
+      //   selectedCurrentMachine.name.toLowerCase() === "interior socal"
+      // ) {
+      //   setShowLocalLocCurrent(true);
+      // }
 
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
