@@ -141,14 +141,15 @@ export default function DisplayItem() {
 
 
   useEffect(() => {
-    if (!machineFieldsInitialized && (TheMachine || selectedCurrentMachine || selectedMachine)) {
-      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
-      setOem(updatedFields.oem);
-      setModality(updatedFields.modality);
-      setModel(updatedFields.model);
-      setMachineFieldsInitialized(true);
-    }
-  }, [storedMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
+    const updatedFields = updateMachineFields(
+      storedMachine,
+      selectedCurrentMachine,
+      selectedMachine
+    );
+    setOem(updatedFields.oem);
+    setModality(updatedFields.modality);
+    setModel(updatedFields.model);
+  }, [storedMachine, selectedCurrentMachine, selectedMachine]);  
 
   // Fetch clients data.
   useEffect(() => {
@@ -285,21 +286,6 @@ export default function DisplayItem() {
       setStoredMachine(data.TheMachine || null);
 
       console.log( "SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine);
-      // Show local loc inputs if applicable
-      // if (
-      //   selectedMachine &&
-      //   selectedMachine.name &&
-      //   selectedMachine.name.toLowerCase() === "interior socal"
-      // ) {
-      //   setShowLocalLocFrom(true);
-      // }
-      // if (
-      //   selectedCurrentMachine &&
-      //   selectedCurrentMachine.name &&
-      //   selectedCurrentMachine.name.toLowerCase() === "interior socal"
-      // ) {
-      //   setShowLocalLocCurrent(true);
-      // }
 
       if (data.Parent) {
         const parentDoc = await data.Parent.get();
@@ -307,10 +293,10 @@ export default function DisplayItem() {
       }
 
       // Priority auto‑population of machine fields.
-      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
-      setOem(updatedFields.oem);
-      setModality(updatedFields.modality);
-      setModel(updatedFields.model);
+      // const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
+      // setOem(updatedFields.oem);
+      // setModality(updatedFields.modality);
+      // setModel(updatedFields.model);
 
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
