@@ -213,7 +213,14 @@ export default function MainSearch() {
               const reformattedDate = `${year}-${month}-${day}`;
               if (reformattedDate !== search) passes = false;
             }
-            if (select === "Work Order" && item.wo !== search) passes = false;
+            if (select === "Work Order") {
+              const hasMatch =
+                item.workOrders &&
+                item.workOrders.some((wo) =>
+                  wo.workOrder.toLowerCase().includes(search.toLowerCase())
+                );
+              if (!hasMatch) passes = false;
+            }            
             if (select === "Product Number" && item.pn !== search) passes = false;
             if (select === "Description" && !item.desc.toLowerCase().includes(search.toLowerCase()))
               passes = false;

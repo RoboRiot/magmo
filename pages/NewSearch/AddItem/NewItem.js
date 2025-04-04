@@ -497,7 +497,11 @@ export default function NewItem() {
   async function toSend() {
     const { id } = router.query; // Ensure id is defined (it may be undefined for a new item)
     const db = firebase.firestore();
-  
+
+    // Get the current authenticated user
+    const currentUser = firebase.auth().currentUser;
+    const userEmail = currentUser ? currentUser.email : "unknown";
+
     // Always use the current state values for OEM, modality, and model.
     const machineData = {
       ...(TheMachine || {}),
@@ -518,7 +522,10 @@ export default function NewItem() {
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = machineData || {};
     formattedItems.addedToWebsite = addToWebsite;
-  
+
+    // Add the current user's email under the "user" field
+    formattedItems.user = userEmail;
+
     // Clean pn and sn arrays to replace undefined values with an empty string.
     formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
     formattedItems.sn = (items.sn || []).map(value => value === undefined ? "" : value);
