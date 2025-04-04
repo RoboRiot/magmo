@@ -521,8 +521,11 @@ export default function DisplayItem() {
     return newObj;
   }
 
+
   async function toSend() {
     const db = firebase.firestore();
+    const currentUser = firebase.auth().currentUser;
+    const userEmail = currentUser ? currentUser.email : "unknown";
 
     // Always use the current state values for OEM, modality, and model.
     const machineData = {
@@ -544,6 +547,9 @@ export default function DisplayItem() {
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = machineData || {};
     formattedItems.addedToWebsite = addToWebsite;
+
+    // NEW: Add the user's email under the field "user"
+    formattedItems.lastEdited = userEmail;
 
     // Clean pn and sn arrays to replace undefined values with an empty string.
     formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
