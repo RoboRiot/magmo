@@ -494,7 +494,7 @@ export default function NewItem() {
   }
   
 
-  async function toSend() {
+  async function toSend(redirect = true) {
     const { id } = router.query; // Ensure id is defined (it may be undefined for a new item)
     const db = firebase.firestore();
   
@@ -518,6 +518,7 @@ export default function NewItem() {
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = machineData || {};
     formattedItems.addedToWebsite = addToWebsite;
+    formattedItems.visible = items.visible;
   
     // Clean pn and sn arrays to replace undefined values with an empty string.
     formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
@@ -543,6 +544,12 @@ export default function NewItem() {
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
+
+    // Only add dateCreated if this is a new document
+    if (!id) {
+      formattedItems.dateCreated = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    }
+
   
     // --- LOCAL SN LOGIC ---
     let docId = id || null;
@@ -650,7 +657,12 @@ export default function NewItem() {
       console.log("Item saved and associatedParts updated!");
   
       // Redirect to the new URL using the new document id.
-      router.push(`/NewSearch/item/${docId}`);
+      if(redirect){
+        router.push(`/NewSearch/item/${docId}`);
+      }
+      else{
+        setRedirect(true);
+      }
   
       // Optionally, show a save confirmation modal.
       handleShowSaveModal();
@@ -815,23 +827,23 @@ export default function NewItem() {
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
   const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
 
-  // const handleSetSelectedMachine = (selMachine) => {
-  //   // Condition: if the machine name (lowercased) is one of these values.
-  //   const condition = (name) =>
-  //     ["socalwarehouse", "norcalwarehouse", "interior socal", "interior norcal"].includes(name.toLowerCase());
-  //   if (machinePick) {
-  //     // "Select From" branch:
-  //     setSelectedMachine({ id: selMachine.id, name: selMachine.name });
-  //     fetchMachine(selMachine.id);
-  //     setShowLocalLocFrom(condition(selMachine.name));
-  //   } else {
-  //     // "Select Current" branch:
-  //     setSelectedCurrentMachine({ id: selMachine.id, name: selMachine.name });
-  //     fetchMachine(selMachine.id);
-  //     setShowLocalLocCurrent(condition(selMachine.name));
-  //   }
-  //   handleCloseMachineModal();
-  // };
+  async function handleClone() {
+    event.preventDefault();
+    if (!items.name || !descriptions[0]?.description) {
+      handleShow();          // your existing error modal
+      return;
+    }
+    setLoading(true);
+    try {
+      // save but don’t redirect
+      await toSend(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const condition = (name) => {
     return name && name.toLowerCase() === "interior socal";
   };
@@ -1616,13 +1628,30 @@ export default function NewItem() {
                         </Button>
                       </ButtonGroup>
                     </Col>
-                    <Col xs={6}>
-                      <Button
-                        variant={addToWebsite ? "primary" : "outline-primary"}
-                        onClick={() => setAddToWebsite((prev) => !prev)}
+                    <Col xs={6} className="d-flex align-items-center">
+                      
+                        <Button
+                          variant={addToWebsite ? "primary" : "outline-primary"}
+                          onClick={() => setAddToWebsite((prev) => !prev)}
                       >
                         {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                       </Button>
+                      <Form.Check
+                        type="checkbox"
+                        id="hide-checkbox"
+                        label="Hide"
+                        // box is checked when we want visible = false
+                        checked={!items.visible}
+                        onChange={e => {
+                          // grab checked immediately
+                          const isHidden = e.currentTarget.checked
+                          setItems(prev => ({
+                            ...prev,
+                            visible: !isHidden
+                          }))
+                        }}
+                        className="ms-3"
+                      />
                     </Col>
                   </Row>
                   <input
@@ -1683,6 +1712,13 @@ export default function NewItem() {
                     style={{ marginRight: "1rem" }}
                   >
                     Save
+                  </Button>
+                  <Button
+                    variant="info"
+                    onClick={handleClone}
+                    style={{ marginRight: "1rem" }}
+                  >
+                    Clone
                   </Button>
                   <LoadingButton
                     type="secondary"
@@ -1791,9 +1827,10 @@ export default function NewItem() {
                           placeholder="Enter Arrival Date"
                           type="date"
                           value={items.arrival_date}
-                          onChange={(e) =>
-                            setItems((prev) => ({ ...prev, arrival_date: e.target.value }))
-                          }
+                          onChange={e => {
+                            const value = e.target.value
+                            setItems(prev => ({ ...prev, arrival_date: value }))
+                          }}
                         />
                       </Form.Group>
                     </Row>

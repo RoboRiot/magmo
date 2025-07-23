@@ -5,9 +5,13 @@ import styles from "../styles/Home.module.css";
 
 import { useAuth } from '../context/AuthUserContext';
 import { useRouter } from 'next/router';
+import firebase from '../context/Firebase';
 
 export default function Home() {
   const [error, setError] = useState("");
+  // Prevent our main-useEffect from hijacking the test-login flow:
+  const [isTestLogin, setIsTestLogin] = useState(false);
+
   const { authUser, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
@@ -19,17 +23,14 @@ export default function Home() {
 
   // If auth status is known and the user is already logged in, redirect them.
   useEffect(() => {
+    if (isTestLogin) return;                     // ← skip for test login
     if (hasMounted && !loading && authUser) {
       const destination = router.query.redirect || "/NewSearch/mainSearch";
-
-      if (router.pathname !== destination) {
-        // console.log("destination", destination);
-        router.push({ pathname: destination, query: {} });
-      } else {
-        router.reload();
-      }
+      // use replace to avoid stacking multiple entries
+      router.replace(destination);
     }
-  }, [hasMounted, authUser, loading, router]);
+  }, [isTestLogin, hasMounted, authUser, loading, router]);
+
 
   if (!hasMounted) return null; // Prevent rendering until mounted
 
@@ -38,17 +39,25 @@ export default function Home() {
     setError("");
     try {
       await signInWithGoogle();
-      // Use the "redirect" query param if available, otherwise default to mainSearch.
       const destination = router.query.redirect || "/NewSearch/mainSearch";
-
-      if (router.pathname !== destination) {
-        // console.log("destination", destination);
-        router.push({ pathname: destination, query: {} });
-      } else {
-        router.reload();
-      }
+      router.replace(destination);
     } catch (err) {
       setError("Failed to log in with Google");
+    }
+  };
+
+  const handleTestLogin = async () => {
+    setError("");
+    setIsTestLogin(true);
+    const password = prompt("Enter password:");
+    if (!password) return;
+
+    try {
+      await firebase.auth().signInWithEmailAndPassword("test@test.com", password);
+      // now go to your custom test-search page:
+      router.replace("/NewSearch/searchTest");
+    } catch (err) {
+      setError("Test login failed: " + err.message);
     }
   };
 
@@ -89,6 +98,15 @@ export default function Home() {
                 />
                 Sign in with Google
               </Button>
+
+              <Button
+                variant="secondary"
+                className="w-100 mt-3"
+                onClick={handleTestLogin}
+              >
+                Test Login
+              </Button>
+
             </Card.Body>
           </Card>
         </div>
