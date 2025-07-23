@@ -28,6 +28,22 @@ import InfoModal from "../../InfoModal";
 import MachineSelectionModal from "./MachineSelectionModal";
 import { addServiceItem } from "../../../../utils/BluefolderService";
 
+import NewLocal from "./NewLocal";
+
+//inflow API
+import InflowAPI from "../../../../utils/inflowAPI";
+
+// === BUILD A MAP ONLY OF THOSE FIELDS THE USER ACTUALLY PICKED ===
+function buildLocalLocObject(loc) {
+  const o = {};
+  if (loc.region)                                    o.region  = loc.region;
+  if (loc.section?.letter && loc.section?.number)    o.section = loc.section;
+  // pick up the new singular fields, too:
+  if (loc.bin   !== undefined && loc.bin   !== "")   o.bin     = loc.bin;
+  if (loc.pallet!== undefined && loc.pallet!== "")   o.pallet  = loc.pallet;
+  return o;
+}
+
 // This will only load the component on the client-side.
 const BarcodeScannerComponent = dynamic(
   () => import("react-qr-barcode-scanner"),
@@ -82,7 +98,50 @@ export default function DisplayItem() {
     localSN: "", // NEW: localSN field added here
     arrival_date: "",  // NEW FIELD: Arrival Date
     visible: true,
-  });  
+  });
+
+  const [newLocalFrom, setNewLocalFrom] = useState({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  const [newLocalCurrent, setNewLocalCurrent] = useState({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+
+  // New states for separate client selections:
+  const [selectedClientFrom, setSelectedClientFrom] = useState(null);
+  const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+
+  const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
+
+  // whenever you pick a new “From” client or machine, clear the old From-loc:
+  // useEffect(() => {
+  //   setNewLocalFrom({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  // }, [selectedClientFrom, selectedMachine]);
+  // const didMountFrom = useRef(false);
+
+  // useEffect(() => {
+  //   if (!didMountFrom.current) {
+  //     // first time through (the data-load phase), don’t clear
+  //     didMountFrom.current = true;
+  //     return;
+  //   }
+  //   // thereafter, when the user picks a new client or machine, clear:
+  //   setNewLocalFrom({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  //   setLocalLocFrom("");
+  // }, [selectedClientFrom, selectedMachine]);
+
+  // whenever you pick a new “Current” client or machine, clear the old Current-loc:
+  // useEffect(() => {
+  //   setNewLocalCurrent({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  // }, [selectedClientCurrent, selectedCurrentMachine]);
+  // const [didFetch, setDidFetch] = useState(false);
+
+  // useEffect(() => {
+  //   if (!didFetch) {
+  //     // we’re in the data-load phase, skip clearing
+  //     setDidFetch(true);
+  //     return;
+  //   }
+  //   // only clear on subsequent user changes:
+  //   setNewLocalCurrent({ region: "", section: {}, bin: "", pallet: "" });
+  // }, [selectedClientCurrent, selectedCurrentMachine]);
 
   // These arrays will be populated from Firebase.
   const [pnOptions, setPnOptions] = useState([]);
@@ -106,8 +165,7 @@ export default function DisplayItem() {
   const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [selectedMachine, setSelectedMachine] = useState(null);
-  const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
+
   const [selectedParent, setSelectedParent] = useState(null);
   const [TheMachine, setTheMachine] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
@@ -124,6 +182,7 @@ export default function DisplayItem() {
   // State for the local warehouse location inputs.
   const [localLocFrom, setLocalLocFrom] = useState("");
   const [localLocCurrent, setLocalLocCurrent] = useState("");
+
   // New state for DOM (Date of Manufacture)
   const [DOM, setDOM] = useState("");
   // New state for OEM, Modality, and Model.
@@ -137,18 +196,89 @@ export default function DisplayItem() {
 
   const [machineFieldsInitialized, setMachineFieldsInitialized] = useState(false);
 
-  const [storedMachine, setStoredMachine] = useState(null);
+  // near the top of DisplayItem()
+const [showLocalModalFrom, setShowLocalModalFrom] = useState(false);
+const [showLocalModalCurrent, setShowLocalModalCurrent] = useState(false);
 
+const openLocalModalFrom = () => setShowLocalModalFrom(true);
+const closeLocalModalFrom = () => setShowLocalModalFrom(false);
+const openLocalModalCurrent = () => setShowLocalModalCurrent(true);
+const closeLocalModalCurrent = () => setShowLocalModalCurrent(false);
 
-  useEffect(() => {
-    if (!machineFieldsInitialized && (TheMachine || selectedCurrentMachine || selectedMachine)) {
-      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
-      setOem(updatedFields.oem);
-      setModality(updatedFields.modality);
-      setModel(updatedFields.model);
-      setMachineFieldsInitialized(true);
+// at the top of DisplayItem()
+  const [showNewLocalModalFrom, setShowNewLocalModalFrom] = useState(false);
+  const [showNewLocalModalCurrent, setShowNewLocalModalCurrent] = useState(false);
+
+  function formatLoc(loc) {
+    if (!loc) return "";
+    const parts = [];
+    if (loc.region) parts.push(loc.region);
+    if (loc.section?.letter && loc.section?.number)
+      parts.push(`${loc.section.letter}${loc.section.number}`);
+    if (loc.bin) parts.push(`B${loc.bin}`);
+    if (loc.pallet) parts.push(`P${loc.pallet}`);
+    return parts.join("–");
+  }
+
+  // when the From-client changes, clear any old local-loc
+  // useEffect(() => {
+  //   setNewLocalFrom({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  // }, [selectedClientFrom]);
+
+  // // when the From-machine changes, clear any old local-loc
+  // useEffect(() => {
+  //   setNewLocalFrom({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  // }, [selectedMachine]);
+
+  // same for Current:
+  // useEffect(() => {
+  //   setNewLocalCurrent({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
+  // }, [selectedClientCurrent, selectedCurrentMachine]);
+
+  const handleSendToInflow = async () => {
+    try {
+      const name = items.name;
+      const description = descriptions[selectedDesc]?.description || "";
+      // gather every photo URL from Firebase Storage
+      const imageUrls = photos.map(p => p.url);
+      await InflowAPI.upsertProduct({ name, description, imageUrls });
+      alert("Sent to inFlow successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Error sending to inFlow: " + err.message);
     }
-  }, [storedMachine, selectedCurrentMachine, selectedMachine, machineFieldsInitialized]);
+  };
+
+  // const [storedMachine, setStoredMachine] = useState(null);
+
+
+  // useEffect(() => {
+  //   // once any of these three change, re-merge:
+  //   if (TheMachine || selectedCurrentMachine || selectedMachine) {
+  //     const merged = updateMachineFields(
+  //       TheMachine,
+  //       selectedCurrentMachine,
+  //       selectedMachine
+  //     );
+  //     setOem(merged.oem);
+  //     setModality(merged.modality);
+  //     setModel(merged.model);
+  //   }
+  // }, [TheMachine, selectedCurrentMachine, selectedMachine]);
+
+  // whenever the “From” client changes:
+  useEffect(() => {
+    setShowLocalLocFrom(
+      selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+    )
+  }, [selectedClientFrom])
+
+  // whenever the “Current” client changes:
+  useEffect(() => {
+    setShowLocalLocCurrent(
+      selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+    )
+  }, [selectedClientCurrent])
 
   // Fetch clients data.
   useEffect(() => {
@@ -197,22 +327,36 @@ export default function DisplayItem() {
       setMachine({ id: machineDoc.id, ...machineData });
       
       // Determine if the machine is "interior socal"
-      const isSocalInterior = machineData.name && machineData.name.toLowerCase() === "interior socal";
-      if (isSocalInterior) {
-        if (isFrom) {
-          setShowLocalLocFrom(true);
-        } else {
-          setShowLocalLocCurrent(true);
-        }
-      } else {
+      // const isSocalInterior = machineData.name && machineData.name.toLowerCase() === "interior socal";
+      // if (isSocalInterior) {
+      //   if (isFrom) {
+      //     setShowLocalLocFrom(true);
+      //   } else {
+      //     setShowLocalLocCurrent(true);
+      //   }
+      // } else {
         // Optionally clear the flag if it is not "interior socal"
-        if (isFrom) {
-          setShowLocalLocFrom(false);
-        } else {
-          setShowLocalLocCurrent(false);
-        }
+        // if (isFrom) {
+        //   setShowLocalLocFrom(false);
+        // } else {
+      //   setShowLocalLocCurrent(false);
+      // }
+      // }
+      // new: fetch client name and combine both checks
+      const clientDoc = machineData.client && typeof machineData.client.get === "function"
+        ? await machineData.client.get()
+        : null;
+      const clientName = clientDoc && clientDoc.exists ? clientDoc.data().name : null;
+      const isSocalInterior = machineData.name?.toLowerCase() === "interior socal";
+      const shouldShow = isSocalInterior || clientName === "SoCalWarehouse";
+
+      if (isFrom) {
+        setShowLocalLocFrom(shouldShow);
+      } else {
+        setShowLocalLocCurrent(shouldShow);
       }
-      
+
+
       if (machineData.client && typeof machineData.client.get === "function") {
         const clientDoc = await machineData.client.get();
         if (clientDoc.exists) {
@@ -242,6 +386,13 @@ export default function DisplayItem() {
       if (data.DOM) {
         setDOM(data.DOM);
       }
+
+      // …after you do setItems, setDescriptions, etc.
+
+      // load the “newLocal” maps
+      if (data.newLocalFrom) setNewLocalFrom(data.newLocalFrom);
+      if (data.newLocalCurrent) setNewLocalCurrent(data.newLocalCurrent);
+
       // Load PO Number if it exists.
       if (data.poNumber) {
         setItems((prev) => ({ ...prev, poNumber: data.poNumber }));
@@ -267,24 +418,65 @@ export default function DisplayItem() {
       if (!data.ClientCurrent && data.CurrentMachine && typeof data.CurrentMachine.get === "function") {
         console.log("Entered resolveClientFromMachine for CurrentMachine (old style for Current)");
         await resolveClientFromMachine(data.CurrentMachine, setSelectedClientCurrent, setSelectedCurrentMachine, false);
-      }      
+      }
 
-      // --- Update machine references (if using new fields) ---
+      let machineFromData = null;
+      let machineCurrentData = null;
+
       if (data.MachineFrom) {
-        const machineFromDoc = await data.MachineFrom.get();
-        if (machineFromDoc.exists) {
-          setSelectedMachine({ id: machineFromDoc.id, ...machineFromDoc.data() });
-        }
+        const doc = await data.MachineFrom.get();
+        machineFromData = doc.exists ? doc.data() : null;
+        setSelectedMachine({ id: doc.id, ...doc.data() });
       }
       if (data.MachineCurrent) {
-        const machineCurrentDoc = await data.MachineCurrent.get();
-        if (machineCurrentDoc.exists) {
-          setSelectedCurrentMachine({ id: machineCurrentDoc.id, ...machineCurrentDoc.data() });
-        }
+        const doc = await data.MachineCurrent.get();
+        machineCurrentData = doc.exists ? doc.data() : null;
+        setSelectedCurrentMachine({ id: doc.id, ...doc.data() });
       }
-      setStoredMachine(data.TheMachine || null);
+      const nameFrom = machineFromData?.name?.toLowerCase();
+      const nameCurrent = machineCurrentData?.name?.toLowerCase();
 
-      console.log( "SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine);
+      // If the machine’s name is “interior socal”, show that branch:
+      // setShowLocalLocFrom(nameFrom === "interior socal");
+      // // Or if your Firestore already has a value for localLocFrom, show it anyway:
+      // if (data.localLocFrom) setShowLocalLocFrom(true);
+
+      // setShowLocalLocCurrent(nameCurrent === "interior socal");
+      // if (data.localLocCurrent) setShowLocalLocCurrent(true);
+      // new: combine machine-name OR client-name check, keep existing-data
+      setShowLocalLocFrom(
+        (nameFrom === "interior socal" || selectedClientFrom?.name?.toLowerCase() === "socalwarehouse")
+        || Boolean(data.localLocFrom)
+      );
+      setShowLocalLocCurrent(
+        (nameCurrent === "interior socal" || selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse")
+        || Boolean(data.localLocCurrent)
+      );
+
+
+      const theMachineData = data.TheMachine || null;
+      
+      setTheMachine(theMachineData);
+      if (theMachineData) {
+        // pull both variants, prefer lowercase if it exists
+        const OEM = theMachineData.oem ?? theMachineData.OEM;
+        const Modality = theMachineData.modality ?? theMachineData.Modality;
+        const Model = theMachineData.model ?? theMachineData.Model;
+        setTheMachine({ ...theMachineData, OEM, Modality, Model });
+      }
+      // setStoredMachine(theMachineData);
+
+      // **right here** merge from the three sources you just fetched:
+      const merged = updateMachineFields(
+        theMachineData,
+        machineCurrentData,
+        machineFromData
+      );
+      setOem(merged.oem);
+      setModality(merged.modality);
+      setModel(merged.model);
+
+      console.log("SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine);
       // Show local loc inputs if applicable
       // if (
       //   selectedMachine &&
@@ -307,10 +499,13 @@ export default function DisplayItem() {
       }
 
       // Priority auto‑population of machine fields.
-      const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
-      setOem(updatedFields.oem);
-      setModality(updatedFields.modality);
-      setModel(updatedFields.model);
+      // const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
+      // // console.log("Updated machine fields:", updatedFields);
+      // setOem(updatedFields.oem);
+      // setModality(updatedFields.modality);
+      // setModel(updatedFields.model);
+
+   
 
       await fetchPhotos(id);
       await checkIfAddedToWebsite(id);
@@ -321,10 +516,12 @@ export default function DisplayItem() {
         query: { signal: id },
       });
     }
+    
   };
 
   // Returns the value for a given field from the highest-priority source.
   function getPriorityMachineField(field, theMachine, currentMachine, fromMachine) {
+    console.log("the machine: ", theMachine, "field: ", field);
     if (theMachine && theMachine[field] && theMachine[field] !== "N/A" && theMachine[field].trim() !== "") {
       return theMachine[field];
     }
@@ -340,9 +537,9 @@ export default function DisplayItem() {
   // Returns an object with updated OEM, modality, and model fields.
   function updateMachineFields(theMachine, currentMachine, fromMachine) {
     return {
-      oem: getPriorityMachineField("oem", theMachine, currentMachine, fromMachine),
-      modality: getPriorityMachineField("modality", theMachine, currentMachine, fromMachine),
-      model: getPriorityMachineField("model", theMachine, currentMachine, fromMachine),
+      oem: getPriorityMachineField("OEM", theMachine, currentMachine, fromMachine),
+      modality: getPriorityMachineField("Modality", theMachine, currentMachine, fromMachine),
+      model: getPriorityMachineField("Model", theMachine, currentMachine, fromMachine),
     };
   }
 
@@ -376,9 +573,15 @@ export default function DisplayItem() {
     if (doc.exists) {
       const machineData = doc.data();
       setTheMachine(machineData);
-      if (!oem) setOem(machineData.oem || machineData.OEM || "");
-      if (!modality) setModality(machineData.modality || machineData.Modality || "");
-      if (!model) setModel(machineData.model || machineData.Model || "");
+      // re-merge all three sources with correct priority:
+      const merged = updateMachineFields(
+        machineData,
+        selectedCurrentMachine,
+        selectedMachine
+      );
+      setOem(merged.oem);
+      setModality(merged.modality);
+      setModel(merged.model);
       const machinesSnapshot = await db
         .collection("Machine")
         .where("Model", "==", machineData.Model || machineData.model)
@@ -452,6 +655,11 @@ export default function DisplayItem() {
         setSelectedClientFrom(clientData);
       } else {
         setSelectedClientCurrent(clientData);
+      }
+      // after setting selectedClientFrom/Current:
+      if (clientData.name === "SoCalWarehouse") {
+        if (machinePick) setShowLocalLocFrom(true);
+        else setShowLocalLocCurrent(true);
       }
       // Fetch machines for this client:
       const machinePromises = clientData.machines.map((machineRef) => machineRef.get());
@@ -535,6 +743,7 @@ export default function DisplayItem() {
     return newObj;
   }
 
+
   async function toSend() {
     const db = firebase.firestore();
 
@@ -563,14 +772,39 @@ export default function DisplayItem() {
     formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
     formattedItems.sn = (items.sn || []).map(value => value === undefined ? "" : value);
 
+    const fromDetails = buildLocalLocObject(newLocalFrom);
+    const currentDetails = buildLocalLocObject(newLocalCurrent);
+
+    console.log("From Details: " + fromDetails.region + " " + fromDetails.section?.letter + fromDetails.section?.number + " " + fromDetails.bin + " " + fromDetails.pallet);
+    console.log("Current Details: " + currentDetails.region + " " + currentDetails.section?.letter + currentDetails.section?.number + " " + currentDetails.bin + " " + currentDetails.pallet);
+
+    if (Object.keys(fromDetails).length) {
+      formattedItems.newLocalFrom = fromDetails;
+      formattedItems.localLocFrom = formatLoc(newLocalFrom) || "";
+    } else {
+      // all fields empty — force an empty string and remove any stray map
+      console.log("entered empty fromDetails else");
+      formattedItems.localLocFrom = "";
+      formattedItems.newLocalFrom = {};
+    }
+
+    if (Object.keys(currentDetails).length) {
+      formattedItems.newLocalCurrent = currentDetails;
+      formattedItems.localLocCurrent = formatLoc(newLocalCurrent) || "";
+    } else {
+      // all fields empty — force an empty string and remove any stray map
+      formattedItems.localLocCurrent = "";
+      formattedItems.newLocalCurrent = {};
+    }
+
     if (selectedMachine && selectedMachine.id) {
       formattedItems.MachineFrom = db.collection("Machine").doc(selectedMachine.id);
     }
-    
+
     if (selectedCurrentMachine && selectedCurrentMachine.id) {
       formattedItems.MachineCurrent = db.collection("Machine").doc(selectedCurrentMachine.id);
-    }    
-    
+    }
+
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
@@ -582,6 +816,15 @@ export default function DisplayItem() {
     if (selectedClientCurrent && selectedClientCurrent.id) {
       formattedItems.ClientCurrent = db.collection("Client").doc(selectedClientCurrent.id);
     }
+
+    // Only attach the richer “newLocal” map when the user actually filled something in
+    if (Object.keys(fromDetails).length) {
+      formattedItems.newLocalFrom = fromDetails;
+    }
+    if (Object.keys(currentDetails).length) {
+      formattedItems.newLocalCurrent = currentDetails;
+    }
+
 
     let docId = id;
     try {
@@ -709,13 +952,15 @@ export default function DisplayItem() {
 
   // When a machine is selected from the modal.
   const handleSetSelectedMachine = (machine) => {
-    const condition = (name) => name && name.toLowerCase() === "interior socal";
+    // const condition = (name) => name && name.toLowerCase() === "interior socal";
+    const isSocalInterior = machine.name?.toLowerCase() === "interior socal";
+
     if (machinePick) {
       setSelectedMachine({ id: machine.id, name: machine.name });
-      setShowLocalLocFrom(condition(machine.name));
+      setShowLocalLocFrom(isSocalInterior || selectedClientFrom?.name?.toLowerCase() === "socalwarehouse");
     } else {
       setSelectedCurrentMachine({ id: machine.id, name: machine.name });
-      setShowLocalLocCurrent(condition(machine.name));
+      setShowLocalLocCurrent(isSocalInterior || selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse");
     }
     fetchMachine(machine.id);
     // Close the machine modal (assuming you're using showMachineModal to control it)
@@ -783,7 +1028,7 @@ export default function DisplayItem() {
         clientName = items.client;
       }
     }
-
+    console.log("descriptions:", descriptions[selectedDesc]);
     const payload = {
       name: items.name,
       pn: items.pn,
@@ -792,8 +1037,8 @@ export default function DisplayItem() {
       client: clientName,
       status: items.status,
       local_sn: id,
-      descriptions: descriptions,
-      date: items.date,
+      descriptions: [descriptions[selectedDesc] || { description: "", date: "" }],
+      date: items.dateCreated || "",
       DOM: DOM,
       oem: oem,
       modality: modality,
@@ -804,7 +1049,7 @@ export default function DisplayItem() {
 
     console.log("Payload for printing:", payload);
     try {
-      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/print-label", {
+      const response = await fetch("https://9d70-174-76-22-138.ngrok-free.app/print-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1028,7 +1273,7 @@ export default function DisplayItem() {
   
     try {
       // Replace with your ngrok URL and appropriate endpoint path (e.g., /api/bluefolder)
-      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/bluefolder", {
+      const response = await fetch("https://9d70-174-76-22-138.ngrok-free.app/bluefolder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1041,10 +1286,7 @@ export default function DisplayItem() {
       alert("Error adding data to BlueFolder.");
     }
   };
-  
-  // New states for separate client selections:
-const [selectedClientFrom, setSelectedClientFrom] = useState(null);
-const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+ 
 
   return (
     <LoggedIn>
@@ -1370,7 +1612,7 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                                 overflowY: "auto",
                               }}
                             >
-                              {items.pn.map((pnOption, idx) => (
+                              {pnOptions.map((pnOption, idx) => (
                                 <div
                                   key={idx}
                                   style={{ padding: "8px", cursor: "pointer" }}
@@ -1443,7 +1685,7 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                                 overflowY: "auto",
                               }}
                             >
-                              {items.sn.map((snOption, idx) => (
+                              {snOptions.map((snOption, idx) => (
                                 <div
                                   key={idx}
                                   style={{ padding: "8px", cursor: "pointer" }}
@@ -1630,15 +1872,57 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                                     <strong>Selected Machine (From):</strong> {selectedMachine.name}
                                   </p>
                                   {showLocalLocFrom && (
-                                    <Form.Group controlId="localLocFrom" className="mt-2">
-                                      <Form.Label>Local Loc (From)</Form.Label>
-                                      <Form.Control
-                                        type="text"
-                                        value={localLocFrom}
-                                        onChange={(e) => setLocalLocFrom(e.target.value)}
-                                      />
-                                    </Form.Group>
+                                    <>
+                                      <Button
+                                        variant="outline-secondary"
+                                        onClick={() => setShowNewLocalModalFrom(true)}
+                                        className="w-100 mb-2"
+                                      >
+                                        {/* build a little helper inline: region-section-bin-pallet */}
+                                        {[
+                                          newLocalFrom.region,
+                                          newLocalFrom.section?.letter + newLocalFrom.section?.number,
+                                          newLocalFrom.bin && `B${newLocalFrom.bin}`,
+                                          newLocalFrom.pallet && `P${newLocalFrom.pallet}`
+                                        ]
+                                          .filter(Boolean)
+                                          .join("-")}
+                                        { /* e.g. “E-A7-B3-P2” */}
+                                      </Button>
+
+                                      <Modal
+                                        show={showNewLocalModalFrom}
+                                        onHide={() => setShowNewLocalModalFrom(false)}
+                                        centered
+                                      >
+                                        <Modal.Header>
+                                          <Modal.Title>Edit Local Loc (From)</Modal.Title>
+                                        </Modal.Header>
+                                        <Modal.Body>
+                                          <NewLocal
+                                            selectedClient={selectedClientFrom}
+                                            showLocalLoc={showNewLocalModalFrom}
+                                            value={newLocalFrom}
+                                            onChange={setNewLocalFrom}
+                                            onSave={(p) => {
+                                              setNewLocalFrom(p);
+                                              setShowNewLocalModalFrom(false);
+                                            }}
+                                            onCancel={() => setShowNewLocalModalFrom(false)}
+                                          />
+                                        </Modal.Body>
+                                        {/* <Modal.Footer>
+                                          <Button
+                                            variant="secondary"
+                                            onClick={() => setShowNewLocalModalFrom(false)}
+                                          >
+                                            Close
+                                          </Button>
+                                        </Modal.Footer> */}
+                                      </Modal>
+                                    </>
                                   )}
+
                                 </>
                               )}
                             </div>
@@ -1671,14 +1955,49 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                                     <strong>Selected Machine (Current):</strong> {selectedCurrentMachine.name}
                                   </p>
                                   {showLocalLocCurrent && (
-                                    <Form.Group controlId="localLocCurrent" className="mt-2">
-                                      <Form.Label>Local Loc (Current)</Form.Label>
-                                      <Form.Control
-                                        type="text"
-                                        value={localLocCurrent}
-                                        onChange={(e) => setLocalLocCurrent(e.target.value)}
-                                      />
-                                    </Form.Group>
+                                    <>
+                                      <Button
+                                        variant="outline-secondary"
+                                        onClick={() => setShowNewLocalModalCurrent(true)}
+                                        className="w-100 mb-2"
+                                      >
+                                        {[newLocalCurrent.region,
+                                        newLocalCurrent.section?.letter + newLocalCurrent.section?.number,
+                                        newLocalCurrent.bin && `B${newLocalCurrent.bin}`,
+                                        newLocalCurrent.pallet && `P${newLocalCurrent.pallet}`
+                                        ].filter(Boolean).join("-")}
+                                      </Button>
+                                      <Modal
+                                        show={showNewLocalModalCurrent}
+                                        onHide={() => setShowNewLocalModalCurrent(false)}
+                                        centered
+                                      >
+                                        <Modal.Header>
+                                          <Modal.Title>Edit Local Loc (Current)</Modal.Title>
+                                        </Modal.Header>
+                                        <Modal.Body>
+                                          <NewLocal
+                                            selectedClient={selectedClientCurrent}
+                                            showLocalLoc={showNewLocalModalCurrent}
+                                            value={newLocalCurrent}
+                                            onChange={setNewLocalCurrent}
+                                            onSave={(p) => {
+                                              setNewLocalCurrent(p);
+                                              setShowNewLocalModalCurrent(false);
+                                            }}
+                                            onCancel={() => setShowNewLocalModalCurrent(false)}
+                                          />
+                                        </Modal.Body>
+                                        {/* <Modal.Footer>
+                                          <Button
+                                            variant="secondary"
+                                            onClick={() => setShowNewLocalModalCurrent(false)}
+                                          >
+                                            Close
+                                          </Button>
+                                        </Modal.Footer> */}
+                                      </Modal>
+                                    </>
                                   )}
                                 </>
                               )}
@@ -1725,9 +2044,16 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                           </Button>
                         </ButtonGroup>
                       </Col>
-                      <Col xs={6}>
+                      <Col xs={6} className="d-flex align-items-center">
                         <Button
-                          
+                          variant="success"
+                          onClick={handleSendToInflow}
+                          style={{ marginLeft: "auto" }}
+                        >
+                          Send to inFlow
+                        </Button>
+                        <Button
+
                           variant="secondary"
                           onClick={handleBluefolderButton}
                           style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
@@ -1741,6 +2067,23 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                         >
                           {addToWebsite ? "✓ Add to Website" : "Add to Website"}
                         </Button>
+
+                        <Form.Check
+                          type="checkbox"
+                          id="hide-checkbox"
+                          label="Hide"
+                          // box is checked when we want visible = false
+                          checked={!items.visible}
+                          onChange={e => {
+                            // grab checked immediately
+                            const isHidden = e.currentTarget.checked
+                            setItems(prev => ({
+                              ...prev,
+                              visible: !isHidden
+                            }))
+                          }}
+                          className="ms-3"
+                        />
                       </Col>
                     </Row>
                     <input
@@ -1928,9 +2271,10 @@ const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
                             placeholder="Enter Arrival Date"
                             type="date"
                             value={items.arrival_date}
-                            onChange={(e) =>
-                              setItems((prev) => ({ ...prev, arrival_date: e.target.value }))
-                            }
+                            onChange={e => {
+                              const value = e.target.value
+                              setItems(prev => ({ ...prev, arrival_date: value }))
+                            }}
                           />
                         </Form.Group>
                       </Row>

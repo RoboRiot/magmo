@@ -98,6 +98,11 @@ export default function WarehouseSelect() {
                 )}
                 {LoadingButton(
                   "secondary",
+                  "Inventory manager",
+                  "../NewSearch/inventory/inventoryManage"
+                )}
+                {LoadingButton(
+                  "primary",
                   "Add New Item",
                   "../NewSearch/AddItem/NewItem"
                 )}

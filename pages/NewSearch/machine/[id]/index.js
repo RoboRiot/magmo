@@ -59,15 +59,23 @@ const Machine = () => {
   const fetchAssociatedParts = async (associatedPartsRefs) => {
     try {
       const db = firebase.firestore();
-      const partsPromises = associatedPartsRefs.map((ref) => ref.get());
-      const partsDocs = await Promise.all(partsPromises);
-  
-      const partsData = partsDocs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const partsDocs = await Promise.all(associatedPartsRefs.map(ref => ref.get()));
+
+      const partsData = await Promise.all(partsDocs.map(async (doc) => {
+        if (!doc.exists) {
+          // skip or return an empty object
+          return null;
+        }
+        const data = doc.data() || {};
+        let clientName = "";
+        if (data.ClientFrom?.get) {
+          const clientDoc = await data.ClientFrom.get();
+          clientName = clientDoc.exists ? clientDoc.data().name : "";
+        }        
+        return { id: doc.id, ...data, clientName };
       }));
-  
-      setAssociatedParts(partsData);
+
+      setAssociatedParts(partsData.filter(p => p));
       console.log("Associated parts data:", partsData);
     } catch (error) {
       console.error("Error fetching associated parts:", error);
@@ -81,12 +89,13 @@ const Machine = () => {
     const payload = {
       items: associatedParts.map(part => ({
         name: part.name,
-        date: part.date, // Ensure your part has a 'date' field.
+        arrival_date: part.arrival_date, // Ensure your part has a 'date' field.
         poNumber: part.poNumber || "",
         OEM: part.TheMachine ? part.TheMachine.oem || "" : "",
         modality: part.TheMachine ? part.TheMachine.modality || "" : "",
         model: part.TheMachine ? part.TheMachine.model || "" : "",
         local_sn: part.id, // Using document id as the local serial number.
+        client: part.clientName || "",
         description: part.description ||
           (part.descriptions && part.descriptions.length > 0
             ? part.descriptions[0].description
@@ -97,7 +106,7 @@ const Machine = () => {
     };
 
     try {
-      const response = await fetch("https://0ad5-174-76-22-138.ngrok-free.app/print_multi", {
+      const response = await fetch("https://9d70-174-76-22-138.ngrok-free.app/print_multi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
