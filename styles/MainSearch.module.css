@@ -1,0 +1,65 @@
+/* MainSearch.module.css */
+/* Add these to your CSS file or inline in the component */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.7); /* Light background with transparency */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Make sure it's above other elements */
+  backdrop-filter: blur(8px); /* Blurs the background */
+}
+
+.spinner-center {
+  font-size: 3rem;
+  color: #007bff; /* Spinner color */
+}
+.divider {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+  }
+  
+  .tableContainer {
+    position: relative;
+    height: 600px;
+  }
+  
+  .scrollableTable {
+    max-height: 540px; /* Adjusted to leave space for the search bar and buttons */
+    overflow-y: auto; /* Enable scroll for the table body */
+  }
+  
+  .stickyHeader {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+  
+  .searchContainer {
+    padding-top: 10px;
+    background: white;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+  }
+  
+  .buttonGroup {
+    display: flex;
+    width: 100%;
+  }
+  
+  .flexButton {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: calc(12px + 0.5vw);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
