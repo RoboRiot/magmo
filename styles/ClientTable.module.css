@@ -1,0 +1,28 @@
+.clientTableContainer {
+    max-height: 400px; /* Adjust the height as needed */
+    overflow-y: auto; /* Enable scroll for the table body */
+  }
+  
+  .clientTable {
+    width: 100%;
+  }
+  
+  .clientTable th,
+  .clientTable td {
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  .clientTable .buttonGroup {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .clientTable .flexButton {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: calc(12px + 0.5vw);
+    text-truncate: ellipsis;
+  }
+  

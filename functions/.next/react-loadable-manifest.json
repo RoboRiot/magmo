@@ -1,0 +1,29 @@
+{
+  "NewSearch\\AddItem\\NewItem.js -> react-qr-barcode-scanner": {
+    "id": "ESy1",
+    "files": [
+      "static/chunks/16.f48aac92925344182c98.js"
+    ]
+  },
+  "NewSearch\\item\\[id]\\index.js -> react-qr-barcode-scanner": {
+    "id": "ESy1",
+    "files": [
+      "static/chunks/16.f48aac92925344182c98.js"
+    ]
+  },
+  "ServiceDocs\\Explorer.js -> ../../components/pdfViewer": {
+    "id": "iawX",
+    "files": [
+      "static/chunks/framework.118b69175bff4bc1f0b1.js",
+      "static/chunks/8764aea244c622a0157f9491e5f453c9d6ed3716.507c6fdf91c061ec8935.js",
+      "static/css/84f35f869fff627d73de.css",
+      "static/chunks/64.930497362be1dec18cfd.js"
+    ]
+  },
+  "Warehousedb\\WarehouseScan.js -> react-qr-barcode-scanner": {
+    "id": "ESy1",
+    "files": [
+      "static/chunks/16.f48aac92925344182c98.js"
+    ]
+  }
+}
