@@ -304,9 +304,9 @@ const Machine = () => {
     bordered: true,
     hover: true,
     size: "sm"
-  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "Part Number"), __jsx("th", null, "Serial Number"), __jsx("th", null, "Date"), __jsx("th", null, "Select"))), __jsx("tbody", null, associatedParts.map(part => __jsx("tr", {
+  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "ID"), __jsx("th", null, "Part Number"), __jsx("th", null, "Serial Number"), __jsx("th", null, "Date"), __jsx("th", null, "Select"))), __jsx("tbody", null, associatedParts.map(part => __jsx("tr", {
     key: part.id
-  }, __jsx("td", null, part.name), __jsx("td", null, part.pn), __jsx("td", null, part.sn), __jsx("td", null, part.date), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+  }, __jsx("td", null, part.name), __jsx("td", null, part.id), __jsx("td", null, part.pn), __jsx("td", null, part.sn), __jsx("td", null, part.date), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "primary",
     onClick: () => handleSelectPart(part.id, part.name)
   }, "Select")))), __jsx("tr", null, __jsx("td", {

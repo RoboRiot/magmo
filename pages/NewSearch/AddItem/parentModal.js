@@ -33,7 +33,7 @@ const CLIENT_UNASSIGNED = "unassigned";
 const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   const [info, setInfo] = useState([]);
   const [backupInfo, setBackupInfo] = useState([]);
-  const [ids, setID] = useState([]);
+  // const [ids, setID] = useState([]);
   const [search, setSearch] = useState("");
   const [select, setSelect] = useState("Name");
   const [showList, setShowList] = useState(false);
@@ -57,7 +57,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
       const data = await fetchPartsWithMachineData();
       setInfo(data);
       setBackupInfo(data);
-      setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
+      // setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
     }
     fetchData();
   }, []);
@@ -123,8 +123,9 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   }
 
   // Row selection handler
-  const rowSelect = (id, name, pn) => {
-    setSelectedParent({ id, name, pn });
+  const rowSelect = (item) => {
+    // item.id must be present in fetchPartsWithMachineData() results
+    setSelectedParent({ id: item.id, name: item.name, pn: item.pn });
     handleClose();
   };
 
@@ -225,14 +226,14 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="lg" centered scrollable dialogClassName="parent-modal-dialog" >
       <Modal.Header closeButton>
         <Modal.Title>Select Parent</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body style={{ maxHeight: "75vh", overflowY: "auto" }}>
         <Container
           className="d-flex align-items-center justify-content-center"
-          style={{ minHeight: "80vh" }}
+          style={{ minHeight: "unset" }}
         >
           <div className="w-100" style={{ maxWidth: "1200px" }}>
             <Card>
@@ -364,8 +365,8 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {info.map((item, index) => (
-                            <tr className="clickable-row" key={index}>
+                          {info.map((item) => (
+                            <tr className="clickable-row" key={item.id}>
                               <td>{item.name}</td>
                               <td>{formatDate(item.date)}</td>
                               <td>
@@ -379,9 +380,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                               <td>
                                 <Button
                                   variant="primary"
-                                  onClick={() =>
-                                    rowSelect(ids[index], item.name, item.pn)
-                                  }
+                                  onClick={() => rowSelect(item)}
                                 >
                                   Select
                                 </Button>
@@ -463,7 +462,16 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>
-          Close
+          Cancel
+        </Button>
+        <Button
+          variant="warning"
+          onClick={() => {
+            setSelectedParent(null);
+            handleClose();
+          }}
+        >
+          Clear Selection
         </Button>
       </Modal.Footer>
       <Modal show={showClientModal} onHide={handleCloseClientModal}>
@@ -516,5 +524,16 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
     </Modal>
   );
 };
-
+<style jsx global>{`
+  /* Constrain the modal dialog width to viewport */
+  .parent-modal-dialog {
+    max-width: 95vw;
+    margin: 0 auto;
+  }
+  /* If the table container has a fixed height already, keep it—but ensure it never exceeds body */
+  .parent-modal-dialog .modal-body .${styles.tableContainer} {
+    max-height: 70vh;
+    overflow: auto;
+  }
+`}</style>
 export default ParentModal;

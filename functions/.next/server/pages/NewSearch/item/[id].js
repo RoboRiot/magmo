@@ -1178,6 +1178,13 @@ module.exports = {
 
 /***/ }),
 
+/***/ "HJQg":
+/***/ (function(module, exports) {
+
+module.exports = require("styled-jsx/style");
+
+/***/ }),
+
 /***/ "IZS3":
 /***/ (function(module, exports) {
 
@@ -4383,20 +4390,23 @@ function makePublicRouterInstance(router) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("IZS3");
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("qoNY");
-/* harmony import */ var _context_AuthUserContext__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("XrFm");
-/* harmony import */ var _LoggedIn__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("mJJZ");
-/* harmony import */ var _utils_ClientTable__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("8HvV");
-/* harmony import */ var _utils_ModelTable__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__("TM8N");
-/* harmony import */ var _utils_PartTable__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__("MSWM");
-/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__("Dktn");
-/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8__);
-/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__("NY6m");
-var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
+/* harmony import */ var styled_jsx_style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("HJQg");
+/* harmony import */ var styled_jsx_style__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(styled_jsx_style__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("cDcd");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("IZS3");
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("qoNY");
+/* harmony import */ var _context_AuthUserContext__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("XrFm");
+/* harmony import */ var _LoggedIn__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("mJJZ");
+/* harmony import */ var _utils_ClientTable__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__("8HvV");
+/* harmony import */ var _utils_ModelTable__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__("TM8N");
+/* harmony import */ var _utils_PartTable__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__("MSWM");
+/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__("Dktn");
+/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9__);
+/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__("NY6m");
+
+var __jsx = react__WEBPACK_IMPORTED_MODULE_1___default.a.createElement;
 
 
 
@@ -4419,89 +4429,85 @@ const ParentModal = ({
   const {
     0: info,
     1: setInfo
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
   const {
     0: backupInfo,
     1: setBackupInfo
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
-  const {
-    0: ids,
-    1: setID
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]); // const [ids, setID] = useState([]);
+
   const {
     0: search,
     1: setSearch
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
   const {
     0: select,
     1: setSelect
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Name");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Name");
   const {
     0: showList,
     1: setShowList
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
   const {
     0: showListSearch,
     1: setShowListSearch
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("text");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("text");
   const {
     0: selectedOEM,
     1: setSelectedOEM
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
   const {
     0: selectedModality,
     1: setSelectedModality
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
   const {
     0: selectedClient,
     1: setSelectedClient
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
   const {
     0: clients,
     1: setClients
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
   const {
     0: showClientModal,
     1: setShowClientModal
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
   const {
     0: clientButtonText,
     1: setClientButtonText
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
   const {
     0: hoverIndex,
     1: setHoverIndex
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
   const {
     0: selectedModel,
     1: setSelectedModel
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
   const {
     0: models,
     1: setModels
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
   const {
     0: showModelModal,
     1: setShowModelModal
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
   const {
     0: modelButtonText,
     1: setModelButtonText
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
   const {
     0: clientSearchTerm,
     1: setClientSearchTerm
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
   const {
     0: modelSearchTerm,
     1: setModelSearchTerm
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
-  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
+  Object(react__WEBPACK_IMPORTED_MODULE_1__["useEffect"])(() => {
     async function fetchData() {
-      const data = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchPartsWithMachineData */ "c"])();
+      const data = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchPartsWithMachineData */ "c"])();
       setInfo(data);
-      setBackupInfo(data);
-      setID(data.map(item => item.id)); // Ensure IDs are correctly set here
+      setBackupInfo(data); // setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
     }
 
     fetchData();
@@ -4561,11 +4567,12 @@ const ParentModal = ({
   } // Row selection handler
 
 
-  const rowSelect = (id, name, pn) => {
+  const rowSelect = item => {
+    // item.id must be present in fetchPartsWithMachineData() results
     setSelectedParent({
-      id,
-      name,
-      pn
+      id: item.id,
+      name: item.name,
+      pn: item.pn
     });
     handleClose();
   }; // Dropdown handlers
@@ -4574,11 +4581,11 @@ const ParentModal = ({
   const {
     0: dropdown1Text,
     1: setDropdown1Text
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
   const {
     0: dropdown2Text,
     1: setDropdown2Text
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
 
   const handleSelect1 = (eventKey, event) => {
     if (eventKey === "unassigned") {
@@ -4600,13 +4607,13 @@ const ParentModal = ({
     }
   };
 
-  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+  Object(react__WEBPACK_IMPORTED_MODULE_1__["useEffect"])(() => {
     searchFilter();
   }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]); // Fetch clients and show modal
 
   const handleClientClick = async () => {
     console.log("clicked");
-    const clientsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchClients */ "a"])(selectedOEM, selectedModality);
+    const clientsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchClients */ "a"])(selectedOEM, selectedModality);
     setClients(clientsData);
     setClientSearchTerm(""); // Reset search term
 
@@ -4635,7 +4642,7 @@ const ParentModal = ({
 
 
   const handleModelClick = async () => {
-    const modelsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchModels */ "b"])(selectedOEM, selectedModality, selectedClient);
+    const modelsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchModels */ "b"])(selectedOEM, selectedModality, selectedClient);
     setModels(modelsData);
     setModelSearchTerm(""); // Reset search term
 
@@ -4669,104 +4676,112 @@ const ParentModal = ({
     searchFilter();
   };
 
-  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
     show: show,
     onHide: handleClose,
-    size: "lg"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+    size: "lg",
+    centered: true,
+    scrollable: true,
+    dialogClassName: "parent-modal-dialog"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
     closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Select Parent")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Container"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Parent")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, {
+    style: {
+      maxHeight: "75vh",
+      overflowY: "auto"
+    }
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Container"], {
     className: "d-flex align-items-center justify-content-center",
     style: {
-      minHeight: "80vh"
+      minHeight: "unset"
     }
   }, __jsx("div", {
     className: "w-100",
     style: {
       maxWidth: "1200px"
     }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Card"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Card"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Row"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Row"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
     md: 4
-  }, __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+  }, __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "OEM"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "OEM"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"], {
     onSelect: handleSelect1
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Toggle, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Toggle, {
     variant: "outline-secondary",
     id: "dropdown-button-1",
     className: "w-100"
-  }, dropdown1Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Menu, {
+  }, dropdown1Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Menu, {
     className: "w-100"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "unassigned"
-  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "GE"
-  }, "GE"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "GE"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "Toshiba"
-  }, "Toshiba"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "Toshiba"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "Siemens"
-  }, "Siemens"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "Siemens"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "Philips"
-  }, "Philips")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+  }, "Philips")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Modality"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Modality"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"], {
     onSelect: handleSelect2
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Toggle, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Toggle, {
     variant: "outline-secondary",
     id: "dropdown-button-2",
     className: "w-100"
-  }, dropdown2Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Menu, {
+  }, dropdown2Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Menu, {
     className: "w-100"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "unassigned"
-  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "CT"
-  }, "CT"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+  }, "CT"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
     eventKey: "MRI"
-  }, "MRI")))), __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+  }, "MRI")))), __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Client"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Client"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "outline-secondary",
     className: "w-100",
     onClick: handleClientClick
-  }, clientButtonText)), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+  }, clientButtonText)), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Client-2"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Client-2"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "outline-secondary",
     className: "w-100",
     disabled: true
-  }, "Select Option")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+  }, "Select Option")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Model"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Model"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "outline-secondary",
     className: "w-100",
     onClick: handleModelClick
   }, modelButtonText)), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.divider
-  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.divider
+  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
     className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Warehouse"), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.buttonGroup
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Warehouse"), __jsx("div", {
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.buttonGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "outline-secondary",
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.flexButton,
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.flexButton,
     onClick: handleWarehouseClick
-  }, "Warehouse"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, "Warehouse"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "outline-secondary",
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.flexButton,
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.flexButton,
     onClick: handleUnassignedClick
-  }, "Unassigned")))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], {
+  }, "Unassigned")))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
     md: 8
   }, __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.tableContainer
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Table"], {
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
     striped: true,
     bordered: true,
     hover: true,
     size: "sm",
     className: "mb-0"
   }, __jsx("thead", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.stickyHeader
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.stickyHeader
   }, __jsx("tr", null, __jsx("th", {
     onClick: () => sortCheckAll(0)
   }, "Name"), __jsx("th", {
@@ -4777,17 +4792,17 @@ const ParentModal = ({
     onClick: () => sortCheckAll(3)
   }, "Product Number"), __jsx("th", {
     onClick: () => sortCheckAll(4)
-  }, "Serial Number"), __jsx("th", null, "Select"))), __jsx("tbody", null, info.map((item, index) => __jsx("tr", {
+  }, "Serial Number"), __jsx("th", null, "Select"))), __jsx("tbody", null, info.map(item => __jsx("tr", {
     className: "clickable-row",
-    key: index
-  }, __jsx("td", null, item.name), __jsx("td", null, Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* formatDate */ "d"])(item.date)), __jsx("td", null, item.workOrders && item.workOrders.length > 0 ? item.workOrders[item.workOrders.length - 1].workOrder : "N/A"), __jsx("td", null, item.pn), __jsx("td", null, item.sn), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    key: item.id
+  }, __jsx("td", null, item.name), __jsx("td", null, Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* formatDate */ "d"])(item.date)), __jsx("td", null, item.workOrders && item.workOrders.length > 0 ? item.workOrders[item.workOrders.length - 1].workOrder : "N/A"), __jsx("td", null, item.pn), __jsx("td", null, item.sn), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "primary",
-    onClick: () => rowSelect(ids[index], item.name, item.pn)
+    onClick: () => rowSelect(item)
   }, "Select")))))), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_8___default.a.searchContainer
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"], {
+    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.searchContainer
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Form"], {
     className: "d-flex pb-2"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
     type: showListSearch,
     placeholder: "Search",
     className: "me-2 flex-grow-1",
@@ -4797,7 +4812,7 @@ const ParentModal = ({
     style: {
       flex: "1"
     }
-  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"], {
+  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"], {
     title: select,
     id: "collasible-nav-dropdown",
     show: showList,
@@ -4806,55 +4821,66 @@ const ParentModal = ({
     style: {
       marginTop: "-5px"
     }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
     onClick: () => setSelect("Name") & setShowListSearch("text")
-  }, "Name"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+  }, "Name"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
     onClick: () => setSelect("Date") & setShowListSearch("date")
-  }, "Date"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+  }, "Date"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
     onClick: () => setSelect("Work Order") & setShowListSearch("number")
-  }, "Work Order"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+  }, "Work Order"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
     onClick: () => setSelect("Product Number") & setShowListSearch("number")
-  }, "Product Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+  }, "Product Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
     onClick: () => setSelect("Description") & setShowListSearch("text")
-  }, "Description")))))))))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Footer, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, "Description")))))))))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Footer, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "secondary",
     onClick: handleClose
-  }, "Close")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+  }, "Cancel"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+    variant: "warning",
+    onClick: () => {
+      setSelectedParent(null);
+      handleClose();
+    }
+  }, "Clear Selection")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
     show: showClientModal,
     onHide: handleCloseClientModal
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
     closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Select Client")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Client")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
     type: "text",
     placeholder: "Search by name",
     className: "mb-3",
     value: clientSearchTerm,
     onChange: e => setClientSearchTerm(e.target.value)
-  }), __jsx(_utils_ClientTable__WEBPACK_IMPORTED_MODULE_5__[/* default */ "a"], {
+  }), __jsx(_utils_ClientTable__WEBPACK_IMPORTED_MODULE_6__[/* default */ "a"], {
     clients: clients.filter(client => client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())),
     disableInfo: true,
     onSelectClient: handleClientSelect,
     onInfoClick: handleClientInfo,
     clearSelection: () => handleClientSelect(null) // Clear selection handler
 
-  }))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+  }))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
     show: showModelModal,
     onHide: handleCloseModelModal
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
     closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Select Model")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Model")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
     type: "text",
     placeholder: "Search by name",
     className: "mb-3",
     value: modelSearchTerm,
     onChange: e => setModelSearchTerm(e.target.value)
-  }), __jsx(_utils_ModelTable__WEBPACK_IMPORTED_MODULE_6__[/* default */ "a"], {
+  }), __jsx(_utils_ModelTable__WEBPACK_IMPORTED_MODULE_7__[/* default */ "a"], {
     models: models.filter(model => typeof model === "string" ? model.toLowerCase().includes(modelSearchTerm.toLowerCase()) : false),
     onSelectModel: handleModelSelect,
     clearSelection: () => handleModelSelect(null) // Clear selection handler
 
   }))));
 };
+
+__jsx(styled_jsx_style__WEBPACK_IMPORTED_MODULE_0___default.a, {
+  id: "2081140824",
+  dynamic: [_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer]
+}, [".parent-modal-dialog{max-width:95vw;margin:0 auto;}", `.parent-modal-dialog .modal-body .${_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer}{max-height:70vh;overflow:auto;}`]);
 
 /* harmony default export */ __webpack_exports__["default"] = (ParentModal);
 
@@ -5030,56 +5056,222 @@ function inflowAPI_objectSpread(target) { for (var i = 1; i < arguments.length; 
 
 function inflowAPI_defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-// inflowAPI.js
+// // inflowAPI.js
+// const BASE_URL   = 'https://cloudapi.inflowinventory.com';
+// const COMPANY_ID = 'e28dc600-32a4-4438-a374-68df72caebbd';
+// // (Move this to env vars in prod)
+// const API_KEY    = '10336E10F0BF982AB7AEB639D2FEB3B2B1C9BD73634D153EA81EE2130A70F9C4-1';
+// const headers = {
+//   'Authorization': `Bearer ${API_KEY}`,
+//   'Content-Type':  'application/json',
+//   // Use the latest you saw in server responses; older also works, but stay current:
+//   'Accept':        'application/json;version=2025-06-24',
+// };
+// async function parseErr(res) {
+//   const t = await res.text();
+//   try { return JSON.parse(t); } catch { return t; }
+// }
+// // --- Look up existing product by name on the collection endpoint ---
+// // Use filter[name] if your tenant supports it; otherwise fall back to filter[smart].
+// async function findProductByName(name) {
+//   // Try exact name filter first
+//   let url = `${BASE_URL}/${COMPANY_ID}/products?filter[name]=${encodeURIComponent(name)}&count=1`;
+//   let res = await fetch(url, { headers });
+//   if (res.ok) {
+//     const data = await res.json();
+//     const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+//     if (items.length) return items[0];
+//   }
+//   // Fallback: smart filter (searches common fields)
+//   url = `${BASE_URL}/${COMPANY_ID}/products?filter[smart]=${encodeURIComponent(name)}&count=1`;
+//   res = await fetch(url, { headers });
+//   if (!res.ok) return null;
+//   const data2 = await res.json();
+//   const items2 = Array.isArray(data2?.items) ? data2.items : (Array.isArray(data2) ? data2 : []);
+//   return items2.length ? items2[0] : null;
+// }
+// class InflowAPI {
+//   /**
+//    * Upsert a product in inFlow via PUT to the collection.
+//    * @param {{ productId?: string, name: string, description: string, imageUrls?: string[], sku?: string }} params
+//    */
+//   static async upsertProduct({ productId, name, description, imageUrls = [], sku }) {
+//     if (!name || !name.trim()) throw new Error('Name is required');
+//     // If no productId, check if one already exists with this name to avoid the unique-name error.
+//     if (!productId) {
+//       const existing = await findProductByName(name.trim());
+//       if (existing && (existing.productId || existing.id)) {
+//         productId = existing.productId || existing.id;
+//       }
+//     }
+//     // If still no id, generate one (this matched your previously-working flow)
+//     const id = productId || crypto.randomUUID();
+//     // Build the payload exactly like your original—PUT to the collection with productId
+//     const payload = {
+//       productId: id,
+//       name,
+//       description,
+//       ...(sku ? { sku } : {}),
+//       ...(imageUrls.length > 0 && {
+//         images: imageUrls.map(u => ({
+//           imageId: crypto.randomUUID(),
+//           originalUrl: u,
+//         })),
+//       }),
+//     };
+//     const url = `${BASE_URL}/${COMPANY_ID}/products`;
+//     const res = await fetch(url, {
+//       method: 'PUT',
+//       headers,
+//       body: JSON.stringify(payload),
+//     });
+//     if (!res.ok) {
+//       const err = await parseErr(res);
+//       throw new Error(`inFlow API error (${res.status}): ${typeof err === 'string' ? err : JSON.stringify(err)}`);
+//     }
+//     return res.json();
+//   }
+// }
+// export default InflowAPI;
+// utils/inflowAPI.js (only the changed bits)
 const BASE_URL = 'https://cloudapi.inflowinventory.com';
 const COMPANY_ID = 'e28dc600-32a4-4438-a374-68df72caebbd';
 const API_KEY = '10336E10F0BF982AB7AEB639D2FEB3B2B1C9BD73634D153EA81EE2130A70F9C4-1';
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  'Content-Type': 'application/json',
+  // stick to a stable version you know works in your tenant:
+  Accept: 'application/json;version=2024-10-01'
+};
+
+const n = s => (s !== null && s !== void 0 ? s : '').toString().trim();
+
+async function parseText(res) {
+  const t = await res.text();
+
+  try {
+    return {
+      json: JSON.parse(t),
+      raw: t
+    };
+  } catch {
+    return {
+      json: null,
+      raw: t
+    };
+  }
+} // ---- EXACT lookup helpers (no fuzzy/SMART fallback) ------------------------
+
+
+async function findProductIdByExactName(name) {
+  const nameNorm = n(name);
+  if (!nameNorm) return null;
+  const url = `${BASE_URL}/${COMPANY_ID}/products?filter[name]=` + `${encodeURIComponent(nameNorm)}&count=1`;
+  const res = await fetch(url, {
+    headers
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const items = Array.isArray(data === null || data === void 0 ? void 0 : data.items) ? data.items : Array.isArray(data) ? data : [];
+  const item = items[0];
+  if (!item) return null; // guard: only accept if name is an exact (case-insensitive) match
+
+  if (n(item.name).toLowerCase() !== nameNorm.toLowerCase()) return null;
+  return item.productId || item.id || null;
+} // Prefer direct GET /products/{id}; fallback to collection filter by id
+
+
+async function getProductById(productId) {
+  // Try item endpoint
+  let res = await fetch(`${BASE_URL}/${COMPANY_ID}/products/${encodeURIComponent(productId)}`, {
+    headers
+  });
+  if (res.ok) return res.json(); // Fallback: filter by id on collection
+
+  res = await fetch(`${BASE_URL}/${COMPANY_ID}/products?filter[productId]=${encodeURIComponent(productId)}&count=1`, {
+    headers
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const items = Array.isArray(data === null || data === void 0 ? void 0 : data.items) ? data.items : Array.isArray(data) ? data : [];
+  return items[0] || null;
+}
+
+function buildImages(imageUrls = []) {
+  return imageUrls.filter(Boolean).map(u => ({
+    imageId: crypto.randomUUID(),
+    originalUrl: u
+  }));
+}
 
 class InflowAPI {
   /**
-   * Insert or update a product in inFlow.
-   * @param {{ productId?: string, name: string, description: string, imageUrls?: string[] }} params
+   * Strict upsert: exact-name reuse only; verify by id afterward.
    */
   static async upsertProduct({
     productId,
     name,
     description,
-    imageUrls = []
+    imageUrls = [],
+    sku,
+    customFields
   }) {
-    // Generate a new GUID if none provided
+    var _ref, _after$isActive;
+
+    const nameNorm = n(name);
+    if (!nameNorm) throw new Error('Name is required'); // Only reuse an id if the name is an exact match. No SMART search.
+
+    if (!productId) productId = await findProductIdByExactName(nameNorm);
     const id = productId || crypto.randomUUID();
-    const url = `${BASE_URL}/${COMPANY_ID}/products`; // Build payload and include images in the body
 
-    const payload = inflowAPI_objectSpread({
+    const payload = inflowAPI_objectSpread(inflowAPI_objectSpread(inflowAPI_objectSpread(inflowAPI_objectSpread({
       productId: id,
-      name,
-      description
-    }, imageUrls.length > 0 && {
-      images: imageUrls.map(u => ({
-        imageId: crypto.randomUUID(),
-        // must supply a valid imageId
-        originalUrl: u
-      }))
-    });
+      name: nameNorm,
+      isActive: true
+    }, n(description) ? {
+      description: n(description)
+    } : {}), n(sku) ? {
+      sku: n(sku)
+    } : {}), imageUrls.length ? {
+      images: buildImages(imageUrls)
+    } : {}), customFields && Object.keys(customFields).length ? {
+      customFields
+    } : {});
 
-    const res = await fetch(url, {
+    console.log('[inFlow] PUT payload:', payload);
+    const res = await fetch(`${BASE_URL}/${COMPANY_ID}/products`, {
       method: 'PUT',
-      // write requests use PUT :contentReference[oaicite:0]{index=0}
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        // auth header :contentReference[oaicite:1]{index=1}
-        'Content-Type': 'application/json',
-        'Accept': 'application/json;version=2024-10-01'
-      },
+      headers,
       body: JSON.stringify(payload)
     });
+    const {
+      json,
+      raw
+    } = await parseText(res);
+    console.log('[inFlow] Raw PUT response:', res.status, raw);
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`inFlow API error (${res.status}): ${errText}`);
+      throw new Error(`inFlow API error (${res.status}): ${raw}`);
+    } // prefer the id the server gave us (if any), else the one we sent
+
+
+    const resolvedId = json && (json.productId || json.id) || id; // Verify by ID only (no fuzzy). This prevents false “success”.
+
+    const after = await getProductById(resolvedId);
+    console.log('[inFlow] Verified by ID:', {
+      productId: resolvedId,
+      name: after === null || after === void 0 ? void 0 : after.name,
+      sku: after === null || after === void 0 ? void 0 : after.sku,
+      // many tenants surface one of these; log whatever exists so you can tell if it’s hidden
+      isActive: (_ref = (_after$isActive = after === null || after === void 0 ? void 0 : after.isActive) !== null && _after$isActive !== void 0 ? _after$isActive : after === null || after === void 0 ? void 0 : after.active) !== null && _ref !== void 0 ? _ref : after === null || after === void 0 ? void 0 : after.status,
+      categoryId: after === null || after === void 0 ? void 0 : after.categoryId
+    });
+
+    if (!after) {
+      throw new Error('Write appeared to succeed, but GET by id returned nothing.');
     }
 
-    return res.json();
+    return after;
   }
 
 }
@@ -5171,36 +5363,64 @@ function LoadingButton({
   }, isLoading ? "Loading…" : name));
 }
 
-function DisplayItem() {
-  var _descriptions$selecte3, _descriptions$selecte4, _newLocalFrom$section, _newLocalFrom$section2, _newLocalCurrent$sect, _newLocalCurrent$sect2;
+function DisplayItem({
+  initialItem,
+  initialMachineData,
+  error
+}) {
+  var _initialItem$price, _initialItem$status, _initialItem$length, _initialItem$width, _initialItem$height, _initialItem$poNumber, _initialItem$tracking, _initialItem$visible, _descriptions$selecte3, _descriptions$selecte4, _newLocalFrom$section, _newLocalFrom$section2, _newLocalCurrent$sect, _newLocalCurrent$sect2;
 
   const router = Object(router_["useRouter"])();
   const {
     signOut
-  } = Object(AuthUserContext["b" /* useAuth */])();
+  } = Object(AuthUserContext["b" /* useAuth */])(); // const { id } = router.query;
+
   const {
-    id
+    id: idFromRouter
   } = router.query;
+  const initialId = (initialItem === null || initialItem === void 0 ? void 0 : initialItem.id) || idFromRouter; // Use a single local var everywhere in this component
+
+  const id = initialId;
   const {
     0: items,
     1: setItems
   } = Object(external_react_["useState"])({
-    name: "",
-    pn: [],
-    sn: [],
-    price: "",
-    status: "",
-    length: "",
-    width: "",
-    height: "",
-    poNumber: "",
-    trackingNumber: "",
-    localSN: "",
-    // NEW: localSN field added here
-    arrival_date: "",
-    // NEW FIELD: Arrival Date
-    visible: true
-  });
+    name: (initialItem === null || initialItem === void 0 ? void 0 : initialItem.name) || "",
+    pn: Array.isArray(initialItem === null || initialItem === void 0 ? void 0 : initialItem.pn) ? initialItem.pn : initialItem !== null && initialItem !== void 0 && initialItem.pn ? [initialItem.pn] : [],
+    sn: Array.isArray(initialItem === null || initialItem === void 0 ? void 0 : initialItem.sn) ? initialItem.sn : initialItem !== null && initialItem !== void 0 && initialItem.sn ? [initialItem.sn] : [],
+    // hydrate these from initialItem so SSR renders fully on deploy
+    price: (_initialItem$price = initialItem === null || initialItem === void 0 ? void 0 : initialItem.price) !== null && _initialItem$price !== void 0 ? _initialItem$price : "",
+    status: (_initialItem$status = initialItem === null || initialItem === void 0 ? void 0 : initialItem.status) !== null && _initialItem$status !== void 0 ? _initialItem$status : "",
+    length: (_initialItem$length = initialItem === null || initialItem === void 0 ? void 0 : initialItem.length) !== null && _initialItem$length !== void 0 ? _initialItem$length : "",
+    width: (_initialItem$width = initialItem === null || initialItem === void 0 ? void 0 : initialItem.width) !== null && _initialItem$width !== void 0 ? _initialItem$width : "",
+    height: (_initialItem$height = initialItem === null || initialItem === void 0 ? void 0 : initialItem.height) !== null && _initialItem$height !== void 0 ? _initialItem$height : "",
+    poNumber: (_initialItem$poNumber = initialItem === null || initialItem === void 0 ? void 0 : initialItem.poNumber) !== null && _initialItem$poNumber !== void 0 ? _initialItem$poNumber : "",
+    trackingNumber: (_initialItem$tracking = initialItem === null || initialItem === void 0 ? void 0 : initialItem.trackingNumber) !== null && _initialItem$tracking !== void 0 ? _initialItem$tracking : "",
+    localSN: (initialItem === null || initialItem === void 0 ? void 0 : initialItem.localSN) || "",
+    arrival_date: (initialItem === null || initialItem === void 0 ? void 0 : initialItem.arrival_date) || "",
+    visible: (_initialItem$visible = initialItem === null || initialItem === void 0 ? void 0 : initialItem.visible) !== null && _initialItem$visible !== void 0 ? _initialItem$visible : true
+  }); // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
+
+  Object(external_react_["useEffect"])(() => {
+    if (!initialItem) return;
+    setDescriptions(initialItem.descriptions || []);
+    setWorkOrders(initialItem.workOrders || []);
+    setDOM(initialItem.DOM || "");
+    setItems(prev => {
+      var _ref, _initialItem$status2, _ref2, _initialItem$price2, _ref3, _initialItem$length2, _ref4, _initialItem$width2, _ref5, _initialItem$height2, _ref6, _initialItem$poNumber2, _ref7, _initialItem$tracking2;
+
+      return _id_objectSpread(_id_objectSpread({}, prev), {}, {
+        // only overwrite if SSR provided a value; otherwise keep what you have
+        status: (_ref = (_initialItem$status2 = initialItem.status) !== null && _initialItem$status2 !== void 0 ? _initialItem$status2 : prev.status) !== null && _ref !== void 0 ? _ref : "",
+        price: (_ref2 = (_initialItem$price2 = initialItem.price) !== null && _initialItem$price2 !== void 0 ? _initialItem$price2 : prev.price) !== null && _ref2 !== void 0 ? _ref2 : "",
+        length: (_ref3 = (_initialItem$length2 = initialItem.length) !== null && _initialItem$length2 !== void 0 ? _initialItem$length2 : prev.length) !== null && _ref3 !== void 0 ? _ref3 : "",
+        width: (_ref4 = (_initialItem$width2 = initialItem.width) !== null && _initialItem$width2 !== void 0 ? _initialItem$width2 : prev.width) !== null && _ref4 !== void 0 ? _ref4 : "",
+        height: (_ref5 = (_initialItem$height2 = initialItem.height) !== null && _initialItem$height2 !== void 0 ? _initialItem$height2 : prev.height) !== null && _ref5 !== void 0 ? _ref5 : "",
+        poNumber: (_ref6 = (_initialItem$poNumber2 = initialItem.poNumber) !== null && _initialItem$poNumber2 !== void 0 ? _initialItem$poNumber2 : prev.poNumber) !== null && _ref6 !== void 0 ? _ref6 : "",
+        trackingNumber: (_ref7 = (_initialItem$tracking2 = initialItem.trackingNumber) !== null && _initialItem$tracking2 !== void 0 ? _initialItem$tracking2 : prev.trackingNumber) !== null && _ref7 !== void 0 ? _ref7 : ""
+      });
+    });
+  }, [initialItem]);
   const {
     0: newLocalFrom,
     1: setNewLocalFrom
@@ -5497,25 +5717,85 @@ function DisplayItem() {
   // useEffect(() => {
   //   setNewLocalCurrent({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
   // }, [selectedClientCurrent, selectedCurrentMachine]);
+  // const handleSendToInflow = async () => {
+  //   try {
+  //     const name = items.name;
+  //     const description = descriptions[selectedDesc]?.description || "";
+  //     // gather every photo URL from Firebase Storage
+  //     const imageUrls = photos.map((p) => p.url);
+  //     await InflowAPI.upsertProduct({ name, description, imageUrls });
+  //     alert("Sent to inFlow successfully!");
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Error sending to inFlow: " + err.message);
+  //   }
+  // };
 
 
   const handleSendToInflow = async () => {
     try {
       var _descriptions$selecte;
 
-      const name = items.name;
-      const description = ((_descriptions$selecte = descriptions[selectedDesc]) === null || _descriptions$selecte === void 0 ? void 0 : _descriptions$selecte.description) || ""; // gather every photo URL from Firebase Storage
+      const name = (items.name || '').trim();
 
-      const imageUrls = photos.map(p => p.url);
-      await inflowAPI.upsertProduct({
+      if (!name) {
+        alert('Item needs a name before sending to inFlow.');
+        return;
+      } // Regular description (don’t also send a custom “Description” unless you truly have one)
+
+
+      const description = (((_descriptions$selecte = descriptions[selectedDesc]) === null || _descriptions$selecte === void 0 ? void 0 : _descriptions$selecte.description) || '').trim(); // Photos already fetched from storage
+
+      const imageUrls = photos.map(p => p.url).filter(Boolean); // SKU = your item id
+
+      const sku = (id !== null && id !== void 0 ? id : '').toString(); // Basic normalizers
+
+      const toCSV = arr => Array.isArray(arr) ? arr.filter(Boolean).join(', ') : arr || ''; // YYYY-MM-DD for the date field in inFlow
+
+
+      const arrivalISO = items.arrival_date ? new Date(items.arrival_date).toISOString().slice(0, 10) : '';
+      const pnStr = Array.isArray(items.pn) ? items.pn.filter(Boolean).join(', ') : items.pn || '';
+      const snStr = Array.isArray(items.sn) ? items.sn.filter(Boolean).join(', ') : items.sn || ''; // Most recent WO (you already have this)
+
+      const mostRecentWO = workOrders !== null && workOrders !== void 0 && workOrders.length ? workOrders.reduce((latest, cur) => new Date(cur.date) > new Date(latest.date) ? cur : latest, workOrders[0]) : {
+        workOrder: '',
+        date: ''
+      }; // Build the numbered fields (match your inFlow “Field 1..10”)
+
+      const customFields = {
+        custom1: (oem || '').trim(),
+        // OEM   (dropdown)
+        custom2: (modality || '').trim(),
+        // Modality (dropdown)
+        custom3: (model || '').trim(),
+        // Model (dropdown)
+        custom4: (description || '').trim(),
+        // Description (text) - optional duplicate
+        custom5: (mostRecentWO.workOrder || '').trim(),
+        // Work Order (text)
+        custom6: ((selectedClientFrom === null || selectedClientFrom === void 0 ? void 0 : selectedClientFrom.name) || '').trim(),
+        // From (text)
+        custom7: pnStr,
+        // Product Number (text)
+        custom8: snStr,
+        // Serial Number (text)
+        custom9: arrivalISO,
+        // Arrival Date (date)
+        custom10: ((selectedClientCurrent === null || selectedClientCurrent === void 0 ? void 0 : selectedClientCurrent.name) || '').trim() // Current (text)
+
+      };
+      console.log('[inFlow] customFields to send (numbered):', customFields);
+      const created = await inflowAPI.upsertProduct({
         name,
         description,
-        imageUrls
+        sku,
+        imageUrls,
+        customFields
       });
-      alert("Sent to inFlow successfully!");
+      alert(`Sent to inFlow successfully. ID: ${(created === null || created === void 0 ? void 0 : created.productId) || (created === null || created === void 0 ? void 0 : created.id) || '(unknown)'}`);
     } catch (err) {
       console.error(err);
-      alert("Error sending to inFlow: " + err.message);
+      alert('Error sending to inFlow: ' + err.message);
     }
   }; // const [storedMachine, setStoredMachine] = useState(null);
   // useEffect(() => {
@@ -5580,10 +5860,10 @@ function DisplayItem() {
     fetchPnSn();
   }, []);
   Object(external_react_["useEffect"])(() => {
-    if (id) {
+    if (!initialItem && idFromRouter) {
       fetchData();
     }
-  }, [id]);
+  }, [initialItem, idFromRouter]);
 
   async function resolveClientFromMachine(machineRef, setClient, setMachine, isFrom = true) {
     const machineDoc = await machineRef.get();
@@ -5636,6 +5916,8 @@ function DisplayItem() {
   }
 
   const fetchData = async () => {
+    const id = (initialItem === null || initialItem === void 0 ? void 0 : initialItem.id) || idFromRouter; // <- make sure id exists here
+
     const db = Firebase["b" /* default */].firestore();
     const doc = await db.collection("Test").doc(id).get();
 
@@ -7406,17 +7688,14 @@ async function getServerSideProps(context) {
   } = context.params;
 
   try {
-    // Fetch item data from Firestore using Admin SDK
     const itemDoc = await FirebaseAdmin["a" /* adminDb */].collection("Test").doc(id).get();
+    if (!itemDoc.exists) return {
+      notFound: true
+    };
+    const itemData = itemDoc.data(); // normalize to arrays for consistent client-side handling
 
-    if (!itemDoc.exists) {
-      return {
-        notFound: true // This will show a 404 page
-
-      };
-    }
-
-    const itemData = itemDoc.data(); // Fetch machine data if it exists
+    const pnArray = Array.isArray(itemData.pn) ? itemData.pn : itemData.pn ? [itemData.pn] : [];
+    const snArray = Array.isArray(itemData.sn) ? itemData.sn : itemData.sn ? [itemData.sn] : []; // fetch machineData (optional; you already had this)
 
     let machineData = {};
 
@@ -7425,27 +7704,23 @@ async function getServerSideProps(context) {
         const machineDoc = await FirebaseAdmin["a" /* adminDb */].doc(itemData.Machine.path).get();
 
         if (machineDoc.exists) {
-          machineData = machineDoc.data(); // Fetch client data if it exists
+          machineData = machineDoc.data();
 
           if (machineData.client && machineData.client.path) {
             const clientDoc = await FirebaseAdmin["a" /* adminDb */].doc(machineData.client.path).get();
-
-            if (clientDoc.exists) {
-              machineData.Client = clientDoc.data().name;
-            }
+            if (clientDoc.exists) machineData.Client = clientDoc.data().name;
           }
         }
-      } catch (error) {
-        console.error("Error fetching machine data:", error);
+      } catch (e) {
+        console.error("Error fetching machine data:", e);
       }
-    } // Serialize the item data, removing any non-serializable fields
-
+    }
 
     const serializedItem = {
       id,
       name: itemData.name || "",
-      pn: itemData.pn || [],
-      sn: itemData.sn || [],
+      pn: pnArray,
+      sn: snArray,
       price: itemData.price || "",
       status: itemData.status || "",
       length: itemData.length || "",
@@ -7455,8 +7730,11 @@ async function getServerSideProps(context) {
       trackingNumber: itemData.trackingNumber || "",
       localSN: itemData.localSN || "",
       arrival_date: itemData.arrival_date || "",
-      visible: itemData.visible !== undefined ? itemData.visible : true // Add other item fields as needed, but ensure they're serializable
-
+      visible: itemData.visible !== undefined ? itemData.visible : true,
+      // add the pieces the UI reads directly
+      descriptions: itemData.descriptions || [],
+      workOrders: itemData.workOrders || [],
+      DOM: itemData.DOM || ""
     };
     return {
       props: {

@@ -14,15 +14,10 @@
     "static/development/_ssgManifest.js"
   ],
   "pages": {
-    "/NewSearch/clientSearch": [
+    "/NewSearch/item/[id]": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/clientSearch.js"
-    ],
-    "/NewSearch/machine/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/machine/[id].js"
+      "static/chunks/pages/NewSearch/item/[id].js"
     ],
     "/_app": [
       "static/chunks/webpack.js",

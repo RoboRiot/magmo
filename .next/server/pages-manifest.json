@@ -2,6 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/NewSearch/clientSearch": "pages/NewSearch/clientSearch.js",
-  "/NewSearch/machine/[id]": "pages/NewSearch/machine/[id].js"
+  "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js"
 }
