@@ -83,30 +83,59 @@ function LoadingButton({ type, name, route }) {
   );
 }
 
+
 export default function DisplayItem({ initialItem, initialMachineData, error }) {
   const router = useRouter();
   const { signOut } = useAuth();
   // const { id } = router.query;
   const { id: idFromRouter } = router.query;
   const initialId = initialItem?.id || idFromRouter;
+  // Use a single local var everywhere in this component
+  const id = initialId;
 
   const [items, setItems] = useState({
-
     name: initialItem?.name || "",
-    pn: Array.isArray(initialItem?.pn) ? initialItem.pn : (initialItem?.pn ? [initialItem.pn] : []),
-    sn: Array.isArray(initialItem?.sn) ? initialItem.sn : (initialItem?.sn ? [initialItem.sn] : []),
+    pn: Array.isArray(initialItem?.pn)
+      ? initialItem.pn
+      : (initialItem?.pn ? [initialItem.pn] : []),
+    sn: Array.isArray(initialItem?.sn)
+      ? initialItem.sn
+      : (initialItem?.sn ? [initialItem.sn] : []),
 
-    price: "",
-    status: "",
-    length: "",
-    width: "",
-    height: "",
-    poNumber: "",
-    trackingNumber: "",
+    // hydrate these from initialItem so SSR renders fully on deploy
+    price: initialItem?.price ?? "",
+    status: initialItem?.status ?? "",
+    length: initialItem?.length ?? "",
+    width: initialItem?.width ?? "",
+    height: initialItem?.height ?? "",
+    poNumber: initialItem?.poNumber ?? "",
+    trackingNumber: initialItem?.trackingNumber ?? "",
     localSN: initialItem?.localSN || "",
     arrival_date: initialItem?.arrival_date || "",
     visible: initialItem?.visible ?? true,
   });
+  // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
+  useEffect(() => {
+    if (!initialItem) return;
+
+    setDescriptions(initialItem.descriptions || []);
+    setWorkOrders(initialItem.workOrders || []);
+    setDOM(initialItem.DOM || "");
+
+    setItems(prev => ({
+      ...prev,
+      // only overwrite if SSR provided a value; otherwise keep what you have
+      status: initialItem.status ?? prev.status ?? "",
+      price: initialItem.price ?? prev.price ?? "",
+      length: initialItem.length ?? prev.length ?? "",
+      width: initialItem.width ?? prev.width ?? "",
+      height: initialItem.height ?? prev.height ?? "",
+      poNumber: initialItem.poNumber ?? prev.poNumber ?? "",
+      trackingNumber: initialItem.trackingNumber ?? prev.trackingNumber ?? "",
+    }));
+  }, [initialItem]);
+
+
 
   const [newLocalFrom, setNewLocalFrom] = useState({
     region: "",
@@ -257,19 +286,88 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
   //   setNewLocalCurrent({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
   // }, [selectedClientCurrent, selectedCurrentMachine]);
 
-  const handleSendToInflow = async () => {
-    try {
-      const name = items.name;
-      const description = descriptions[selectedDesc]?.description || "";
-      // gather every photo URL from Firebase Storage
-      const imageUrls = photos.map((p) => p.url);
-      await InflowAPI.upsertProduct({ name, description, imageUrls });
-      alert("Sent to inFlow successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Error sending to inFlow: " + err.message);
+  // const handleSendToInflow = async () => {
+  //   try {
+  //     const name = items.name;
+  //     const description = descriptions[selectedDesc]?.description || "";
+  //     // gather every photo URL from Firebase Storage
+  //     const imageUrls = photos.map((p) => p.url);
+  //     await InflowAPI.upsertProduct({ name, description, imageUrls });
+  //     alert("Sent to inFlow successfully!");
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Error sending to inFlow: " + err.message);
+  //   }
+  // };
+
+const handleSendToInflow = async () => {
+  try {
+    const name = (items.name || '').trim();
+    if (!name) {
+      alert('Item needs a name before sending to inFlow.');
+      return;
     }
-  };
+
+    // Regular description (don’t also send a custom “Description” unless you truly have one)
+    const description = (descriptions[selectedDesc]?.description || '').trim();
+
+    // Photos already fetched from storage
+    const imageUrls = photos.map(p => p.url).filter(Boolean);
+
+    // SKU = your item id
+    const sku = (id ?? '').toString();
+
+   
+
+    // Basic normalizers
+    const toCSV = arr => (Array.isArray(arr) ? arr.filter(Boolean).join(', ') : (arr || ''));
+
+    // YYYY-MM-DD for the date field in inFlow
+    const arrivalISO = items.arrival_date
+      ? new Date(items.arrival_date).toISOString().slice(0, 10)
+      : '';
+
+    const pnStr = Array.isArray(items.pn) ? items.pn.filter(Boolean).join(', ') : (items.pn || '');
+    const snStr = Array.isArray(items.sn) ? items.sn.filter(Boolean).join(', ') : (items.sn || '');
+
+    // Most recent WO (you already have this)
+    const mostRecentWO =
+      workOrders?.length
+        ? workOrders.reduce((latest, cur) => (new Date(cur.date) > new Date(latest.date) ? cur : latest), workOrders[0])
+        : { workOrder: '', date: '' };
+
+    // Build the numbered fields (match your inFlow “Field 1..10”)
+    const customFields = {
+      custom1: (oem || '').trim(),                      // OEM   (dropdown)
+      custom2: (modality || '').trim(),                 // Modality (dropdown)
+      custom3: (model || '').trim(),                    // Model (dropdown)
+      custom4: (description || '').trim(),              // Description (text) - optional duplicate
+      custom5: (mostRecentWO.workOrder || '').trim(),   // Work Order (text)
+      custom6: (selectedClientFrom?.name || '').trim(), // From (text)
+      custom7: pnStr,                                   // Product Number (text)
+      custom8: snStr,                                   // Serial Number (text)
+      custom9: arrivalISO,                              // Arrival Date (date)
+      custom10: (selectedClientCurrent?.name || '').trim(), // Current (text)
+    };
+
+    console.log('[inFlow] customFields to send (numbered):', customFields);
+
+
+    const created = await InflowAPI.upsertProduct({
+      name,
+      description,
+      sku,
+      imageUrls,
+      customFields,
+    });
+
+    alert(`Sent to inFlow successfully. ID: ${created?.productId || created?.id || '(unknown)'}`);
+  } catch (err) {
+    console.error(err);
+    alert('Error sending to inFlow: ' + err.message);
+  }
+};
+
 
   // const [storedMachine, setStoredMachine] = useState(null);
 
@@ -1445,6 +1543,86 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
     }
   };
 
+  const handleAddToSlack = async (which) => {
+  try {
+    // Build the same “blob” style your lists use
+    const lines = [];
+
+    // 1) Title line
+    lines.push(items.name?.trim() || id);
+
+    // 2) PN / SN on one line if present
+    const pn0 = Array.isArray(items.pn) ? items.pn[0] : items.pn;
+    const sn0 = Array.isArray(items.sn) ? items.sn[0] : items.sn;
+    if (pn0 || sn0) {
+      const pnPart = pn0 ? `PN: ${pn0}` : "";
+      const snPart = sn0 ? `SN: ${sn0}` : "";
+      lines.push([pnPart, snPart].filter(Boolean).join("  "));
+    }
+
+    // 3) WO (most recent), PO, RL (tracking)
+    const mostRecentWO = (workOrders?.length
+      ? workOrders.reduce(
+          (latest, cur) =>
+            new Date(cur.date) > new Date(latest.date) ? cur : latest,
+          workOrders[0]
+        )
+      : null);
+
+    if (mostRecentWO?.workOrder) lines.push(`WO ${mostRecentWO.workOrder}`);
+    if (items.poNumber)         lines.push(`PO ${items.poNumber}`);
+    if (items.trackingNumber)   lines.push(`RL ${items.trackingNumber}`);
+
+    // 4) Optional inline description
+    const desc = descriptions?.[selectedDesc]?.description?.trim();
+    if (desc) lines.push(desc);
+
+    const bodyText = lines.join("\n");                     // used by Tasks
+    const linkUrl  = typeof window !== "undefined" ? window.location.href : "";
+    const title    = `${(items.name || id || "Untitled").trim()} (${id || ""})`;
+
+    const resp = await fetch("/api/slack/add-to-list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // 🔴 the missing piece:
+        listKey: which,                                     // "receiving" | "shipping" | "tasks"
+
+        // shared
+        title,
+        linkUrl,
+
+        // tasks-specific helper text (API will ignore for shipping/receiving)
+        bodyText,
+
+        // shipping/receiving fields
+        description: descriptions?.[selectedDesc]?.description || "",
+        date: items.arrival_date || "",                     // YYYY-MM-DD
+        pn: items.pn,
+        sn: items.sn,
+        dom: DOM,
+        trackingNumber: items.trackingNumber || "",
+        poNumber: items.poNumber || "",
+        workOrder: (workOrders?.[0]?.workOrder) || "",
+        localSN: id,
+        photoUrls: photos.map(p => p.url).filter(Boolean),
+      }),
+    });
+
+    const json = await resp.json();
+    if (!resp.ok || !json.ok) {
+      console.error("Slack add failed", json);
+      alert("Failed to add to Slack List: " + (json.error || "unknown error"));
+      return;
+    }
+    alert(`Added to Slack ${which === "receiving" ? "Receiving" : which === "shipping" ? "Shipping" : "Tasks"} list.`);
+  } catch (e) {
+    console.error(e);
+    alert("Error adding to Slack");
+  }
+};
+
+
   return (
     <LoggedIn>
       <div>
@@ -2270,6 +2448,7 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
                         >
                           BlueFolder
                         </Button>
+                        
 
                         <Button
                           variant={addToWebsite ? "primary" : "outline-primary"}
@@ -2374,6 +2553,32 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
                       name="Back"
                       route="NewSearch/mainSearch"
                     />
+                    <div style={{ display: "flex", flexDirection: "column", marginLeft: ".5rem" }}>
+                      <span style={{ fontSize: 12, lineHeight: "12px", textAlign: "center" }}>Slack</span>
+                      <div style={{ display: "flex", border: "1px solid #ced4da", borderRadius: 6, overflow: "hidden" }}>
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => handleAddToSlack("receiving")}
+                          style={{ border: "none", borderRight: "1px solid #ced4da" }}
+                        >
+                          Receiving
+                        </Button>
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => handleAddToSlack("shipping")}
+                          style={{ border: "none" }}
+                        >
+                          Shipping
+                        </Button>
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => handleAddToSlack("tasks")}
+                        >
+                          Tasks
+                        </Button>
+                      </div>
+                    </div>
+
                     <Button
                       variant="info"
                       onClick={handlePrint}
@@ -2578,44 +2783,41 @@ export async function getServerSideProps(context) {
   const { id } = context.params;
 
   try {
-    // Fetch item data from Firestore using Admin SDK
     const itemDoc = await adminDb.collection("Test").doc(id).get();
-
-    if (!itemDoc.exists) {
-      return {
-        notFound: true, // This will show a 404 page
-      };
-    }
+    if (!itemDoc.exists) return { notFound: true };
 
     const itemData = itemDoc.data();
 
-    // Fetch machine data if it exists
+    // normalize to arrays for consistent client-side handling
+    const pnArray = Array.isArray(itemData.pn)
+      ? itemData.pn
+      : (itemData.pn ? [itemData.pn] : []);
+    const snArray = Array.isArray(itemData.sn)
+      ? itemData.sn
+      : (itemData.sn ? [itemData.sn] : []);
+
+    // fetch machineData (optional; you already had this)
     let machineData = {};
     if (itemData.Machine && itemData.Machine.path) {
       try {
         const machineDoc = await adminDb.doc(itemData.Machine.path).get();
         if (machineDoc.exists) {
           machineData = machineDoc.data();
-
-          // Fetch client data if it exists
           if (machineData.client && machineData.client.path) {
             const clientDoc = await adminDb.doc(machineData.client.path).get();
-            if (clientDoc.exists) {
-              machineData.Client = clientDoc.data().name;
-            }
+            if (clientDoc.exists) machineData.Client = clientDoc.data().name;
           }
         }
-      } catch (error) {
-        console.error("Error fetching machine data:", error);
+      } catch (e) {
+        console.error("Error fetching machine data:", e);
       }
     }
 
-    // Serialize the item data, removing any non-serializable fields
     const serializedItem = {
       id,
       name: itemData.name || "",
-      pn: itemData.pn || [],
-      sn: itemData.sn || [],
+      pn: pnArray,
+      sn: snArray,
       price: itemData.price || "",
       status: itemData.status || "",
       length: itemData.length || "",
@@ -2626,7 +2828,11 @@ export async function getServerSideProps(context) {
       localSN: itemData.localSN || "",
       arrival_date: itemData.arrival_date || "",
       visible: itemData.visible !== undefined ? itemData.visible : true,
-      // Add other item fields as needed, but ensure they're serializable
+
+      // add the pieces the UI reads directly
+      descriptions: itemData.descriptions || [],
+      workOrders: itemData.workOrders || [],
+      DOM: itemData.DOM || "",
     };
 
     return {
@@ -2637,10 +2843,7 @@ export async function getServerSideProps(context) {
     };
   } catch (error) {
     console.error("Error in getServerSideProps:", error);
-    return {
-      props: {
-        error: "Failed to load item data",
-      },
-    };
+    return { props: { error: "Failed to load item data" } };
   }
 }
+

@@ -1,89 +1,107 @@
+// pages/index.js
 import Head from "next/head";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button, Card, Container, Alert } from "react-bootstrap";
 import styles from "../styles/Home.module.css";
-
-import { useAuth } from "../context/AuthUserContext";
 import { useRouter } from "next/router";
-import firebase, { auth } from "../context/Firebase";
+import firebase from "../context/Firebase"; // compat default export ONLY
 
 export default function Home() {
-  const [error, setError] = useState("");
-  // Prevent our main-useEffect from hijacking the test-login flow:
-  const [isTestLogin, setIsTestLogin] = useState(false);
-
-  const { authUser, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState("");
   const [hasMounted, setHasMounted] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const unsubRef = useRef(null);
 
-  // Ensure we are on the client side
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const getDestination = () => {
+    const q = router?.query?.redirect;
+    return Array.isArray(q) ? q[0] || "/NewSearch/mainSearch" : (q || "/NewSearch/mainSearch");
+  };
 
-  // Handle redirect result from Google Auth
-  // Handle redirect result from Google Auth (runs everywhere)
+  const isIosSafari = () => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    const isIOS = /iP(hone|ad|od)/i.test(ua);
+    const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/i.test(ua);
+    return isIOS && isSafari;
+  };
+
+  useEffect(() => setHasMounted(true), []);
+
+  // One-time auth listener
   useEffect(() => {
-    if (hasMounted && !loading) {
-      auth
-        .getRedirectResult()
-        .then((result) => {
-          console.log("=== REDIRECT RESULT ===");
-          console.log("Result:", result);
-          if (result.credential) {
-            const destination = router.query.redirect || "/NewSearch/mainSearch";
-            console.log("User authenticated, redirecting to:", destination);
-            router.replace(destination);
-          } else {
-            console.log("No credential found in redirect result");
+    if (!hasMounted) return;
+    (async () => {
+      try {
+        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        // simple storage probe to detect hostile environments
+        try {
+          localStorage.setItem("__magmo_probe", "1");
+        } catch (e) {
+          console.warn("[auth] localStorage not available; redirects may fail");
+        }
+
+        unsubRef.current = firebase.auth().onAuthStateChanged((user) => {
+          console.log("[auth] onAuthStateChanged:", user);
+          setAuthReady(true);
+          if (user) {
+            const dest = getDestination();
+            router.replace(dest);
           }
-        })
-        .catch((error) => {
-          console.error("Redirect result error:", error);
-          setError("Authentication failed. Please try again.");
         });
-    }
-  }, [hasMounted, loading, router]);
+      } catch (e) {
+        console.error("[auth] persistence setup error:", e);
+        setError("Authentication init failed.");
+      }
+    })();
 
+    return () => {
+      if (unsubRef.current) unsubRef.current();
+    };
+  }, [hasMounted, router]);
 
-  // If auth status is known and the user is already logged in, redirect them.
-  useEffect(() => {
-    if (isTestLogin) return; // ← skip for test login
-    if (hasMounted && !loading && authUser) {
-      const destination = router.query.redirect || "/NewSearch/mainSearch";
-  // use replace to avoid stacking multiple entries
-      router.replace(destination);
-    }
-  }, [isTestLogin, hasMounted, authUser, loading, router]);
+  if (!hasMounted) return null;
 
-  if (!hasMounted) return null; // Prevent rendering until mounted
-
-  // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
     setError("");
     try {
-      await signInWithGoogle();
-      // Note: With redirect, the user will be redirected to Google and then back to this page
-      // The redirect result will be handled in the useEffect above
+      await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope("email");
+      provider.addScope("profile");
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      // prefer popup (no redirect state), fallback to redirect only where needed
+      if (isIosSafari()) {
+        console.log("[auth] Using redirect (iOS Safari)");
+        // mark that we attempted sign-in (to detect storage loss)
+        try { localStorage.setItem("__magmo_signin_attempt", Date.now().toString()); } catch (_) {}
+        await firebase.auth().signInWithRedirect(provider);
+      } else {
+        console.log("[auth] Using popup");
+        const result = await firebase.auth().signInWithPopup(provider);
+        console.log("[auth] popup result:", result && result.user);
+        // onAuthStateChanged will route; but we can route immediately too:
+        if (result && result.user) {
+          const dest = getDestination();
+          router.replace(dest);
+        }
+      }
     } catch (err) {
-      setError("Failed to log in with Google");
+      console.error("[auth] sign-in error:", err);
+      setError("Failed to log in with Google: " + (err && err.message ? err.message : String(err)));
     }
   };
 
   const handleTestLogin = async () => {
     setError("");
-    setIsTestLogin(true);
     const password = prompt("Enter password:");
     if (!password) return;
-
     try {
-      await firebase
-        .auth()
-        .signInWithEmailAndPassword("test@test.com", password);
-      // now go to your custom test-search page:
+      await firebase.auth().signInWithEmailAndPassword("test@test.com", password);
       router.replace("/NewSearch/searchTest");
     } catch (err) {
-      setError("Test login failed: " + err.message);
+      setError("Test login failed: " + (err && err.message ? err.message : String(err)));
     }
   };
 
@@ -95,15 +113,14 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
 
-      <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
-      >
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
         <div className="w-100" style={{ maxWidth: "400px" }}>
           <Card>
             <Card.Body>
               <h2 className="text-center mb-4">MAGMO</h2>
+              {!authReady && <div className="mb-2 small text-muted">Initializing…</div>}
               {error && <Alert variant="danger">{error}</Alert>}
+
               <Button
                 variant="light"
                 className="w-100 d-flex align-items-center justify-content-center"
@@ -125,11 +142,7 @@ export default function Home() {
                 Sign in with Google
               </Button>
 
-              <Button
-                variant="secondary"
-                className="w-100 mt-3"
-                onClick={handleTestLogin}
-              >
+              <Button variant="secondary" className="w-100 mt-3" onClick={handleTestLogin}>
                 Test Login
               </Button>
             </Card.Body>
