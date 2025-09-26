@@ -67,6 +67,8 @@ export default function MainSearch() {
   const { signOut } = useAuth();
   const [info, setInfo] = useState([]);
   const [backupInfo, setBackupInfo] = useState([]);
+  const [augmentedInfo, setAugmentedInfo] = useState([]); // items with clientFromId/currentId added
+  const [isLoading, setIsLoading] = useState(true);
   const [ids, setID] = useState([]);
   const [show, setShow] = useState(false);
   const [dItem, setDItem] = useState();
@@ -105,16 +107,81 @@ export default function MainSearch() {
     fetchData();
   }, [router.route]);
 
-  async function fetchData() {
-    if (router.query.inputText && router.query.selectedType) {
-      setSelect(router.query.selectedType);
-      setSearch(router.query.inputText);
-    }
-    const data = await fetchPartsWithMachineData();
-    setInfo(data);
-    setBackupInfo(data);
-    setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
-  }
+ async function fetchData() {
+   setIsLoading(true);
+   try {
+     if (router.query.inputText && router.query.selectedType) {
+       setSelect(router.query.selectedType);
+       setSearch(router.query.inputText);
+     }
+     // light retry for transient Firestore hiccups
+     const load = async (attempt = 1) => {
+       try {
+         return await fetchPartsWithMachineData();
+       } catch (e) {
+         if (attempt >= 3) throw e;
+         await new Promise(r => setTimeout(r, 250 * Math.pow(2, attempt - 1)));
+         return load(attempt + 1);
+       }
+     };
+     const data = await load();
+     setBackupInfo(data);
+     setID(data.map((item) => item.id));
+
+     // --- Pre-augment: resolve client ids of Machine / CurrentMachine once ---
+     const db = firebase.firestore();
+     const machineIds = [];
+     const curMachineIds = [];
+     for (const item of data) {
+       if (item?.Machine?.id) machineIds.push(item.Machine.id);
+       if (item?.CurrentMachine?.id) curMachineIds.push(item.CurrentMachine.id);
+     }
+     const uniq = (arr) => [...new Set(arr)];
+     const mIds = uniq(machineIds);
+     const cIds = uniq(curMachineIds);
+
+     const fetchMachineClients = async (ids) => {
+       if (!ids.length) return {};
+       const out = {};
+       // Firestore "in" supports up to 10 document IDs per query
+       const chunks = [];
+       for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+       for (const chunk of chunks) {
+         const snap = await db
+           .collection("Machine")
+           .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+           .get();
+         snap.forEach((doc) => {
+           const md = doc.data() || {};
+           out[doc.id] = md.client?.id || null;
+         });
+       }
+       return out;
+     };
+
+     const [fromMap, curMap] = await Promise.all([
+       fetchMachineClients(mIds),
+       fetchMachineClients(cIds),
+     ]);
+
+     const augmented = data.map((item) => ({
+       ...item,
+       // keep existing fields; add fast client id fields for sync filtering
+       clientFromId: item?.Machine?.id ? fromMap[item.Machine.id] ?? null : null,
+       clientCurrentId: item?.CurrentMachine?.id ? curMap[item.CurrentMachine.id] ?? null : null,
+     }));
+
+     setAugmentedInfo(augmented);
+     // default view = everything not explicitly hidden
+     setInfo(augmented.filter((it) => it.visible !== false));
+   } catch (err) {
+     console.error("Error fetching data:", err);
+     setInfo([]);
+     setAugmentedInfo([]);
+   } finally {
+     setIsLoading(false);
+   }
+ }
 
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
@@ -122,128 +189,71 @@ export default function MainSearch() {
   // for each item, fetches its Machine and CurrentMachine documents,
   // then compares the client id (from machineData.client.id) to the selected client.
   useEffect(() => {
-    async function filterParts() {
-      console.log(
-        "filterParts called with selectedClientFrom:",
-        selectedClientFrom,
-        "selectedClientCurrent:",
-        selectedClientCurrent
-      );
-      const filtered = await Promise.all(
-        backupInfo.map(async (item) => {
-          if (!item.visible) {
-            return null;
-          }
-          
-          let passes = true;
-          // Check OEM, Modality, and Model from machineData (if available)
-          if (item.machineData) {
-            if (selectedOEM && item.machineData.OEM !== selectedOEM) passes = false;
-            if (selectedModality && item.machineData.Modality !== selectedModality)
-              passes = false;
-            if (selectedModel && item.machineData.Model !== selectedModel) passes = false;
-          }
-          // For Client From: use the part’s Machine reference
-          if (passes && selectedClientFrom) {
-            if (!item.Machine) {
-              console.log(`Item ${item.id} has no Machine reference.`);
-              passes = false;
-            } else {
-              try {
-                const machineSnap = await item.Machine.get();
-                if (!machineSnap.exists) {
-                  console.log(`Item ${item.id} Machine document does not exist.`);
-                  passes = false;
-                } else {
-                  const machineData = machineSnap.data();
-                  if (!machineData.client) {
-                    console.log(`Item ${item.id} Machine has no client reference.`);
-                    passes = false;
-                  } else {
-                    // Get the client id from the DocumentReference
-                    const clientFromId = machineData.client.id;
-                    console.log(
-                      `Item ${item.id}: fetched Client From id = ${clientFromId}, selectedClientFrom = ${selectedClientFrom}`
-                    );
-                    if (clientFromId !== selectedClientFrom) passes = false;
-                  }
-                }
-              } catch (error) {
-                console.error(`Error fetching Machine for item ${item.id}:`, error);
-                passes = false;
-              }
-            }
-          }
-          // For Client Current: use the part’s CurrentMachine reference
-          if (passes && selectedClientCurrent) {
-            if (!item.CurrentMachine) {
-              console.log(`Item ${item.id} has no CurrentMachine reference.`);
-              passes = false;
-            } else {
-              try {
-                const currentMachineSnap = await item.CurrentMachine.get();
-                if (!currentMachineSnap.exists) {
-                  console.log(`Item ${item.id} CurrentMachine document does not exist.`);
-                  passes = false;
-                } else {
-                  const currentMachineData = currentMachineSnap.data();
-                  if (!currentMachineData.client) {
-                    console.log(`Item ${item.id} CurrentMachine has no client reference.`);
-                    passes = false;
-                  } else {
-                    const clientCurrentId = currentMachineData.client.id;
-                    console.log(
-                      `Item ${item.id}: fetched Client Current id = ${clientCurrentId}, selectedClientCurrent = ${selectedClientCurrent}`
-                    );
-                    if (clientCurrentId !== selectedClientCurrent) passes = false;
-                  }
-                }
-              } catch (error) {
-                console.error(`Error fetching CurrentMachine for item ${item.id}:`, error);
-                passes = false;
-              }
-            }
-          }
-          // If search text is not empty, apply additional filtering
-          if (passes && search !== "") {
-            if (select === "Name" && !item.name.toLowerCase().includes(search.toLowerCase()))
-              passes = false;
-            if (select === "Date") {
-              const [month, day, year] = item.date.split("/");
-              const reformattedDate = `${year}-${month}-${day}`;
-              if (reformattedDate !== search) passes = false;
-            }
-            if (select === "Work Order") {
-              const hasMatch =
-                item.workOrders &&
-                item.workOrders.some((wo) =>
-                  wo.workOrder.toLowerCase().includes(search.toLowerCase())
-                );
-              if (!hasMatch) passes = false;
-            }            
-            if (select === "Product Number" && item.pn !== search) passes = false;
-            if (select === "Description" && !item.desc.toLowerCase().includes(search.toLowerCase()))
-              passes = false;
-            if (select === "SKU" && !item.id.toLowerCase().includes(search.toLowerCase()))
-              passes = false;
-          }
-          return passes ? item : null;
-        })
-      );
-      const filteredResults = filtered.filter((item) => item !== null);
-      console.log("Filtered result count:", filteredResults.length);
-      setInfo(filteredResults);
-    }
-    filterParts();
-  }, [
-    selectedOEM,
-    selectedModality,
-    selectedClientFrom,
-    selectedClientCurrent,
-    selectedModel,
-    search,
-    backupInfo,
-  ]);
+      function filterParts() {
+     const base = augmentedInfo; // already has clientFromId/clientCurrentId
+     const noFilters =
+       !selectedOEM &&
+       !selectedModality &&
+       !selectedModel &&
+       !selectedClientFrom &&
+       !selectedClientCurrent &&
+       !search;
+     if (noFilters) {
+       setInfo(base.filter((it) => it.visible !== false));
+       return;
+     }
+
+     const filtered = base.filter((item) => {
+       // only hide when explicitly false
+       if (item.visible === false) return false;
+
+       // OEM/modality/model via machineData (you already put this in items)
+       if (item.machineData) {
+         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
+         if (selectedModality && item.machineData.Modality !== selectedModality) return false;
+         if (selectedModel && item.machineData.Model !== selectedModel) return false;
+       }
+
+       // Client filters (now instant)
+       if (selectedClientFrom && item.clientFromId !== selectedClientFrom) return false;
+       if (selectedClientCurrent && item.clientCurrentId !== selectedClientCurrent) return false;
+
+       // Search
+       if (search) {
+         const s = String(search).toLowerCase();
+         if (select === "Name") {
+           return (item.name || "").toLowerCase().includes(s);
+         }
+         if (select === "Date") {
+           // your items look like mm/dd/yyyy
+           const parts = (item.date || "").split("/");
+           if (parts.length === 3) {
+             const [mm, dd, yyyy] = parts;
+             const reformatted = `${yyyy}-${mm}-${dd}`;
+             return reformatted === search;
+           }
+           return false;
+         }
+         if (select === "Work Order") {
+           return Array.isArray(item.workOrders) &&
+             item.workOrders.some((wo) => String(wo.workOrder || "").toLowerCase().includes(s));
+         }
+         if (select === "Product Number") {
+           return String(item.pn || "").toLowerCase().includes(s);
+         }
+         if (select === "Description") {
+           return String(item.desc || "").toLowerCase().includes(s);
+         }
+         if (select === "SKU") {
+           return String(item.id || "").toLowerCase().includes(s);
+         }
+       }
+       return true;
+     });
+     setInfo(filtered);
+   }
+   filterParts();
+ }, [selectedOEM, selectedModality, selectedClientFrom, selectedClientCurrent, selectedModel, search, select, augmentedInfo]);
 
   function sortCheckAll(pos) {
     const sortedInfo = [...info].sort((a, b) => {
@@ -282,11 +292,19 @@ export default function MainSearch() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleSelectItem = (id) => {
-    setSelectedItems((prev) => {
-      const newSelection = prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
-      console.log("Selected items:", newSelection);
-    });
+    setSelectedItems(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
+
+
+  // setSelectedItems((prev) => {
+  //   const newSelection = prev.includes(id)
+  //     ? prev.filter((itemId) => itemId !== id)
+  //     : [...prev, id];
+  //   console.log("Selected items:", newSelection);
+  //   return newSelection; // <- important
+  // });
 
   const handleShowDeleteModal = () => setShowDeleteModal(true);
   const handleCloseDeleteModal = () => setShowDeleteModal(false);
@@ -744,21 +762,28 @@ export default function MainSearch() {
 
                 <Col md={8}>
                   <div className={styles.tableContainer}>
-                    <PartTable
-                      info={info}
-                      labels={labels}
-                      ids={ids}
-                      hoverStyle={hoverStyle}
-                      sortCheckAll={sortCheckAll}
-                      checkDelete={checkDelete}
-                      isDeleting={isDeleting}
-                      rowSelect={rowSelect}
-                      setHoverIndex={setHoverIndex}
-                      hoverIndex={hoverIndex}
-                      selectedItems={selectedItems}         // Pass selectedItems state
-                      setSelectedItems={setSelectedItems}   // Pass its setter
-                    />
-
+                    {isLoading ? (
+                      <div className="d-flex justify-content-center align-items-center p-5">
+                        <Spinner animation="border" role="status">
+                          <span className="sr-only">M</span>
+                        </Spinner>
+                      </div>
+                    ) : (
+                      <PartTable
+                        info={info}
+                        labels={labels}
+                        ids={ids}
+                        hoverStyle={hoverStyle}
+                        sortCheckAll={sortCheckAll}
+                        checkDelete={checkDelete}
+                        isDeleting={isDeleting}
+                        rowSelect={rowSelect}
+                        setHoverIndex={setHoverIndex}
+                        hoverIndex={hoverIndex}
+                        selectedItems={selectedItems}
+                        setSelectedItems={setSelectedItems}
+                      />
+                    )}
 
                     <div className={styles.searchContainer}>
                       <Form className="d-flex pb-2">
