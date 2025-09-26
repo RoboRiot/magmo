@@ -1,0 +1,14 @@
+# Root envs
+.env
+.env.local
+.env.*.local
+
+# Keep an example to document variables
+!.env.example
+
+# Functions envs
+functions/.env
+functions/.env.local
+functions/.env.*.local
+# Keep example
+!functions/.env.example
