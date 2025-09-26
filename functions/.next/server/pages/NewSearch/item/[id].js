@@ -5370,6 +5370,8 @@ function DisplayItem({
 }) {
   var _initialItem$price, _initialItem$status, _initialItem$length, _initialItem$width, _initialItem$height, _initialItem$poNumber, _initialItem$tracking, _initialItem$visible, _descriptions$selecte3, _descriptions$selecte4, _newLocalFrom$section, _newLocalFrom$section2, _newLocalCurrent$sect, _newLocalCurrent$sect2;
 
+  // Feature flag to show/hide the 3 Slack buttons
+  const SHOW_SLACK_BUTTONS = "true" === "true";
   const router = Object(router_["useRouter"])();
   const {
     signOut
@@ -5860,10 +5862,8 @@ function DisplayItem({
     fetchPnSn();
   }, []);
   Object(external_react_["useEffect"])(() => {
-    if (!initialItem && idFromRouter) {
-      fetchData();
-    }
-  }, [initialItem, idFromRouter]);
+    if (id) fetchData(); // always hydrate on the client
+  }, [id]);
 
   async function resolveClientFromMachine(machineRef, setClient, setMachine, isFrom = true) {
     const machineDoc = await machineRef.get();
@@ -6933,6 +6933,83 @@ function DisplayItem({
       console.error("BlueFolder error:", error);
       alert("Error adding data to BlueFolder.");
     }
+  }; // // Slack integration handler.
+  // const handleAddToSlack = async (which) => {
+  //   try {
+  //     const pn0 = Array.isArray(items.pn) ? items.pn[0] : items.pn;
+  //     const sn0 = Array.isArray(items.sn) ? items.sn[0] : items.sn;
+  //     const linkUrl = typeof window !== "undefined" ? window.location.href : "";
+  //     const safeName = (items?.name || id || "Untitled").trim();
+  //     const title = `${safeName}${id ? ` (${id})` : ""}`;
+  //     console.log("[SLACK][handleAddToSlack] which:", which);
+  //     console.log("[SLACK] title:", title);
+  //     console.log("[SLACK] PN:", items.pn, "SN:", items.sn);
+  //     const resp = await fetch("/api/slack/add-to-list", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         listKey: which,      // "shipping" | "receiving" | "tasks"
+  //         title,
+  //         pn: items.pn,
+  //         sn: items.sn,
+  //         // keeping it minimal by design while we stabilize PN/SN
+  //         linkUrl,
+  //       }),
+  //     });
+  // Slack integration handler (drop-in replacement)
+  // Slack integration handler (drop-in replacement)
+  // Slack integration handler (client) — replace your existing handleAddToSlack with this
+
+
+  const handleAddToSlack = async (which = "shipping") => {
+    try {
+      var _sort$, _ref8, _items$trackingNumber, _json$debug, _json$debug2;
+
+      const safeName = ((items === null || items === void 0 ? void 0 : items.name) || id || "Untitled").trim();
+      const title = `${safeName}${id ? ` (${id})` : ""}`;
+      const pn0 = Array.isArray(items === null || items === void 0 ? void 0 : items.pn) ? items.pn[0] : items === null || items === void 0 ? void 0 : items.pn;
+      const sn0 = Array.isArray(items === null || items === void 0 ? void 0 : items.sn) ? items.sn[0] : items === null || items === void 0 ? void 0 : items.sn;
+      const pn_sn = [pn0 && `PN: ${pn0}`, sn0 && `SN: ${sn0}`].filter(Boolean).join("  ");
+      const mostRecentWO = workOrders && workOrders.length ? (_sort$ = [...workOrders].sort((a, b) => new Date((b === null || b === void 0 ? void 0 : b.date) || 0) - new Date((a === null || a === void 0 ? void 0 : a.date) || 0))[0]) === null || _sort$ === void 0 ? void 0 : _sort$.workOrder : "";
+      const description = selectedDesc != null && descriptions !== null && descriptions !== void 0 && descriptions[selectedDesc] ? descriptions[selectedDesc].description || "" : (items === null || items === void 0 ? void 0 : items.description) || "";
+      const tracking = (_ref8 = (_items$trackingNumber = items === null || items === void 0 ? void 0 : items.trackingNumber) !== null && _items$trackingNumber !== void 0 ? _items$trackingNumber : items === null || items === void 0 ? void 0 : items.tracking) !== null && _ref8 !== void 0 ? _ref8 : "";
+      const local_sn = id || (items === null || items === void 0 ? void 0 : items.localSN) || "";
+      const photoUrls = Array.isArray(photos) ? photos.map(p => p === null || p === void 0 ? void 0 : p.url).filter(Boolean) : [];
+      const resp = await fetch("/api/slack/add-to-list", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          listKey: which,
+          title,
+          pn_sn,
+          // <— server expects this
+          work_order: mostRecentWO || "",
+          local_sn,
+          tracking,
+          description: (description || "").trim(),
+          photoUrls // array of https URLs
+
+        })
+      });
+      const json = await resp.json();
+      console.log("[SLACK][handleAddToSlack] response:", json);
+      if (json !== null && json !== void 0 && (_json$debug = json.debug) !== null && _json$debug !== void 0 && _json$debug.steps) console.table(json.debug.steps);
+      if (json !== null && json !== void 0 && (_json$debug2 = json.debug) !== null && _json$debug2 !== void 0 && _json$debug2.photos) console.table(json.debug.photos);
+
+      if (!resp.ok || !(json !== null && json !== void 0 && json.ok)) {
+        setErr(`Slack add failed: ${(json === null || json === void 0 ? void 0 : json.error) || "unknown error"}`);
+        setShowErr(true);
+        return;
+      }
+
+      alert(`Added to Slack ${which === "shipping" ? "Shipping" : which === "receiving" ? "Receiving" : "Tasks"} list.`);
+    } catch (e) {
+      console.error(e);
+      setErr("Error adding to Slack");
+      setShowErr(true);
+    }
   };
 
   return __jsx(LoggedIn["default"], null, __jsx("div", null, __jsx(external_react_bootstrap_["Modal"], {
@@ -7525,7 +7602,39 @@ function DisplayItem({
     type: "primary",
     name: "Back",
     route: "NewSearch/mainSearch"
-  }), __jsx(external_react_bootstrap_["Button"], {
+  }), SHOW_SLACK_BUTTONS && __jsx("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      marginLeft: ".5rem"
+    }
+  }, __jsx("span", {
+    style: {
+      fontSize: 12,
+      lineHeight: "12px",
+      textAlign: "center"
+    }
+  }, "Slack"), __jsx("div", {
+    style: {
+      display: "flex",
+      border: "1px solid #ced4da",
+      borderRadius: 6,
+      overflow: "hidden"
+    }
+  }, __jsx(external_react_bootstrap_["Button"], {
+    variant: "outline-primary",
+    onClick: () => handleAddToSlack("receiving"),
+    style: {
+      border: "none",
+      borderRight: "1px solid #ced4da"
+    }
+  }, "Receiving"), __jsx(external_react_bootstrap_["Button"], {
+    variant: "outline-primary",
+    onClick: () => handleAddToSlack("shipping"),
+    style: {
+      border: "none"
+    }
+  }, "Shipping"))), __jsx(external_react_bootstrap_["Button"], {
     variant: "info",
     onClick: handlePrint,
     style: {

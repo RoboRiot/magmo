@@ -85,6 +85,10 @@ function LoadingButton({ type, name, route }) {
 
 
 export default function DisplayItem({ initialItem, initialMachineData, error }) {
+  // Feature flag to show/hide the 3 Slack buttons
+  const SHOW_SLACK_BUTTONS =
+    process.env.NEXT_PUBLIC_SHOW_SLACK_BUTTONS === "true";
+
   const router = useRouter();
   const { signOut } = useAuth();
   // const { id } = router.query;
@@ -434,10 +438,8 @@ const handleSendToInflow = async () => {
   }, []);
 
   useEffect(() => {
-    if (!initialItem && idFromRouter) {
-      fetchData();
-    }
-  }, [initialItem, idFromRouter]);
+    if (id) fetchData();           // always hydrate on the client
+  }, [id]);
 
   async function resolveClientFromMachine(
     machineRef,
@@ -1543,82 +1545,98 @@ const handleSendToInflow = async () => {
     }
   };
 
-  const handleAddToSlack = async (which) => {
+// // Slack integration handler.
+// const handleAddToSlack = async (which) => {
+//   try {
+//     const pn0 = Array.isArray(items.pn) ? items.pn[0] : items.pn;
+//     const sn0 = Array.isArray(items.sn) ? items.sn[0] : items.sn;
+
+//     const linkUrl = typeof window !== "undefined" ? window.location.href : "";
+//     const safeName = (items?.name || id || "Untitled").trim();
+//     const title = `${safeName}${id ? ` (${id})` : ""}`;
+
+//     console.log("[SLACK][handleAddToSlack] which:", which);
+//     console.log("[SLACK] title:", title);
+//     console.log("[SLACK] PN:", items.pn, "SN:", items.sn);
+
+//     const resp = await fetch("/api/slack/add-to-list", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//         listKey: which,      // "shipping" | "receiving" | "tasks"
+//         title,
+//         pn: items.pn,
+//         sn: items.sn,
+//         // keeping it minimal by design while we stabilize PN/SN
+//         linkUrl,
+//       }),
+//     });
+// Slack integration handler (drop-in replacement)
+// Slack integration handler (drop-in replacement)
+
+
+// Slack integration handler (client) — replace your existing handleAddToSlack with this
+const handleAddToSlack = async (which = "shipping") => {
   try {
-    // Build the same “blob” style your lists use
-    const lines = [];
+    const safeName = (items?.name || id || "Untitled").trim();
+    const title = `${safeName}${id ? ` (${id})` : ""}`;
 
-    // 1) Title line
-    lines.push(items.name?.trim() || id);
+    const pn0 = Array.isArray(items?.pn) ? items.pn[0] : items?.pn;
+    const sn0 = Array.isArray(items?.sn) ? items.sn[0] : items?.sn;
+    const pn_sn = [pn0 && `PN: ${pn0}`, sn0 && `SN: ${sn0}`]
+      .filter(Boolean)
+      .join("  ");
 
-    // 2) PN / SN on one line if present
-    const pn0 = Array.isArray(items.pn) ? items.pn[0] : items.pn;
-    const sn0 = Array.isArray(items.sn) ? items.sn[0] : items.sn;
-    if (pn0 || sn0) {
-      const pnPart = pn0 ? `PN: ${pn0}` : "";
-      const snPart = sn0 ? `SN: ${sn0}` : "";
-      lines.push([pnPart, snPart].filter(Boolean).join("  "));
-    }
+    const mostRecentWO =
+      (workOrders && workOrders.length)
+        ? [...workOrders].sort((a,b) => new Date(b?.date||0) - new Date(a?.date||0))[0]?.workOrder
+        : "";
 
-    // 3) WO (most recent), PO, RL (tracking)
-    const mostRecentWO = (workOrders?.length
-      ? workOrders.reduce(
-          (latest, cur) =>
-            new Date(cur.date) > new Date(latest.date) ? cur : latest,
-          workOrders[0]
-        )
-      : null);
+    const description =
+      (selectedDesc != null && descriptions?.[selectedDesc])
+        ? (descriptions[selectedDesc].description || "")
+        : (items?.description || "");
 
-    if (mostRecentWO?.workOrder) lines.push(`WO ${mostRecentWO.workOrder}`);
-    if (items.poNumber)         lines.push(`PO ${items.poNumber}`);
-    if (items.trackingNumber)   lines.push(`RL ${items.trackingNumber}`);
+    const tracking = items?.trackingNumber ?? items?.tracking ?? "";
+    const local_sn = id || items?.localSN || "";
 
-    // 4) Optional inline description
-    const desc = descriptions?.[selectedDesc]?.description?.trim();
-    if (desc) lines.push(desc);
-
-    const bodyText = lines.join("\n");                     // used by Tasks
-    const linkUrl  = typeof window !== "undefined" ? window.location.href : "";
-    const title    = `${(items.name || id || "Untitled").trim()} (${id || ""})`;
+    const photoUrls = Array.isArray(photos)
+      ? photos.map(p => p?.url).filter(Boolean)
+      : [];
 
     const resp = await fetch("/api/slack/add-to-list", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        // 🔴 the missing piece:
-        listKey: which,                                     // "receiving" | "shipping" | "tasks"
-
-        // shared
+        listKey: which,
         title,
-        linkUrl,
-
-        // tasks-specific helper text (API will ignore for shipping/receiving)
-        bodyText,
-
-        // shipping/receiving fields
-        description: descriptions?.[selectedDesc]?.description || "",
-        date: items.arrival_date || "",                     // YYYY-MM-DD
-        pn: items.pn,
-        sn: items.sn,
-        dom: DOM,
-        trackingNumber: items.trackingNumber || "",
-        poNumber: items.poNumber || "",
-        workOrder: (workOrders?.[0]?.workOrder) || "",
-        localSN: id,
-        photoUrls: photos.map(p => p.url).filter(Boolean),
+        pn_sn,                 // <— server expects this
+        work_order: mostRecentWO || "",
+        local_sn,
+        tracking,
+        description: (description || "").trim(),
+        photoUrls,             // array of https URLs
       }),
     });
 
     const json = await resp.json();
-    if (!resp.ok || !json.ok) {
-      console.error("Slack add failed", json);
-      alert("Failed to add to Slack List: " + (json.error || "unknown error"));
+    console.log("[SLACK][handleAddToSlack] response:", json);
+    if (json?.debug?.steps) console.table(json.debug.steps);
+    if (json?.debug?.photos) console.table(json.debug.photos);
+
+    if (!resp.ok || !json?.ok) {
+      setErr(`Slack add failed: ${json?.error || "unknown error"}`);
+      setShowErr(true);
       return;
     }
-    alert(`Added to Slack ${which === "receiving" ? "Receiving" : which === "shipping" ? "Shipping" : "Tasks"} list.`);
+
+    alert(
+      `Added to Slack ${which === "shipping" ? "Shipping" : which === "receiving" ? "Receiving" : "Tasks"} list.`
+    );
   } catch (e) {
     console.error(e);
-    alert("Error adding to Slack");
+    setErr("Error adding to Slack");
+    setShowErr(true);
   }
 };
 
@@ -2553,32 +2571,33 @@ const handleSendToInflow = async () => {
                       name="Back"
                       route="NewSearch/mainSearch"
                     />
-                    <div style={{ display: "flex", flexDirection: "column", marginLeft: ".5rem" }}>
-                      <span style={{ fontSize: 12, lineHeight: "12px", textAlign: "center" }}>Slack</span>
-                      <div style={{ display: "flex", border: "1px solid #ced4da", borderRadius: 6, overflow: "hidden" }}>
-                        <Button
-                          variant="outline-primary"
-                          onClick={() => handleAddToSlack("receiving")}
-                          style={{ border: "none", borderRight: "1px solid #ced4da" }}
-                        >
-                          Receiving
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          onClick={() => handleAddToSlack("shipping")}
-                          style={{ border: "none" }}
-                        >
-                          Shipping
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          onClick={() => handleAddToSlack("tasks")}
-                        >
-                          Tasks
-                        </Button>
+                    {SHOW_SLACK_BUTTONS && (
+                      <div style={{ display: "flex", flexDirection: "column", marginLeft: ".5rem" }}>
+                        <span style={{ fontSize: 12, lineHeight: "12px", textAlign: "center" }}>Slack</span>
+                        <div style={{ display: "flex", border: "1px solid #ced4da", borderRadius: 6, overflow: "hidden" }}>
+                          <Button
+                            variant="outline-primary"
+                            onClick={() => handleAddToSlack("receiving")}
+                            style={{ border: "none", borderRight: "1px solid #ced4da" }}
+                          >
+                            Receiving
+                          </Button>
+                          <Button
+                            variant="outline-primary"
+                            onClick={() => handleAddToSlack("shipping")}
+                            style={{ border: "none" }}
+                          >
+                            Shipping
+                          </Button>
+                          {/* <Button
+                            variant="outline-primary"
+                            onClick={() => handleAddToSlack("tasks")}
+                          >
+                            Tasks
+                          </Button> */}
+                        </div>
                       </div>
-                    </div>
-
+                    )}
                     <Button
                       variant="info"
                       onClick={handlePrint}
