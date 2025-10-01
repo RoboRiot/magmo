@@ -3,6 +3,7 @@ import { Table, Button, Form } from "react-bootstrap";
 import { formatDate } from "./fetchAssociations";
 import styles from "../styles/PartTable.module.css";
 
+
 export default function PartTable({
   info,
   labels,
@@ -37,7 +38,7 @@ export default function PartTable({
 
   return (
     <div className={styles.scrollableTable}>
-      <Table striped bordered hover size="sm" className="mb-0">
+      <Table striped bordered hover size="sm" className={`mb-0 ${styles.fixedTable}`}>
         <thead className={styles.stickyHeader}>
           <tr>
             {labels.map((item, index) => (
@@ -51,7 +52,7 @@ export default function PartTable({
                 {item}
               </th>
             ))}
-            <th style={{ textAlign: "center" }}>
+            <th className={styles.actionCol} style={{ textAlign: "center" }}>
               {selectedItems.length > 0 ? (
                 <Button
                   variant="danger"
@@ -80,23 +81,40 @@ export default function PartTable({
               className="clickable-row"
             >
               <td style={{ textAlign: "center", cursor: "default" }}>
-                {item.name}
+                <div className={styles.cellClamp} title={item.name}>
+                  {item.name}
+                </div>
               </td>
               <td style={{ textAlign: "center", cursor: "default" }}>
-                {formatDate(item.date)}
+                <div className={styles.cellClamp} title={formatDate(item.date)}>
+                  {formatDate(item.date)}
+                </div>
               </td>
               <td style={{ textAlign: "center", cursor: "default" }}>
-                {item.workOrders && item.workOrders.length > 0
-                  ? item.workOrders[item.workOrders.length - 1].workOrder
-                  : "N/A"}
+                <div
+                  className={styles.cellClamp}
+                  title={
+                    item.workOrders && item.workOrders.length > 0
+                      ? item.workOrders[item.workOrders.length - 1].workOrder
+                      : "N/A"
+                  }
+                >
+                  {item.workOrders && item.workOrders.length > 0
+                    ? item.workOrders[item.workOrders.length - 1].workOrder
+                    : "N/A"}
+                </div>
               </td>
               <td style={{ textAlign: "center", cursor: "default" }}>
-                {item.pn}
+                <div className={styles.cellClamp} title={item.pn}>
+                  {item.pn}
+                </div>
               </td>
               <td style={{ textAlign: "center", cursor: "default" }}>
-                {item.sn}
+                <div className={styles.cellClamp} title={item.sn}>
+                  {item.sn}
+                </div>
               </td>
-              <td style={{ textAlign: "center" }}>
+              <td className={styles.actionCol} style={{ textAlign: "center" }}>
                 <Form.Check
                   type="checkbox"
                   checked={selectedItems.includes(item.id)}

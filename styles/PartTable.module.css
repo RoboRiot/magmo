@@ -41,4 +41,29 @@
     min-width: 0;
     font-size: calc(12px + 0.5vw);
   }
+
+    
+  /* force table to allocate equal-width columns */
+.fixedTable {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* clamp cell text to 10 characters per line, max 3 lines */
+.cellClamp {
+  max-width: 10ch;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;           /* 3 rows max */
+  -webkit-box-orient: vertical;
+  word-break: break-word;           /* wrap long tokens like long SNs */
+  white-space: normal;              /* allow wrapping */
+}
+
+/* keep action/delete column from shrinking */
+.actionCol {
+  width: 96px;                      /* adjust if needed */
+  white-space: nowrap;
+}
+
   
