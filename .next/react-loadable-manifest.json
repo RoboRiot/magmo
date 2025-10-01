@@ -5,7 +5,7 @@
       "static/chunks/0.js"
     ]
   },
-  "NewSearch\\item\\[id]\\index.js -> react-qr-barcode-scanner": {
+  "NewSearch\\AddItem\\NewItem.js -> react-qr-barcode-scanner": {
     "id": "./node_modules/react-qr-barcode-scanner/dist/index.js",
     "files": [
       "static/chunks/1.js"

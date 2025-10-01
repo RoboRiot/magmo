@@ -30,10 +30,7 @@ import "firebase/compat/storage";
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
-  authDomain:
-    typeof window !== "undefined" && window.location.hostname === "localhost"
-      ? "magmo-ac10c.firebaseapp.com"
-      : "magmo-cloud.web.app",
+  authDomain: "magmo-ac10c.firebaseapp.com",
   projectId: "magmo-ac10c",
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
