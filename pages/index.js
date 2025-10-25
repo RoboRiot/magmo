@@ -117,7 +117,26 @@ export default function Home() {
         <div className="w-100" style={{ maxWidth: "400px" }}>
           <Card>
             <Card.Body>
-              <h2 className="text-center mb-4">MAGMO</h2>
+              <div
+                className="text-center mb-4"
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
+                <img
+                  src="/magmo.png"
+                  alt="Magmo Logo"
+                  style={{
+                    width: "100%",
+                    maxWidth: "400px", // adjust this if needed
+                    height: "auto",
+                    objectFit: "contain",
+                  }}
+                />
+              </div>
               {!authReady && <div className="mb-2 small text-muted">Initializing…</div>}
               {error && <Alert variant="danger">{error}</Alert>}
 

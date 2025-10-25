@@ -84,8 +84,12 @@ export default function WarehouseSelect() {
             <Card.Body>
               <h2 className="text-center mb-4">Warehouse DB</h2>
               <div className="d-grid gap-3">
-                {LoadingButton("primary", "Scan", "Warehousedb/WarehouseScan")}
-
+                {LoadingButton("secondary", "Scan", "Warehousedb/WarehouseScan")}
+{LoadingButton(
+                  "primary",
+                  "Ask Magmo",
+                  "../AskMagmo"
+                )}
                 {LoadingButton(
                   "secondary",
                   "Main List",

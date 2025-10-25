@@ -70,6 +70,7 @@ export default function NewItem() {
     pn: [""],
     sn: [""], // This will be overridden on submit.
     localSN: "", // NEW FIELD: holds user input for a local serial number.
+    date: new Date().toISOString().split("T")[0], // auto-fill current date
     price: "",
     status: "",
     poNumber: "",

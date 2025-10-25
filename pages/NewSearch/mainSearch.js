@@ -63,6 +63,55 @@ function LoadingButton({ type, name, route }) {
   );
 }
 
+// ---- DATE HELPERS (top-level scope) ----
+
+// Convert anything date-ish into a timestamp (ms since epoch).
+function toTime(value) {
+  if (!value) return null;
+
+  // Firestore Timestamp { seconds, nanoseconds }
+  if (typeof value === "object" && value !== null && value.seconds != null) {
+    try { return value.seconds * 1000; } catch { /* ignore */ }
+  }
+
+  // Native Date
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return isNaN(t) ? null : t;
+  }
+
+  // Strings
+  if (typeof value === "string") {
+    // ISO / yyyy-mm-dd
+    const iso = Date.parse(value);
+    if (!isNaN(iso)) return iso;
+
+    // mm/dd/yyyy
+    const parts = value.split("/");
+    if (parts.length === 3) {
+      const [mm, dd, yyyy] = parts;
+      const alt = Date.parse(`${yyyy}-${mm}-${dd}`);
+      if (!isNaN(alt)) return alt;
+    }
+  }
+
+  // Last resort
+  const t = Date.parse(value);
+  return isNaN(t) ? null : t;
+}
+
+// Canonicalize to 'yyyy-mm-dd' (matches <input type="date">)
+function toYMD(value) {
+  const t = toTime(value);
+  if (t == null) return null;
+  const d = new Date(t);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+
 export default function MainSearch() {
   const { signOut } = useAuth();
   const [info, setInfo] = useState([]);
@@ -93,6 +142,16 @@ export default function MainSearch() {
   const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
   const labelBaseNames = ["name", "date", "wo", "pn", "sn"];
   const sortCheckBase = [false, false, false, false, false, false];
+
+  function withSortIcon(baseLabels, activeIndex, isDesc) {
+    return baseLabels.map((text, i) => {
+      if (i !== activeIndex) return text; // untouched
+      const arrow = isDesc ? " ▼" : " ▲";
+      return `${text}${arrow}`;
+    });
+  }
+
+
   const [labels, setLabels] = useState(labelBase);
   const [sortCheck, setSortCheck] = useState(sortCheckBase);
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -107,81 +166,105 @@ export default function MainSearch() {
     fetchData();
   }, [router.route]);
 
- async function fetchData() {
-   setIsLoading(true);
-   try {
-     if (router.query.inputText && router.query.selectedType) {
-       setSelect(router.query.selectedType);
-       setSearch(router.query.inputText);
-     }
-     // light retry for transient Firestore hiccups
-     const load = async (attempt = 1) => {
-       try {
-         return await fetchPartsWithMachineData();
-       } catch (e) {
-         if (attempt >= 3) throw e;
-         await new Promise(r => setTimeout(r, 250 * Math.pow(2, attempt - 1)));
-         return load(attempt + 1);
-       }
-     };
-     const data = await load();
-     setBackupInfo(data);
-     setID(data.map((item) => item.id));
+  async function fetchData() {
+    setIsLoading(true);
+    try {
+      if (router.query.inputText && router.query.selectedType) {
+        setSelect(router.query.selectedType);
+        setSearch(router.query.inputText);
+      }
+      // light retry for transient Firestore hiccups
+      const load = async (attempt = 1) => {
+        try {
+          return await fetchPartsWithMachineData();
+        } catch (e) {
+          if (attempt >= 3) throw e;
+          await new Promise(r => setTimeout(r, 250 * Math.pow(2, attempt - 1)));
+          return load(attempt + 1);
+        }
+      };
+      const data = await load();
+      setBackupInfo(data);
+      setLabels(labelBase); // <-- add this line after setBackupInfo(data)
+      setID(data.map((item) => item.id));
 
-     // --- Pre-augment: resolve client ids of Machine / CurrentMachine once ---
-     const db = firebase.firestore();
-     const machineIds = [];
-     const curMachineIds = [];
-     for (const item of data) {
-       if (item?.Machine?.id) machineIds.push(item.Machine.id);
-       if (item?.CurrentMachine?.id) curMachineIds.push(item.CurrentMachine.id);
-     }
-     const uniq = (arr) => [...new Set(arr)];
-     const mIds = uniq(machineIds);
-     const cIds = uniq(curMachineIds);
+      // --- Pre-augment: resolve client ids of Machine / CurrentMachine once ---
+      const db = firebase.firestore();
+      const machineIds = [];
+      const curMachineIds = [];
+      const theMachineIds = []; // <-- ADD
 
-     const fetchMachineClients = async (ids) => {
-       if (!ids.length) return {};
-       const out = {};
-       // Firestore "in" supports up to 10 document IDs per query
-       const chunks = [];
-       for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
-       for (const chunk of chunks) {
-         const snap = await db
-           .collection("Machine")
-           .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-           .get();
-         snap.forEach((doc) => {
-           const md = doc.data() || {};
-           out[doc.id] = md.client?.id || null;
-         });
-       }
-       return out;
-     };
+      for (const item of data) {
+        if (item?.Machine?.id) machineIds.push(item.Machine.id);
+        if (item?.CurrentMachine?.id) curMachineIds.push(item.CurrentMachine.id);
+        if (item?.TheMachine?.id) theMachineIds.push(item.TheMachine.id); // <-- ADD
+      }
+      const uniq = (arr) => [...new Set(arr)];
+      const mIds = uniq(machineIds);
+      const cIds = uniq(curMachineIds);
 
-     const [fromMap, curMap] = await Promise.all([
-       fetchMachineClients(mIds),
-       fetchMachineClients(cIds),
-     ]);
+      const fetchMachineClients = async (ids) => {
+        if (!ids.length) return {};
+        const out = {};
+        // Firestore "in" supports up to 10 document IDs per query
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+        for (const chunk of chunks) {
+          const snap = await db
+            .collection("Machine")
+            .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+            .get();
+          snap.forEach((doc) => {
+            const md = doc.data() || {};
+            out[doc.id] = md.client?.id || null;
+          });
+        }
+        return out;
+      };
 
-     const augmented = data.map((item) => ({
-       ...item,
-       // keep existing fields; add fast client id fields for sync filtering
-       clientFromId: item?.Machine?.id ? fromMap[item.Machine.id] ?? null : null,
-       clientCurrentId: item?.CurrentMachine?.id ? curMap[item.CurrentMachine.id] ?? null : null,
-     }));
+      // Fetch full machine docs (OEM/Modality/Model/Client/etc.) for a set of ids
+      const fetchMachinesData = async (ids) => {
+        if (!ids.length) return {};
+        const out = {};
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+        for (const chunk of chunks) {
+          const snap = await db
+            .collection("Machine")
+            .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+            .get();
+          snap.forEach((doc) => {
+            out[doc.id] = { id: doc.id, ...(doc.data() || {}) };
+          });
+        }
+        return out;
+      };
 
-     setAugmentedInfo(augmented);
-     // default view = everything not explicitly hidden
-     setInfo(augmented.filter((it) => it.visible !== false));
-   } catch (err) {
-     console.error("Error fetching data:", err);
-     setInfo([]);
-     setAugmentedInfo([]);
-   } finally {
-     setIsLoading(false);
-   }
- }
+
+      const [fromMap, curMap, theMap] = await Promise.all([
+        fetchMachineClients(mIds),
+        fetchMachineClients(cIds),
+        fetchMachinesData(uniq(theMachineIds)), // <-- now captured as theMap
+      ]);
+
+      // New-style only: take client ids straight from item refs
+      const augmented = data.map((item) => ({
+        ...item,
+        clientFromId: item?.ClientFrom?.id ?? null,
+        clientCurrentId: item?.ClientCurrent?.id ?? null,
+      }));
+
+      setAugmentedInfo(augmented);
+      // default view = everything not explicitly hidden
+      setInfo(augmented.filter((it) => it.visible !== false));
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setInfo([]);
+      setAugmentedInfo([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
@@ -189,95 +272,146 @@ export default function MainSearch() {
   // for each item, fetches its Machine and CurrentMachine documents,
   // then compares the client id (from machineData.client.id) to the selected client.
   useEffect(() => {
-      function filterParts() {
-     const base = augmentedInfo; // already has clientFromId/clientCurrentId
-     const noFilters =
-       !selectedOEM &&
-       !selectedModality &&
-       !selectedModel &&
-       !selectedClientFrom &&
-       !selectedClientCurrent &&
-       !search;
-     if (noFilters) {
-       setInfo(base.filter((it) => it.visible !== false));
-       return;
-     }
+    function filterParts() {
+      const base = augmentedInfo; // already has clientFromId/clientCurrentId
+      const noFilters =
+        !selectedOEM &&
+        !selectedModality &&
+        !selectedModel &&
+        !selectedClientFrom &&
+        !selectedClientCurrent &&
+        !search;
+      if (noFilters) {
+        setInfo(base.filter((it) => it.visible !== false));
+        return;
+      }
 
-     const filtered = base.filter((item) => {
-       // only hide when explicitly false
-       if (item.visible === false) return false;
+      const filtered = base.filter((item) => {
+        // only hide when explicitly false
+        if (item.visible === false) return false;
 
-       // OEM/modality/model via machineData (you already put this in items)
-       if (item.machineData) {
-         if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-         if (selectedModality && item.machineData.Modality !== selectedModality) return false;
-         if (selectedModel && item.machineData.Model !== selectedModel) return false;
-       }
+        // OEM/modality/model via machineData (you already put this in items)
+        // OEM / Modality / Model filtering
+        // Prefer machineData; fall back to theMachineData; finally try inline TheMachine if it has plain fields
+        const OEM = item?.machineData?.OEM
+          ?? item?.theMachineData?.OEM
+          ?? item?.TheMachine?.OEM;
+        const Modality = item?.machineData?.Modality
+          ?? item?.theMachineData?.Modality
+          ?? item?.TheMachine?.Modality;
+        const Model = item?.machineData?.Model
+          ?? item?.theMachineData?.Model
+          ?? item?.TheMachine?.Model;
 
-       // Client filters (now instant)
-       if (selectedClientFrom && item.clientFromId !== selectedClientFrom) return false;
-       if (selectedClientCurrent && item.clientCurrentId !== selectedClientCurrent) return false;
+        if (selectedOEM && OEM !== selectedOEM) return false;
+        if (selectedModality && Modality !== selectedModality) return false;
+        if (selectedModel && Model !== selectedModel) return false;
 
-       // Search
-       if (search) {
-         const s = String(search).toLowerCase();
-         if (select === "Name") {
-           return (item.name || "").toLowerCase().includes(s);
-         }
-         if (select === "Date") {
-           // your items look like mm/dd/yyyy
-           const parts = (item.date || "").split("/");
-           if (parts.length === 3) {
-             const [mm, dd, yyyy] = parts;
-             const reformatted = `${yyyy}-${mm}-${dd}`;
-             return reformatted === search;
-           }
-           return false;
-         }
-         if (select === "Work Order") {
-           return Array.isArray(item.workOrders) &&
-             item.workOrders.some((wo) => String(wo.workOrder || "").toLowerCase().includes(s));
-         }
-         if (select === "Product Number") {
-           return String(item.pn || "").toLowerCase().includes(s);
-         }
-         if (select === "Description") {
-           return String(item.desc || "").toLowerCase().includes(s);
-         }
-         if (select === "SKU") {
-           return String(item.id || "").toLowerCase().includes(s);
-         }
-       }
-       return true;
-     });
-     setInfo(filtered);
-   }
-   filterParts();
- }, [selectedOEM, selectedModality, selectedClientFrom, selectedClientCurrent, selectedModel, search, select, augmentedInfo]);
+
+        // Client filters (now instant)
+        if (selectedClientFrom && item.clientFromId !== selectedClientFrom) return false;
+        if (selectedClientCurrent && item.clientCurrentId !== selectedClientCurrent) return false;
+
+        // Search
+        if (search) {
+          const s = String(search).toLowerCase();
+          if (select === "Name") {
+            return (item.name || "").toLowerCase().includes(s);
+          }
+          if (select === "Date") {
+            // If user hasn't picked a date yet, don't hide anything
+            if (!search) return true;
+
+            const wantedDay = search; // already 'yyyy-mm-dd' from <input type="date">
+
+            // 1) Match item.date, regardless of its format or type
+            const itemYMD = toYMD(item.date);
+            if (itemYMD && itemYMD === wantedDay) return true;
+
+            // 2) Also check any description dates (if you store dates there)
+            if (Array.isArray(item.descriptions)) {
+              const hitDesc = item.descriptions.some((d) => toYMD(d?.date) === wantedDay);
+              if (hitDesc) return true;
+            }
+
+            // 3) And work order dates (if present)
+            if (Array.isArray(item.workOrders)) {
+              const hitWO = item.workOrders.some((w) => toYMD(w?.date) === wantedDay);
+              if (hitWO) return true;
+            }
+
+            return false;
+          }
+
+          if (select === "Work Order") {
+            return Array.isArray(item.workOrders) &&
+              item.workOrders.some((wo) => String(wo.workOrder || "").toLowerCase().includes(s));
+          }
+          if (select === "Product Number") {
+            return String(item.pn || "").toLowerCase().includes(s);
+          }
+          if (select === "Description") {
+            return String(item.desc || "").toLowerCase().includes(s);
+          }
+          if (select === "SKU") {
+            return String(item.id || "").toLowerCase().includes(s);
+          }
+        }
+        return true;
+      });
+      setInfo(filtered);
+    }
+    filterParts();
+  }, [selectedOEM, selectedModality, selectedClientFrom, selectedClientCurrent, selectedModel, search, select, augmentedInfo]);
 
   function sortCheckAll(pos) {
+    // Determine next direction: toggle the clicked column only
+    const nextSortCheck = sortCheck.map((v, i) => (i === pos ? !v : v));
+    const isDesc = nextSortCheck[pos]; // true means descending
+
     const sortedInfo = [...info].sort((a, b) => {
-      if (pos === 0 || pos === 5) {
-        return sortCheck[pos]
-          ? b[labelBaseNames[pos]].localeCompare(a[labelBaseNames[pos]])
-          : a[labelBaseNames[pos]].localeCompare(b[labelBaseNames[pos]]);
-      }
+      const key = labelBaseNames[pos];
+
       if (pos === 1) {
-        return sortCheck[pos]
-          ? Date.parse(b[labelBaseNames[pos]]) - Date.parse(a[labelBaseNames[pos]])
-          : Date.parse(a[labelBaseNames[pos]]) - Date.parse(b[labelBaseNames[pos]]);
+        // DATE column
+        const ta = toTime(a[key]);
+        const tb = toTime(b[key]);
+
+        // Put missing dates at the end for ascending, at the start for descending
+        if (ta === null && tb === null) return 0;
+        if (ta === null) return isDesc ? -1 : 1;
+        if (tb === null) return isDesc ? 1 : -1;
+
+        return isDesc ? (tb - ta) : (ta - tb);
       }
-      return sortCheck[pos]
-        ? Number(b[labelBaseNames[pos]]) - Number(a[labelBaseNames[pos]])
-        : Number(a[labelBaseNames[pos]]) - Number(b[labelBaseNames[pos]]);
+
+      // NAME or SKU (string-y columns): indexes 0 or 5 in your original logic
+      if (pos === 0 || pos === 5) {
+        const av = (a[key] ?? "").toString();
+        const bv = (b[key] ?? "").toString();
+        return isDesc ? bv.localeCompare(av) : av.localeCompare(bv);
+      }
+
+      // Numeric-ish columns (wo, pn, sn) — fall back to string compare if NaN
+      const an = Number(a[key]);
+      const bn = Number(b[key]);
+
+      if (!isNaN(an) && !isNaN(bn)) {
+        return isDesc ? (bn - an) : (an - bn);
+      } else {
+        const av = (a[key] ?? "").toString();
+        const bv = (b[key] ?? "").toString();
+        return isDesc ? bv.localeCompare(av) : av.localeCompare(bv);
+      }
     });
+
     setInfo(sortedInfo);
-    setSortCheck((prevSortCheck) =>
-      prevSortCheck.map((_, index) =>
-        index === pos ? !prevSortCheck[pos] : prevSortCheck[index]
-      )
-    );
+    setSortCheck(nextSortCheck);
+
+    // Update header labels to show the little arrow on the active column
+    setLabels(withSortIcon(labelBase, pos, isDesc));
   }
+
 
   const rowSelect = (item) => {
     if (item && item.id) {
@@ -410,16 +544,80 @@ export default function MainSearch() {
     }
   };
 
+  // Build a unique list of clients from the items currently loaded, filtered by OEM/Modality.
+  // `type` is "from" or "current" to decide which client ref to read.
+  async function buildClientsFromItems(type) {
+    const db = firebase.firestore();
+    const ids = new Set();
+
+    // Respect current OEM / Modality filters when deriving client options
+    const filtered = augmentedInfo.filter((item) => {
+      const OEM = item?.machineData?.OEM ?? item?.OEM ?? null;
+      const Modality = item?.machineData?.Modality ?? item?.Modality ?? null;
+      if (selectedOEM && OEM !== selectedOEM) return false;
+      if (selectedModality && Modality !== selectedModality) return false;
+      return true;
+    });
+
+    for (const it of filtered) {
+      const id = type === "from" ? it.clientFromId : it.clientCurrentId;
+      if (id) ids.add(id);
+    }
+
+    const out = [];
+    const idArray = [...ids];
+    for (let i = 0; i < idArray.length; i += 10) {
+      const chunk = idArray.slice(i, i + 10);
+      const snap = await db
+        .collection("Client")
+        .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+        .get();
+      snap.forEach((doc) => {
+        const d = doc.data() || {};
+        out.push({ id: doc.id, name: d.name || doc.id });
+      });
+    }
+
+    // sort by name for nicer UX
+    out.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    return out;
+  }
+
+
   // --------------------
   // CLIENT SELECTION HANDLING
   // --------------------
   // This function fetches clients and opens the client modal.
   const handleClientClick = async () => {
-    const clientsData = await fetchClients(selectedOEM, selectedModality);
-    setClients(clientsData);
+    let safeClients = [];
+    try {
+      const clientsData = await fetchClients(selectedOEM, selectedModality);
+      safeClients = Array.isArray(clientsData) ? clientsData : [];
+    } catch (e) {
+      console.error("fetchClients failed:", e);
+    }
+
+    // Fallback to building from loaded items if API gave us nothing
+    if (safeClients.length === 0) {
+      try {
+        if (!clientSelectionType) {
+          // if somehow not set yet, default to "from"
+          setClientSelectionType("from");
+        }
+        const derived = await buildClientsFromItems(clientSelectionType || "from");
+        safeClients = derived;
+      } catch (e) {
+        console.error("Fallback buildClientsFromItems failed:", e);
+        safeClients = [];
+      }
+    }
+
+    setClients(safeClients);
     setClientSearchTerm("");
     setShowClientModal(true);
   };
+
+
 
   // When a client is selected in the modal, we now assume the parameter is a client ID.
   // If the passed value is null, we clear the selection.
@@ -548,6 +746,53 @@ export default function MainSearch() {
     }
   };
 
+  //   // Safely convert any date-ish value into a comparable timestamp (ms since epoch).
+  // function toTime(value) {
+  //   if (!value) return null;
+
+  //   // Firestore Timestamp: { seconds, nanoseconds }
+  //   if (typeof value === "object" && value.seconds) {
+  //     try {
+  //       return value.seconds * 1000;
+  //     } catch { /* fallthrough */ }
+  //   }
+
+  //   // If already a Date
+  //   if (value instanceof Date) return isNaN(value.getTime()) ? null : value.getTime();
+
+  //   // If string: try ISO first
+  //   if (typeof value === "string") {
+  //     // yyyy-mm-dd (from your form inputs)
+  //     const iso = Date.parse(value);
+  //     if (!isNaN(iso)) return iso;
+
+  //     // mm/dd/yyyy fallback (older items)
+  //     const parts = value.split("/");
+  //     if (parts.length === 3) {
+  //       const [mm, dd, yyyy] = parts;
+  //       const alt = Date.parse(`${yyyy}-${mm}-${dd}`);
+  //       if (!isNaN(alt)) return alt;
+  //     }
+  //   }
+
+  //   // Canonicalize any date-ish value to 'yyyy-mm-dd' so it matches <input type="date"> values
+  //   function toYMD(value) {
+  //     const t = toTime(value);
+  //     if (t == null) return null;
+  //     const d = new Date(t);
+  //     const yyyy = d.getFullYear();
+  //     const mm = String(d.getMonth() + 1).padStart(2, "0");
+  //     const dd = String(d.getDate()).padStart(2, "0");
+  //     return `${yyyy}-${mm}-${dd}`;
+  //   }
+
+
+  //   // Last resort
+  //   const t = Date.parse(value);
+  //   return isNaN(t) ? null : t;
+  // }
+
+
   return (
     <LoggedIn>
       {isDeleting && (
@@ -590,8 +835,8 @@ export default function MainSearch() {
             onChange={(e) => setClientSearchTerm(e.target.value)}
           />
           <ClientTable
-            clients={clients.filter((client) =>
-              client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+            clients={(Array.isArray(clients) ? clients : []).filter(
+              (client) => (client?.name ?? "").toLowerCase().includes(clientSearchTerm.toLowerCase())
             )}
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
@@ -695,10 +940,8 @@ export default function MainSearch() {
                       <Button
                         variant="outline-secondary"
                         className="w-100"
-                        onClick={() => {
-                          setClientSelectionType("from");
-                          handleClientClick();
-                        }}
+                        onClick={() => handleClientClick("from")}
+
                       >
                         {clientFromButtonText}
                       </Button>
@@ -708,10 +951,8 @@ export default function MainSearch() {
                       <Button
                         variant="outline-secondary"
                         className="w-100"
-                        onClick={() => {
-                          setClientSelectionType("current");
-                          handleClientClick();
-                        }}
+                        onClick={() => handleClientClick("current")}
+
                       >
                         {clientCurrentButtonText}
                       </Button>
@@ -764,9 +1005,29 @@ export default function MainSearch() {
                   <div className={styles.tableContainer}>
                     {isLoading ? (
                       <div className="d-flex justify-content-center align-items-center p-5">
-                        <Spinner animation="border" role="status">
-                          <span className="sr-only">M</span>
-                        </Spinner>
+                        <img
+                          src="/magmo-logo.png" // make sure it's in /public
+                          alt="Loading Magmo"
+                          style={{
+                            width: 64,
+                            height: 64,
+                            animation: "magmo-spin 1s linear infinite",
+                            transformOrigin: "50% 50%",
+                            display: "block",
+                          }}
+                        />
+
+                        {/* global so styled-jsx doesn't hash the name */}
+                        <style jsx global>{`
+      @keyframes magmo-spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `}</style>
                       </div>
                     ) : (
                       <PartTable
@@ -784,6 +1045,7 @@ export default function MainSearch() {
                         setSelectedItems={setSelectedItems}
                       />
                     )}
+
 
                     <div className={styles.searchContainer}>
                       <Form className="d-flex pb-2">
@@ -844,6 +1106,6 @@ export default function MainSearch() {
     </LoggedIn>
   );
 
-  
+
 }
 
