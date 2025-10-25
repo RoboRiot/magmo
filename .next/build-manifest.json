@@ -14,15 +14,10 @@
     "static/development/_ssgManifest.js"
   ],
   "pages": {
-    "/NewSearch/AddItem/NewItem": [
+    "/AskMagmo": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/AddItem/NewItem.js"
-    ],
-    "/NewSearch/mainSearch": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/mainSearch.js"
+      "static/chunks/pages/AskMagmo.js"
     ],
     "/_app": [
       "static/chunks/webpack.js",
