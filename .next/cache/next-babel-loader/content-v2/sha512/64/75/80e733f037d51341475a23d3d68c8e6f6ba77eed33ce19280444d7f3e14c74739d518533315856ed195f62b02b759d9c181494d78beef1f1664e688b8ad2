@@ -1,1 +1,0 @@
-{"ast":null,"code":"import React from \"react\";\nvar __jsx = React.createElement;\nimport Footer from './footer';\nimport styles from '../styles/Home.module.css';\n\nvar Layout = function Layout(_ref) {\n  var children = _ref.children;\n  return __jsx(React.Fragment, null, children);\n};\n\nexport default Layout;","map":null,"metadata":{},"sourceType":"module"}
