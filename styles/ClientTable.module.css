@@ -1,28 +1,49 @@
 .clientTableContainer {
-    max-height: 400px; /* Adjust the height as needed */
-    overflow-y: auto; /* Enable scroll for the table body */
-  }
-  
-  .clientTable {
-    width: 100%;
-  }
-  
-  .clientTable th,
-  .clientTable td {
-    text-align: center;
-    vertical-align: middle;
-  }
-  
-  .clientTable .buttonGroup {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-  }
-  
-  .clientTable .flexButton {
-    flex-grow: 1;
-    min-width: 0;
-    font-size: calc(12px + 0.5vw);
-    text-truncate: ellipsis;
-  }
-  
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.clientTable {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.clientTable th,
+.clientTable td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.clientTable thead th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.clientTable tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.actionRow td {
+  background: #f8fafc;
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.clientTable .buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.clientTable .flexButton {
+  flex-grow: 1;
+  min-width: 0;
+  font-size: calc(12px + 0.5vw);
+  text-truncate: ellipsis;
+}

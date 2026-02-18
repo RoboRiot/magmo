@@ -3,24 +3,27 @@ import { useRouter } from "next/router";
 import {
   Table,
   Button,
-  Container,
-  Card,
-  Row,
-  Col,
   Alert,
+  Spinner,
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
 import ClientInfoModal from "../../ClientInfoModal";
 import MachineCreationModal from "../../MachineCreationModal";
+import styles from "../Client.module.css";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
 
-const Client = () => {
+const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const router = useRouter();
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [machineOptions, setMachineOptions] = useState([]);
-  const [error, setError] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(initialClient || null);
+  const [machineOptions, setMachineOptions] = useState(
+    Array.isArray(initialMachines) ? initialMachines : []
+  );
+  const [error, setError] = useState(initialError || null);
+  const [isLoading, setIsLoading] = useState(
+    !initialClient && !initialError
+  );
 
   // State for machine addition modals
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
@@ -28,24 +31,29 @@ const Client = () => {
   const [availableMachines, setAvailableMachines] = useState([]);
 
   useEffect(() => {
-    if (router.isReady) {
-      const { clientId } = router.query;
-      // Extract clientId from query or URL path
-      const id = clientId || router.asPath.split("/").pop();
-      fetchClientData(id);
-    }
-  }, [router.isReady]);
+    if (!router.isReady) return;
+    const activeId = router.query.id || router.asPath.split("/").pop();
+    if (!activeId) return;
+    const hasInitial = initialClient && initialClient.id === activeId;
+    fetchClientData(activeId, { silent: hasInitial });
+  }, [router.isReady, router.query.id, initialClient]);
 
-  const fetchClientData = async (clientId) => {
+  const fetchClientData = async (clientId, { silent = false } = {}) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
+    setError(null);
     try {
       const db = firebase.firestore();
       const clientDoc = await db.collection("Client").doc(clientId).get();
       if (clientDoc.exists) {
         const clientData = clientDoc.data();
-        setSelectedClient(clientData);
+        setSelectedClient({ id: clientId, ...clientData });
 
-        // Fetch machine documents referenced in the client's machines array
-        const machinePromises = clientData.machines.map((machineRef) =>
+        const machineRefs = Array.isArray(clientData.machines)
+          ? clientData.machines
+          : [];
+        const machinePromises = machineRefs.map((machineRef) =>
           machineRef.get()
         );
         const machineDocs = await Promise.all(machinePromises);
@@ -60,6 +68,10 @@ const Client = () => {
     } catch (error) {
       console.error("Error fetching client data:", error);
       setError("Error fetching client data");
+    } finally {
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -150,77 +162,127 @@ const Client = () => {
   };
 
   return (
-    <Container className="mt-5">
-      <Row className="justify-content-md-center">
-        <Col md="8">
-          <Card>
-            <Card.Header>
-              <h4>Client Machines</h4>
-            </Card.Header>
-            <Card.Body>
-              {error && <Alert variant="danger">{error}</Alert>}
-              {selectedClient ? (
-                <>
-                  <h5>Client: {selectedClient.name}</h5>
-                  <p>Location: {selectedClient.local}</p>
-                  <div className="mb-3">
-                    <Button variant="primary" onClick={openAddMachineModal}>
-                      Add Existing Machine
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="ms-2"
-                      onClick={() => setShowCreateMachineModal(true)}
-                    >
-                      Create New Machine
-                    </Button>
+    <div className={styles.page}>
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div className={styles.brand}>
+            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+            <div>
+              <div className={styles.brandName}>Magmo</div>
+              <div className={styles.brandSub}>Client Detail</div>
+            </div>
+          </div>
+          <Button
+            variant="outline-secondary"
+            className={styles.backButton}
+            onClick={() => router.back()}
+          >
+            Back
+          </Button>
+        </header>
+
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>Client Machines</div>
+              <div className={styles.cardSubtitle}>
+                Manage machines linked to this client.
+              </div>
+            </div>
+            <div className={styles.cardMeta}>
+              {machineOptions.length} machines
+            </div>
+          </div>
+
+          <div className={styles.cardBody}>
+            {error && <Alert variant="danger">{error}</Alert>}
+            {isLoading && (
+              <div className={styles.loadingWrap}>
+                <Spinner animation="border" role="status">
+                  <span className="sr-only">Loading...</span>
+                </Spinner>
+              </div>
+            )}
+
+            {!isLoading && selectedClient && (
+              <>
+                <div className={styles.clientSummary}>
+                  <div className={styles.clientName}>{selectedClient.name}</div>
+                  <div className={styles.clientMetaRow}>
+                    <span>
+                      Location: {selectedClient.local || "Unknown"}
+                    </span>
+                    <span>Client ID: {selectedClient.id}</span>
                   </div>
-                  <Table striped bordered hover size="sm">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Location</th>
-                        <th>OEM</th>
-                        <th>Modality</th>
-                        <th>Select</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {machineOptions.map((machine) => (
-                        <tr key={machine.id}>
-                          <td>{machine.name}</td>
-                          <td>{machine.local}</td>
-                          <td>{machine.OEM}</td>
-                          <td>{machine.Modality}</td>
-                          <td>
-                            <Button
-                              variant="primary"
-                              onClick={() =>
-                                handleSelectMachine(machine.id, machine.name)
-                              }
-                            >
-                              Select
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                  <Button
-                    variant="primary"
-                    style={{ marginTop: "20px" }}
-                    onClick={() => router.back()}
-                  >
-                    Back
+                </div>
+
+                <div className={styles.actionRow}>
+                  <Button variant="primary" onClick={openAddMachineModal}>
+                    Add Existing Machine
                   </Button>
-                </>
-              ) : (
-                !error && <p>Loading client data...</p>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => setShowCreateMachineModal(true)}
+                  >
+                    Create New Machine
+                  </Button>
+                </div>
+
+                <div className={styles.tableCard}>
+                  <div className={styles.tableHeader}>
+                    <span>Machines</span>
+                    <span className={styles.tableHint}>
+                      Select a machine to view details.
+                    </span>
+                  </div>
+                  <div className={styles.tableWrap}>
+                    <Table striped bordered hover size="sm" className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Location</th>
+                          <th>OEM</th>
+                          <th>Modality</th>
+                          <th>Select</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {machineOptions.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className={styles.emptyState}>
+                              No machines assigned yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          machineOptions.map((machine) => (
+                            <tr key={machine.id}>
+                              <td>{machine.name}</td>
+                              <td>{machine.local}</td>
+                              <td>{machine.OEM}</td>
+                              <td>{machine.Modality}</td>
+                              <td>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleSelectMachine(machine.id, machine.name)
+                                  }
+                                >
+                                  Select
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </Table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
 
       {/* Modal to add an existing machine to the client */}
       <ClientInfoModal
@@ -236,7 +298,7 @@ const Client = () => {
         handleClose={() => setShowCreateMachineModal(false)}
         onCreateMachine={handleCreateMachine}
       />
-    </Container>
+    </div>
   );
 };
 

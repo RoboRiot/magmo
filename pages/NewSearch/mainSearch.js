@@ -1,9 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
-  Container,
-  Card,
-  Row,
-  Col,
   InputGroup,
   Dropdown,
   FormControl,
@@ -11,15 +7,15 @@ import {
   NavDropdown,
   Form,
   Modal,
-  Spinner,
+  Pagination,
+  Offcanvas,
 } from "react-bootstrap";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
-  fetchPartsWithMachineData,
+  fetchPartsWithMachineDataPage,
   fetchClients,
   fetchModels,
-  formatDate,
 } from "../../utils/fetchAssociations";
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
@@ -28,11 +24,14 @@ import ModelTable from "../../utils/ModelTable";
 import PartTable from "../../utils/PartTable";
 import styles from "../../styles/MainSearch.module.css";
 import firebase from "../../context/Firebase";
+import { buildNameTokens } from "../../utils/itemFormShared";
+import WarehouseMapModal from "../../components/WarehouseMapModal";
 
 // Predefined warehouse client IDs and display names
 const SOCAL_CLIENT_ID = "AIS17182";
 const NORCAL_CLIENT_ID = "AIS25097";
 const UNASSIGNED_CLIENT_ID = "AIS00404";
+const DEFAULT_PAGE_SIZE = 25;
 
 
 // Simulates a network request delay
@@ -41,23 +40,29 @@ function simulateNetworkRequest() {
 }
 
 // Custom LoadingButton component
-function LoadingButton({ type, name, route }) {
+function LoadingButton({ type, name, route, className }) {
   const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
-      simulateNetworkRequest().then(() => setLoading(false));
+      let cancelled = false;
+      simulateNetworkRequest().then(() => {
+        if (!cancelled) setLoading(false);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [isLoading]);
 
   return (
     <Link href={`/${route}`}>
       <a
-        className={`btn btn-${type}`}
+        className={`btn btn-${type} ${className || ""}`}
         disabled={isLoading}
         onClick={() => !isLoading && setLoading(true)}
       >
-        {isLoading ? "Loading…" : name}
+        {isLoading ? "Loading..." : name}
       </a>
     </Link>
   );
@@ -111,6 +116,27 @@ function toYMD(value) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function normalizeText(value) {
+  if (value == null) return "";
+  return String(value).toLowerCase().trim();
+}
+
+function getMachineField(item, key) {
+  if (!item) return null;
+  const lower = key.toLowerCase();
+  return (
+    item?.machineData?.[key] ??
+    item?.machineData?.[lower] ??
+    item?.currentMachineData?.[key] ??
+    item?.currentMachineData?.[lower] ??
+    item?.theMachineData?.[key] ??
+    item?.theMachineData?.[lower] ??
+    item?.TheMachine?.[key] ??
+    item?.TheMachine?.[lower] ??
+    null
+  );
+}
+
 
 export default function MainSearch() {
   const { signOut } = useAuth();
@@ -120,6 +146,9 @@ export default function MainSearch() {
   const [isLoading, setIsLoading] = useState(true);
   const [ids, setID] = useState([]);
   const [show, setShow] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [dItem, setDItem] = useState();
   const [select, setSelect] = useState("Name");
   const [showList, setShowList] = useState(false);
@@ -137,6 +166,7 @@ export default function MainSearch() {
   const [showClientModal, setShowClientModal] = useState(false);
   // This state tells the modal which client box is being updated: "from" or "current"
   const [clientSelectionType, setClientSelectionType] = useState(null);
+  const [showMap, setShowMap] = useState(false);
 
   const router = useRouter();
   const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
@@ -159,210 +189,426 @@ export default function MainSearch() {
   const [gPos, setGPos] = useState(null);
   const [gIde, setGIde] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageCursors, setPageCursors] = useState([]);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const fetchSeq = useRef(0);
+  const backfillInFlight = useRef(false);
+  const [queryEpoch, setQueryEpoch] = useState(0);
+  const [loadError, setLoadError] = useState(null);
+  const tableBodyRef = useRef(null);
+  const rowHeightRef = useRef(46);
+  const headerHeightRef = useRef(38);
+
+  const LOAD_TIMEOUT_MS = 30000;
+  const openMap = () => setShowMap(true);
+
+  const handleMapView = useCallback(
+    (selection = {}) => {
+      const params = new URLSearchParams();
+      const {
+        region,
+        sectionLetter,
+        sectionNumber,
+        pallet,
+        bin,
+      } = selection;
+
+      if (region) params.set("region", region);
+      if (sectionLetter) params.set("sectionLetter", sectionLetter);
+      if (sectionNumber) params.set("sectionNumber", sectionNumber);
+      if (pallet) params.set("pallet", pallet);
+      if (bin) params.set("bin", bin);
+
+      const query = params.toString();
+      router.push(
+        `/NewSearch/inventory/inventoryManage${query ? `?${query}` : ""}`
+      );
+      setShowMap(false);
+    },
+    [router]
+  );
+
+  const startNameTokenBackfill = useCallback(async (reason = "") => {
+    if (backfillInFlight.current) return;
+    if (typeof window !== "undefined") {
+      const lastRun = window.localStorage.getItem("nameTokensBackfillAt");
+      if (lastRun && Date.now() - Number(lastRun) < 24 * 60 * 60 * 1000) {
+        return;
+      }
+    }
+
+    backfillInFlight.current = true;
+    const db = firebase.firestore();
+    let lastDoc = null;
+
+    const tokensEqual = (a, b) => {
+      if (a.length !== b.length) return false;
+      const setA = new Set(a);
+      const setB = new Set(b);
+      if (setA.size !== setB.size) return false;
+      for (const v of setA) if (!setB.has(v)) return false;
+      return true;
+    };
+
+    try {
+      while (true) {
+        let query = db
+          .collection("Test")
+          .orderBy(firebase.firestore.FieldPath.documentId())
+          .limit(200);
+        if (lastDoc) query = query.startAfter(lastDoc);
+
+        const snap = await query.get();
+        if (snap.empty) break;
+
+        const batch = db.batch();
+        let writes = 0;
+
+        snap.docs.forEach((doc) => {
+          const data = doc.data() || {};
+          const name = typeof data.name === "string" ? data.name : "";
+          const nameLower = name.toLowerCase();
+          const nameTokens = buildNameTokens(name);
+          const existingTokens = Array.isArray(data.nameTokens)
+            ? Array.from(new Set(data.nameTokens.map((v) => String(v))))
+            : [];
+
+          const needsUpdate =
+            data.nameLower !== nameLower ||
+            !tokensEqual(existingTokens, nameTokens);
+
+          if (needsUpdate) {
+            batch.update(doc.ref, { nameLower, nameTokens });
+            writes += 1;
+          }
+        });
+
+        if (writes > 0) {
+          await batch.commit();
+        }
+
+        lastDoc = snap.docs[snap.docs.length - 1];
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "nameTokensBackfillAt",
+          String(Date.now())
+        );
+      }
+    } catch (error) {
+      console.error("Name token backfill failed:", reason, error);
+    } finally {
+      backfillInFlight.current = false;
+    }
+  }, []);
+
+  const searchLower = (search || "").toLowerCase().trim();
+  const hasActiveFilters =
+    Boolean(selectedOEM) ||
+    Boolean(selectedModality) ||
+    Boolean(selectedModel) ||
+    Boolean(selectedClientFrom) ||
+    Boolean(selectedClientCurrent) ||
+    Boolean(searchLower);
+
+  const valueMatches = (value, s) => {
+    if (!value) return false;
+    if (Array.isArray(value)) {
+      return value.some((v) => valueMatches(v, s));
+    }
+    return String(value).toLowerCase().includes(s);
+  };
+
+  const matchesFilters = useCallback(
+    (item) => {
+      // hide explicitly hidden items
+      if (item?.visible === false) return false;
+
+      // OEM / Modality / Model filtering
+      const OEM = getMachineField(item, "OEM");
+      const Modality = getMachineField(item, "Modality");
+      const Model = getMachineField(item, "Model");
+
+      if (selectedOEM && normalizeText(OEM) !== normalizeText(selectedOEM)) {
+        return false;
+      }
+      if (
+        selectedModality &&
+        normalizeText(Modality) !== normalizeText(selectedModality)
+      ) {
+        return false;
+      }
+      if (selectedModel && normalizeText(Model) !== normalizeText(selectedModel)) {
+        return false;
+      }
+
+      // Client filters
+      if (selectedClientFrom && item?.clientFromId !== selectedClientFrom) {
+        return false;
+      }
+      if (
+        selectedClientCurrent &&
+        item?.clientCurrentId !== selectedClientCurrent
+      ) {
+        return false;
+      }
+
+      // Search
+      if (searchLower) {
+        if (select === "Name") {
+          return valueMatches(item?.name, searchLower);
+        }
+        if (select === "Date") {
+          const wantedDay = searchLower; // yyyy-mm-dd from input
+          const itemYMD = toYMD(item?.date);
+          if (itemYMD && itemYMD === wantedDay) return true;
+          if (Array.isArray(item?.descriptions)) {
+            if (item.descriptions.some((d) => toYMD(d?.date) === wantedDay)) {
+              return true;
+            }
+          }
+          if (Array.isArray(item?.workOrders)) {
+            if (item.workOrders.some((w) => toYMD(w?.date) === wantedDay)) {
+              return true;
+            }
+          }
+          return false;
+        }
+        if (select === "Work Order") {
+          return (
+            Array.isArray(item?.workOrders) &&
+            item.workOrders.some((wo) =>
+              valueMatches(wo?.workOrder, searchLower)
+            )
+          );
+        }
+        if (select === "Product Number") {
+          return valueMatches(item?.pn, searchLower);
+        }
+        if (select === "Serial Number") {
+          return valueMatches(item?.sn, searchLower);
+        }
+        if (select === "Description") {
+          if (valueMatches(item?.desc, searchLower)) return true;
+          if (valueMatches(item?.description, searchLower)) return true;
+          if (Array.isArray(item?.descriptions)) {
+            return item.descriptions.some((d) =>
+              valueMatches(d?.description, searchLower)
+            );
+          }
+          return false;
+        }
+        if (select === "SKU") {
+          return (
+            valueMatches(item?.id, searchLower) ||
+            valueMatches(item?.localSN, searchLower) ||
+            valueMatches(item?.local_sn, searchLower)
+          );
+        }
+      }
+
+      return true;
+    },
+    [
+      selectedOEM,
+      selectedModality,
+      selectedModel,
+      selectedClientFrom,
+      selectedClientCurrent,
+      searchLower,
+      select,
+    ]
+  );
+
+  const resetPagination = () => {
+    setPage(1);
+    setPageCursors([]);
+    setHasNextPage(false);
+  };
+
+  // Reset pagination on route/query change (prevents stale pages like “starting at 6”)
+  useEffect(() => {
+    resetPagination();
+    setQueryEpoch((v) => v + 1);
+  }, [router.asPath]);
+
+  // Reset and refetch when filters/search change
+  useEffect(() => {
+    resetPagination();
+    setQueryEpoch((v) => v + 1);
+  }, [
+    selectedOEM,
+    selectedModality,
+    selectedModel,
+    selectedClientFrom,
+    selectedClientCurrent,
+    search,
+    select,
+  ]);
 
 
   // Fetch data on component mount and route change
   useEffect(() => {
-    fetchData();
-  }, [router.route]);
+    fetchData(page);
+  }, [page, queryEpoch]);
 
-  async function fetchData() {
+  useEffect(() => {
+    if (!router?.events) return;
+    const handleDone = () => setIsNavigating(false);
+    router.events.on("routeChangeComplete", handleDone);
+    router.events.on("routeChangeError", handleDone);
+    return () => {
+      router.events.off("routeChangeComplete", handleDone);
+      router.events.off("routeChangeError", handleDone);
+    };
+  }, [router]);
+
+  async function fetchData(requestedPage = 1) {
+    const seq = ++fetchSeq.current;
+    let timedOut = false;
     setIsLoading(true);
+    setLoadError(null);
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      if (seq === fetchSeq.current) {
+        setLoadError({
+          code: "timeout",
+          message: `Loading is taking longer than ${Math.round(
+            LOAD_TIMEOUT_MS / 1000
+          )}s. This is likely due to very selective filters.`,
+        });
+        setIsLoading(false);
+      }
+    }, LOAD_TIMEOUT_MS);
     try {
       if (router.query.inputText && router.query.selectedType) {
         setSelect(router.query.selectedType);
         setSearch(router.query.inputText);
       }
+      const startAfterDoc =
+        requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
+      if (requestedPage > 1 && !startAfterDoc) {
+        setPage(1);
+        if (seq === fetchSeq.current) {
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+        }
+        return;
+      }
+      const effectiveSelect = router.query.selectedType || select;
+      const effectiveSearch = router.query.inputText || search;
+      const effectiveSearchLower = (effectiveSearch || "")
+        .toLowerCase()
+        .trim();
+
       // light retry for transient Firestore hiccups
       const load = async (attempt = 1) => {
         try {
-          return await fetchPartsWithMachineData();
+          return await fetchPartsWithMachineDataPage({
+            pageSize,
+            startAfterDoc,
+            visibleOnly: true,
+            filterFn: hasActiveFilters ? matchesFilters : null,
+            search: effectiveSearchLower
+              ? {
+                  type: effectiveSelect,
+                  raw: effectiveSearch,
+                  lower: effectiveSearchLower,
+                }
+              : null,
+            needsMachineData:
+              Boolean(selectedOEM) ||
+              Boolean(selectedModality) ||
+              Boolean(selectedModel) ||
+              Boolean(selectedClientFrom) ||
+              Boolean(selectedClientCurrent),
+          });
         } catch (e) {
           if (attempt >= 3) throw e;
           await new Promise(r => setTimeout(r, 250 * Math.pow(2, attempt - 1)));
           return load(attempt + 1);
         }
       };
-      const data = await load();
+      const { parts: data, lastDoc, hasNextPage: nextPage } = await load();
+      if (timedOut || seq !== fetchSeq.current) return;
+      const hasNameSearch =
+        Boolean(effectiveSearchLower) && effectiveSelect === "Name";
+      if (
+        hasNameSearch &&
+        (data.length === 0 ||
+          data.some(
+            (item) =>
+              !Array.isArray(item?.nameTokens) || item.nameTokens.length === 0
+          ))
+      ) {
+        startNameTokenBackfill("name-search");
+      }
+      if (requestedPage === 1 && data.length === 0) {
+        setPageCursors([]);
+        setHasNextPage(false);
+      }
       setBackupInfo(data);
       setLabels(labelBase); // <-- add this line after setBackupInfo(data)
       setID(data.map((item) => item.id));
-
-      // --- Pre-augment: resolve client ids of Machine / CurrentMachine once ---
-      const db = firebase.firestore();
-      const machineIds = [];
-      const curMachineIds = [];
-      const theMachineIds = []; // <-- ADD
-
-      for (const item of data) {
-        if (item?.Machine?.id) machineIds.push(item.Machine.id);
-        if (item?.CurrentMachine?.id) curMachineIds.push(item.CurrentMachine.id);
-        if (item?.TheMachine?.id) theMachineIds.push(item.TheMachine.id); // <-- ADD
+      if (requestedPage > 1 && data.length === 0) {
+        setHasNextPage(false);
+        setPage(1);
+        return;
       }
-      const uniq = (arr) => [...new Set(arr)];
-      const mIds = uniq(machineIds);
-      const cIds = uniq(curMachineIds);
-
-      const fetchMachineClients = async (ids) => {
-        if (!ids.length) return {};
-        const out = {};
-        // Firestore "in" supports up to 10 document IDs per query
-        const chunks = [];
-        for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
-        for (const chunk of chunks) {
-          const snap = await db
-            .collection("Machine")
-            .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-            .get();
-          snap.forEach((doc) => {
-            const md = doc.data() || {};
-            out[doc.id] = md.client?.id || null;
-          });
+      setHasNextPage(nextPage);
+      setPageCursors((prev) => {
+        const next = requestedPage === 1 ? [] : [...prev];
+        if (lastDoc) {
+          next[requestedPage - 1] = lastDoc;
         }
-        return out;
-      };
+        return next;
+      });
+      setSelectedItems([]);
 
-      // Fetch full machine docs (OEM/Modality/Model/Client/etc.) for a set of ids
-      const fetchMachinesData = async (ids) => {
-        if (!ids.length) return {};
-        const out = {};
-        const chunks = [];
-        for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
-        for (const chunk of chunks) {
-          const snap = await db
-            .collection("Machine")
-            .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-            .get();
-          snap.forEach((doc) => {
-            out[doc.id] = { id: doc.id, ...(doc.data() || {}) };
-          });
-        }
-        return out;
-      };
-
-
-      const [fromMap, curMap, theMap] = await Promise.all([
-        fetchMachineClients(mIds),
-        fetchMachineClients(cIds),
-        fetchMachinesData(uniq(theMachineIds)), // <-- now captured as theMap
-      ]);
-
-      // New-style only: take client ids straight from item refs
+      // Normalize client ids for filtering
       const augmented = data.map((item) => ({
         ...item,
-        clientFromId: item?.ClientFrom?.id ?? null,
-        clientCurrentId: item?.ClientCurrent?.id ?? null,
+        clientFromId:
+          item?.clientFromId ??
+          (typeof item?.ClientFrom === "string" ? item.ClientFrom : null) ??
+          item?.ClientFrom?.id ??
+          null,
+        clientCurrentId:
+          item?.clientCurrentId ??
+          (typeof item?.ClientCurrent === "string" ? item.ClientCurrent : null) ??
+          item?.ClientCurrent?.id ??
+          null,
       }));
 
       setAugmentedInfo(augmented);
-      // default view = everything not explicitly hidden
-      setInfo(augmented.filter((it) => it.visible !== false));
+      // default view = filtered (keeps pagination and filters consistent)
+      setInfo(augmented.filter(matchesFilters));
     } catch (err) {
+      if (seq !== fetchSeq.current) return;
       console.error("Error fetching data:", err);
+      const code = err?.code || "unknown";
+      setLoadError({
+        code,
+        message: err?.message || "Failed to load items.",
+      });
       setInfo([]);
       setAugmentedInfo([]);
     } finally {
-      setIsLoading(false);
+      clearTimeout(timeoutId);
+      if (seq === fetchSeq.current && !timedOut) setIsLoading(false);
     }
   }
 
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
-  // Asynchronous filter function that loops through backupInfo and,
-  // for each item, fetches its Machine and CurrentMachine documents,
-  // then compares the client id (from machineData.client.id) to the selected client.
+  // Filter the currently loaded items (now consistent with paged filtering)
   useEffect(() => {
-    function filterParts() {
-      const base = augmentedInfo; // already has clientFromId/clientCurrentId
-      const noFilters =
-        !selectedOEM &&
-        !selectedModality &&
-        !selectedModel &&
-        !selectedClientFrom &&
-        !selectedClientCurrent &&
-        !search;
-      if (noFilters) {
-        setInfo(base.filter((it) => it.visible !== false));
-        return;
-      }
-
-      const filtered = base.filter((item) => {
-        // only hide when explicitly false
-        if (item.visible === false) return false;
-
-        // OEM/modality/model via machineData (you already put this in items)
-        // OEM / Modality / Model filtering
-        // Prefer machineData; fall back to theMachineData; finally try inline TheMachine if it has plain fields
-        const OEM = item?.machineData?.OEM
-          ?? item?.theMachineData?.OEM
-          ?? item?.TheMachine?.OEM;
-        const Modality = item?.machineData?.Modality
-          ?? item?.theMachineData?.Modality
-          ?? item?.TheMachine?.Modality;
-        const Model = item?.machineData?.Model
-          ?? item?.theMachineData?.Model
-          ?? item?.TheMachine?.Model;
-
-        if (selectedOEM && OEM !== selectedOEM) return false;
-        if (selectedModality && Modality !== selectedModality) return false;
-        if (selectedModel && Model !== selectedModel) return false;
-
-
-        // Client filters (now instant)
-        if (selectedClientFrom && item.clientFromId !== selectedClientFrom) return false;
-        if (selectedClientCurrent && item.clientCurrentId !== selectedClientCurrent) return false;
-
-        // Search
-        if (search) {
-          const s = String(search).toLowerCase();
-          if (select === "Name") {
-            return (item.name || "").toLowerCase().includes(s);
-          }
-          if (select === "Date") {
-            // If user hasn't picked a date yet, don't hide anything
-            if (!search) return true;
-
-            const wantedDay = search; // already 'yyyy-mm-dd' from <input type="date">
-
-            // 1) Match item.date, regardless of its format or type
-            const itemYMD = toYMD(item.date);
-            if (itemYMD && itemYMD === wantedDay) return true;
-
-            // 2) Also check any description dates (if you store dates there)
-            if (Array.isArray(item.descriptions)) {
-              const hitDesc = item.descriptions.some((d) => toYMD(d?.date) === wantedDay);
-              if (hitDesc) return true;
-            }
-
-            // 3) And work order dates (if present)
-            if (Array.isArray(item.workOrders)) {
-              const hitWO = item.workOrders.some((w) => toYMD(w?.date) === wantedDay);
-              if (hitWO) return true;
-            }
-
-            return false;
-          }
-
-          if (select === "Work Order") {
-            return Array.isArray(item.workOrders) &&
-              item.workOrders.some((wo) => String(wo.workOrder || "").toLowerCase().includes(s));
-          }
-          if (select === "Product Number") {
-            return String(item.pn || "").toLowerCase().includes(s);
-          }
-          if (select === "Description") {
-            return String(item.desc || "").toLowerCase().includes(s);
-          }
-          if (select === "SKU") {
-            return String(item.id || "").toLowerCase().includes(s);
-          }
-        }
-        return true;
-      });
-      setInfo(filtered);
-    }
-    filterParts();
-  }, [selectedOEM, selectedModality, selectedClientFrom, selectedClientCurrent, selectedModel, search, select, augmentedInfo]);
+    const base = augmentedInfo || [];
+    setInfo(base.filter(matchesFilters));
+  }, [augmentedInfo, matchesFilters]);
 
   function sortCheckAll(pos) {
     // Determine next direction: toggle the clicked column only
@@ -416,6 +662,7 @@ export default function MainSearch() {
   const rowSelect = (item) => {
     if (item && item.id) {
       console.log("Selected item:", item);
+      setIsNavigating(true);
       router.push("./item/" + item.id);
     } else {
       console.error("Unable to determine the selected item’s ID: ", item);
@@ -552,10 +799,17 @@ export default function MainSearch() {
 
     // Respect current OEM / Modality filters when deriving client options
     const filtered = augmentedInfo.filter((item) => {
-      const OEM = item?.machineData?.OEM ?? item?.OEM ?? null;
-      const Modality = item?.machineData?.Modality ?? item?.Modality ?? null;
-      if (selectedOEM && OEM !== selectedOEM) return false;
-      if (selectedModality && Modality !== selectedModality) return false;
+      const OEM = getMachineField(item, "OEM");
+      const Modality = getMachineField(item, "Modality");
+      if (selectedOEM && normalizeText(OEM) !== normalizeText(selectedOEM)) {
+        return false;
+      }
+      if (
+        selectedModality &&
+        normalizeText(Modality) !== normalizeText(selectedModality)
+      ) {
+        return false;
+      }
       return true;
     });
 
@@ -792,14 +1046,244 @@ export default function MainSearch() {
   //   return isNaN(t) ? null : t;
   // }
 
+  const totalKnownPages = Math.max(
+    1,
+    pageCursors.filter(Boolean).length + (hasNextPage ? 1 : 0)
+  );
+  const pageButtons = (() => {
+    const buttons = [];
+    const maxVisible = 7;
+
+    const pushPage = (p) =>
+      buttons.push(
+        <Pagination.Item
+          key={`page-${p}`}
+          active={p === page}
+          onClick={() => setPage(p)}
+        >
+          {p}
+        </Pagination.Item>
+      );
+
+    const pushEllipsis = (key) =>
+      buttons.push(<Pagination.Ellipsis key={key} disabled />);
+
+    if (totalKnownPages <= maxVisible) {
+      for (let i = 1; i <= totalKnownPages; i += 1) pushPage(i);
+      return buttons;
+    }
+
+    let start = Math.max(2, page - 1);
+    let end = Math.min(totalKnownPages - 1, page + 1);
+
+    const desiredWindow = maxVisible - 2;
+    let currentWindow = end - start + 1;
+    let remaining = desiredWindow - currentWindow;
+
+    while (remaining > 0) {
+      if (start > 2) {
+        start -= 1;
+        remaining -= 1;
+      }
+      if (remaining > 0 && end < totalKnownPages - 1) {
+        end += 1;
+        remaining -= 1;
+      }
+      if (start === 2 && end === totalKnownPages - 1) break;
+    }
+
+    pushPage(1);
+    if (start > 2) pushEllipsis("start-ellipsis");
+    for (let i = start; i <= end; i += 1) pushPage(i);
+    if (end < totalKnownPages - 1) pushEllipsis("end-ellipsis");
+    pushPage(totalKnownPages);
+    if (hasNextPage) pushEllipsis("more-ellipsis");
+
+    return buttons;
+  })();
+
+  const recalcPageSize = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (page !== 1) return;
+    if (!tableBodyRef.current) return;
+    const containerHeight =
+      tableBodyRef.current.getBoundingClientRect().height || 0;
+    if (!containerHeight) return;
+
+    const headerRow =
+      tableBodyRef.current.querySelector("table thead tr") ||
+      tableBodyRef.current.querySelector("thead tr");
+    const bodyRow =
+      tableBodyRef.current.querySelector("table tbody tr") ||
+      tableBodyRef.current.querySelector("tbody tr");
+
+    if (headerRow) {
+      const h = headerRow.getBoundingClientRect().height;
+      if (h) headerHeightRef.current = h;
+    }
+    if (bodyRow) {
+      const r = bodyRow.getBoundingClientRect().height;
+      if (r) rowHeightRef.current = r;
+    }
+
+    const verticalPadding = 24;
+    const available =
+      containerHeight - headerHeightRef.current - verticalPadding;
+    const estimated = Math.floor(available / rowHeightRef.current);
+    const clamped = Math.max(5, Math.min(50, estimated));
+    if (clamped > 0 && clamped !== pageSize) {
+      setPageSize(clamped);
+      resetPagination();
+      setQueryEpoch((v) => v + 1);
+    }
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    recalcPageSize();
+    const onResize = () => recalcPageSize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [recalcPageSize]);
+
+  useEffect(() => {
+    if (isLoading || page !== 1) return;
+    recalcPageSize();
+  }, [page, isLoading, recalcPageSize]);
+
+  const renderFilters = (idPrefix) => (
+    <div className={styles.filtersPanel}>
+      <div className={styles.filtersHeader}>
+        <div>
+          <div className={styles.filtersTitle}>Filters</div>
+          <div className={styles.filtersSubtitle}>
+            Narrow results by machine, client, or warehouse.
+          </div>
+        </div>
+        {hasActiveFilters ? (
+          <span className={styles.filtersBadge}>Active</span>
+        ) : null}
+      </div>
+
+      <div className={styles.filterSection}>
+        <div className={styles.filterSectionTitle}>Machine</div>
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>OEM</InputGroup.Text>
+          <Dropdown onSelect={handleSelect1} className="w-100">
+            <Dropdown.Toggle
+              variant="outline-secondary"
+              id={`${idPrefix}-oem`}
+              className={`w-100 ${styles.inputButton}`}
+            >
+              {dropdown1Text}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="w-100">
+              <Dropdown.Item eventKey="unassigned">Select Option</Dropdown.Item>
+              <Dropdown.Item eventKey="GE">GE</Dropdown.Item>
+              <Dropdown.Item eventKey="Toshiba">Toshiba</Dropdown.Item>
+              <Dropdown.Item eventKey="Siemens">Siemens</Dropdown.Item>
+              <Dropdown.Item eventKey="Philips">Philips</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        </InputGroup>
+
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Modality</InputGroup.Text>
+          <Dropdown onSelect={handleSelect2} className="w-100">
+            <Dropdown.Toggle
+              variant="outline-secondary"
+              id={`${idPrefix}-modality`}
+              className={`w-100 ${styles.inputButton}`}
+            >
+              {dropdown2Text}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="w-100">
+              <Dropdown.Item eventKey="unassigned">Select Option</Dropdown.Item>
+              <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
+              <Dropdown.Item eventKey="MRI">MRI</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        </InputGroup>
+
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Model</InputGroup.Text>
+          <Button
+            variant="outline-secondary"
+            className={`w-100 ${styles.inputButton}`}
+            onClick={handleModelClick}
+          >
+            {modelButtonText}
+          </Button>
+        </InputGroup>
+      </div>
+
+      <div className={styles.filterSection}>
+        <div className={styles.filterSectionTitle}>Client</div>
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Client From</InputGroup.Text>
+          <Button
+            variant="outline-secondary"
+            className={`w-100 ${styles.inputButton}`}
+            onClick={() => handleClientClick("from")}
+          >
+            {clientFromButtonText}
+          </Button>
+        </InputGroup>
+
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Client Current</InputGroup.Text>
+          <Button
+            variant="outline-secondary"
+            className={`w-100 ${styles.inputButton}`}
+            onClick={() => handleClientClick("current")}
+          >
+            {clientCurrentButtonText}
+          </Button>
+        </InputGroup>
+      </div>
+
+      <div className={styles.filterSection}>
+        <div className={styles.filterSectionTitle}>Warehouse</div>
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Quick</InputGroup.Text>
+          <div className={styles.buttonGroup}>
+            <Button
+              variant="outline-secondary"
+              className={styles.flexButton}
+              onClick={handleSoCalWarehouseClick}
+            >
+              SoCal Warehouse
+            </Button>
+            <Button
+              variant="outline-secondary"
+              className={styles.flexButton}
+              onClick={handleNorCalWarehouseClick}
+            >
+              NorCal Warehouse
+            </Button>
+            <Button
+              variant="outline-secondary"
+              className={styles.flexButton}
+              onClick={handleWarehouseUnassignedClick}
+            >
+              Unassigned
+            </Button>
+          </div>
+        </InputGroup>
+      </div>
+    </div>
+  );
+
 
   return (
     <LoggedIn>
-      {isDeleting && (
-        <div className="loading-overlay">
-          <Spinner animation="border" role="status" className="spinner-center">
-            <span className="sr-only">Loading...</span>
-          </Spinner>
+      {(isDeleting || isNavigating) && (
+        <div className={styles.loadingOverlay}>
+          <img
+            src="/magmo-logo.png"
+            alt="Loading Magmo"
+            className={styles.loadingLogo}
+          />
         </div>
       )}
       <Modal show={showDeleteModal} onHide={handleCloseDeleteModal}>
@@ -870,239 +1354,241 @@ export default function MainSearch() {
         </Modal.Body>
       </Modal>
 
-      <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
-      >
-        <div className="w-100" style={{ maxWidth: "1200px" }}>
-          <Card>
-            <Card.Body>
-              <h2 className="text-center mb-4">Magmo</h2>
-              <Row>
-                <Col md={4}>
-                  {/* Dropdowns */}
+      <div className={styles.page}>
+        <div className={styles.pageInner}>
+          <header className={styles.header}>
+            <div className={styles.headerLeft}>
+              <button
+                type="button"
+                className={styles.burger}
+                onClick={() => setShowFilters(true)}
+                aria-label="Open filters"
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+              <div className={styles.brand}>
+                <img
+                  src="/magmo-logo.png"
+                  alt="Magmo"
+                  className={styles.brandLogo}
+                />
+                <div>
+                  <div className={styles.brandName}>Magmo</div>
+                  <div className={styles.brandSub}>Inventory Search</div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.headerRight}>
+              <div className={styles.headerStatus}>
+                {hasActiveFilters ? "Filters active" : "All items"}
+              </div>
+            </div>
+          </header>
+
+          <div className={styles.content}>
+            <aside className={styles.sidebar}>{renderFilters("sidebar")}</aside>
+            <main className={styles.main}>
+              <div className={styles.tableCard}>
+                <div className={styles.tableHeader}>
                   <div>
-                    <InputGroup className="mb-3">
-                      <InputGroup.Text>OEM</InputGroup.Text>
-                      <Dropdown onSelect={handleSelect1}>
-                        <Dropdown.Toggle
-                          variant="outline-secondary"
-                          id="dropdown-button-1"
-                          className="w-100"
-                        >
-                          {dropdown1Text}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu className="w-100">
-                          <Dropdown.Item eventKey="unassigned">
-                            Select Option
-                          </Dropdown.Item>
-                          <Dropdown.Item eventKey="GE">GE</Dropdown.Item>
-                          <Dropdown.Item eventKey="Toshiba">
-                            Toshiba
-                          </Dropdown.Item>
-                          <Dropdown.Item eventKey="Siemens">
-                            Siemens
-                          </Dropdown.Item>
-                          <Dropdown.Item eventKey="Philips">
-                            Philips
-                          </Dropdown.Item>
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    </InputGroup>
-
-                    <InputGroup className="mb-5">
-                      <InputGroup.Text>Modality</InputGroup.Text>
-                      <Dropdown onSelect={handleSelect2}>
-                        <Dropdown.Toggle
-                          variant="outline-secondary"
-                          id="dropdown-button-2"
-                          className="w-100"
-                        >
-                          {dropdown2Text}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu className="w-100">
-                          <Dropdown.Item eventKey="unassigned">
-                            Select Option
-                          </Dropdown.Item>
-                          <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
-                          <Dropdown.Item eventKey="MRI">MRI</Dropdown.Item>
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    </InputGroup>
-                  </div>
-
-                  <div className={styles.divider}></div>
-
-                  {/* Client selection boxes */}
-                  <div>
-                    <InputGroup className="mb-3">
-                      <InputGroup.Text>Client From</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        onClick={() => handleClientClick("from")}
-
-                      >
-                        {clientFromButtonText}
-                      </Button>
-                    </InputGroup>
-                    <InputGroup className="mb-3">
-                      <InputGroup.Text>Client Current</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        onClick={() => handleClientClick("current")}
-
-                      >
-                        {clientCurrentButtonText}
-                      </Button>
-                    </InputGroup>
-
-                    <InputGroup className="mb-3">
-                      <InputGroup.Text>Model</InputGroup.Text>
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100"
-                        onClick={handleModelClick}
-                      >
-                        {modelButtonText}
-                      </Button>
-                    </InputGroup>
-
-                    <div className={styles.divider}></div>
-
-                    {/* Warehouse buttons for Client Current */}
-                    <InputGroup className="mb-3">
-                      <InputGroup.Text>Warehouse</InputGroup.Text>
-                      <div className={styles.buttonGroup}>
-                        <Button
-                          variant="outline-secondary"
-                          className={styles.flexButton}
-                          onClick={handleSoCalWarehouseClick}
-                        >
-                          SoCal Warehouse
-                        </Button>
-                        <Button
-                          variant="outline-secondary"
-                          className={styles.flexButton}
-                          onClick={handleNorCalWarehouseClick}
-                        >
-                          NorCal Warehouse
-                        </Button>
-                        <Button
-                          variant="outline-secondary"
-                          className={styles.flexButton}
-                          onClick={handleWarehouseUnassignedClick}
-                        >
-                          Unassigned
-                        </Button>
-                      </div>
-                    </InputGroup>
-                  </div>
-                </Col>
-
-                <Col md={8}>
-                  <div className={styles.tableContainer}>
-                    {isLoading ? (
-                      <div className="d-flex justify-content-center align-items-center p-5">
-                        <img
-                          src="/magmo-logo.png" // make sure it's in /public
-                          alt="Loading Magmo"
-                          style={{
-                            width: 64,
-                            height: 64,
-                            animation: "magmo-spin 1s linear infinite",
-                            transformOrigin: "50% 50%",
-                            display: "block",
-                          }}
-                        />
-
-                        {/* global so styled-jsx doesn't hash the name */}
-                        <style jsx global>{`
-      @keyframes magmo-spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
-      }
-    `}</style>
-                      </div>
-                    ) : (
-                      <PartTable
-                        info={info}
-                        labels={labels}
-                        ids={ids}
-                        hoverStyle={hoverStyle}
-                        sortCheckAll={sortCheckAll}
-                        checkDelete={checkDelete}
-                        isDeleting={isDeleting}
-                        rowSelect={rowSelect}
-                        setHoverIndex={setHoverIndex}
-                        hoverIndex={hoverIndex}
-                        selectedItems={selectedItems}
-                        setSelectedItems={setSelectedItems}
-                      />
-                    )}
-
-
-                    <div className={styles.searchContainer}>
-                      <Form className="d-flex pb-2">
-                        <FormControl
-                          type={showListSearch}
-                          placeholder="Search"
-                          className="me-2 flex-grow-1"
-                          aria-label="Search"
-                          value={search}
-                          onChange={searchChangeHandler}
-                          style={{ flex: "1" }}
-                        />
-                        <NavDropdown
-                          title={select}
-                          id="collasible-nav-dropdown"
-                          show={showList}
-                          onMouseEnter={() => setShowList(true)}
-                          onMouseLeave={() => setShowList(false)}
-                          style={{ marginTop: "-5px" }}
-                        >
-                          <NavDropdown.Item onClick={() => { setSelect("Name"); setShowListSearch("text"); }}>
-                            Name
-                          </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => { setSelect("Date"); setShowListSearch("date"); }}>
-                            Date
-                          </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => { setSelect("Work Order"); setShowListSearch("number"); }}>
-                            Work Order
-                          </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => { setSelect("Product Number"); setShowListSearch("number"); }}>
-                            Product Number
-                          </NavDropdown.Item>
-                          <NavDropdown.Item onClick={() => { setSelect("Description"); setShowListSearch("text"); }}>
-                            Description
-                          </NavDropdown.Item>
-                          <NavDropdown.Item
-                            onClick={() => {
-                              setSelect("SKU");
-                              setShowListSearch("text");
-                            }}
-                          >
-                            SKU
-                          </NavDropdown.Item>
-                        </NavDropdown>
-                      </Form>
-                      <div className="d-flex justify-content-between">
-                        <LoadingButton type="secondary" name="Add New Item" route="NewSearch/AddItem/NewItem" />
-                        <LoadingButton type="primary" name="Back" route="Warehousedb/WarehouseSelect" />
-                      </div>
+                    <div className={styles.tableTitle}>Items</div>
+                    <div className={styles.tableSubtitle}>
+                      {isLoading ? "Loading items" : `${info.length} items on this page`}
                     </div>
                   </div>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
+                  <div className={styles.tableMeta}>
+                    Page {page} {hasNextPage ? `of ${totalKnownPages}+` : `of ${totalKnownPages}`}
+                  </div>
+                </div>
+
+                <div className={styles.tableBody} ref={tableBodyRef}>
+                  {isLoading ? (
+                    <div className={styles.loadingState}>
+                      <img
+                        src="/magmo-logo.png"
+                        alt="Loading Magmo"
+                        className={styles.loadingLogo}
+                      />
+                      <div className={styles.loadingText}>Loading</div>
+                    </div>
+                  ) : loadError ? (
+                    <div className={styles.errorState}>
+                      <div className={styles.errorTitle}>
+                        Load failed ({loadError.code})
+                      </div>
+                      <div className={styles.errorMessage}>{loadError.message}</div>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => {
+                          resetPagination();
+                          setQueryEpoch((v) => v + 1);
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : (
+                    <PartTable
+                      info={info}
+                      labels={labels}
+                      ids={ids}
+                      hoverStyle={hoverStyle}
+                      sortCheckAll={sortCheckAll}
+                      checkDelete={checkDelete}
+                      isDeleting={isDeleting}
+                      rowSelect={rowSelect}
+                      setHoverIndex={setHoverIndex}
+                      hoverIndex={hoverIndex}
+                      selectedItems={selectedItems}
+                      setSelectedItems={setSelectedItems}
+                      minRows={pageSize}
+                    />
+                  )}
+                </div>
+
+                <div className={styles.tableFooter}>
+                  <div className={styles.paginationRow}>
+                    <Pagination size="sm">
+                      <Pagination.Prev
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                      >
+                        Previous
+                      </Pagination.Prev>
+                      {pageButtons}
+                      <Pagination.Next
+                        onClick={() => setPage((p) => p + 1)}
+                        disabled={!hasNextPage}
+                      >
+                        Next
+                      </Pagination.Next>
+                    </Pagination>
+                  </div>
+                  <Form className={styles.searchRow}>
+                    <FormControl
+                      type={showListSearch}
+                      placeholder="Search"
+                      className={styles.searchInput}
+                      aria-label="Search"
+                      value={search}
+                      onChange={searchChangeHandler}
+                    />
+                    <NavDropdown
+                      title={select}
+                      id="collasible-nav-dropdown"
+                      show={showList}
+                      onMouseEnter={() => setShowList(true)}
+                      onMouseLeave={() => setShowList(false)}
+                      className={styles.searchSelect}
+                    >
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Name");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        Name
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Date");
+                          setShowListSearch("date");
+                        }}
+                      >
+                        Date
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Work Order");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        Work Order
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Product Number");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        Product Number
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Serial Number");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        Serial Number
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("Description");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        Description
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => {
+                          setSelect("SKU");
+                          setShowListSearch("text");
+                        }}
+                      >
+                        SKU
+                      </NavDropdown.Item>
+                    </NavDropdown>
+                  </Form>
+                  <div className={styles.footerActions}>
+                    <LoadingButton
+                      type="secondary"
+                      name="Add New Item"
+                      route="NewSearch/AddItem/NewItem"
+                      className={styles.actionButton}
+                    />
+                    <Button
+                      variant="info"
+                      className={`${styles.actionButton} ${styles.mapActionButton}`}
+                      onClick={openMap}
+                    >
+                      Map
+                    </Button>
+                    <LoadingButton
+                      type="primary"
+                      name="Back"
+                      route="Warehousedb/WarehouseSelect"
+                      className={styles.actionButton}
+                    />
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
         </div>
-      </Container>
+
+        <Offcanvas
+          show={showFilters}
+          onHide={() => setShowFilters(false)}
+          placement="start"
+          className={styles.filtersDrawer}
+          scroll
+          backdrop
+        >
+          <Offcanvas.Header closeButton>
+            <Offcanvas.Title>Filters</Offcanvas.Title>
+          </Offcanvas.Header>
+          <Offcanvas.Body>{renderFilters("drawer")}</Offcanvas.Body>
+        </Offcanvas>
+
+        <WarehouseMapModal
+          show={showMap}
+          onHide={() => setShowMap(false)}
+          onView={handleMapView}
+        />
+      </div>
     </LoggedIn>
   );
 

@@ -3,37 +3,46 @@ import { useRouter } from "next/router";
 import {
   Table,
   Button,
-  Container,
-  Card,
-  Row,
-  Col,
   Alert,
+  Modal,
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
+import styles from "../Machine.module.css";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
 
-const Machine = () => {
+const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }) => {
   const router = useRouter();
-  const [selectedMachine, setSelectedMachine] = useState(null);
-  const [associatedParts, setAssociatedParts] = useState([]);
-  const [error, setError] = useState(null);
+  const [selectedMachine, setSelectedMachine] = useState(
+    initialMachine || null
+  );
+  const [associatedParts, setAssociatedParts] = useState(
+    Array.isArray(initialAssociatedParts) ? initialAssociatedParts : []
+  );
+  const [error, setError] = useState(initialError || null);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [showPrintSuccess, setShowPrintSuccess] = useState(false);
 
   useEffect(() => {
     if (router.isReady) {
-      const { machineId } = router.query;
-      if (!machineId) {
+      const { id } = router.query;
+      if (!id) {
         const pathSegments = router.asPath.split("/");
         const machineIdFromPath = pathSegments[pathSegments.length - 1];
         console.log(`Machine ID extracted from URL path: ${machineIdFromPath}`);
         fetchMachineData(machineIdFromPath);
       } else {
-        console.log(`Machine ID from router query: ${machineId}`);
-        fetchMachineData(machineId);
+        console.log(`Machine ID from router query: ${id}`);
+        // If SSR already hydrated, avoid re-fetching unless we truly need to.
+        if (!selectedMachine) {
+          fetchMachineData(id);
+        }
       }
     }
-  }, [router.isReady]);
+  }, [router.isReady, selectedMachine]);
 
   const fetchMachineData = async (machineId) => {
     try {
@@ -43,6 +52,7 @@ const Machine = () => {
       if (machineDoc.exists) {
         const machineData = machineDoc.data();
         setSelectedMachine(machineData);
+        setError(null);
         console.log("Machine data:", machineData);
 
         // Fetch associated parts
@@ -83,6 +93,7 @@ const Machine = () => {
       );
 
       setAssociatedParts(partsData.filter((p) => p));
+      setError(null);
       console.log("Associated parts data:", partsData);
     } catch (error) {
       console.error("Error fetching associated parts:", error);
@@ -91,6 +102,7 @@ const Machine = () => {
   };
 
   const handlePrintMulti = async () => {
+    setIsPrinting(true);
     // Create your payload with the mapped items.
     // Replace 'associatedParts' with your actual variable containing the list.
     const payload = {
@@ -124,14 +136,62 @@ const Machine = () => {
       );
       const result = await response.json();
       console.log("Print multi result:", result.status);
+      if (!response.ok || result?.status === "error") {
+        throw new Error(result?.message || "Print failed.");
+      }
+      setShowPrintSuccess(true);
     } catch (error) {
       console.error("Error printing multiple labels:", error);
+      setError(error?.message || "Error printing multiple labels");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
   const handleSelectPart = (id, name) => {
     console.log(`Selected part ID: ${id}, Name: ${name}`);
     router.push("../item/" + id);
+  };
+
+  const handleDragStart = (index) => (event) => {
+    if (event.target.closest("button")) {
+      event.preventDefault();
+      return;
+    }
+    setDragIndex(index);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(
+      "text/plain",
+      associatedParts[index]?.id || String(index)
+    );
+  };
+
+  const handleDragOver = (index) => (event) => {
+    event.preventDefault();
+    if (dragOverIndex !== index) setDragOverIndex(index);
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (index) => (event) => {
+    event.preventDefault();
+    if (dragIndex == null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setAssociatedParts((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const formatDate = (input) => {
@@ -156,88 +216,183 @@ const Machine = () => {
   };
 
   return (
-    <Container className="mt-5">
-      <Row className="justify-content-md-center">
-        <Col md="8">
-          <Card>
-            <Card.Header>
-              <h4>Machine Details</h4>
-            </Card.Header>
-            <Card.Body>
-              {error && <Alert variant="danger">{error}</Alert>}
-              {selectedMachine ? (
-                <>
-                  <h5>Machine: {selectedMachine.name}</h5>
-                  <p>Model: {selectedMachine.Model}</p>
-                  <p>Model: {selectedMachine.Modality}</p>
-                  <p>Model: {selectedMachine.OEM}</p>
-                  <p>Last PM: {formatDate(selectedMachine.lastPM)}</p>
-                  <p>Next PM: {formatDate(selectedMachine.nextPM)}</p>
-                  <h5>Associated Parts</h5>
-                  <Table striped bordered hover size="sm">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>ID</th>
-                        <th>Part Number</th>
-                        <th>Serial Number</th>
-                        <th>Date</th>
-                        <th>Select</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {associatedParts.map((part) => (
-                        <tr key={part.id}>
-                          <td>{part.name}</td>
-                          <td>{part.id}</td>
-                          <td>{part.pn}</td>
-                          <td>{part.sn}</td>
-                          <td>{part.date}</td>
-                          <td>
-                            <Button
-                              variant="primary"
-                              onClick={() =>
-                                handleSelectPart(part.id, part.name)
-                              }
-                            >
-                              Select
-                            </Button>
-                          </td>
+    <div className={styles.page}>
+      {isPrinting && (
+        <div className={styles.loadingOverlay}>
+          <img
+            src="/magmo-logo.png"
+            alt="Printing"
+            className={styles.loadingLogo}
+          />
+        </div>
+      )}
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div className={styles.brand}>
+            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+            <div>
+              <div className={styles.brandName}>Magmo</div>
+              <div className={styles.brandSub}>Machine Detail</div>
+            </div>
+          </div>
+          <Button
+            variant="outline-secondary"
+            className={styles.backButton}
+            onClick={() => router.back()}
+          >
+            Back
+          </Button>
+        </header>
+
+        <div className={styles.card}>
+          <Modal
+            show={showPrintSuccess}
+            onHide={() => setShowPrintSuccess(false)}
+            centered
+          >
+            <Modal.Header closeButton>
+              <Modal.Title>Print Complete</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              All items were sent to the printer successfully.
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="primary"
+                onClick={() => setShowPrintSuccess(false)}
+              >
+                Ok
+              </Button>
+            </Modal.Footer>
+          </Modal>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>Machine Details</div>
+              <div className={styles.cardSubtitle}>
+                Drag and drop parts to reorder this list.
+              </div>
+            </div>
+            <div className={styles.cardMeta}>
+              {associatedParts.length} parts
+            </div>
+          </div>
+          <div className={styles.cardBody}>
+            {error && !selectedMachine && (
+              <Alert variant="danger">{error}</Alert>
+            )}
+            {selectedMachine ? (
+              <>
+                <div className={styles.machineGrid}>
+                  <div className={styles.machineInfo}>
+                    <div className={styles.machineName}>
+                      {selectedMachine.name || "Unnamed Machine"}
+                    </div>
+                    <div className={styles.machineMetaRow}>
+                      <span>OEM: {selectedMachine.OEM || "N/A"}</span>
+                      <span>Modality: {selectedMachine.Modality || "N/A"}</span>
+                      <span>Model: {selectedMachine.Model || "N/A"}</span>
+                    </div>
+                  </div>
+                  <div className={styles.machineDates}>
+                    <div>
+                      <span className={styles.dateLabel}>Last PM</span>
+                      <span>{formatDate(selectedMachine.lastPM)}</span>
+                    </div>
+                    <div>
+                      <span className={styles.dateLabel}>Next PM</span>
+                      <span>{formatDate(selectedMachine.nextPM)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.tableCard}>
+                  <div className={styles.tableHeader}>
+                    Associated Parts
+                    <span className={styles.tableHint}>
+                      Click + hold to move
+                    </span>
+                  </div>
+                  <div className={styles.tableWrap}>
+                    <Table
+                      striped
+                      bordered
+                      hover
+                      size="sm"
+                      className={styles.table}
+                    >
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>ID</th>
+                          <th>Part Number</th>
+                          <th>Serial Number</th>
+                          <th>Date</th>
+                          <th>Select</th>
                         </tr>
-                      ))}
-                      <tr>
-                        <td
-                          colSpan="5"
-                          style={{ textAlign: "center", paddingTop: "20px" }}
-                        >
-                          <Button
-                            variant="secondary"
-                            onClick={handlePrintMulti}
+                      </thead>
+                      <tbody>
+                        {associatedParts.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className={styles.emptyState}>
+                              No associated parts found.
+                            </td>
+                          </tr>
+                        )}
+                        {associatedParts.map((part, index) => (
+                          <tr
+                            key={part.id}
+                            draggable
+                            onDragStart={handleDragStart(index)}
+                            onDragOver={handleDragOver(index)}
+                            onDrop={handleDrop(index)}
+                            onDragEnd={handleDragEnd}
+                            className={`${styles.draggableRow} ${
+                              dragIndex === index ? styles.dragging : ""
+                            } ${
+                              dragOverIndex === index && dragIndex !== index
+                                ? styles.dropTarget
+                                : ""
+                            }`}
                           >
-                            Print All Items
-                          </Button>
-                        </td>
-                      </tr>
-                      {/* <Col md={4}> */}
-                      <Button
-                        variant="primary"
-                        style={{ marginTop: "20px" }}
-                        onClick={() => router.back()}
-                      >
-                        back
-                      </Button>
-                      {/* </Col> */}
-                    </tbody>
-                  </Table>
-                </>
-              ) : (
-                !error && <p>Loading machine data...</p>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+                            <td>{part.name}</td>
+                            <td>{part.id}</td>
+                            <td>{part.pn}</td>
+                            <td>{part.sn}</td>
+                            <td>{formatDate(part.date || part.arrival_date)}</td>
+                            <td>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() =>
+                                  handleSelectPart(part.id, part.name)
+                                }
+                              >
+                                Select
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                  <div className={styles.tableActions}>
+                    <Button
+                      variant="secondary"
+                      className={styles.actionButton}
+                      onClick={handlePrintMulti}
+                    >
+                      Print All Items
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              !error && <p className={styles.loadingText}>Loading machine data...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

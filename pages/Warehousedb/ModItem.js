@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { useAuth } from "../../context/AuthUserContext";
 import firebase from "../../context/Firebase";
+import { buildNameTokens } from "../../utils/itemFormShared";
 
 import LoggedIn from "../LoggedIn";
 
@@ -69,6 +70,8 @@ export default function dashboard() {
     tempDate = new Date(year, month - 1, day); // Note: month is 0-indexed in JavaScript
 
     let returnData = Object.assign({}, items, { date: tempDate });
+    returnData.nameLower = (items.name || "").toLowerCase();
+    returnData.nameTokens = buildNameTokens(items.name);
     console.log(returnData.date.toString());
     await db
       .collection("Test")

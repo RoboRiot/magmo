@@ -26,6 +26,15 @@ import ClientInfoModal from "../ClientInfoModal";
 import ParentModal from "./parentModal";
 import MachineSelectionModal from "../item/[id]/MachineSelectionModal";
 import InfoModal from "../InfoModal";
+import InflowAPI from "../../../utils/inflowAPI";
+import NewLocal from "../item/[id]/NewLocal";
+import {
+  buildLocalLocObject,
+  formatLoc,
+  updateMachineFields,
+  buildNameTokens,
+} from "../../../utils/itemFormShared";
+import styles from "./NewItem.module.css";
 
 // Load BarcodeScannerComponent only on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -43,7 +52,13 @@ function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState(false);
   useEffect(() => {
     if (isLoading) {
-      simulateNetworkRequest().then(() => setLoading(false));
+      let cancelled = false;
+      simulateNetworkRequest().then(() => {
+        if (!cancelled) setLoading(false);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [isLoading]);
   const handleClick = () => setLoading(true);
@@ -63,6 +78,8 @@ function LoadingButton({ type, name, route }) {
 export default function NewItem() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const SHOW_SLACK_BUTTONS =
+    process.env.NEXT_PUBLIC_SHOW_SLACK_BUTTONS === "true";
   // Initialize item state – for a new item, these start empty.
   // We store PN and SN as arrays.
   const [items, setItems] = useState({
@@ -74,6 +91,7 @@ export default function NewItem() {
     price: "",
     status: "",
     poNumber: "",
+    trackingNumber: "",
     length: "",
     width: "",
     height: "",
@@ -95,12 +113,24 @@ export default function NewItem() {
   const [model, setModel] = useState("");
 
   // Local location states.
-  const [localLocFrom, setLocalLocFrom] = useState("");
-  const [localLocCurrent, setLocalLocCurrent] = useState("");
+  const [newLocalFrom, setNewLocalFrom] = useState({
+    region: "",
+    section: { letter: "", number: "" },
+    bin: "",
+    pallet: "",
+  });
+  const [newLocalCurrent, setNewLocalCurrent] = useState({
+    region: "",
+    section: { letter: "", number: "" },
+    bin: "",
+    pallet: "",
+  });
 
   // Other states.
   const [pnOptions, setPnOptions] = useState([]);
   const [snOptions, setSnOptions] = useState([]);
+  const [pnSnLoaded, setPnSnLoaded] = useState(false);
+  const [pnSnLoading, setPnSnLoading] = useState(false);
   const [descriptions, setDescriptions] = useState([
     { description: "", date: "" },
   ]);
@@ -146,13 +176,239 @@ export default function NewItem() {
 
   // For browsing photos.
   const browseInputRef = useRef(null);
+  const cloneSeedRef = useRef(null);
 
   // Inside your NewItem component:
   const [loading, setLoading] = useState(false);
+  const [savedDocId, setSavedDocId] = useState(null);
+  const isMountedRef = useRef(true);
 
-  if (!router.isReady) {
-    return null; // or a loading indicator
-  }
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeSetLoading = (value) => {
+    if (isMountedRef.current) setLoading(value);
+  };
+
+  const withTimeout = (promise, ms, label = "Operation") =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${Math.ceil(ms / 1000)}s`));
+      }, ms);
+      promise
+        .then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+
+  const shallowClean = (obj) => {
+    const newObj = {};
+    Object.keys(obj || {}).forEach((key) => {
+      newObj[key] = obj[key] === undefined ? "" : obj[key];
+    });
+    return newObj;
+  };
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const cloneFrom = router.query.cloneFrom;
+    if (!cloneFrom || cloneSeedRef.current === cloneFrom) return;
+    cloneSeedRef.current = cloneFrom;
+
+    let cancelled = false;
+    const db = firebase.firestore();
+
+    const toArray = (value) => {
+      if (Array.isArray(value)) return value;
+      if (value === null || value === undefined || value === "") return [""];
+      return [value];
+    };
+
+    const toDateString = (value) => {
+      if (!value) return "";
+      if (value?.toDate) {
+        const d = value.toDate();
+        return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+      }
+      if (value instanceof Date) {
+        return isNaN(value.getTime()) ? "" : value.toISOString().slice(0, 10);
+      }
+      if (typeof value === "string") {
+        if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+        const parsed = Date.parse(value);
+        if (!isNaN(parsed)) return new Date(parsed).toISOString().slice(0, 10);
+      }
+      return "";
+    };
+
+    const resolveDoc = async (ref, collection) => {
+      if (!ref) return null;
+      try {
+        if (typeof ref.get === "function") {
+          const doc = await ref.get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+        }
+        if (typeof ref === "string") {
+          const doc = await db.collection(collection).doc(ref).get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+        }
+        if (ref?.id) {
+          const doc = await db.collection(collection).doc(ref.id).get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+        }
+        if (ref?.path) {
+          const doc = await db.doc(ref.path).get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+        }
+      } catch (error) {
+        console.error(`Clone ref lookup failed (${collection})`, error);
+      }
+      return null;
+    };
+
+    (async () => {
+      try {
+        const doc = await db.collection("Test").doc(cloneFrom).get();
+        if (!doc.exists) {
+          if (!cancelled) {
+            setErr("Clone source not found.");
+            setShowErr(true);
+          }
+          return;
+        }
+
+        const data = doc.data() || {};
+        const dateValue = toDateString(data.date);
+        const arrivalValue =
+          toDateString(data.arrival_date) ||
+          (typeof data.arrival_date === "string" ? data.arrival_date : "");
+
+        if (!cancelled) {
+          setItems((prev) => ({
+            ...prev,
+            name: data.name || "",
+            pn: toArray(data.pn),
+            sn: toArray(data.sn),
+            localSN: "",
+            date: dateValue || prev.date || "",
+            price: data.price ?? "",
+            status: data.status ?? "",
+            poNumber: data.poNumber ?? "",
+            trackingNumber: data.trackingNumber ?? "",
+            length: data.length ?? "",
+            width: data.width ?? "",
+            height: data.height ?? "",
+            arrival_date: arrivalValue || "",
+            visible: data.visible !== undefined ? data.visible : true,
+          }));
+          setDescriptions(
+            Array.isArray(data.descriptions) && data.descriptions.length
+              ? data.descriptions
+              : [{ description: "", date: "" }]
+          );
+          setWorkOrders(
+            Array.isArray(data.workOrders) && data.workOrders.length
+              ? data.workOrders
+              : [{ workOrder: "", date: "" }]
+          );
+          setDOM(data.DOM || "");
+          setNewLocalFrom(
+            data.newLocalFrom || {
+              region: "",
+              section: { letter: "", number: "" },
+              bin: "",
+              pallet: "",
+            }
+          );
+          setNewLocalCurrent(
+            data.newLocalCurrent || {
+              region: "",
+              section: { letter: "", number: "" },
+              bin: "",
+              pallet: "",
+            }
+          );
+          setAddToWebsite(Boolean(data.addedToWebsite));
+          setSavedDocId(null);
+          setSelectedDesc(0);
+        }
+
+        if (data.TheMachine && !cancelled) {
+          setTheMachine(data.TheMachine);
+          setMachineFieldsInitialized(false);
+          if (!oem || oem === "N/A")
+            setOem(data.TheMachine.oem || data.TheMachine.OEM || "");
+          if (!modality || modality === "N/A")
+            setModality(data.TheMachine.modality || data.TheMachine.Modality || "");
+          if (!model || model === "N/A")
+            setModel(data.TheMachine.model || data.TheMachine.Model || "");
+        }
+
+        const parentDoc = await resolveDoc(data.Parent, "Test");
+        if (parentDoc && !cancelled) {
+          setSelectedParent({ id: parentDoc.id, name: parentDoc.name || "" });
+        }
+
+        const clientFromDoc = await resolveDoc(data.ClientFrom, "Client");
+        if (clientFromDoc && !cancelled) {
+          setSelectedClientFrom({ id: clientFromDoc.id, ...clientFromDoc });
+        }
+
+        const clientCurrentDoc = await resolveDoc(data.ClientCurrent, "Client");
+        if (clientCurrentDoc && !cancelled) {
+          setSelectedClientCurrent({ id: clientCurrentDoc.id, ...clientCurrentDoc });
+        }
+
+        const machineFromDoc = await resolveDoc(
+          data.MachineFrom || data.Machine,
+          "Machine"
+        );
+        if (machineFromDoc && !cancelled) {
+          setSelectedMachine({
+            id: machineFromDoc.id,
+            name: machineFromDoc.name || machineFromDoc.Model || "",
+          });
+          if (!data.TheMachine) {
+            setTheMachine(machineFromDoc);
+            setMachineFieldsInitialized(false);
+          }
+        }
+
+        const machineCurrentDoc = await resolveDoc(
+          data.MachineCurrent || data.CurrentMachine,
+          "Machine"
+        );
+        if (machineCurrentDoc && !cancelled) {
+          setSelectedCurrentMachine({
+            id: machineCurrentDoc.id,
+            name: machineCurrentDoc.name || machineCurrentDoc.Model || "",
+          });
+          if (!data.TheMachine && !machineFromDoc) {
+            setTheMachine(machineCurrentDoc);
+            setMachineFieldsInitialized(false);
+          }
+        }
+      } catch (error) {
+        console.error("Clone load failed:", error);
+        if (!cancelled) {
+          setErr("Failed to load clone data.");
+          setShowErr(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.cloneFrom, oem, modality, model]);
 
   // -------------------- Since this is "add" mode, we do not fetch an existing document.
   // However, we still fetch global PN and SN options and clients for selection.
@@ -169,22 +425,40 @@ export default function NewItem() {
     fetchClientsData();
   }, []);
 
-  useEffect(() => {
-    async function fetchPnSn() {
+  const loadPnSnOptions = async () => {
+    if (pnSnLoaded || pnSnLoading) return;
+    setPnSnLoading(true);
+    try {
       const db = firebase.firestore();
-      const snapshot = await db.collection("Test").get();
+      const snapshot = await db
+        .collection("Test")
+        .orderBy(firebase.firestore.FieldPath.documentId())
+        .limit(500)
+        .get();
       let pnSet = new Set();
       let snSet = new Set();
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.pn) pnSet.add(data.pn);
-        if (data.sn) snSet.add(data.sn);
+        if (Array.isArray(data.pn)) {
+          data.pn.forEach((pn) => pn && pnSet.add(pn));
+        } else if (data.pn) {
+          pnSet.add(data.pn);
+        }
+        if (Array.isArray(data.sn)) {
+          data.sn.forEach((sn) => sn && snSet.add(sn));
+        } else if (data.sn) {
+          snSet.add(data.sn);
+        }
       });
       setPnOptions([...pnSet]);
       setSnOptions([...snSet]);
+      setPnSnLoaded(true);
+    } catch (error) {
+      console.error("Error fetching PN/SN options:", error);
+    } finally {
+      setPnSnLoading(false);
     }
-    fetchPnSn();
-  }, []);
+  };
 
   const [machineFieldsInitialized, setMachineFieldsInitialized] =
     useState(false);
@@ -417,6 +691,10 @@ export default function NewItem() {
       } else {
         setSelectedClientCurrent({ id: clientDoc.id, ...clientData });
       }
+      if (clientData.name === "SoCalWarehouse") {
+        if (machinePick) setShowLocalLocFrom(true);
+        else setShowLocalLocCurrent(true);
+      }
       // Fetch machines for this client:
       const machinePromises = clientData.machines.map((machineRef) =>
         machineRef.get()
@@ -501,23 +779,31 @@ export default function NewItem() {
   // For NewItem, only require Name and Description.
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!items.name || !descriptions[0]?.description) {
+    if (!isReadyForActions) {
       handleShow();
     } else {
-      setLoading(true); // start loading before async work
+      safeSetLoading(true); // start loading before async work
       try {
-        await toSend();
+        const docId = await toSend();
+        if (!docId) {
+          setErr("Save failed. Please try again.");
+          setShowErr(true);
+        }
       } catch (error) {
         console.error(error);
+        setErr(error?.message || "Save failed.");
+        setShowErr(true);
       } finally {
-        setLoading(false); // end loading after async work completes
+        safeSetLoading(false); // end loading after async work completes
       }
     }
   }
 
-  async function toSend(redirect = true) {
-    const { id } = router.query; // Ensure id is defined (it may be undefined for a new item)
+  async function toSend(redirect = true, options = {}) {
+    const { id } = router.query;
     const db = firebase.firestore();
+    const { forceNew = false } = options;
+    const existingId = forceNew ? null : (savedDocId || id || null);
 
     // Get the current authenticated user
     const currentUser = firebase.auth().currentUser;
@@ -534,9 +820,27 @@ export default function NewItem() {
     const formattedItems = { ...items, descriptions, workOrders };
     // Remove any unused fields.
     formattedItems.status = items.status || "";
+    formattedItems.nameLower = (items.name || "").toLowerCase();
+    formattedItems.nameTokens = buildNameTokens(items.name);
     formattedItems.DOM = DOM; // Date of Manufacture
-    formattedItems.localLocFrom = localLocFrom || "";
-    formattedItems.localLocCurrent = localLocCurrent || "";
+    const fromDetails = buildLocalLocObject(newLocalFrom);
+    const currentDetails = buildLocalLocObject(newLocalCurrent);
+
+    if (Object.keys(fromDetails).length) {
+      formattedItems.newLocalFrom = fromDetails;
+      formattedItems.localLocFrom = formatLoc(newLocalFrom) || "";
+    } else {
+      formattedItems.localLocFrom = "";
+      formattedItems.newLocalFrom = {};
+    }
+
+    if (Object.keys(currentDetails).length) {
+      formattedItems.newLocalCurrent = currentDetails;
+      formattedItems.localLocCurrent = formatLoc(newLocalCurrent) || "";
+    } else {
+      formattedItems.localLocCurrent = "";
+      formattedItems.newLocalCurrent = {};
+    }
     formattedItems.date = items.date || "";
     formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
     formattedItems.poNumber = items.poNumber || "";
@@ -547,6 +851,7 @@ export default function NewItem() {
 
     // Add the current user's email under the "user" field
     formattedItems.user = userEmail;
+    formattedItems.lastEdited = userEmail;
     // Clean pn and sn arrays to replace undefined values with an empty string.
     formattedItems.pn = (items.pn || []).map((value) =>
       value === undefined ? "" : value
@@ -585,12 +890,58 @@ export default function NewItem() {
     }
 
     // Only add dateCreated if this is a new document
-    if (!id) {
+    if (!existingId) {
       formattedItems.dateCreated = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
     }
 
     // --- LOCAL SN LOGIC ---
-    let docId = id || null;
+    let docId = existingId;
+
+    const queueAssociationUpdates = (targetDocId) => {
+      const updates = [];
+      if (selectedMachine && selectedMachine.id) {
+        updates.push(
+          db
+            .collection("Machine")
+            .doc(selectedMachine.id)
+            .update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(targetDocId)
+              ),
+            })
+        );
+      }
+      if (selectedCurrentMachine && selectedCurrentMachine.id) {
+        updates.push(
+          db
+            .collection("Machine")
+            .doc(selectedCurrentMachine.id)
+            .update({
+              associatedParts: firebase.firestore.FieldValue.arrayUnion(
+                db.collection("Test").doc(targetDocId)
+              ),
+            })
+        );
+      }
+      if (updates.length) {
+        Promise.allSettled(updates).then((results) => {
+          results.forEach((result) => {
+            if (result.status === "rejected") {
+              console.error("Error updating associatedParts:", result.reason);
+            }
+          });
+        });
+      }
+    };
+
+    const queuePhotoUpload = (targetDocId) => {
+      const hasNewPhotos = photos.some((photo) => photo && photo.file);
+      if (!hasNewPhotos) return;
+      uploadPhotos(targetDocId).catch((error) => {
+        console.error("Error uploading photos:", error);
+      });
+    };
+
     try {
       if (docId) {
         // Check if a localSN is provided and if it differs from the current docId.
@@ -600,67 +951,39 @@ export default function NewItem() {
             : docId;
         if (docId !== newDocId) {
           // Migrate: Create a new document with the newDocId.
-          await db.collection("Test").doc(newDocId).set(formattedItems);
+          await withTimeout(
+            db.collection("Test").doc(newDocId).set(formattedItems),
+            45000,
+            "Firestore save"
+          );
 
-          if (selectedMachine && selectedMachine.id) {
-            const machineRef = db.collection("Machine").doc(selectedMachine.id);
-            const machineDoc = await machineRef.get();
-            if (machineDoc.exists) {
-              await machineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(newDocId)
-                ),
-              });
-            }
-          }
+          queueAssociationUpdates(newDocId);
+          queuePhotoUpload(newDocId);
 
-          if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            const currentMachineRef = db
-              .collection("Machine")
-              .doc(selectedCurrentMachine.id);
-            const currentMachineDoc = await currentMachineRef.get();
-            if (currentMachineDoc.exists) {
-              await currentMachineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(newDocId)
-                ),
-              });
-            }
-          }
           // Delete the old document.
-          await db.collection("Test").doc(docId).delete();
+          try {
+            await withTimeout(
+              db.collection("Test").doc(docId).delete(),
+              20000,
+              "Delete old item"
+            );
+          } catch (deleteError) {
+            console.error("Error deleting old item:", deleteError);
+          }
+
           // Set docId to the new document ID.
           docId = newDocId;
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
           const cleanFormattedItems = shallowClean(formattedItems);
-          await db.collection("Test").doc(docId).update(cleanFormattedItems);
+          await withTimeout(
+            db.collection("Test").doc(docId).update(cleanFormattedItems),
+            45000,
+            "Firestore save"
+          );
 
-          if (selectedMachine && selectedMachine.id) {
-            const machineRef = db.collection("Machine").doc(selectedMachine.id);
-            const machineDoc = await machineRef.get();
-            if (machineDoc.exists) {
-              await machineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(docId)
-                ),
-              });
-            }
-          }
-
-          if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            const currentMachineRef = db
-              .collection("Machine")
-              .doc(selectedCurrentMachine.id);
-            const currentMachineDoc = await currentMachineRef.get();
-            if (currentMachineDoc.exists) {
-              await currentMachineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(docId)
-                ),
-              });
-            }
-          }
+          queueAssociationUpdates(docId);
+          queuePhotoUpload(docId);
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
@@ -668,51 +991,53 @@ export default function NewItem() {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : generateCustomID();
-        await db.collection("Test").doc(docId).set(formattedItems);
+        await withTimeout(
+          db.collection("Test").doc(docId).set(formattedItems),
+          45000,
+          "Firestore save"
+        );
 
-        if (selectedMachine && selectedMachine.id) {
-          const machineRef = db.collection("Machine").doc(selectedMachine.id);
-          const machineDoc = await machineRef.get();
-          if (machineDoc.exists) {
-            await machineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
-          }
-        }
-
-        if (selectedCurrentMachine && selectedCurrentMachine.id) {
-          const currentMachineRef = db
-            .collection("Machine")
-            .doc(selectedCurrentMachine.id);
-          const currentMachineDoc = await currentMachineRef.get();
-          if (currentMachineDoc.exists) {
-            await currentMachineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
-          }
-        }
+        queueAssociationUpdates(docId);
+        queuePhotoUpload(docId);
       }
-      // Upload any new photos to Firebase Storage.
-      await uploadPhotos(docId);
-      console.log("Item saved and associatedParts updated!");
+
+      console.log("Item saved!");
+
+      if (!forceNew) {
+        setSavedDocId(docId);
+      }
 
       // Redirect to the new URL using the new document id.
       if (redirect) {
         router.push(`/NewSearch/item/${docId}`);
       } else {
-        setRedirect(true);
+        // Optionally, show a save confirmation modal.
+        handleShowSaveModal();
       }
-
-      // Optionally, show a save confirmation modal.
-      handleShowSaveModal();
+      return docId;
     } catch (error) {
       console.error("Error saving data:", error);
+      return null;
     }
   }
+
+  const isReadyForActions =
+    (items.name || "").trim() !== "" &&
+    (descriptions[selectedDesc]?.description || "").trim() !== "";
+
+  const ensureSaved = async () => {
+    if (!isReadyForActions) {
+      handleShow();
+      return null;
+    }
+    if (savedDocId) return savedDocId;
+    const docId = await toSend(false);
+    if (!docId) {
+      setErr("Failed to save item before action.");
+      setShowErr(true);
+    }
+    return docId;
+  };
 
   // -------------------- Info Modal Handlers (unchanged)
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -720,7 +1045,13 @@ export default function NewItem() {
   const handleShowInfoModal = async () => {
     const db = firebase.firestore();
     try {
-      const doc = await db.collection("Test").doc(id).get();
+      const docId = savedDocId || router.query.id;
+      if (!docId) {
+        setErr("Save the item before viewing info.");
+        setShowErr(true);
+        return;
+      }
+      const doc = await db.collection("Test").doc(docId).get();
       if (doc.exists) {
         const data = doc.data();
         setItemName(data.name || "N/A");
@@ -763,13 +1094,8 @@ export default function NewItem() {
   };
 
   const handlePrint = async () => {
-    if (!items.name) {
-      alert("Missing name");
-      return;
-    }
-
-    // In addItem mode, there is no existing id so generate one
-    const printId = generateCustomID();
+    const docId = await ensureSaved();
+    if (!docId) return;
 
     const payload = {
       name: items.name,
@@ -777,19 +1103,22 @@ export default function NewItem() {
       sn: items.sn,
       wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
       status: items.status,
-      local_sn: printId, // Use the generated custom ID
+      local_sn: docId,
       descriptions: descriptions,
       date: items.date || new Date().toISOString().split("T")[0],
       DOM: DOM,
       oem: oem,
       modality: modality,
       model: model,
+      poNumber: items.poNumber,
+      arrival_date: items.arrival_date,
+      trackingNumber: items.trackingNumber,
     };
 
     console.log("Payload for printing:", payload);
     try {
       const response = await fetch(
-        "https://cc7e-174-76-22-138.ngrok-free.app/print-label",
+        "https://9d70-174-76-22-138.ngrok-free.app/print-label",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -800,6 +1129,202 @@ export default function NewItem() {
       console.log("Print result:", result);
     } catch (error) {
       console.error("Error printing label:", error);
+    }
+  };
+
+  const handleSendToInflow = async () => {
+    try {
+      const docId = await ensureSaved();
+      if (!docId) return;
+
+      const name = (items.name || "").trim();
+      if (!name) {
+        alert("Item needs a name before sending to inFlow.");
+        return;
+      }
+
+      const description = (descriptions[selectedDesc]?.description || "").trim();
+      const imageUrls = photos.map((p) => p.url).filter(Boolean);
+      const sku = docId.toString();
+
+      const arrivalISO = items.arrival_date
+        ? new Date(items.arrival_date).toISOString().slice(0, 10)
+        : "";
+
+      const pnStr = Array.isArray(items.pn)
+        ? items.pn.filter(Boolean).join(", ")
+        : items.pn || "";
+      const snStr = Array.isArray(items.sn)
+        ? items.sn.filter(Boolean).join(", ")
+        : items.sn || "";
+
+      const mostRecentWO =
+        workOrders?.length
+          ? workOrders.reduce((latest, cur) =>
+              new Date(cur.date) > new Date(latest.date) ? cur : latest
+            )
+          : { workOrder: "", date: "" };
+
+      const customFields = {
+        custom1: (oem || "").trim(),
+        custom2: (modality || "").trim(),
+        custom3: (model || "").trim(),
+        custom4: (description || "").trim(),
+        custom5: (mostRecentWO.workOrder || "").trim(),
+        custom6: (selectedClientFrom?.name || "").trim(),
+        custom7: pnStr,
+        custom8: snStr,
+        custom9: arrivalISO,
+        custom10: (selectedClientCurrent?.name || "").trim(),
+      };
+
+      const created = await InflowAPI.upsertProduct({
+        name,
+        description,
+        sku,
+        imageUrls,
+        customFields,
+      });
+
+      alert(
+        `Sent to inFlow successfully. ID: ${
+          created?.productId || created?.id || "(unknown)"
+        }`
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Error sending to inFlow: " + err.message);
+    }
+  };
+
+  const handleBluefolderButton = async () => {
+    const docId = await ensureSaved();
+    if (!docId) return;
+
+    const currentWorkOrder =
+      workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "";
+    if (!currentWorkOrder) {
+      alert("Please fill out the work order field before adding to BlueFolder.");
+      return;
+    }
+
+    const payload = {
+      name: items.name,
+      pn: items.pn[0] || "",
+      sn: items.sn[0] || "",
+      status: items.status,
+      description: descriptions[selectedDesc]?.description || "",
+      workOrder: currentWorkOrder,
+      localsn: docId,
+    };
+
+    try {
+      const response = await fetch(
+        "https://9d70-174-76-22-138.ngrok-free.app/bluefolder",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const result = await response.json();
+      alert("BlueFolder service item added successfully!");
+      console.log("BlueFolder result:", result);
+    } catch (error) {
+      console.error("BlueFolder error:", error);
+      alert("Error adding data to BlueFolder.");
+    }
+  };
+
+  const handleAddToSlack = async (which = "shipping") => {
+    try {
+      const docId = await ensureSaved();
+      if (!docId) return;
+
+      const safeName = (items?.name || docId || "Untitled").trim();
+      const title = `${safeName}${docId ? ` (${docId})` : ""}`;
+
+      const pn0 = Array.isArray(items?.pn) ? items.pn[0] : items?.pn;
+      const sn0 = Array.isArray(items?.sn) ? items.sn[0] : items?.sn;
+      const pn_sn = [pn0 && `PN: ${pn0}`, sn0 && `SN: ${sn0}`]
+        .filter(Boolean)
+        .join("  ");
+
+      const mostRecentWO =
+        workOrders && workOrders.length
+          ? [...workOrders].sort(
+              (a, b) => new Date(b?.date || 0) - new Date(a?.date || 0)
+            )[0]?.workOrder
+          : "";
+
+      const description =
+        selectedDesc != null && descriptions?.[selectedDesc]
+          ? descriptions[selectedDesc].description || ""
+          : items?.description || "";
+
+      const tracking = items?.trackingNumber ?? items?.tracking ?? "";
+      const local_sn = docId || items?.localSN || "";
+
+      const photoUrls = Array.isArray(photos)
+        ? photos.map((p) => p?.url).filter(Boolean)
+        : [];
+
+      const resp = await fetch("/api/slack/add-to-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listKey: which,
+          title,
+          pn_sn,
+          work_order: mostRecentWO || "",
+          local_sn,
+          tracking,
+          description: (description || "").trim(),
+          photoUrls,
+        }),
+      });
+
+      const json = await resp.json();
+      console.log("[SLACK][handleAddToSlack] response:", json);
+      if (json?.debug?.steps) console.table(json.debug.steps);
+      if (json?.debug?.photos) console.table(json.debug.photos);
+
+      if (!resp.ok || !json?.ok) {
+        setErr(`Slack add failed: ${json?.error || "unknown error"}`);
+        setShowErr(true);
+        return;
+      }
+
+      alert(
+        `Added to Slack ${
+          which === "shipping"
+            ? "Shipping"
+            : which === "receiving"
+            ? "Receiving"
+            : "Tasks"
+        } list.`
+      );
+    } catch (e) {
+      console.error(e);
+      setErr("Error adding to Slack");
+      setShowErr(true);
+    }
+  };
+
+  const handleToggleAddToWebsite = async () => {
+    const docId = await ensureSaved();
+    if (!docId) return;
+
+    const next = !addToWebsite;
+    setAddToWebsite(next);
+    try {
+      await firebase
+        .firestore()
+        .collection("Test")
+        .doc(docId)
+        .update({ addedToWebsite: next });
+    } catch (error) {
+      console.error("Error updating addedToWebsite:", error);
     }
   };
 
@@ -825,119 +1350,36 @@ export default function NewItem() {
     setAddingNewSn(false);
   };
 
-  function getPriorityMachineField(
-    field,
-    currentValue,
-    theMachine,
-    currentMachine,
-    fromMachine
-  ) {
-    // If the field is already filled in by the user, return it unchanged.
-    if (
-      currentValue &&
-      currentValue.trim() !== "" &&
-      currentValue.trim() !== "N/A"
-    ) {
-      return currentValue;
-    }
-
-    // Otherwise, prioritize the best available value.
-    if (
-      theMachine &&
-      theMachine[field] &&
-      theMachine[field].trim() !== "" &&
-      theMachine[field] !== "N/A"
-    ) {
-      return theMachine[field];
-    }
-    if (
-      currentMachine &&
-      currentMachine[field] &&
-      currentMachine[field].trim() !== "" &&
-      currentMachine[field] !== "N/A"
-    ) {
-      return currentMachine[field];
-    }
-    if (
-      fromMachine &&
-      fromMachine[field] &&
-      fromMachine[field].trim() !== "" &&
-      fromMachine[field] !== "N/A"
-    ) {
-      return fromMachine[field];
-    }
-
-    return currentValue; // Default to keeping the current value
-  }
-
-  function updateMachineFields(theMachine, currentMachine, fromMachine) {
-    return {
-      oem: getValidMachineField("oem", theMachine, currentMachine, fromMachine),
-      modality: getValidMachineField(
-        "modality",
-        theMachine,
-        currentMachine,
-        fromMachine
-      ),
-      model: getValidMachineField(
-        "model",
-        theMachine,
-        currentMachine,
-        fromMachine
-      ),
-    };
-  }
-
-  function getValidMachineField(
-    field,
-    theMachine,
-    currentMachine,
-    fromMachine
-  ) {
-    if (
-      theMachine &&
-      theMachine[field] &&
-      theMachine[field].trim() !== "" &&
-      theMachine[field] !== "N/A"
-    ) {
-      return theMachine[field];
-    }
-    if (
-      currentMachine &&
-      currentMachine[field] &&
-      currentMachine[field].trim() !== "" &&
-      currentMachine[field] !== "N/A"
-    ) {
-      return currentMachine[field];
-    }
-    if (
-      fromMachine &&
-      fromMachine[field] &&
-      fromMachine[field].trim() !== "" &&
-      fromMachine[field] !== "N/A"
-    ) {
-      return fromMachine[field];
-    }
-    return ""; // Keep it empty if no valid data exists
-  }
-
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
   const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
+  const [showNewLocalModalFrom, setShowNewLocalModalFrom] = useState(false);
+  const [showNewLocalModalCurrent, setShowNewLocalModalCurrent] =
+    useState(false);
 
-  async function handleClone() {
+  async function handleClone(event) {
     event.preventDefault();
-    if (!items.name || !descriptions[0]?.description) {
+    if (!isReadyForActions) {
       handleShow(); // your existing error modal
       return;
     }
-    setLoading(true);
+    safeSetLoading(true);
     try {
       // save but don’t redirect
-      await toSend(false);
+      const docId = await toSend(false, { forceNew: true });
+      if (!docId) {
+        setErr("Save failed. Please try again.");
+        setShowErr(true);
+      } else {
+        // Prepare for the next clone without overwriting the last one.
+        setSavedDocId(null);
+        setItems((prev) => ({ ...prev, localSN: "" }));
+      }
     } catch (err) {
       console.error(err);
+      setErr(err?.message || "Save failed.");
+      setShowErr(true);
     } finally {
-      setLoading(false);
+      safeSetLoading(false);
     }
   }
 
@@ -946,15 +1388,19 @@ export default function NewItem() {
   };
 
   const handleSetSelectedMachine = (machine) => {
-    const condition = (name) => name && name.toLowerCase() === "interior socal";
+    const isSocalInterior = machine.name?.toLowerCase() === "interior socal";
     if (machinePick) {
       setSelectedMachine({ id: machine.id, name: machine.name });
-      // For "from", show the local loc input if condition met.
-      setShowLocalLocFrom(condition(machine.name));
+      setShowLocalLocFrom(
+        isSocalInterior ||
+          selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+      );
     } else {
       setSelectedCurrentMachine({ id: machine.id, name: machine.name });
-      // For "current", you might also want a local loc input:
-      setShowLocalLocCurrent(condition(machine.name));
+      setShowLocalLocCurrent(
+        isSocalInterior ||
+          selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+      );
     }
     fetchMachine(machine.id);
     setShowMachineModal(false);
@@ -964,6 +1410,12 @@ export default function NewItem() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [currentSnIndex, setCurrentSnIndex] = useState(0);
   const [showSnDropdown, setShowSnDropdown] = useState(false);
+
+  useEffect(() => {
+    if (showDropdown || showSnDropdown) {
+      loadPnSnOptions();
+    }
+  }, [showDropdown, showSnDropdown]);
 
   const handleAddNewClient = () => {
     // Generate a random client number as part of the URL.
@@ -976,6 +1428,18 @@ export default function NewItem() {
 
   const [selectedClientFrom, setSelectedClientFrom] = useState(null);
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+
+  useEffect(() => {
+    setShowLocalLocFrom(
+      selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+    );
+  }, [selectedClientFrom]);
+
+  useEffect(() => {
+    setShowLocalLocCurrent(
+      selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+    );
+  }, [selectedClientCurrent]);
 
   return (
     <LoggedIn>
@@ -1285,14 +1749,17 @@ export default function NewItem() {
         </div>
       )}
       {/* Main Form */}
-      <Container
-        className="d-flex align-items-center justify-content-center"
-        style={{ minHeight: "100vh" }}
-      >
-        <div className="w-100" style={{ maxWidth: "600px" }}>
-          <Card className="align-items-center justify-content-center">
-            <Card.Body>
-              <h2 className="text-center mb-4">Add New Item</h2>
+      <Container fluid className={styles.page}>
+        <div className={styles.shell}>
+          <Card className={styles.card}>
+            <Card.Body className={styles.cardBody}>
+              <div className={styles.header}>
+                <div className={styles.kicker}>New Item</div>
+                <h2 className={styles.title}>Add New Item</h2>
+                <div className={styles.subtitle}>
+                  Capture details, photos, and routing before saving.
+                </div>
+              </div>
               <Form onSubmit={handleSubmit}>
                 {/* Row for Name and PN */}
                 <Row className="mb-3">
@@ -1478,7 +1945,48 @@ export default function NewItem() {
                     </Form.Group>
                   </Col>
                 </Row>
-
+                {/* Row for Local SN, Arrival Date, Tracking */}
+                <Row className="mb-3">
+                  <Col>
+                    <Form.Group controlId="localSN">
+                      <Form.Label>Local SN</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter Local SN"
+                        value={items.localSN || ""}
+                        onChange={handleChange("localSN")}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group controlId="arrivalDate">
+                      <Form.Label>Arrival Date</Form.Label>
+                      <Form.Control
+                        placeholder="Enter Arrival Date"
+                        type="date"
+                        value={items.arrival_date}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setItems((prev) => ({
+                            ...prev,
+                            arrival_date: value,
+                          }));
+                        }}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group controlId="trackingNumber">
+                      <Form.Label>Tracking Number</Form.Label>
+                      <Form.Control
+                        placeholder="Tracking Number"
+                        type="text"
+                        value={items.trackingNumber}
+                        onChange={handleChange("trackingNumber")}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
                 {/* Row for OEM, Modality, Model */}
                 <Row className="mb-3">
                   <Col>
@@ -1638,19 +2146,55 @@ export default function NewItem() {
                                   {selectedMachine.name}
                                 </p>
                                 {showLocalLocFrom && (
-                                  <Form.Group
-                                    controlId="localLocFrom"
-                                    className="mt-2"
-                                  >
-                                    <Form.Label>Local Loc (From)</Form.Label>
-                                    <Form.Control
-                                      type="text"
-                                      value={localLocFrom}
-                                      onChange={(e) =>
-                                        setLocalLocFrom(e.target.value)
+                                  <>
+                                    <Button
+                                      variant="outline-secondary"
+                                      onClick={() =>
+                                        setShowNewLocalModalFrom(true)
                                       }
-                                    />
-                                  </Form.Group>
+                                      className="w-100 mb-2"
+                                    >
+                                      {[
+                                        newLocalFrom.region,
+                                        newLocalFrom.section?.letter +
+                                          newLocalFrom.section?.number,
+                                        newLocalFrom.bin &&
+                                          `B${newLocalFrom.bin}`,
+                                        newLocalFrom.pallet &&
+                                          `P${newLocalFrom.pallet}`,
+                                      ]
+                                        .filter(Boolean)
+                                        .join("-") || "Set Local Location"}
+                                    </Button>
+                                    <Modal
+                                      show={showNewLocalModalFrom}
+                                      onHide={() =>
+                                        setShowNewLocalModalFrom(false)
+                                      }
+                                      centered
+                                    >
+                                      <Modal.Header>
+                                        <Modal.Title>
+                                          Edit Local Loc (From)
+                                        </Modal.Title>
+                                      </Modal.Header>
+                                      <Modal.Body>
+                                        <NewLocal
+                                          selectedClient={selectedClientFrom}
+                                          showLocalLoc={showNewLocalModalFrom}
+                                          value={newLocalFrom}
+                                          onChange={setNewLocalFrom}
+                                          onSave={(p) => {
+                                            setNewLocalFrom(p);
+                                            setShowNewLocalModalFrom(false);
+                                          }}
+                                          onCancel={() =>
+                                            setShowNewLocalModalFrom(false)
+                                          }
+                                        />
+                                      </Modal.Body>
+                                    </Modal>
+                                  </>
                                 )}
                               </>
                             )}
@@ -1696,19 +2240,57 @@ export default function NewItem() {
                                   {selectedCurrentMachine.name}
                                 </p>
                                 {showLocalLocCurrent && (
-                                  <Form.Group
-                                    controlId="localLocCurrent"
-                                    className="mt-2"
-                                  >
-                                    <Form.Label>Local Loc (Current)</Form.Label>
-                                    <Form.Control
-                                      type="text"
-                                      value={localLocCurrent}
-                                      onChange={(e) =>
-                                        setLocalLocCurrent(e.target.value)
+                                  <>
+                                    <Button
+                                      variant="outline-secondary"
+                                      onClick={() =>
+                                        setShowNewLocalModalCurrent(true)
                                       }
-                                    />
-                                  </Form.Group>
+                                      className="w-100 mb-2"
+                                    >
+                                      {[
+                                        newLocalCurrent.region,
+                                        newLocalCurrent.section?.letter +
+                                          newLocalCurrent.section?.number,
+                                        newLocalCurrent.bin &&
+                                          `B${newLocalCurrent.bin}`,
+                                        newLocalCurrent.pallet &&
+                                          `P${newLocalCurrent.pallet}`,
+                                      ]
+                                        .filter(Boolean)
+                                        .join("-") || "Set Local Location"}
+                                    </Button>
+                                    <Modal
+                                      show={showNewLocalModalCurrent}
+                                      onHide={() =>
+                                        setShowNewLocalModalCurrent(false)
+                                      }
+                                      centered
+                                    >
+                                      <Modal.Header>
+                                        <Modal.Title>
+                                          Edit Local Loc (Current)
+                                        </Modal.Title>
+                                      </Modal.Header>
+                                      <Modal.Body>
+                                        <NewLocal
+                                          selectedClient={selectedClientCurrent}
+                                          showLocalLoc={
+                                            showNewLocalModalCurrent
+                                          }
+                                          value={newLocalCurrent}
+                                          onChange={setNewLocalCurrent}
+                                          onSave={(p) => {
+                                            setNewLocalCurrent(p);
+                                            setShowNewLocalModalCurrent(false);
+                                          }}
+                                          onCancel={() =>
+                                            setShowNewLocalModalCurrent(false)
+                                          }
+                                        />
+                                      </Modal.Body>
+                                    </Modal>
+                                  </>
                                 )}
                               </>
                             )}
@@ -1738,8 +2320,8 @@ export default function NewItem() {
                 </div>
                 {/* Photo Action Row */}
                 <div style={{ marginBottom: "1rem" }}>
-                  <Row className="mb-3">
-                    <Col xs={6}>
+                  <Row className={`mb-3 ${styles.photoActionsRow}`}>
+                    <Col xs={12} md={6}>
                       <ButtonGroup>
                         <Button
                           variant="outline-secondary"
@@ -1755,21 +2337,36 @@ export default function NewItem() {
                         </Button>
                       </ButtonGroup>
                     </Col>
-                    <Col xs={6} className="d-flex align-items-center">
+                    <Col xs={12} md={6} className={styles.photoActionsRight}>
+                      <Button
+                        variant="success"
+                        onClick={handleSendToInflow}
+                        disabled={!isReadyForActions}
+                        style={{ marginLeft: "auto" }}
+                      >
+                        Send to inFlow
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={handleBluefolderButton}
+                        disabled={!isReadyForActions}
+                        style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
+                      >
+                        BlueFolder
+                      </Button>
                       <Button
                         variant={addToWebsite ? "primary" : "outline-primary"}
-                        onClick={() => setAddToWebsite((prev) => !prev)}
+                        onClick={handleToggleAddToWebsite}
+                        disabled={!isReadyForActions}
                       >
-                        {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                        {addToWebsite ? "Added to Website" : "Add to Website"}
                       </Button>
                       <Form.Check
                         type="checkbox"
                         id="hide-checkbox"
                         label="Hide"
-                        // box is checked when we want visible = false
                         checked={!items.visible}
                         onChange={(e) => {
-                          // grab checked immediately
                           const isHidden = e.currentTarget.checked;
                           setItems((prev) => ({
                             ...prev,
@@ -1831,7 +2428,7 @@ export default function NewItem() {
                 {/* Extra Section: Dimensions, Price, and DOM */}
 
                 {/* Submit Row */}
-                <div className="mt-3 d-flex flex-wrap align-items-center">
+                <div className={`mt-3 d-flex flex-wrap align-items-center ${styles.actionRow}`}>
                   <Button
                     variant="primary"
                     type="submit"
@@ -1851,9 +2448,57 @@ export default function NewItem() {
                     name="Back"
                     route="NewSearch/mainSearch"
                   />
+                  {SHOW_SLACK_BUTTONS && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        marginLeft: ".5rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 12,
+                          lineHeight: "12px",
+                          textAlign: "center",
+                        }}
+                      >
+                        Slack
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          border: "1px solid #ced4da",
+                          borderRadius: 6,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => handleAddToSlack("receiving")}
+                          disabled={!isReadyForActions}
+                          style={{
+                            border: "none",
+                            borderRight: "1px solid #ced4da",
+                          }}
+                        >
+                          Receiving
+                        </Button>
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => handleAddToSlack("shipping")}
+                          disabled={!isReadyForActions}
+                          style={{ border: "none" }}
+                        >
+                          Shipping
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <Button
                     variant="info"
                     onClick={handlePrint}
+                    disabled={!isReadyForActions}
                     style={{ marginLeft: "auto" }}
                   >
                     Print Label
@@ -1926,16 +2571,6 @@ export default function NewItem() {
                           onChange={(e) => setDOM(e.target.value)}
                         />
                       </Form.Group>
-                      {/* NEW: Local SN input */}
-                      <Form.Group as={Col} controlId="localSN">
-                        <Form.Label>Local SN</Form.Label>
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter Local SN"
-                          value={items.localSN || ""}
-                          onChange={handleChange("localSN")}
-                        />
-                      </Form.Group>
                     </Row>
                     <Row>
                       <Form.Group as={Col} controlId="poNumber">
@@ -1945,21 +2580,6 @@ export default function NewItem() {
                           placeholder="PO Number"
                           value={items.poNumber || ""}
                           onChange={handleChange("poNumber")}
-                        />
-                      </Form.Group>
-                      <Form.Group as={Col} controlId="arrivalDate">
-                        <Form.Label>Arrival Date</Form.Label>
-                        <Form.Control
-                          placeholder="Enter Arrival Date"
-                          type="date"
-                          value={items.arrival_date}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setItems((prev) => ({
-                              ...prev,
-                              arrival_date: value,
-                            }));
-                          }}
                         />
                       </Form.Group>
                     </Row>
@@ -1973,3 +2593,10 @@ export default function NewItem() {
     </LoggedIn>
   );
 }
+
+
+
+
+
+
+

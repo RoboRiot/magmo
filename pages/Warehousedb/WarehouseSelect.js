@@ -18,7 +18,7 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
+function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState({ name: false });
 
   useEffect(() => {
@@ -84,37 +84,41 @@ export default function WarehouseSelect() {
             <Card.Body>
               <h2 className="text-center mb-4">Warehouse DB</h2>
               <div className="d-grid gap-3">
-                {LoadingButton("secondary", "Scan", "Warehousedb/WarehouseScan")}
-{LoadingButton(
-                  "primary",
-                  "Ask Magmo",
-                  "../AskMagmo"
-                )}
-                {LoadingButton(
-                  "secondary",
-                  "Main List",
-                  "../NewSearch/mainSearch"
-                )}
-                {LoadingButton(
-                  "primary",
-                  "Client List",
-                  "../NewSearch/clientSearch"
-                )}
-                {LoadingButton(
-                  "secondary",
-                  "Inventory manager",
-                  "../NewSearch/inventory/inventoryManage"
-                )}
-                {LoadingButton(
-                  "primary",
-                  "Add New Item",
-                  "../NewSearch/AddItem/NewItem"
-                )}
-                {LoadingButton(
-                  "secondary",
-                  "Test Print",
-                  "../NewSearch/TestPrint"
-                )}
+                <LoadingButton
+                  type="secondary"
+                  name="Scan"
+                  route="Warehousedb/WarehouseScan"
+                />
+                <LoadingButton
+                  type="primary"
+                  name="Ask Magmo"
+                  route="../AskMagmo"
+                />
+                <LoadingButton
+                  type="secondary"
+                  name="Main List"
+                  route="../NewSearch/mainSearch"
+                />
+                <LoadingButton
+                  type="primary"
+                  name="Client List"
+                  route="../NewSearch/clientSearch"
+                />
+                <LoadingButton
+                  type="secondary"
+                  name="Inventory manager"
+                  route="../NewSearch/inventory/inventoryManage"
+                />
+                <LoadingButton
+                  type="primary"
+                  name="Add New Item"
+                  route="../NewSearch/AddItem/NewItem"
+                />
+                <LoadingButton
+                  type="secondary"
+                  name="Test Print"
+                  route="../NewSearch/TestPrint"
+                />
 
                 <Form className="d-flex">
                   <FormControl
@@ -179,7 +183,7 @@ export default function WarehouseSelect() {
                     Search
                   </Button>
                 </Form>
-                {LoadingButton("secondary", "Back <-", "dashboard")}
+                <LoadingButton type="secondary" name="Back <-" route="dashboard" />
               </div>
             </Card.Body>
           </Card>

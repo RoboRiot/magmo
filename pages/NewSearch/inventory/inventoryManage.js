@@ -12,15 +12,19 @@ import {
 } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { formatLoc } from "../../../utils/itemFormShared";
 
 
 export default function InventoryManage() {
+  const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filters, setFilters] = useState({
     region: "",
-    section: "",
+    sectionLetter: "",
+    sectionNumber: "",
     bin: "",
     pallet: "",
     localSN: "",
@@ -37,6 +41,18 @@ export default function InventoryManage() {
         const data = snap.docs.map((d) => {
           const doc = d.data();
           const loc = doc.newLocalCurrent || {};
+          let sectionLetter = "";
+          let sectionNumber = "";
+          if (typeof loc.section === "string") {
+            sectionLetter = loc.section.slice(0, 1);
+            sectionNumber = loc.section.slice(1);
+          } else if (loc.section) {
+            sectionLetter = loc.section.letter || "";
+            sectionNumber =
+              loc.section.number !== undefined && loc.section.number !== null
+                ? String(loc.section.number)
+                : "";
+          }
           return {
             id: d.id,
             name: doc.name || "",
@@ -44,7 +60,8 @@ export default function InventoryManage() {
             sn: doc.sn || "",
             localSN: doc.localSN || "",
             region: loc.region?.toString() ?? "",
-            section: loc.section?.toString() ?? "",
+            sectionLetter,
+            sectionNumber,
             bin: loc.bin?.toString() ?? "",
             pallet: loc.pallet?.toString() ?? "",
           };
@@ -54,11 +71,34 @@ export default function InventoryManage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const qp = router.query;
+    const getParam = (key) =>
+      Array.isArray(qp[key]) ? qp[key][0] : qp[key];
+    setFilters((prev) => ({
+      ...prev,
+      region: getParam("region") || "",
+      sectionLetter: getParam("sectionLetter") || "",
+      sectionNumber: getParam("sectionNumber") || "",
+      bin: getParam("bin") || "",
+      pallet: getParam("pallet") || "",
+      localSN: getParam("localSN") || "",
+    }));
+  }, [router.isReady]);
+
   // ---- derive distinct filter options ----
   const distinct = (arr) =>
     Array.from(new Set(arr.filter((v) => v))).sort();
   const regions  = useMemo(() => distinct(items.map((i) => i.region)),  [items]);
-  const sections = useMemo(() => distinct(items.map((i) => i.section)), [items]);
+  const sectionLetters = useMemo(
+    () => distinct(items.map((i) => i.sectionLetter)),
+    [items]
+  );
+  const sectionNumbers = useMemo(
+    () => distinct(items.map((i) => i.sectionNumber)),
+    [items]
+  );
   const bins     = useMemo(() => distinct(items.map((i) => i.bin)),     [items]);
   const pallets  = useMemo(() => distinct(items.map((i) => i.pallet)),  [items]);
 
@@ -85,7 +125,7 @@ export default function InventoryManage() {
 
   // ---- filtered list ----
   const filteredItems = items.filter((it) =>
-    ["region", "section", "bin", "pallet", "localSN"].every(
+    ["region", "sectionLetter", "sectionNumber", "bin", "pallet", "localSN"].every(
       (f) => !filters[f] || it[f] === filters[f]
     )
   );
@@ -98,30 +138,41 @@ export default function InventoryManage() {
     const updates = Array.from(selectedIds).map((id) => {
       const orig = items.find((i) => i.id === id) || {};
       const newRegion  = bulkField === "region"  ? bulkValue : orig.region;
-      const newSection = bulkField === "section" ? bulkValue : orig.section;
+      const newSectionLetter =
+        bulkField === "sectionLetter" ? bulkValue : orig.sectionLetter;
+      const newSectionNumber =
+        bulkField === "sectionNumber" ? bulkValue : orig.sectionNumber;
       const newBin     = bulkField === "bin"     ? bulkValue : orig.bin;
       const newPallet  = bulkField === "pallet"  ? bulkValue : orig.pallet;
 
-      const parts = [];
-      if (newRegion)  parts.push(newRegion);
-      if (newSection) parts.push(newSection);
-      if (newBin)     parts.push(`B${newBin}`);
-      if (newPallet)  parts.push(`P${newPallet}`);
-      const newLocString = parts.join("-");
+      const newLocString = formatLoc({
+        region: newRegion,
+        section:
+          newSectionLetter && newSectionNumber
+            ? { letter: newSectionLetter, number: newSectionNumber }
+            : undefined,
+        bin: newBin,
+        pallet: newPallet,
+      });
 
       const updateObj = {
         region: newRegion,
-        section: newSection,
         bin: newBin,
         pallet: newPallet,
         localLocCurrent: newLocString,
         newLocalCurrent: {
           region: newRegion,
-          section: newSection,
           bin: newBin,
           pallet: newPallet,
         },
       };
+      if (newSectionLetter && newSectionNumber) {
+        updateObj.section = { letter: newSectionLetter, number: newSectionNumber };
+        updateObj.newLocalCurrent.section = {
+          letter: newSectionLetter,
+          number: newSectionNumber,
+        };
+      }
 
       return db
         .collection("Test")
@@ -134,7 +185,8 @@ export default function InventoryManage() {
                 ? {
                     ...item,
                     region: newRegion,
-                    section: newSection,
+                    sectionLetter: newSectionLetter,
+                    sectionNumber: newSectionNumber,
                     bin: newBin,
                     pallet: newPallet,
                   }
@@ -215,16 +267,31 @@ export default function InventoryManage() {
             </Form.Select>
           </Col>
           <Col>
-            <Form.Label>Section</Form.Label>
+            <Form.Label>Section Letter</Form.Label>
             <Form.Select
-              value={filters.section}
+              value={filters.sectionLetter}
               onChange={(e) => {
                 const v = e.target.value;
-                setFilters((p) => ({ ...p, section: v }));
+                setFilters((p) => ({ ...p, sectionLetter: v }));
               }}
             >
-              <option value="">All sections</option>
-              {sections.map((s) => (
+              <option value="">All letters</option>
+              {sectionLetters.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Form.Select>
+          </Col>
+          <Col>
+            <Form.Label>Section Number</Form.Label>
+            <Form.Select
+              value={filters.sectionNumber}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilters((p) => ({ ...p, sectionNumber: v }));
+              }}
+            >
+              <option value="">All numbers</option>
+              {sectionNumbers.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </Form.Select>
@@ -293,7 +360,8 @@ export default function InventoryManage() {
               >
                 <option value="">Change…</option>
                 <option value="region">Region</option>
-                <option value="section">Section</option>
+                <option value="sectionLetter">Section Letter</option>
+                <option value="sectionNumber">Section Number</option>
                 <option value="bin">Bin</option>
                 <option value="pallet">Pallet</option>
               </Form.Select>
@@ -340,7 +408,7 @@ export default function InventoryManage() {
                 <td>{it.sn}</td>
                 <td>{it.localSN}</td>
                 <td>{it.region}</td>
-                <td>{it.section}</td>
+                <td>{it.sectionLetter}{it.sectionNumber}</td>
                 <td>{it.bin}</td>
                 <td>{it.pallet}</td>
               </tr>

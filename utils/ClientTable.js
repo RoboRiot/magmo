@@ -12,6 +12,10 @@ const ClientTable = ({
   disableInfo,
   isClientSearch,
 }) => {
+  const columnCount =
+    1 + (disableInfo ? 0 : 1) + (disableSelect ? 0 : 1);
+  const showActions = Boolean(clearSelection || onAddClient);
+
   return (
     <Table striped bordered hover size="sm" className={styles.clientTable}>
       <thead>
@@ -22,17 +26,28 @@ const ClientTable = ({
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td colSpan="3" style={{ textAlign: "center" }}>
-            <Button variant="secondary" onClick={clearSelection}>
-              Clear Selection
-            </Button>
-            {/* New Add New Client button */}
-            <Button variant="primary" onClick={onAddClient} className="ms-2">
-              Add New Client
-            </Button>
-          </td>
-        </tr>
+        {showActions && (
+          <tr className={styles.actionRow}>
+            <td colSpan={columnCount}>
+              <div className={styles.actionButtons}>
+                {clearSelection && (
+                  <Button variant="secondary" onClick={clearSelection}>
+                    Clear Selection
+                  </Button>
+                )}
+                {onAddClient && (
+                  <Button
+                    variant="primary"
+                    onClick={onAddClient}
+                    className="ms-2"
+                  >
+                    Add New Client
+                  </Button>
+                )}
+              </div>
+            </td>
+          </tr>
+        )}
         {clients.map((client) => (
           <tr key={client.id}>
             <td>{client.name}</td>

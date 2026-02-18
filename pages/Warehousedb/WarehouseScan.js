@@ -21,7 +21,7 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
+function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState({ name: false });
 
   useEffect(() => {
@@ -99,11 +99,11 @@ export default function dashboard() {
                 >
                   Flip Camera
                 </button>
-                {LoadingButton(
-                  "primary",
-                  "Back",
-                  "Warehousedb/WarehouseSelect"
-                )}
+                <LoadingButton
+                  type="primary"
+                  name="Back"
+                  route="Warehousedb/WarehouseSelect"
+                />
                 <Button variant="link" onClick={signOut}>
                   Sign out
                 </Button>

@@ -10,7 +10,7 @@ function simulateNetworkRequest() {
     return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
+function LoadingButton({ type, name, route }) {
     
 
     const [isLoading, setLoading] = useState({ name: false });
@@ -52,11 +52,11 @@ export default function dashboard() {
                             <h2 className="text-center mb-4">Logs</h2>
                             <div class="d-grid gap-3">
 
-                                {LoadingButton("primary", "Info", "#")}
+                                <LoadingButton type="primary" name="Info" route="#" />
 
-                                {LoadingButton("secondary", "All Notes", "#")}
+                                <LoadingButton type="secondary" name="All Notes" route="#" />
 
-                                {LoadingButton("primary", "Drive", "drive")}
+                                <LoadingButton type="primary" name="Drive" route="drive" />
 
                                 <Button variant="link" onClick={signOut}>Sign out</Button>
 

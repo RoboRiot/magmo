@@ -3,18 +3,20 @@
     height: 600px;
   }
   
-  .scrollableTable {
-    max-height: 540px; /* Adjusted to leave space for the search bar and buttons */
-    overflow-y: auto; /* Enable scroll for the table body */
-    position: relative;
-  }
-  
-  .stickyHeader {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 1;
-  }
+.scrollableTable {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+  padding: 0 18px 16px;
+}
+
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
   
   .searchContainer {
     padding-top: 10px;
@@ -25,28 +27,47 @@
     width: 100%;
   }
   
-  .divider {
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 20px;
-  }
-  
-  .buttonGroup {
-    display: flex;
-    width: 100%;
-  }
-  
-  .flexButton {
-    flex-grow: 1;
-    text-truncate: true;
-    min-width: 0;
-    font-size: calc(12px + 0.5vw);
-  }
+.divider {
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
 
-    
-  /* force table to allocate equal-width columns */
+.buttonGroup {
+  display: flex;
+  width: 100%;
+}
+
+.flexButton {
+  flex-grow: 1;
+  text-truncate: true;
+  min-width: 0;
+  font-size: calc(12px + 0.5vw);
+}
+
+/* force table to allocate equal-width columns */
 .fixedTable {
   table-layout: fixed;
   width: 100%;
+  border-color: #e2e8f0;
+  font-size: 0.86rem;
+  color: #0f172a;
+}
+
+.fixedTable th,
+.fixedTable td {
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.fixedTable thead th {
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fixedTable tbody tr:hover {
+  background: #f1f5f9;
 }
 
 /* clamp cell text to 10 characters per line, max 3 lines */
@@ -62,8 +83,79 @@
 
 /* keep action/delete column from shrinking */
 .actionCol {
-  width: 96px;                      /* adjust if needed */
+  width: 88px;                      /* adjust if needed */
   white-space: nowrap;
+}
+
+.longPressOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 9999;
+}
+
+.longPressCard {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 18px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+  max-width: 90vw;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .scrollableTable {
+    padding: 0 12px 14px;
+  }
+
+  .fixedTable {
+    font-size: 0.98rem;
+  }
+
+  .fixedTable th,
+  .fixedTable td {
+    padding: 14px 10px;
+  }
+
+  .cellClamp {
+    max-width: 20ch;
+    -webkit-line-clamp: 4;
+  }
+
+  .actionCol {
+    width: 64px;
+  }
+
+  .fixedTable th:nth-child(1),
+  .fixedTable td:nth-child(1) {
+    width: 40%;
+  }
+
+  .fixedTable th:nth-child(2),
+  .fixedTable td:nth-child(2),
+  .fixedTable th:nth-child(3),
+  .fixedTable td:nth-child(3),
+  .fixedTable th:nth-child(4),
+  .fixedTable td:nth-child(4),
+  .fixedTable th:nth-child(5),
+  .fixedTable td:nth-child(5) {
+    width: 12%;
+  }
+
+  .fixedTable th:nth-child(6),
+  .fixedTable td:nth-child(6) {
+    width: 9%;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
 }
 
   

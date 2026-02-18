@@ -1,7 +1,10 @@
 // NewLocal.js
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Button, Stack } from "react-bootstrap";
+import { useRouter } from "next/router";
 import firebase from "../../../../context/Firebase";
+import WarehouseMapModal from "../../../../components/WarehouseMapModal";
+import styles from "./NewLocal.module.css";
 
 export default function NewLocal({
   onSave = () => {},
@@ -11,8 +14,8 @@ export default function NewLocal({
   value = {},
   onChange,
 }) {
+  const router = useRouter();
   const [regionOptions, setRegionOptions] = useState([]);
-  const [sectionMap, setSectionMap]     = useState({});
   const [binCount, setBinCount]         = useState(0);
   const [palletCount, setPalletCount]   = useState(0);
 
@@ -21,6 +24,7 @@ export default function NewLocal({
   const [sectionNumber, setSectionNumber] = useState("");
   const [binSelected, setBinSelected]     = useState("");
   const [palletSelected, setPalletSelected] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   // 1) load directory exactly as before
   useEffect(() => {
@@ -29,7 +33,6 @@ export default function NewLocal({
     db.collection("Warehouse").doc("directory").get().then(doc => {
       const d = doc.data() || {};
       setRegionOptions(d.Region   || []);
-      setSectionMap   (d.Section  || {});
       setBinCount     (d.Bin      || 0);
       setPalletCount  (d.Pallet   || 0);
     });
@@ -56,8 +59,10 @@ export default function NewLocal({
   }, [region, sectionLetter, sectionNumber, binSelected, palletSelected]);
 
   // helpers:
-const letters = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
-const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
+  const letters = Array.from({ length: 26 }, (_, i) =>
+    String.fromCharCode(65 + i)
+  );
+  const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
   const binOptions = Array.from({ length: binCount }, (_, i) => i + 1);
   const palletOptions = Array.from({ length: palletCount }, (_, i) => i + 1);
 
@@ -92,11 +97,56 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
     onSave(p);
   };
 
+  const openMap = () => {
+    setShowMap(true);
+  };
+
+  const handleMapSelectionChange = (selection = {}) => {
+    if (Object.prototype.hasOwnProperty.call(selection, "region")) {
+      setRegion(selection.region || "");
+    }
+    if (Object.prototype.hasOwnProperty.call(selection, "sectionLetter")) {
+      setSectionLetter(selection.sectionLetter || "");
+    }
+    if (Object.prototype.hasOwnProperty.call(selection, "sectionNumber")) {
+      setSectionNumber(
+        selection.sectionNumber ? String(selection.sectionNumber) : ""
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(selection, "pallet")) {
+      setPalletSelected(selection.pallet ? String(selection.pallet) : "");
+    }
+    if (Object.prototype.hasOwnProperty.call(selection, "bin")) {
+      setBinSelected(selection.bin ? String(selection.bin) : "");
+    }
+  };
+
+  const handleViewInventory = (selection = {}) => {
+    const params = new URLSearchParams();
+    const regionValue = selection.region ?? region;
+    const letterValue = selection.sectionLetter ?? sectionLetter;
+    const numberValue = selection.sectionNumber ?? sectionNumber;
+    const palletValue = selection.pallet ?? palletSelected;
+    const binValue = selection.bin ?? binSelected;
+
+    if (regionValue) params.set("region", regionValue);
+    if (letterValue) params.set("sectionLetter", letterValue);
+    if (numberValue) params.set("sectionNumber", numberValue);
+    if (palletValue) params.set("pallet", palletValue);
+    if (binValue) params.set("bin", binValue);
+
+    const query = params.toString();
+    router.push(
+      `/NewSearch/inventory/inventoryManage${query ? `?${query}` : ""}`
+    );
+    setShowMap(false);
+  };
+
   return (
-    <div>
-      <Row>
+    <div className={styles.wrapper}>
+      <Row className={styles.formRow}>
         <Col>
-          <Form.Group>
+          <Form.Group className={styles.formGroup}>
             <Form.Label>Region</Form.Label>
             <Form.Select
               value={region} onChange={e=>setRegion(e.target.value)}
@@ -107,7 +157,7 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
           </Form.Group>
         </Col>
         <Col>
-          <Form.Group>
+          <Form.Group className={styles.formGroup}>
             <Form.Label>Section Letter</Form.Label>
             <Form.Select
               value={sectionLetter}
@@ -120,7 +170,7 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
           </Form.Group>
         </Col>
         <Col>
-          <Form.Group>
+          <Form.Group className={styles.formGroup}>
             <Form.Label>Section Number</Form.Label>
             <Form.Select
               value={sectionNumber}
@@ -135,7 +185,7 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
       </Row>
       <Row className="mt-3">
         <Col>
-          <Form.Group>
+          <Form.Group className={styles.formGroup}>
             <Form.Label>Bin</Form.Label>
             <Stack direction="horizontal" gap={2}>
               <Form.Select
@@ -153,7 +203,7 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
           </Form.Group>
         </Col>
         <Col>
-          <Form.Group>
+          <Form.Group className={styles.formGroup}>
           <Form.Label>Pallet</Form.Label>
           <Stack direction="horizontal" gap={2}>
           <Form.Select
@@ -172,18 +222,32 @@ const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
         </Col>
       </Row>
       {/* OK / Cancel footer */}
-      <Row className="mt-4">
-        <Col>
-          <div className="mt-3 text-end">
-            <Button variant="secondary" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleOk}>
-              OK
-            </Button>
-          </div>
-        </Col>
-      </Row>
+      <div className={styles.actionRow}>
+        <Button variant="outline-primary" onClick={openMap}>
+          Map
+        </Button>
+        <div className={styles.actionSpacer} />
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="primary" onClick={handleOk}>
+          OK
+        </Button>
+      </div>
+      <WarehouseMapModal
+        show={showMap}
+        onHide={() => setShowMap(false)}
+        onView={handleViewInventory}
+        onSelectionChange={handleMapSelectionChange}
+        initialSelection={{
+          region,
+          sectionLetter,
+          sectionNumber,
+          pallet: palletSelected,
+          bin: binSelected,
+        }}
+      />
     </div>
   );
 }
+

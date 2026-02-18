@@ -5,7 +5,7 @@
     "dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider next dev",
     "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider next build",
     "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider next start",
-    "firebase:build": "next build && cp -r .next functions/",
+    "firebase:build": "cross-env NODE_OPTIONS=--openssl-legacy-provider next build && node -e \"const fs=require('fs'); const path='functions/.next'; const sleep=(ms)=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms); for(let i=0;i<6;i++){ try{ fs.rmSync(path,{recursive:true,force:true}); break; } catch(err){ if(!['EBUSY','EPERM','ENOTEMPTY'].includes(err.code) || i===5){ throw err; } sleep(500); } } fs.cpSync('.next', path, {recursive:true, force:true});\"",
     "firebase:deploy": "npm run firebase:build && firebase deploy",
     "deploy:ssr": "bash ./deploy.sh"
   },
