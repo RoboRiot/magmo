@@ -3,5 +3,5 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/Warehousedb/WarehouseSelect": "pages/Warehousedb/WarehouseSelect.js",
-  "/NewSearch/clientSearch": "pages/NewSearch/clientSearch.js"
+  "/NewSearch/inventory/inventoryManage": "pages/NewSearch/inventory/inventoryManage.js"
 }

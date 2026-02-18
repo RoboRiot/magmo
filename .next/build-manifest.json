@@ -14,10 +14,10 @@
     "static/development/_ssgManifest.js"
   ],
   "pages": {
-    "/NewSearch/clientSearch": [
+    "/NewSearch/inventory/inventoryManage": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/clientSearch.js"
+      "static/chunks/pages/NewSearch/inventory/inventoryManage.js"
     ],
     "/Warehousedb/WarehouseSelect": [
       "static/chunks/webpack.js",

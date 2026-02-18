@@ -77,7 +77,7 @@ export default function dashboard() {
     return new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
-  function LoadingButton(type, name, route) {
+  function LoadingButton({ type, name, route }) {
     const [isLoading, setLoading] = useState({ name: false });
 
     useEffect(() => {
@@ -115,7 +115,7 @@ export default function dashboard() {
               <h2 className="text-center mb-4">Drive</h2>
               <div class="d-grid gap-3">
                 
-                {LoadingButton("primary", "Info", "#")}
+                <LoadingButton type="primary" name="Info" route="#" />
                 <Tab.Container id="list-group-tabs-example" defaultActiveKey="#link1">
                                     <Row>
                                         <Col sm={4}>

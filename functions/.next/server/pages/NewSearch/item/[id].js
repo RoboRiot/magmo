@@ -6,7 +6,7 @@ module.exports =
 /******/ 	// object to store loaded chunks
 /******/ 	// "0" means "already loaded"
 /******/ 	var installedChunks = {
-/******/ 		17: 0
+/******/ 		18: 0
 /******/ 	};
 /******/
 /******/ 	// The require function
@@ -101,7 +101,7 @@ module.exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 19);
+/******/ 	return __webpack_require__(__webpack_require__.s = 20);
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -194,7 +194,44 @@ exports.cancelIdleCallback = cancelIdleCallback;
 
 /***/ }),
 
-/***/ 19:
+/***/ "1SzK":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"wrapper": "NewLocal_wrapper__2Txmh",
+	"formRow": "NewLocal_formRow__2vj9Q",
+	"formGroup": "NewLocal_formGroup__1xlVK",
+	"actionRow": "NewLocal_actionRow__3SZ2D",
+	"actionSpacer": "NewLocal_actionSpacer__2x5sD",
+	"mapLoading": "NewLocal_mapLoading__3HyyY",
+	"mapError": "NewLocal_mapError__i9ZnV",
+	"mapStage": "NewLocal_mapStage__1eA_Y",
+	"mapHint": "NewLocal_mapHint__2PIrR",
+	"mapCanvas": "NewLocal_mapCanvas__aW2OO",
+	"regionBlock": "NewLocal_regionBlock__2bFHn",
+	"regionE": "NewLocal_regionE__1Zg5S",
+	"regionF": "NewLocal_regionF__1LErC",
+	"regionG": "NewLocal_regionG__1duPB",
+	"regionA": "NewLocal_regionA__1Vqyy",
+	"regionD": "NewLocal_regionD__1fmkS",
+	"regionC": "NewLocal_regionC__3HqII",
+	"regionB": "NewLocal_regionB__3figN",
+	"gridWrapper": "NewLocal_gridWrapper__HtKWl",
+	"grid": "NewLocal_grid__1cy5i",
+	"gridCell": "NewLocal_gridCell__S3ktj",
+	"gridCellDisabled": "NewLocal_gridCellDisabled__2HA95",
+	"palletGrid": "NewLocal_palletGrid__9vHpI",
+	"palletButton": "NewLocal_palletButton__ol8vB",
+	"binButton": "NewLocal_binButton__3K18J",
+	"mapEmpty": "NewLocal_mapEmpty__1X06Q",
+	"mapFooter": "NewLocal_mapFooter__3L5rZ"
+};
+
+
+/***/ }),
+
+/***/ 20:
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__("oysE");
@@ -797,9 +834,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("IZS3");
 /* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("NY6m");
+/* harmony import */ var next_router__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("4Q3z");
+/* harmony import */ var next_router__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(next_router__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("NY6m");
+/* harmony import */ var _components_WarehouseMapModal__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("cmwG");
+/* harmony import */ var _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("1SzK");
+/* harmony import */ var _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5__);
 var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 // NewLocal.js
+
+
+
 
 
 
@@ -811,14 +856,11 @@ function NewLocal({
   value = {},
   onChange
 }) {
+  const router = Object(next_router__WEBPACK_IMPORTED_MODULE_2__["useRouter"])();
   const {
     0: regionOptions,
     1: setRegionOptions
   } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
-  const {
-    0: sectionMap,
-    1: setSectionMap
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])({});
   const {
     0: binCount,
     1: setBinCount
@@ -846,15 +888,18 @@ function NewLocal({
   const {
     0: palletSelected,
     1: setPalletSelected
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(""); // 1) load directory exactly as before
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: showMap,
+    1: setShowMap
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false); // 1) load directory exactly as before
 
   Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
     if (!showLocalLoc) return;
-    const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_2__[/* default */ "b"].firestore();
+    const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore();
     db.collection("Warehouse").doc("directory").get().then(doc => {
       const d = doc.data() || {};
       setRegionOptions(d.Region || []);
-      setSectionMap(d.Section || {});
       setBinCount(d.Bin || 0);
       setPalletCount(d.Pallet || 0);
     });
@@ -898,7 +943,7 @@ function NewLocal({
 
   const handleAddBin = async () => {
     const next = binCount + 1;
-    await _context_Firebase__WEBPACK_IMPORTED_MODULE_2__[/* default */ "b"].firestore().collection("Warehouse").doc("directory").update({
+    await _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore().collection("Warehouse").doc("directory").update({
       Bin: next
     });
     setBinCount(next);
@@ -908,7 +953,7 @@ function NewLocal({
 
   const handleAddPallet = async () => {
     const next = palletCount + 1;
-    await _context_Firebase__WEBPACK_IMPORTED_MODULE_2__[/* default */ "b"].firestore().collection("Warehouse").doc("directory").update({
+    await _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore().collection("Warehouse").doc("directory").update({
       Pallet: next
     });
     setPalletCount(next);
@@ -928,7 +973,58 @@ function NewLocal({
     onSave(p);
   };
 
-  return __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Row"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Region"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
+  const openMap = () => {
+    setShowMap(true);
+  };
+
+  const handleMapSelectionChange = (selection = {}) => {
+    if (Object.prototype.hasOwnProperty.call(selection, "region")) {
+      setRegion(selection.region || "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(selection, "sectionLetter")) {
+      setSectionLetter(selection.sectionLetter || "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(selection, "sectionNumber")) {
+      setSectionNumber(selection.sectionNumber ? String(selection.sectionNumber) : "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(selection, "pallet")) {
+      setPalletSelected(selection.pallet ? String(selection.pallet) : "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(selection, "bin")) {
+      setBinSelected(selection.bin ? String(selection.bin) : "");
+    }
+  };
+
+  const handleViewInventory = (selection = {}) => {
+    var _selection$region, _selection$sectionLet, _selection$sectionNum, _selection$pallet, _selection$bin;
+
+    const params = new URLSearchParams();
+    const regionValue = (_selection$region = selection.region) !== null && _selection$region !== void 0 ? _selection$region : region;
+    const letterValue = (_selection$sectionLet = selection.sectionLetter) !== null && _selection$sectionLet !== void 0 ? _selection$sectionLet : sectionLetter;
+    const numberValue = (_selection$sectionNum = selection.sectionNumber) !== null && _selection$sectionNum !== void 0 ? _selection$sectionNum : sectionNumber;
+    const palletValue = (_selection$pallet = selection.pallet) !== null && _selection$pallet !== void 0 ? _selection$pallet : palletSelected;
+    const binValue = (_selection$bin = selection.bin) !== null && _selection$bin !== void 0 ? _selection$bin : binSelected;
+    if (regionValue) params.set("region", regionValue);
+    if (letterValue) params.set("sectionLetter", letterValue);
+    if (numberValue) params.set("sectionNumber", numberValue);
+    if (palletValue) params.set("pallet", palletValue);
+    if (binValue) params.set("bin", binValue);
+    const query = params.toString();
+    router.push(`/NewSearch/inventory/inventoryManage${query ? `?${query}` : ""}`);
+    setShowMap(false);
+  };
+
+  return __jsx("div", {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.wrapper
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Row"], {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formRow
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Region"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
     value: region,
     onChange: e => setRegion(e.target.value)
   }, __jsx("option", {
@@ -936,7 +1032,9 @@ function NewLocal({
   }, "Select region"), regionOptions.map(r => __jsx("option", {
     key: r,
     value: r
-  }, r))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Section Letter"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
+  }, r))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Section Letter"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
     value: sectionLetter,
     onChange: e => setSectionLetter(e.target.value) // disabled={!region}
 
@@ -945,7 +1043,9 @@ function NewLocal({
   }, "Letter"), letters.map(l => __jsx("option", {
     key: l,
     value: l
-  }, l))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Section Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
+  }, l))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Section Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
     value: sectionNumber,
     onChange: e => setSectionNumber(e.target.value) // disabled={!region}
 
@@ -956,7 +1056,9 @@ function NewLocal({
     value: n
   }, n)))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Row"], {
     className: "mt-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Bin"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Stack"], {
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Bin"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Stack"], {
     direction: "horizontal",
     gap: 2
   }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
@@ -971,7 +1073,9 @@ function NewLocal({
   }, b))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "outline-secondary",
     onClick: handleAddBin
-  }, "+ Bin")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Pallet"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Stack"], {
+  }, "+ Bin")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Group, {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.formGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Label, null, "Pallet"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Stack"], {
     direction: "horizontal",
     gap: 2
   }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Select, {
@@ -986,17 +1090,32 @@ function NewLocal({
   }, p))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "outline-secondary",
     onClick: handleAddPallet
-  }, "+ Pallet"))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Row"], {
-    className: "mt-4"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Col"], null, __jsx("div", {
-    className: "mt-3 text-end"
+  }, "+ Pallet"))))), __jsx("div", {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.actionRow
   }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-primary",
+    onClick: openMap
+  }, "Map"), __jsx("div", {
+    className: _NewLocal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.actionSpacer
+  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "secondary",
     onClick: onCancel
   }, "Cancel"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "primary",
     onClick: handleOk
-  }, "OK")))));
+  }, "OK")), __jsx(_components_WarehouseMapModal__WEBPACK_IMPORTED_MODULE_4__[/* default */ "a"], {
+    show: showMap,
+    onHide: () => setShowMap(false),
+    onView: handleViewInventory,
+    onSelectionChange: handleMapSelectionChange,
+    initialSelection: {
+      region,
+      sectionLetter,
+      sectionNumber,
+      pallet: palletSelected,
+      bin: binSelected
+    }
+  }));
 }
 
 /***/ }),
@@ -1027,25 +1146,28 @@ const ClientTable = ({
   disableInfo,
   isClientSearch
 }) => {
+  const columnCount = 1 + (disableInfo ? 0 : 1) + (disableSelect ? 0 : 1);
+  const showActions = Boolean(clearSelection || onAddClient);
   return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Table"], {
     striped: true,
     bordered: true,
     hover: true,
     size: "sm",
     className: _styles_ClientTable_module_css__WEBPACK_IMPORTED_MODULE_2___default.a.clientTable
-  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Client Name"), !disableInfo && __jsx("th", null, "Info"), !disableSelect && __jsx("th", null, "Select"))), __jsx("tbody", null, __jsx("tr", null, __jsx("td", {
-    colSpan: "3",
-    style: {
-      textAlign: "center"
-    }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Client Name"), !disableInfo && __jsx("th", null, "Info"), !disableSelect && __jsx("th", null, "Select"))), __jsx("tbody", null, showActions && __jsx("tr", {
+    className: _styles_ClientTable_module_css__WEBPACK_IMPORTED_MODULE_2___default.a.actionRow
+  }, __jsx("td", {
+    colSpan: columnCount
+  }, __jsx("div", {
+    className: _styles_ClientTable_module_css__WEBPACK_IMPORTED_MODULE_2___default.a.actionButtons
+  }, clearSelection && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "secondary",
     onClick: clearSelection
-  }, "Clear Selection"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+  }, "Clear Selection"), onAddClient && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "primary",
     onClick: onAddClient,
     className: "ms-2"
-  }, "Add New Client"))), clients.map(client => __jsx("tr", {
+  }, "Add New Client")))), clients.map(client => __jsx("tr", {
     key: client.id
   }, __jsx("td", null, client.name), !disableInfo && __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
     variant: "info",
@@ -1159,32 +1281,6 @@ module.exports = _typeof;
 
 /***/ }),
 
-/***/ "Dktn":
-/***/ (function(module, exports) {
-
-// Exports
-module.exports = {
-	"loading-overlay": "MainSearch_loading-overlay__12605",
-	"spinner-center": "MainSearch_spinner-center__3evuC",
-	"divider": "MainSearch_divider__3rSSU",
-	"tableContainer": "MainSearch_tableContainer__LD18P",
-	"scrollableTable": "MainSearch_scrollableTable__EtDed",
-	"stickyHeader": "MainSearch_stickyHeader__3UmgI",
-	"searchContainer": "MainSearch_searchContainer__1xJnu",
-	"buttonGroup": "MainSearch_buttonGroup__1GWI6",
-	"flexButton": "MainSearch_flexButton__3znqD"
-};
-
-
-/***/ }),
-
-/***/ "HJQg":
-/***/ (function(module, exports) {
-
-module.exports = require("styled-jsx/style");
-
-/***/ }),
-
 /***/ "IZS3":
 /***/ (function(module, exports) {
 
@@ -1192,133 +1288,70 @@ module.exports = require("react-bootstrap");
 
 /***/ }),
 
-/***/ "MSWM":
+/***/ "KWEF":
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return PartTable; });
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("IZS3");
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _fetchAssociations__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("qoNY");
-/* harmony import */ var _styles_PartTable_module_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("cbdS");
-/* harmony import */ var _styles_PartTable_module_css__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_styles_PartTable_module_css__WEBPACK_IMPORTED_MODULE_3__);
-var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return buildLocalLocObject; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return formatLoc; });
+/* unused harmony export getPriorityMachineField */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return updateMachineFields; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return buildNameTokens; });
+function buildLocalLocObject(loc) {
+  var _loc$section, _loc$section2;
 
+  const o = {};
+  if (loc !== null && loc !== void 0 && loc.region) o.region = loc.region;
+  if (loc !== null && loc !== void 0 && (_loc$section = loc.section) !== null && _loc$section !== void 0 && _loc$section.letter && loc !== null && loc !== void 0 && (_loc$section2 = loc.section) !== null && _loc$section2 !== void 0 && _loc$section2.number) o.section = loc.section;
+  if ((loc === null || loc === void 0 ? void 0 : loc.bin) !== undefined && (loc === null || loc === void 0 ? void 0 : loc.bin) !== "") o.bin = loc.bin;
+  if ((loc === null || loc === void 0 ? void 0 : loc.pallet) !== undefined && (loc === null || loc === void 0 ? void 0 : loc.pallet) !== "") o.pallet = loc.pallet;
+  return o;
+}
+function formatLoc(loc) {
+  var _loc$section3, _loc$section4;
 
+  if (!loc) return "";
+  const parts = [];
+  if (loc.region) parts.push(loc.region);
 
+  if ((_loc$section3 = loc.section) !== null && _loc$section3 !== void 0 && _loc$section3.letter && (_loc$section4 = loc.section) !== null && _loc$section4 !== void 0 && _loc$section4.number) {
+    parts.push(`${loc.section.letter}${loc.section.number}`);
+  }
 
-function PartTable({
-  info,
-  labels,
-  ids,
-  hoverStyle,
-  sortCheckAll,
-  checkDelete,
-  isDeleting,
-  rowSelect,
-  setHoverIndex,
-  hoverIndex,
-  selectedItems,
-  setSelectedItems
-}) {
-  // const [selectedItems, setSelectedItems] = useState([]);
-  // Toggle selection of items
-  const handleSelectItem = id => {
-    setSelectedItems(prevSelectedItems => prevSelectedItems.includes(id) ? prevSelectedItems.filter(itemId => itemId !== id) : [...prevSelectedItems, id]);
-  }; // Handle delete button click for selected items
+  if (loc.bin) parts.push(`B${loc.bin}`);
+  if (loc.pallet) parts.push(`P${loc.pallet}`);
+  return parts.join("–");
+}
 
+function isValidField(value) {
+  if (typeof value !== "string") return Boolean(value);
+  const trimmed = value.trim();
+  return trimmed !== "" && trimmed !== "N/A";
+}
 
-  const handleDeleteSelected = () => {
-    if (selectedItems.length > 0) {
-      checkDelete(null, null, selectedItems, "selected items");
-    }
+function getPriorityMachineField(field, theMachine, currentMachine, fromMachine) {
+  if (theMachine && isValidField(theMachine[field])) return theMachine[field];
+  if (currentMachine && isValidField(currentMachine[field])) return currentMachine[field];
+  if (fromMachine && isValidField(fromMachine[field])) return fromMachine[field];
+  return "";
+}
+function updateMachineFields(theMachine, currentMachine, fromMachine) {
+  const pick = (primary, fallback) => getPriorityMachineField(primary, theMachine, currentMachine, fromMachine) || getPriorityMachineField(fallback, theMachine, currentMachine, fromMachine);
+
+  return {
+    oem: pick("OEM", "oem"),
+    modality: pick("Modality", "modality"),
+    model: pick("Model", "model")
   };
+}
+function buildNameTokens(name) {
+  if (!name || typeof name !== "string") return [];
+  const lower = name.toLowerCase().trim();
+  if (!lower) return [];
+  const tokens = lower.split(/[^a-z0-9]+/).filter(Boolean); // include the full phrase so exact multi-word searches can match
 
-  return __jsx("div", {
-    className: _styles_PartTable_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.scrollableTable
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Table"], {
-    striped: true,
-    bordered: true,
-    hover: true,
-    size: "sm",
-    className: "mb-0"
-  }, __jsx("thead", {
-    className: _styles_PartTable_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.stickyHeader
-  }, __jsx("tr", null, labels.map((item, index) => __jsx("th", {
-    style: hoverStyle(index),
-    onMouseOver: () => setHoverIndex(index),
-    onMouseOut: () => setHoverIndex(null),
-    onClick: () => sortCheckAll(index),
-    key: index
-  }, item)), __jsx("th", {
-    style: {
-      textAlign: "center"
-    }
-  }, selectedItems.length > 0 ? __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
-    variant: "danger",
-    onClick: handleDeleteSelected,
-    disabled: isDeleting,
-    size: "sm"
-  }, "Delete Selected (", selectedItems.length, ")") : "select"))), __jsx("tbody", null, info.map((item, index) => __jsx("tr", {
-    key: index,
-    onClick: e => {
-      // Only trigger rowSelect if the target is not a checkbox
-      if (e.target.type !== "checkbox") {
-        rowSelect(item);
-      }
-    },
-    className: "clickable-row"
-  }, __jsx("td", {
-    style: {
-      textAlign: "center",
-      cursor: "default"
-    }
-  }, item.name), __jsx("td", {
-    style: {
-      textAlign: "center",
-      cursor: "default"
-    }
-  }, Object(_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* formatDate */ "d"])(item.date)), __jsx("td", {
-    style: {
-      textAlign: "center",
-      cursor: "default"
-    }
-  }, item.workOrders && item.workOrders.length > 0 ? item.workOrders[item.workOrders.length - 1].workOrder : "N/A"), __jsx("td", {
-    style: {
-      textAlign: "center",
-      cursor: "default"
-    }
-  }, item.pn), __jsx("td", {
-    style: {
-      textAlign: "center",
-      cursor: "default"
-    }
-  }, item.sn), __jsx("td", {
-    style: {
-      textAlign: "center"
-    }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Form"].Check, {
-    type: "checkbox",
-    checked: selectedItems.includes(item.id),
-    onChange: e => {
-      e.stopPropagation(); // Prevent row click when checkbox is clicked
-      // Toggle selection using item.id directly
-
-      setSelectedItems(prevSelectedItems => prevSelectedItems.includes(item.id) ? prevSelectedItems.filter(id => id !== item.id) : [...prevSelectedItems, item.id]);
-    },
-    "aria-label": `Select ${item.name}`
-  })))), info.length < 10 && Array.from({
-    length: 10 - info.length
-  }).map((_, index) => __jsx("tr", {
-    key: `empty-${index}`
-  }, __jsx("td", {
-    colSpan: labels.length + 1,
-    style: {
-      textAlign: "center"
-    }
-  }, "\xA0"))))));
+  tokens.push(lower);
+  return Array.from(new Set(tokens));
 }
 
 /***/ }),
@@ -1528,7 +1561,7 @@ exports.default = _default;
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
-  authDomain:  false ? undefined : "magmo-cloud.web.app",
+  authDomain: "magmo-ac10c.firebaseapp.com",
   projectId: "magmo-ac10c",
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
@@ -1538,7 +1571,11 @@ const FirebaseCredentials = {
 
 if (!firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.apps.length) {
   firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.initializeApp(FirebaseCredentials);
-}
+} // Some networks/proxies block Firestore's streaming transport.
+// Force long polling in the browser to avoid stalled writes/listens.
+
+
+if (false) {}
 
 const auth = firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.auth();
 /* harmony default export */ __webpack_exports__["b"] = (firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a); // import { initializeApp } from 'firebase/app';
@@ -2042,6 +2079,46 @@ function resolveRewrites(asPath, pages, rewrites, query, resolveHref, locales) {
 
 /***/ }),
 
+/***/ "R4mU":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"modalDialog": "ParentModal_modalDialog__15Q08",
+	"modalContent": "ParentModal_modalContent__1gA4I",
+	"modalHeader": "ParentModal_modalHeader__onCFZ",
+	"modalTitle": "ParentModal_modalTitle__1lqve",
+	"modalSubtitle": "ParentModal_modalSubtitle__1oe9V",
+	"modalBody": "ParentModal_modalBody__2Yct2",
+	"modalFooter": "ParentModal_modalFooter__1xG48",
+	"modalGrid": "ParentModal_modalGrid__3Hzml",
+	"filtersPanel": "ParentModal_filtersPanel__3x6nG",
+	"panelTitle": "ParentModal_panelTitle__39v2f",
+	"panelHint": "ParentModal_panelHint__3dPSc",
+	"inputGroup": "ParentModal_inputGroup__2gkHd",
+	"panelDivider": "ParentModal_panelDivider__3bFLy",
+	"quickButtons": "ParentModal_quickButtons__1OLOj",
+	"quickButton": "ParentModal_quickButton__2OQPF",
+	"resultsPanel": "ParentModal_resultsPanel__3vLiX",
+	"resultsHeader": "ParentModal_resultsHeader__3Ldbc",
+	"resultsTitle": "ParentModal_resultsTitle__3263P",
+	"resultsSubtitle": "ParentModal_resultsSubtitle__2zTIV",
+	"pagination": "ParentModal_pagination__2gy06",
+	"searchRow": "ParentModal_searchRow__3xXUB",
+	"searchInput": "ParentModal_searchInput__2jJC5",
+	"tableWrap": "ParentModal_tableWrap__d7_0d",
+	"table": "ParentModal_table__2sQKG",
+	"stickyHeader": "ParentModal_stickyHeader__Uu7Ue",
+	"loadingState": "ParentModal_loadingState__1mfbA",
+	"loadingLogo": "ParentModal_loadingLogo__1wI4s",
+	"magmo-spin": "ParentModal_magmo-spin__mq-Xf",
+	"errorState": "ParentModal_errorState__K2vSB",
+	"emptyState": "ParentModal_emptyState__2Hy72"
+};
+
+
+/***/ }),
+
 /***/ "TM8N":
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -2423,6 +2500,30 @@ function getRouteRegex(normalizedRoute) {
 
 /***/ }),
 
+/***/ "bD1r":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"page": "NewItem_page__N0Jxp",
+	"shell": "NewItem_shell__3f3Fm",
+	"card": "NewItem_card__5nd6m",
+	"cardBody": "NewItem_cardBody__3f2A4",
+	"header": "NewItem_header__1FsVc",
+	"kicker": "NewItem_kicker__3Lmoo",
+	"title": "NewItem_title__JU5wf",
+	"subtitle": "NewItem_subtitle__1XWYi",
+	"photoActionsRow": "NewItem_photoActionsRow__1hQM1",
+	"photoActionsRight": "NewItem_photoActionsRight__37LiR",
+	"actionRow": "NewItem_actionRow__F0l13",
+	"loadingOverlay": "NewItem_loadingOverlay__2Y0iE",
+	"loadingLogo": "NewItem_loadingLogo__1mDO9",
+	"magmo-spin": "NewItem_magmo-spin__so7m1"
+};
+
+
+/***/ }),
+
 /***/ "cDcd":
 /***/ (function(module, exports) {
 
@@ -2743,20 +2844,450 @@ exports.default = _default;
 
 /***/ }),
 
-/***/ "cbdS":
-/***/ (function(module, exports) {
+/***/ "cmwG":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-// Exports
-module.exports = {
-	"tableContainer": "PartTable_tableContainer__18TCg",
-	"scrollableTable": "PartTable_scrollableTable__2TybW",
-	"stickyHeader": "PartTable_stickyHeader__1HJK1",
-	"searchContainer": "PartTable_searchContainer__2r7ak",
-	"divider": "PartTable_divider__1QxCq",
-	"buttonGroup": "PartTable_buttonGroup__3ZfOO",
-	"flexButton": "PartTable_flexButton__2po2e"
-};
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return WarehouseMapModal; });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("IZS3");
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("NY6m");
+/* harmony import */ var _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("jZh5");
+/* harmony import */ var _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3__);
+var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 
+
+
+
+const REGION_ORDER = ["E", "F", "G", "A", "D", "C", "B"];
+const NO_PALLET = "NoPallet";
+const LETTERS = Array.from({
+  length: 26
+}, (_, i) => String.fromCharCode(65 + i));
+const NUMBERS = Array.from({
+  length: 50
+}, (_, i) => i + 1);
+function WarehouseMapModal({
+  show = false,
+  onHide = () => {},
+  onView,
+  onSelectionChange,
+  initialSelection = {}
+}) {
+  const {
+    0: regionOptions,
+    1: setRegionOptions
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  const {
+    0: sectionMap,
+    1: setSectionMap
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])({});
+  const {
+    0: mapStep,
+    1: setMapStep
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("regions");
+  const {
+    0: mapRegion,
+    1: setMapRegion
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: mapRow,
+    1: setMapRow
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: mapCol,
+    1: setMapCol
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: mapPallet,
+    1: setMapPallet
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: mapBin,
+    1: setMapBin
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: mapCellPallets,
+    1: setMapCellPallets
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])({});
+  const {
+    0: mapPalletBins,
+    1: setMapPalletBins
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])({});
+  const {
+    0: mapLoading,
+    1: setMapLoading
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: mapError,
+    1: setMapError
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: directoryLoaded,
+    1: setDirectoryLoaded
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const lastShowRef = Object(react__WEBPACK_IMPORTED_MODULE_0__["useRef"])(false);
+  const notifySelectionChange = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(selection => {
+    if (typeof onSelectionChange === "function") {
+      onSelectionChange(selection);
+    }
+  }, [onSelectionChange]);
+  const loadDirectory = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(async () => {
+    if (directoryLoaded) return;
+
+    try {
+      const doc = await _context_Firebase__WEBPACK_IMPORTED_MODULE_2__[/* default */ "b"].firestore().collection("Warehouse").doc("directory").get();
+      const data = doc.data() || {};
+      setRegionOptions(data.Region || []);
+      setSectionMap(data.Section || {});
+      setDirectoryLoaded(true);
+    } catch (error) {
+      console.error("Failed to load map directory", error);
+      setMapError("Failed to load warehouse directory.");
+    }
+  }, [directoryLoaded]);
+  const loadRegionInventory = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(async regionId => {
+    if (!regionId) return;
+    setMapLoading(true);
+    setMapError("");
+
+    try {
+      const snap = await _context_Firebase__WEBPACK_IMPORTED_MODULE_2__[/* default */ "b"].firestore().collection("Test").where("newLocalCurrent.region", "==", regionId).get();
+      const cellPallets = {};
+      const palletBins = {};
+      snap.forEach(doc => {
+        var _doc$data, _loc$section, _loc$section2;
+
+        const loc = ((_doc$data = doc.data()) === null || _doc$data === void 0 ? void 0 : _doc$data.newLocalCurrent) || {};
+        let row = (_loc$section = loc.section) === null || _loc$section === void 0 ? void 0 : _loc$section.letter;
+        let col = (_loc$section2 = loc.section) === null || _loc$section2 === void 0 ? void 0 : _loc$section2.number;
+
+        if ((!row || !col) && typeof loc.section === "string") {
+          const trimmed = loc.section.trim();
+          row = trimmed.slice(0, 1);
+          col = trimmed.slice(1);
+        }
+
+        if (col !== undefined && col !== null) {
+          col = String(col);
+        }
+
+        const pallet = loc.pallet;
+        const bin = loc.bin;
+        if (!row || !col) return;
+        const cellKey = `${row}-${col}`;
+        const hasBin = bin !== undefined && bin !== null && `${bin}` !== "";
+        const hasPallet = pallet !== undefined && pallet !== null && `${pallet}` !== "";
+        if (!hasPallet && !hasBin) return;
+        const palletId = hasPallet ? String(pallet) : NO_PALLET;
+        if (!cellPallets[cellKey]) cellPallets[cellKey] = new Set();
+        cellPallets[cellKey].add(palletId);
+
+        if (hasBin) {
+          const palletKey = `${cellKey}-P${palletId}`;
+          if (!palletBins[palletKey]) palletBins[palletKey] = new Set();
+          palletBins[palletKey].add(String(bin));
+        }
+      });
+      const cellObj = {};
+      Object.keys(cellPallets).forEach(key => {
+        cellObj[key] = Array.from(cellPallets[key]).sort((a, b) => {
+          if (a === NO_PALLET) return 1;
+          if (b === NO_PALLET) return -1;
+          const na = Number(a);
+          const nb = Number(b);
+          if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+          return String(a).localeCompare(String(b));
+        });
+      });
+      const palletObj = {};
+      Object.keys(palletBins).forEach(key => {
+        palletObj[key] = Array.from(palletBins[key]).sort((a, b) => Number(a) - Number(b));
+      });
+      setMapCellPallets(cellObj);
+      setMapPalletBins(palletObj);
+    } catch (error) {
+      console.error("Failed to load map inventory", error);
+      setMapError("Failed to load map inventory.");
+    } finally {
+      setMapLoading(false);
+    }
+  }, []);
+  const getRegionDimensions = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(regionId => {
+    const entry = sectionMap === null || sectionMap === void 0 ? void 0 : sectionMap[regionId];
+
+    if (Array.isArray(entry) && entry.length >= 2) {
+      const cols = parseInt(entry[0], 10);
+      const rows = parseInt(entry[1], 10);
+      return {
+        cols: Number.isFinite(cols) ? cols : 0,
+        rows: Number.isFinite(rows) ? rows : 0
+      };
+    }
+
+    return {
+      cols: 0,
+      rows: 0
+    };
+  }, [sectionMap]);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    const wasOpen = lastShowRef.current;
+    lastShowRef.current = show;
+    if (!show || wasOpen) return;
+    loadDirectory();
+    setMapError("");
+    const {
+      region,
+      sectionLetter,
+      sectionNumber,
+      pallet,
+      bin
+    } = initialSelection || {};
+    setMapRegion(region || "");
+    setMapRow(sectionLetter || "");
+    setMapCol(sectionNumber ? String(sectionNumber) : "");
+    setMapPallet(pallet ? String(pallet) : "");
+    setMapBin(bin ? String(bin) : "");
+    setMapStep(region ? "grid" : "regions");
+    if (region) loadRegionInventory(region);
+  }, [show, initialSelection, loadDirectory, loadRegionInventory]);
+
+  const handleSelectRegion = regionId => {
+    const selection = {
+      region: regionId,
+      sectionLetter: "",
+      sectionNumber: "",
+      pallet: "",
+      bin: ""
+    };
+    setMapRegion(regionId);
+    setMapRow("");
+    setMapCol("");
+    setMapPallet("");
+    setMapBin("");
+    setMapStep("grid");
+    notifySelectionChange(selection);
+    loadRegionInventory(regionId);
+  };
+
+  const handleSelectCell = (rowLetter, colNumber) => {
+    const colValue = String(colNumber);
+    const selection = {
+      region: mapRegion,
+      sectionLetter: rowLetter,
+      sectionNumber: colValue,
+      pallet: "",
+      bin: ""
+    };
+    setMapRow(rowLetter);
+    setMapCol(colValue);
+    setMapPallet("");
+    setMapBin("");
+    setMapStep("pallets");
+    notifySelectionChange(selection);
+  };
+
+  const handleSelectPallet = palletId => {
+    const palletValue = String(palletId);
+    const normalizedPallet = palletValue === NO_PALLET ? "" : palletValue;
+    const selection = {
+      region: mapRegion,
+      sectionLetter: mapRow,
+      sectionNumber: mapCol,
+      pallet: normalizedPallet,
+      bin: ""
+    };
+    setMapPallet(palletValue);
+    setMapBin("");
+    setMapStep("bins");
+    notifySelectionChange(selection);
+  };
+
+  const handleSelectBin = binId => {
+    const binValue = String(binId);
+    const normalizedPallet = mapPallet === NO_PALLET ? "" : mapPallet;
+    const selection = {
+      region: mapRegion,
+      sectionLetter: mapRow,
+      sectionNumber: mapCol,
+      pallet: normalizedPallet,
+      bin: binValue
+    };
+    setMapBin(binValue);
+    notifySelectionChange(selection);
+  };
+
+  const handleBack = () => {
+    if (mapStep === "bins") setMapStep("pallets");else if (mapStep === "pallets") setMapStep("grid");else if (mapStep === "grid") setMapStep("regions");
+  };
+
+  const handleView = () => {
+    if (typeof onView !== "function") return;
+    const normalizedPallet = mapPallet === NO_PALLET ? "" : mapPallet;
+    onView({
+      region: mapRegion,
+      sectionLetter: mapRow,
+      sectionNumber: mapCol,
+      pallet: normalizedPallet,
+      bin: mapBin
+    });
+  };
+
+  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+    show: show,
+    onHide: onHide,
+    centered: true,
+    size: "lg"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+    closeButton: true
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Warehouse Map")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, mapLoading && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapLoading
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Spinner"], {
+    animation: "border"
+  }), __jsx("span", null, "Loading map data...")), mapError && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapError
+  }, mapError), !mapLoading && mapStep === "regions" && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapStage
+  }, __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapHint
+  }, "Select a region"), __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapCanvas
+  }, REGION_ORDER.map(regionId => __jsx("button", {
+    key: regionId,
+    type: "button",
+    className: `${_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.regionBlock} ${_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a[`region${regionId}`]}`,
+    onClick: () => handleSelectRegion(regionId),
+    disabled: Array.isArray(regionOptions) && regionOptions.length > 0 && !regionOptions.includes(regionId)
+  }, regionId)))), !mapLoading && mapStep === "grid" && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapStage
+  }, __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapHint
+  }, "Region ", mapRegion, ": choose a row and column"), (() => {
+    const dims = getRegionDimensions(mapRegion);
+    const rows = LETTERS.slice(0, dims.rows || 0).reverse();
+    const cols = NUMBERS.slice(0, dims.cols || 0);
+
+    if (!rows.length || !cols.length) {
+      const sectionKeys = Object.keys(mapCellPallets || {}).filter(Boolean).map(key => {
+        const [row, col] = key.split("-");
+        return {
+          key,
+          row,
+          col
+        };
+      }).sort((a, b) => {
+        if (a.row === b.row) {
+          return Number(a.col) - Number(b.col);
+        }
+
+        return b.row.localeCompare(a.row);
+      });
+
+      if (!sectionKeys.length) {
+        return __jsx("div", {
+          className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapEmpty
+        }, "No grid data for this region.");
+      }
+
+      return __jsx("div", {
+        className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.gridWrapper
+      }, __jsx("div", {
+        className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapHint
+      }, "Grid not available. Select an available section below."), __jsx("div", {
+        className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletGrid
+      }, sectionKeys.map(({
+        key,
+        row,
+        col
+      }) => __jsx("button", {
+        key: key,
+        type: "button",
+        className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletButton,
+        onClick: () => handleSelectCell(row, col)
+      }, row, col))));
+    }
+
+    return __jsx("div", {
+      className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.gridWrapper
+    }, __jsx("div", {
+      className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.grid,
+      style: {
+        "--grid-cols": cols.length
+      }
+    }, rows.map(row => cols.map(col => {
+      var _mapCellPallets$cellK;
+
+      const cellKey = `${row}-${col}`;
+      const hasPallets = Boolean((_mapCellPallets$cellK = mapCellPallets[cellKey]) === null || _mapCellPallets$cellK === void 0 ? void 0 : _mapCellPallets$cellK.length);
+      return __jsx("button", {
+        key: cellKey,
+        type: "button",
+        className: `${_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.gridCell} ${hasPallets ? "" : _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.gridCellDisabled}`,
+        onClick: () => hasPallets && handleSelectCell(row, col),
+        disabled: !hasPallets
+      }, __jsx("span", null, row, col));
+    }))));
+  })()), !mapLoading && mapStep === "pallets" && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapStage
+  }, __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapHint
+  }, "Region ", mapRegion, " - Section ", mapRow, mapCol, ": select a pallet"), __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletGrid
+  }, (mapCellPallets[`${mapRow}-${mapCol}`] || []).map(pallet => {
+    const palletKey = `${mapRow}-${mapCol}-P${pallet}`;
+    const bins = mapPalletBins[palletKey] || [];
+    return __jsx("button", {
+      key: pallet,
+      type: "button",
+      className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletButton,
+      onClick: () => {
+        if (bins.length === 0 && typeof onView === "function") {
+          const selection = {
+            region: mapRegion,
+            sectionLetter: mapRow,
+            sectionNumber: mapCol,
+            pallet: pallet === NO_PALLET ? "" : String(pallet),
+            bin: ""
+          };
+          notifySelectionChange(selection);
+          onView(selection);
+          return;
+        }
+
+        handleSelectPallet(pallet);
+      }
+    }, pallet === NO_PALLET ? "No Pallet" : `Pallet ${pallet}`);
+  }), !(mapCellPallets[`${mapRow}-${mapCol}`] || []).length && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapEmpty
+  }, "No pallets available here."))), !mapLoading && mapStep === "bins" && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapStage
+  }, __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapHint
+  }, "Region ", mapRegion, " - Section ", mapRow, mapCol, " - Pallet ", mapPallet), __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletGrid
+  }, (mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || []).map(bin => __jsx("button", {
+    key: bin,
+    type: "button",
+    className: `${_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.palletButton} ${_WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.binButton}`,
+    onClick: () => handleSelectBin(bin)
+  }, "Bin ", bin)), !(mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || []).length && __jsx("div", {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapEmpty
+  }, "No bins available on this pallet.")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Footer, {
+    className: _WarehouseMapModal_module_css__WEBPACK_IMPORTED_MODULE_3___default.a.mapFooter
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-secondary",
+    onClick: handleBack,
+    disabled: mapStep === "regions"
+  }, "Back"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-primary",
+    onClick: handleView
+  }, "View"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "secondary",
+    onClick: onHide
+  }, "Close")));
+}
 
 /***/ }),
 
@@ -4165,6 +4696,38 @@ function parseRelativeUrl(url, base) {
 
 /***/ }),
 
+/***/ "jZh5":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"mapLoading": "WarehouseMapModal_mapLoading__Tch_t",
+	"mapError": "WarehouseMapModal_mapError__1BcWi",
+	"mapStage": "WarehouseMapModal_mapStage__1kwg9",
+	"mapHint": "WarehouseMapModal_mapHint__q3uQc",
+	"mapCanvas": "WarehouseMapModal_mapCanvas__sXfv7",
+	"regionBlock": "WarehouseMapModal_regionBlock__1XUlM",
+	"regionE": "WarehouseMapModal_regionE__1uVAv",
+	"regionF": "WarehouseMapModal_regionF__2Ghcs",
+	"regionG": "WarehouseMapModal_regionG__2IToq",
+	"regionA": "WarehouseMapModal_regionA__3Pn0Z",
+	"regionD": "WarehouseMapModal_regionD__IcyCo",
+	"regionC": "WarehouseMapModal_regionC__3lNq2",
+	"regionB": "WarehouseMapModal_regionB__3Byw_",
+	"gridWrapper": "WarehouseMapModal_gridWrapper__1t3wN",
+	"grid": "WarehouseMapModal_grid__1BC9x",
+	"gridCell": "WarehouseMapModal_gridCell__1DS2V",
+	"gridCellDisabled": "WarehouseMapModal_gridCellDisabled__1n54C",
+	"palletGrid": "WarehouseMapModal_palletGrid__28eML",
+	"palletButton": "WarehouseMapModal_palletButton__NuMn0",
+	"binButton": "WarehouseMapModal_binButton__28ynB",
+	"mapEmpty": "WarehouseMapModal_mapEmpty__2hiUi",
+	"mapFooter": "WarehouseMapModal_mapFooter__1o0Ri"
+};
+
+
+/***/ }),
+
 /***/ "lzi3":
 /***/ (function(module, exports) {
 
@@ -4385,676 +4948,15 @@ function makePublicRouterInstance(router) {
 
 /***/ }),
 
-/***/ "oGF+":
+/***/ "nc39":
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var styled_jsx_style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("HJQg");
-/* harmony import */ var styled_jsx_style__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(styled_jsx_style__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("cDcd");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("IZS3");
-/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("qoNY");
-/* harmony import */ var _context_AuthUserContext__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("XrFm");
-/* harmony import */ var _LoggedIn__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("mJJZ");
-/* harmony import */ var _utils_ClientTable__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__("8HvV");
-/* harmony import */ var _utils_ModelTable__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__("TM8N");
-/* harmony import */ var _utils_PartTable__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__("MSWM");
-/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__("Dktn");
-/* harmony import */ var _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9__);
-/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__("NY6m");
-
-var __jsx = react__WEBPACK_IMPORTED_MODULE_1___default.a.createElement;
-
-
-
-
-
-
-
-
-
-
-const CLIENT_WAREHOUSE = "igor-house";
-const CLIENT_UNASSIGNED = "unassigned";
-
-const ParentModal = ({
-  show,
-  handleClose,
-  setSelectedParent,
-  parts
-}) => {
-  const {
-    0: info,
-    1: setInfo
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
-  const {
-    0: backupInfo,
-    1: setBackupInfo
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]); // const [ids, setID] = useState([]);
-
-  const {
-    0: search,
-    1: setSearch
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
-  const {
-    0: select,
-    1: setSelect
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Name");
-  const {
-    0: showList,
-    1: setShowList
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
-  const {
-    0: showListSearch,
-    1: setShowListSearch
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("text");
-  const {
-    0: selectedOEM,
-    1: setSelectedOEM
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
-  const {
-    0: selectedModality,
-    1: setSelectedModality
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
-  const {
-    0: selectedClient,
-    1: setSelectedClient
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
-  const {
-    0: clients,
-    1: setClients
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
-  const {
-    0: showClientModal,
-    1: setShowClientModal
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
-  const {
-    0: clientButtonText,
-    1: setClientButtonText
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
-  const {
-    0: hoverIndex,
-    1: setHoverIndex
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
-  const {
-    0: selectedModel,
-    1: setSelectedModel
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(null);
-  const {
-    0: models,
-    1: setModels
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])([]);
-  const {
-    0: showModelModal,
-    1: setShowModelModal
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(false);
-  const {
-    0: modelButtonText,
-    1: setModelButtonText
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
-  const {
-    0: clientSearchTerm,
-    1: setClientSearchTerm
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
-  const {
-    0: modelSearchTerm,
-    1: setModelSearchTerm
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("");
-  Object(react__WEBPACK_IMPORTED_MODULE_1__["useEffect"])(() => {
-    async function fetchData() {
-      const data = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchPartsWithMachineData */ "c"])();
-      setInfo(data);
-      setBackupInfo(data); // setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
-    }
-
-    fetchData();
-  }, []);
-
-  const handleCloseClientModal = () => setShowClientModal(false);
-
-  const handleShowClientModal = () => setShowClientModal(true);
-
-  const handleCloseModelModal = () => setShowModelModal(false);
-
-  const handleShowModelModal = () => setShowModelModal(true); // Handle search input changes
-
-
-  const searchChangeHandler = event => setSearch(event.target.value); // Filter items based on search criteria
-
-
-  function searchFilter() {
-    const temp = backupInfo.filter(item => {
-      if (item.machineData) {
-        if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-        if (selectedModality && item.machineData.Modality !== selectedModality) return false;
-        if (selectedClient && item.machineData.Client !== selectedClient) return false;
-        if (selectedModel && item.machineData.Model !== selectedModel) return false;
-      }
-
-      if (select === "Name" && item.name.toLowerCase().includes(search.toLowerCase())) return true;
-
-      if (select === "Date") {
-        const [month, day, year] = item.date.split("/");
-        const reformattedDate = `${year}-${month}-${day}`;
-        return reformattedDate === search;
-      }
-
-      if (select === "Work Order" && Number(item.wo) === Number(search)) return true;
-      if (select === "Product Number" && Number(item.pn) === Number(search)) return true;
-      if (select === "Description" && item.desc.toLowerCase().includes(search.toLowerCase())) return true;
-      return false;
-    });
-    setInfo(temp);
-  } // Sort items based on column
-
-
-  function sortCheckAll(pos) {
-    const sortedInfo = [...info].sort((a, b) => {
-      if (pos === 0 || pos === 5) {
-        return b[select].localeCompare(a[select]);
-      }
-
-      if (pos === 1) {
-        return Date.parse(b[select]) - Date.parse(a[select]);
-      }
-
-      return Number(b[select]) - Number(a[select]);
-    });
-    setInfo(sortedInfo);
-  } // Row selection handler
-
-
-  const rowSelect = item => {
-    // item.id must be present in fetchPartsWithMachineData() results
-    setSelectedParent({
-      id: item.id,
-      name: item.name,
-      pn: item.pn
-    });
-    handleClose();
-  }; // Dropdown handlers
-
-
-  const {
-    0: dropdown1Text,
-    1: setDropdown1Text
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
-  const {
-    0: dropdown2Text,
-    1: setDropdown2Text
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])("Select Option");
-
-  const handleSelect1 = (eventKey, event) => {
-    if (eventKey === "unassigned") {
-      setDropdown1Text("Select Option");
-      setSelectedOEM(null);
-    } else {
-      setDropdown1Text(event.target.textContent);
-      setSelectedOEM(event.target.textContent);
-    }
-  };
-
-  const handleSelect2 = (eventKey, event) => {
-    if (eventKey === "unassigned") {
-      setDropdown2Text("Select Option");
-      setSelectedModality(null);
-    } else {
-      setDropdown2Text(event.target.textContent);
-      setSelectedModality(event.target.textContent);
-    }
-  };
-
-  Object(react__WEBPACK_IMPORTED_MODULE_1__["useEffect"])(() => {
-    searchFilter();
-  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]); // Fetch clients and show modal
-
-  const handleClientClick = async () => {
-    console.log("clicked");
-    const clientsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchClients */ "a"])(selectedOEM, selectedModality);
-    setClients(clientsData);
-    setClientSearchTerm(""); // Reset search term
-
-    setShowClientModal(true);
-  }; // Client selection handler
-
-
-  const handleClientSelect = clientName => {
-    setClientButtonText(clientName || "Select Option");
-    setSelectedClient(clientName || null);
-    setShowClientModal(false);
-  }; // Client info handler
-
-
-  const handleClientInfo = (clientId, clientName) => {
-    console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
-  }; // Clear client selection handler
-
-
-  const handleClearClientSelection = () => {
-    setClientButtonText("Select Option");
-    setSelectedClient(null);
-    setShowClientModal(false);
-    searchFilter();
-  }; // Fetch models and show modal
-
-
-  const handleModelClick = async () => {
-    const modelsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* fetchModels */ "b"])(selectedOEM, selectedModality, selectedClient);
-    setModels(modelsData);
-    setModelSearchTerm(""); // Reset search term
-
-    setShowModelModal(true);
-  }; // Model selection handler
-
-
-  const handleModelSelect = modelName => {
-    setModelButtonText(modelName || "Select Option");
-    setSelectedModel(modelName || null);
-    setShowModelModal(false);
-  }; // Clear model selection handler
-
-
-  const handleClearModelSelection = () => {
-    setModelButtonText("Select Option");
-    setSelectedModel(null);
-    setShowModelModal(false);
-    searchFilter();
-  };
-
-  const handleWarehouseClick = () => {
-    setClientButtonText(CLIENT_WAREHOUSE);
-    setSelectedClient(CLIENT_WAREHOUSE);
-    searchFilter();
-  };
-
-  const handleUnassignedClick = () => {
-    setClientButtonText(CLIENT_UNASSIGNED);
-    setSelectedClient(CLIENT_UNASSIGNED);
-    searchFilter();
-  };
-
-  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
-    show: show,
-    onHide: handleClose,
-    size: "lg",
-    centered: true,
-    scrollable: true,
-    dialogClassName: "parent-modal-dialog"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
-    closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Parent")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, {
-    style: {
-      maxHeight: "75vh",
-      overflowY: "auto"
-    }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Container"], {
-    className: "d-flex align-items-center justify-content-center",
-    style: {
-      minHeight: "unset"
-    }
-  }, __jsx("div", {
-    className: "w-100",
-    style: {
-      maxWidth: "1200px"
-    }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Row"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
-    md: 4
-  }, __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "OEM"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"], {
-    onSelect: handleSelect1
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Toggle, {
-    variant: "outline-secondary",
-    id: "dropdown-button-1",
-    className: "w-100"
-  }, dropdown1Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Menu, {
-    className: "w-100"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "unassigned"
-  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "GE"
-  }, "GE"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "Toshiba"
-  }, "Toshiba"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "Siemens"
-  }, "Siemens"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "Philips"
-  }, "Philips")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Modality"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"], {
-    onSelect: handleSelect2
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Toggle, {
-    variant: "outline-secondary",
-    id: "dropdown-button-2",
-    className: "w-100"
-  }, dropdown2Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Menu, {
-    className: "w-100"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "unassigned"
-  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "CT"
-  }, "CT"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Dropdown"].Item, {
-    eventKey: "MRI"
-  }, "MRI")))), __jsx("div", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Client"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "outline-secondary",
-    className: "w-100",
-    onClick: handleClientClick
-  }, clientButtonText)), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Client-2"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "outline-secondary",
-    className: "w-100",
-    disabled: true
-  }, "Select Option")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Model"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "outline-secondary",
-    className: "w-100",
-    onClick: handleModelClick
-  }, modelButtonText)), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.divider
-  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"], {
-    className: "mb-3"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["InputGroup"].Text, null, "Warehouse"), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.buttonGroup
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "outline-secondary",
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.flexButton,
-    onClick: handleWarehouseClick
-  }, "Warehouse"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "outline-secondary",
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.flexButton,
-    onClick: handleUnassignedClick
-  }, "Unassigned")))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
-    md: 8
-  }, __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
-    striped: true,
-    bordered: true,
-    hover: true,
-    size: "sm",
-    className: "mb-0"
-  }, __jsx("thead", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.stickyHeader
-  }, __jsx("tr", null, __jsx("th", {
-    onClick: () => sortCheckAll(0)
-  }, "Name"), __jsx("th", {
-    onClick: () => sortCheckAll(1)
-  }, "Date"), __jsx("th", {
-    onClick: () => sortCheckAll(2)
-  }, "Work Order"), __jsx("th", {
-    onClick: () => sortCheckAll(3)
-  }, "Product Number"), __jsx("th", {
-    onClick: () => sortCheckAll(4)
-  }, "Serial Number"), __jsx("th", null, "Select"))), __jsx("tbody", null, info.map(item => __jsx("tr", {
-    className: "clickable-row",
-    key: item.id
-  }, __jsx("td", null, item.name), __jsx("td", null, Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_3__[/* formatDate */ "d"])(item.date)), __jsx("td", null, item.workOrders && item.workOrders.length > 0 ? item.workOrders[item.workOrders.length - 1].workOrder : "N/A"), __jsx("td", null, item.pn), __jsx("td", null, item.sn), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "primary",
-    onClick: () => rowSelect(item)
-  }, "Select")))))), __jsx("div", {
-    className: _styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.searchContainer
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Form"], {
-    className: "d-flex pb-2"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
-    type: showListSearch,
-    placeholder: "Search",
-    className: "me-2 flex-grow-1",
-    "aria-label": "Search",
-    value: search,
-    onChange: searchChangeHandler,
-    style: {
-      flex: "1"
-    }
-  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"], {
-    title: select,
-    id: "collasible-nav-dropdown",
-    show: showList,
-    onMouseEnter: () => setShowList(true),
-    onMouseLeave: () => setShowList(false),
-    style: {
-      marginTop: "-5px"
-    }
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
-    onClick: () => setSelect("Name") & setShowListSearch("text")
-  }, "Name"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
-    onClick: () => setSelect("Date") & setShowListSearch("date")
-  }, "Date"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
-    onClick: () => setSelect("Work Order") & setShowListSearch("number")
-  }, "Work Order"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
-    onClick: () => setSelect("Product Number") & setShowListSearch("number")
-  }, "Product Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["NavDropdown"].Item, {
-    onClick: () => setSelect("Description") & setShowListSearch("text")
-  }, "Description")))))))))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Footer, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "secondary",
-    onClick: handleClose
-  }, "Cancel"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "warning",
-    onClick: () => {
-      setSelectedParent(null);
-      handleClose();
-    }
-  }, "Clear Selection")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
-    show: showClientModal,
-    onHide: handleCloseClientModal
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
-    closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Client")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
-    type: "text",
-    placeholder: "Search by name",
-    className: "mb-3",
-    value: clientSearchTerm,
-    onChange: e => setClientSearchTerm(e.target.value)
-  }), __jsx(_utils_ClientTable__WEBPACK_IMPORTED_MODULE_6__[/* default */ "a"], {
-    clients: clients.filter(client => client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())),
-    disableInfo: true,
-    onSelectClient: handleClientSelect,
-    onInfoClick: handleClientInfo,
-    clearSelection: () => handleClientSelect(null) // Clear selection handler
-
-  }))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
-    show: showModelModal,
-    onHide: handleCloseModelModal
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
-    closeButton: true
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Select Model")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["FormControl"], {
-    type: "text",
-    placeholder: "Search by name",
-    className: "mb-3",
-    value: modelSearchTerm,
-    onChange: e => setModelSearchTerm(e.target.value)
-  }), __jsx(_utils_ModelTable__WEBPACK_IMPORTED_MODULE_7__[/* default */ "a"], {
-    models: models.filter(model => typeof model === "string" ? model.toLowerCase().includes(modelSearchTerm.toLowerCase()) : false),
-    onSelectModel: handleModelSelect,
-    clearSelection: () => handleModelSelect(null) // Clear selection handler
-
-  }))));
-};
-
-__jsx(styled_jsx_style__WEBPACK_IMPORTED_MODULE_0___default.a, {
-  id: "2081140824",
-  dynamic: [_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer]
-}, [".parent-modal-dialog{max-width:95vw;margin:0 auto;}", `.parent-modal-dialog .modal-body .${_styles_MainSearch_module_css__WEBPACK_IMPORTED_MODULE_9___default.a.tableContainer}{max-height:70vh;overflow:auto;}`]);
-
-/* harmony default export */ __webpack_exports__["default"] = (ParentModal);
-
-/***/ }),
-
-/***/ "oysE":
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-// ESM COMPAT FLAG
-__webpack_require__.r(__webpack_exports__);
-
-// EXPORTS
-__webpack_require__.d(__webpack_exports__, "default", function() { return /* binding */ DisplayItem; });
-__webpack_require__.d(__webpack_exports__, "getServerSideProps", function() { return /* binding */ getServerSideProps; });
-
-// EXTERNAL MODULE: external "react"
-var external_react_ = __webpack_require__("cDcd");
-var external_react_default = /*#__PURE__*/__webpack_require__.n(external_react_);
-
-// EXTERNAL MODULE: ./node_modules/bootstrap/dist/css/bootstrap.min.css
-var bootstrap_min = __webpack_require__("q4sD");
-
-// EXTERNAL MODULE: external "react-bootstrap"
-var external_react_bootstrap_ = __webpack_require__("IZS3");
-
-// EXTERNAL MODULE: ./node_modules/next/link.js
-var next_link = __webpack_require__("YFqc");
-var link_default = /*#__PURE__*/__webpack_require__.n(next_link);
-
-// EXTERNAL MODULE: ./context/AuthUserContext.js + 1 modules
-var AuthUserContext = __webpack_require__("XrFm");
-
-// EXTERNAL MODULE: ./context/Firebase.js
-var Firebase = __webpack_require__("NY6m");
-
-// EXTERNAL MODULE: ./pages/LoggedIn.js
-var LoggedIn = __webpack_require__("mJJZ");
-
-// EXTERNAL MODULE: external "next/router"
-var router_ = __webpack_require__("4Q3z");
-
-// EXTERNAL MODULE: ./utils/fetchAssociations.js
-var fetchAssociations = __webpack_require__("qoNY");
-
-// EXTERNAL MODULE: ./utils/ClientTable.js
-var ClientTable = __webpack_require__("8HvV");
-
-// EXTERNAL MODULE: ./pages/NewSearch/ClientInfoModal.js
-var ClientInfoModal = __webpack_require__("MbKa");
-
-// EXTERNAL MODULE: ./pages/NewSearch/AddItem/parentModal.js
-var parentModal = __webpack_require__("oGF+");
-
-// EXTERNAL MODULE: external "next/dynamic"
-var dynamic_ = __webpack_require__("/T1H");
-var dynamic_default = /*#__PURE__*/__webpack_require__.n(dynamic_);
-
-// EXTERNAL MODULE: ./pages/NewSearch/InfoModal.js
-var InfoModal = __webpack_require__("VZWn");
-
-// EXTERNAL MODULE: ./pages/NewSearch/item/[id]/MachineSelectionModal.js
-var MachineSelectionModal = __webpack_require__("cJ15");
-
-// CONCATENATED MODULE: ./utils/BluefolderService.js
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-// BluefolderService.js
-const API_TOKEN = "9b224624-44db-49dd-9042-c3b15e9a39d4"; // your token
-
-const ITEMS_URL = "https://app.bluefolder.com/api/2.0/items/add.aspx";
-const MATERIALS_URL = "https://app.bluefolder.com/api/2.0/serviceRequests/addMaterial.aspx";
-const HEADERS = {
-  "Content-Type": "text/xml"
-};
-async function addServiceItem(serviceRequestId, item) {
-  // Use "Service Item" for name and description
-  const uniqueName = "Service Item"; // Step 1: Create a new material item in BlueFolder
-
-  const itemPayload = `
-    <request>
-      <itemAdd>
-        <itemType>materials</itemType>
-        <itemName>${uniqueName}</itemName>
-        <description>Service Item</description>
-        <accountName></accountName>
-        <isFlatRate>false</isFlatRate>
-        <mfrDescription></mfrDescription>
-        <mfrItemNo></mfrItemNo>
-        <mfrName>BlueFolderTestManufacturer</mfrName>
-        <notes>Service Item</notes>
-        <taxableDefault>true</taxableDefault>
-        <unitCost>0.00</unitCost>
-        <unitPrice>0.00</unitPrice>
-        <unitListPrice>0.00</unitListPrice>
-      </itemAdd>
-    </request>
-  `;
-  const itemResponse = await fetch(ITEMS_URL, {
-    method: "POST",
-    headers: _objectSpread(_objectSpread({}, HEADERS), {}, {
-      Authorization: "Basic " + btoa(API_TOKEN + ":x")
-    }),
-    body: itemPayload
-  });
-  const itemText = await itemResponse.text();
-  const parser = new DOMParser();
-  const itemXml = parser.parseFromString(itemText, "application/xml");
-
-  if (itemXml.documentElement.getAttribute("status") !== "ok") {
-    throw new Error("Failed to create material item in BlueFolder");
-  }
-
-  const itemIdElem = itemXml.getElementsByTagName("itemId")[0];
-  const itemId = itemIdElem ? itemIdElem.textContent : null; // Step 2: Add the material to the specified work order
-
-  const nowStr = new Date().toLocaleString("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
-  const comment = `Name: ${item.name}\nPN: ${item.pn}\nSN: ${item.sn}\nStatus: ${item.status}\nDescription: ${item.description}`;
-  const materialPayload = `
-    <request>
-      <serviceRequestAddMaterial>
-        <serviceRequestId>${serviceRequestId}</serviceRequestId>
-        <dateUsed>${nowStr}</dateUsed>
-        <quantity>1</quantity>
-        <billingStatus>billable</billingStatus>
-        <itemNo>${uniqueName}</itemNo>
-        <itemDescription>Service Item</itemDescription>
-        <itemUnitCost>0.00</itemUnitCost>
-        <itemUnitPrice>0.00</itemUnitPrice>
-        <comment>${comment}</comment>
-        <commentIsPublic>false</commentIsPublic>
-        <taxable>true</taxable>
-      </serviceRequestAddMaterial>
-    </request>
-  `;
-  const materialResponse = await fetch(MATERIALS_URL, {
-    method: "POST",
-    headers: _objectSpread(_objectSpread({}, HEADERS), {}, {
-      Authorization: "Basic " + btoa(API_TOKEN + ":x")
-    }),
-    body: materialPayload
-  });
-  const materialText = await materialResponse.text();
-  const materialXml = parser.parseFromString(materialText, "application/xml");
-
-  if (materialXml.documentElement.getAttribute("status") !== "ok") {
-    throw new Error("Failed to add material to work order in BlueFolder");
-  }
-
-  return {
-    itemId,
-    materialResponse: materialText
-  };
-}
-// EXTERNAL MODULE: ./pages/NewSearch/item/[id]/NewLocal.js
-var NewLocal = __webpack_require__("7wmr");
-
-// CONCATENATED MODULE: ./utils/inflowAPI.js
-function inflowAPI_ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function inflowAPI_objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { inflowAPI_ownKeys(Object(source), true).forEach(function (key) { inflowAPI_defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { inflowAPI_ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-
-function inflowAPI_defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 // // inflowAPI.js
 // const BASE_URL   = 'https://cloudapi.inflowinventory.com';
@@ -5224,7 +5126,7 @@ class InflowAPI {
     if (!productId) productId = await findProductIdByExactName(nameNorm);
     const id = productId || crypto.randomUUID();
 
-    const payload = inflowAPI_objectSpread(inflowAPI_objectSpread(inflowAPI_objectSpread(inflowAPI_objectSpread({
+    const payload = _objectSpread(_objectSpread(_objectSpread(_objectSpread({
       productId: id,
       name: nameNorm,
       isActive: true
@@ -5276,12 +5178,792 @@ class InflowAPI {
 
 }
 
-/* harmony default export */ var inflowAPI = (InflowAPI);
+/* harmony default export */ __webpack_exports__["a"] = (InflowAPI);
+
+/***/ }),
+
+/***/ "oGF+":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("IZS3");
+/* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("qoNY");
+/* harmony import */ var _utils_ClientTable__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("8HvV");
+/* harmony import */ var _utils_ModelTable__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("TM8N");
+/* harmony import */ var _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("R4mU");
+/* harmony import */ var _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5__);
+var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
+
+
+
+
+
+
+const CLIENT_WAREHOUSE = "igor-house";
+const CLIENT_UNASSIGNED = "unassigned";
+const PAGE_SIZE = 20;
+
+const ParentModal = ({
+  show,
+  handleClose,
+  setSelectedParent
+}) => {
+  const {
+    0: info,
+    1: setInfo
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  const {
+    0: isLoading,
+    1: setIsLoading
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: page,
+    1: setPage
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(1);
+  const {
+    0: pageCursors,
+    1: setPageCursors
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  const {
+    0: hasNextPage,
+    1: setHasNextPage
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: queryEpoch,
+    1: setQueryEpoch
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(0);
+  const {
+    0: loadError,
+    1: setLoadError
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: search,
+    1: setSearch
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: select,
+    1: setSelect
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Name");
+  const {
+    0: showList,
+    1: setShowList
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: showListSearch,
+    1: setShowListSearch
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("text");
+  const {
+    0: selectedOEM,
+    1: setSelectedOEM
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: selectedModality,
+    1: setSelectedModality
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: selectedClient,
+    1: setSelectedClient
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: clients,
+    1: setClients
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  const {
+    0: showClientModal,
+    1: setShowClientModal
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: clientButtonText,
+    1: setClientButtonText
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  const {
+    0: selectedModel,
+    1: setSelectedModel
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: models,
+    1: setModels
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  const {
+    0: showModelModal,
+    1: setShowModelModal
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: modelButtonText,
+    1: setModelButtonText
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  const {
+    0: clientSearchTerm,
+    1: setClientSearchTerm
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const {
+    0: modelSearchTerm,
+    1: setModelSearchTerm
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+
+  const getMachineField = (item, key) => {
+    var _ref, _ref2, _ref3, _item$machineData$key, _item$machineData, _item$machineData2, _key$toLowerCase, _item$currentMachineD, _item$currentMachineD2, _key$toLowerCase2;
+
+    if (!item) return null;
+    return (_ref = (_ref2 = (_ref3 = (_item$machineData$key = item === null || item === void 0 ? void 0 : (_item$machineData = item.machineData) === null || _item$machineData === void 0 ? void 0 : _item$machineData[key]) !== null && _item$machineData$key !== void 0 ? _item$machineData$key : item === null || item === void 0 ? void 0 : (_item$machineData2 = item.machineData) === null || _item$machineData2 === void 0 ? void 0 : _item$machineData2[key === null || key === void 0 ? void 0 : (_key$toLowerCase = key.toLowerCase) === null || _key$toLowerCase === void 0 ? void 0 : _key$toLowerCase.call(key)]) !== null && _ref3 !== void 0 ? _ref3 : item === null || item === void 0 ? void 0 : (_item$currentMachineD = item.currentMachineData) === null || _item$currentMachineD === void 0 ? void 0 : _item$currentMachineD[key]) !== null && _ref2 !== void 0 ? _ref2 : item === null || item === void 0 ? void 0 : (_item$currentMachineD2 = item.currentMachineData) === null || _item$currentMachineD2 === void 0 ? void 0 : _item$currentMachineD2[key === null || key === void 0 ? void 0 : (_key$toLowerCase2 = key.toLowerCase) === null || _key$toLowerCase2 === void 0 ? void 0 : _key$toLowerCase2.call(key)]) !== null && _ref !== void 0 ? _ref : null;
+  };
+
+  const resetPagination = () => {
+    setPage(1);
+    setPageCursors([]);
+    setHasNextPage(false);
+  };
+
+  const searchChangeHandler = event => setSearch(event.target.value);
+
+  const matchesFilters = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(item => {
+    if (!item) return false;
+
+    if (selectedOEM) {
+      const OEM = getMachineField(item, "OEM");
+      if (OEM !== selectedOEM) return false;
+    }
+
+    if (selectedModality) {
+      const Modality = getMachineField(item, "Modality");
+      if (Modality !== selectedModality) return false;
+    }
+
+    if (selectedModel) {
+      const Model = getMachineField(item, "Model");
+      if (Model !== selectedModel) return false;
+    }
+
+    if (selectedClient) {
+      const clientRef = getMachineField(item, "client");
+      const clientId = typeof clientRef === "string" ? clientRef : (clientRef === null || clientRef === void 0 ? void 0 : clientRef.id) || null;
+      if (clientId !== selectedClient) return false;
+    }
+
+    return true;
+  }, [selectedOEM, selectedModality, selectedModel, selectedClient]);
+  const fetchData = Object(react__WEBPACK_IMPORTED_MODULE_0__["useCallback"])(async (requestedPage = 1) => {
+    if (!show) return;
+    const startAfterDoc = requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
+
+    if (requestedPage > 1 && !startAfterDoc) {
+      setPage(1);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
+    const searchLower = (search || "").toLowerCase().trim();
+
+    try {
+      const {
+        parts: data,
+        lastDoc,
+        hasNextPage: nextPage
+      } = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchPartsWithMachineDataPage */ "d"])({
+        pageSize: PAGE_SIZE,
+        startAfterDoc,
+        visibleOnly: true,
+        filterFn: selectedOEM || selectedModality || selectedModel || selectedClient ? matchesFilters : null,
+        search: searchLower ? {
+          type: select,
+          raw: search,
+          lower: searchLower
+        } : null,
+        needsMachineData: Boolean(selectedOEM) || Boolean(selectedModality) || Boolean(selectedModel) || Boolean(selectedClient)
+      });
+      setInfo(data);
+      setHasNextPage(nextPage);
+      setPageCursors(prev => {
+        const next = requestedPage === 1 ? [] : [...prev];
+
+        if (lastDoc) {
+          next[requestedPage - 1] = lastDoc;
+        }
+
+        return next;
+      });
+    } catch (error) {
+      console.error("Parent modal load failed:", error);
+      setLoadError((error === null || error === void 0 ? void 0 : error.message) || "Failed to load items.");
+      setInfo([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [show, pageCursors, search, select, selectedOEM, selectedModality, selectedModel, selectedClient, matchesFilters]);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    if (!show) return;
+    resetPagination();
+    setQueryEpoch(v => v + 1);
+  }, [show, selectedOEM, selectedModality, selectedModel, selectedClient, search, select]);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    if (!show) return;
+    fetchData(page);
+  }, [show, page, queryEpoch, fetchData]);
+
+  const rowSelect = item => {
+    setSelectedParent({
+      id: item.id,
+      name: item.name,
+      pn: item.pn
+    });
+    handleClose();
+  };
+
+  const {
+    0: dropdown1Text,
+    1: setDropdown1Text
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+  const {
+    0: dropdown2Text,
+    1: setDropdown2Text
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("Select Option");
+
+  const handleSelect1 = (eventKey, event) => {
+    if (eventKey === "unassigned") {
+      setDropdown1Text("Select Option");
+      setSelectedOEM(null);
+    } else {
+      setDropdown1Text(event.target.textContent);
+      setSelectedOEM(event.target.textContent);
+    }
+  };
+
+  const handleSelect2 = (eventKey, event) => {
+    if (eventKey === "unassigned") {
+      setDropdown2Text("Select Option");
+      setSelectedModality(null);
+    } else {
+      setDropdown2Text(event.target.textContent);
+      setSelectedModality(event.target.textContent);
+    }
+  };
+
+  const handleClientClick = async () => {
+    const clientsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchClients */ "a"])(selectedOEM, selectedModality);
+    setClients(clientsData);
+    setClientSearchTerm("");
+    setShowClientModal(true);
+  };
+
+  const handleClientSelect = clientId => {
+    if (!clientId) {
+      setClientButtonText("Select Option");
+      setSelectedClient(null);
+      setShowClientModal(false);
+      return;
+    }
+
+    const client = clients.find(c => c.id === clientId);
+    setClientButtonText((client === null || client === void 0 ? void 0 : client.name) || "Select Option");
+    setSelectedClient(clientId);
+    setShowClientModal(false);
+  };
+
+  const handleClientInfo = (clientId, clientName) => {
+    console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
+  };
+
+  const handleClearClientSelection = () => {
+    setClientButtonText("Select Option");
+    setSelectedClient(null);
+    setShowClientModal(false);
+  };
+
+  const handleModelClick = async () => {
+    const modelsData = await Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* fetchModels */ "b"])(selectedOEM, selectedModality, selectedClient);
+    setModels(modelsData);
+    setModelSearchTerm("");
+    setShowModelModal(true);
+  };
+
+  const handleModelSelect = modelName => {
+    setModelButtonText(modelName || "Select Option");
+    setSelectedModel(modelName || null);
+    setShowModelModal(false);
+  };
+
+  const handleClearModelSelection = () => {
+    setModelButtonText("Select Option");
+    setSelectedModel(null);
+    setShowModelModal(false);
+  };
+
+  const handleWarehouseClick = () => {
+    setClientButtonText(CLIENT_WAREHOUSE);
+    setSelectedClient(CLIENT_WAREHOUSE);
+  };
+
+  const handleUnassignedClick = () => {
+    setClientButtonText(CLIENT_UNASSIGNED);
+    setSelectedClient(CLIENT_UNASSIGNED);
+  };
+
+  const totalKnownPages = Math.max(1, pageCursors.filter(Boolean).length + (hasNextPage ? 1 : 0));
+
+  const pageButtons = (() => {
+    const buttons = [];
+    const maxVisible = 6;
+
+    const pushPage = p => buttons.push(__jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Pagination"].Item, {
+      key: `page-${p}`,
+      active: p === page,
+      onClick: () => setPage(p)
+    }, p));
+
+    const pushEllipsis = key => buttons.push(__jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Pagination"].Ellipsis, {
+      key: key,
+      disabled: true
+    }));
+
+    if (totalKnownPages <= maxVisible) {
+      for (let i = 1; i <= totalKnownPages; i += 1) pushPage(i);
+
+      return buttons;
+    }
+
+    let start = Math.max(2, page - 1);
+    let end = Math.min(totalKnownPages - 1, page + 1);
+    const desiredWindow = maxVisible - 2;
+    let currentWindow = end - start + 1;
+    let remaining = desiredWindow - currentWindow;
+
+    while (remaining > 0) {
+      if (start > 2) {
+        start -= 1;
+        remaining -= 1;
+      }
+
+      if (remaining > 0 && end < totalKnownPages - 1) {
+        end += 1;
+        remaining -= 1;
+      }
+
+      if (start === 2 && end === totalKnownPages - 1) break;
+    }
+
+    pushPage(1);
+    if (start > 2) pushEllipsis("start-ellipsis");
+
+    for (let i = start; i <= end; i += 1) pushPage(i);
+
+    if (end < totalKnownPages - 1) pushEllipsis("end-ellipsis");
+    pushPage(totalKnownPages);
+    if (hasNextPage) pushEllipsis("more-ellipsis");
+    return buttons;
+  })();
+
+  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+    show: show,
+    onHide: handleClose,
+    size: "xl",
+    centered: true,
+    dialogClassName: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalDialog,
+    contentClassName: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalContent
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+    closeButton: true,
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalHeader
+  }, __jsx("div", null, __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalTitle
+  }, "Select Parent"), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalSubtitle
+  }, "Search and choose a parent item for this part."))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalBody
+  }, __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalGrid
+  }, __jsx("aside", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.filtersPanel
+  }, __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.panelTitle
+  }, "Filters"), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.panelHint
+  }, "Narrow results with machine and client filters."), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.inputGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "OEM"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"], {
+    onSelect: handleSelect1,
+    className: "w-100"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Toggle, {
+    variant: "outline-secondary",
+    id: "dropdown-button-1",
+    className: "w-100"
+  }, dropdown1Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Menu, {
+    className: "w-100"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "unassigned"
+  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "GE"
+  }, "GE"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "Toshiba"
+  }, "Toshiba"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "Siemens"
+  }, "Siemens"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "Philips"
+  }, "Philips")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.inputGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Modality"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"], {
+    onSelect: handleSelect2,
+    className: "w-100"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Toggle, {
+    variant: "outline-secondary",
+    id: "dropdown-button-2",
+    className: "w-100"
+  }, dropdown2Text), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Menu, {
+    className: "w-100"
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "unassigned"
+  }, "Select Option"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "CT"
+  }, "CT"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Dropdown"].Item, {
+    eventKey: "MRI"
+  }, "MRI")))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.inputGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Client"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-secondary",
+    className: "w-100",
+    onClick: handleClientClick
+  }, clientButtonText)), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"], {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.inputGroup
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["InputGroup"].Text, null, "Model"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-secondary",
+    className: "w-100",
+    onClick: handleModelClick
+  }, modelButtonText)), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.panelDivider
+  }), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.panelTitle
+  }, "Quick"), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.quickButtons
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-secondary",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.quickButton,
+    onClick: handleWarehouseClick
+  }, "Warehouse"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "outline-secondary",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.quickButton,
+    onClick: handleUnassignedClick
+  }, "Unassigned"))), __jsx("section", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.resultsPanel
+  }, __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.resultsHeader
+  }, __jsx("div", null, __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.resultsTitle
+  }, "Results"), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.resultsSubtitle
+  }, isLoading ? "Loading items" : `${info.length} items`)), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Pagination"], {
+    size: "sm",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.pagination
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Pagination"].Prev, {
+    onClick: () => setPage(p => Math.max(1, p - 1)),
+    disabled: page <= 1
+  }), pageButtons, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Pagination"].Next, {
+    onClick: () => setPage(p => p + 1),
+    disabled: !hasNextPage
+  }))), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.searchRow
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+    type: showListSearch,
+    placeholder: "Search",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.searchInput,
+    "aria-label": "Search",
+    value: search,
+    onChange: searchChangeHandler
+  }), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"], {
+    title: select,
+    id: "parent-search-dropdown",
+    show: showList,
+    onMouseEnter: () => setShowList(true),
+    onMouseLeave: () => setShowList(false)
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Name");
+      setShowListSearch("text");
+    }
+  }, "Name"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Date");
+      setShowListSearch("date");
+    }
+  }, "Date"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Work Order");
+      setShowListSearch("text");
+    }
+  }, "Work Order"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Product Number");
+      setShowListSearch("text");
+    }
+  }, "Product Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Serial Number");
+      setShowListSearch("text");
+    }
+  }, "Serial Number"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["NavDropdown"].Item, {
+    onClick: () => {
+      setSelect("Description");
+      setShowListSearch("text");
+    }
+  }, "Description"))), __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.tableWrap
+  }, isLoading ? __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.loadingState
+  }, __jsx("img", {
+    src: "/magmo-logo.png",
+    alt: "Loading",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.loadingLogo
+  })) : loadError ? __jsx("div", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.errorState
+  }, loadError) : __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Table"], {
+    striped: true,
+    bordered: true,
+    hover: true,
+    size: "sm",
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.table
+  }, __jsx("thead", {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.stickyHeader
+  }, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "Date"), __jsx("th", null, "Work Order"), __jsx("th", null, "Product Number"), __jsx("th", null, "Serial Number"), __jsx("th", null, "Select"))), __jsx("tbody", null, info.length === 0 && __jsx("tr", null, __jsx("td", {
+    colSpan: 6,
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.emptyState
+  }, "No items found.")), info.map(item => __jsx("tr", {
+    key: item.id
+  }, __jsx("td", null, item.name), __jsx("td", null, Object(_utils_fetchAssociations__WEBPACK_IMPORTED_MODULE_2__[/* formatDate */ "e"])(item.date)), __jsx("td", null, item.workOrders && item.workOrders.length > 0 ? item.workOrders[item.workOrders.length - 1].workOrder : "N/A"), __jsx("td", null, item.pn), __jsx("td", null, item.sn), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "primary",
+    size: "sm",
+    onClick: () => rowSelect(item)
+  }, "Select")))))))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Footer, {
+    className: _ParentModal_module_css__WEBPACK_IMPORTED_MODULE_5___default.a.modalFooter
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "secondary",
+    onClick: handleClose
+  }, "Cancel"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Button"], {
+    variant: "warning",
+    onClick: () => {
+      setSelectedParent(null);
+      handleClose();
+    }
+  }, "Clear Selection")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+    show: showClientModal,
+    onHide: () => setShowClientModal(false)
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+    closeButton: true
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Select Client")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+    type: "text",
+    placeholder: "Search by name",
+    className: "mb-3",
+    value: clientSearchTerm,
+    onChange: e => setClientSearchTerm(e.target.value)
+  }), __jsx(_utils_ClientTable__WEBPACK_IMPORTED_MODULE_3__[/* default */ "a"], {
+    clients: clients.filter(client => (client.name || "").toLowerCase().includes(clientSearchTerm.toLowerCase())),
+    disableInfo: true,
+    onSelectClient: handleClientSelect,
+    onInfoClick: handleClientInfo,
+    clearSelection: handleClearClientSelection
+  }))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"], {
+    show: showModelModal,
+    onHide: () => setShowModelModal(false)
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Header, {
+    closeButton: true
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Title, null, "Select Model")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["Modal"].Body, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_1__["FormControl"], {
+    type: "text",
+    placeholder: "Search by name",
+    className: "mb-3",
+    value: modelSearchTerm,
+    onChange: e => setModelSearchTerm(e.target.value)
+  }), __jsx(_utils_ModelTable__WEBPACK_IMPORTED_MODULE_4__[/* default */ "a"], {
+    models: models.filter(model => typeof model === "string" ? model.toLowerCase().includes(modelSearchTerm.toLowerCase()) : false),
+    onSelectModel: handleModelSelect,
+    clearSelection: handleClearModelSelection
+  }))));
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (ParentModal);
+
+/***/ }),
+
+/***/ "oysE":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+// ESM COMPAT FLAG
+__webpack_require__.r(__webpack_exports__);
+
+// EXPORTS
+__webpack_require__.d(__webpack_exports__, "default", function() { return /* binding */ DisplayItemPage; });
+__webpack_require__.d(__webpack_exports__, "getServerSideProps", function() { return /* binding */ getServerSideProps; });
+
+// EXTERNAL MODULE: external "react"
+var external_react_ = __webpack_require__("cDcd");
+var external_react_default = /*#__PURE__*/__webpack_require__.n(external_react_);
+
+// EXTERNAL MODULE: ./node_modules/bootstrap/dist/css/bootstrap.min.css
+var bootstrap_min = __webpack_require__("q4sD");
+
+// EXTERNAL MODULE: external "react-bootstrap"
+var external_react_bootstrap_ = __webpack_require__("IZS3");
+
+// EXTERNAL MODULE: ./node_modules/next/link.js
+var next_link = __webpack_require__("YFqc");
+var link_default = /*#__PURE__*/__webpack_require__.n(next_link);
+
+// EXTERNAL MODULE: ./context/AuthUserContext.js + 1 modules
+var AuthUserContext = __webpack_require__("XrFm");
+
+// EXTERNAL MODULE: ./context/Firebase.js
+var Firebase = __webpack_require__("NY6m");
+
+// EXTERNAL MODULE: ./pages/LoggedIn.js
+var LoggedIn = __webpack_require__("mJJZ");
+
+// EXTERNAL MODULE: external "next/router"
+var router_ = __webpack_require__("4Q3z");
+
+// EXTERNAL MODULE: ./utils/fetchAssociations.js
+var fetchAssociations = __webpack_require__("qoNY");
+
+// EXTERNAL MODULE: ./utils/ClientTable.js
+var ClientTable = __webpack_require__("8HvV");
+
+// EXTERNAL MODULE: ./pages/NewSearch/ClientInfoModal.js
+var ClientInfoModal = __webpack_require__("MbKa");
+
+// EXTERNAL MODULE: ./pages/NewSearch/AddItem/parentModal.js
+var parentModal = __webpack_require__("oGF+");
+
+// EXTERNAL MODULE: external "next/dynamic"
+var dynamic_ = __webpack_require__("/T1H");
+var dynamic_default = /*#__PURE__*/__webpack_require__.n(dynamic_);
+
+// EXTERNAL MODULE: ./pages/NewSearch/InfoModal.js
+var InfoModal = __webpack_require__("VZWn");
+
+// EXTERNAL MODULE: ./pages/NewSearch/item/[id]/MachineSelectionModal.js
+var MachineSelectionModal = __webpack_require__("cJ15");
+
+// CONCATENATED MODULE: ./utils/BluefolderService.js
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+// BluefolderService.js
+const API_TOKEN = "9b224624-44db-49dd-9042-c3b15e9a39d4"; // your token
+
+const ITEMS_URL = "https://app.bluefolder.com/api/2.0/items/add.aspx";
+const MATERIALS_URL = "https://app.bluefolder.com/api/2.0/serviceRequests/addMaterial.aspx";
+const HEADERS = {
+  "Content-Type": "text/xml"
+};
+async function addServiceItem(serviceRequestId, item) {
+  // Use "Service Item" for name and description
+  const uniqueName = "Service Item"; // Step 1: Create a new material item in BlueFolder
+
+  const itemPayload = `
+    <request>
+      <itemAdd>
+        <itemType>materials</itemType>
+        <itemName>${uniqueName}</itemName>
+        <description>Service Item</description>
+        <accountName></accountName>
+        <isFlatRate>false</isFlatRate>
+        <mfrDescription></mfrDescription>
+        <mfrItemNo></mfrItemNo>
+        <mfrName>BlueFolderTestManufacturer</mfrName>
+        <notes>Service Item</notes>
+        <taxableDefault>true</taxableDefault>
+        <unitCost>0.00</unitCost>
+        <unitPrice>0.00</unitPrice>
+        <unitListPrice>0.00</unitListPrice>
+      </itemAdd>
+    </request>
+  `;
+  const itemResponse = await fetch(ITEMS_URL, {
+    method: "POST",
+    headers: _objectSpread(_objectSpread({}, HEADERS), {}, {
+      Authorization: "Basic " + btoa(API_TOKEN + ":x")
+    }),
+    body: itemPayload
+  });
+  const itemText = await itemResponse.text();
+  const parser = new DOMParser();
+  const itemXml = parser.parseFromString(itemText, "application/xml");
+
+  if (itemXml.documentElement.getAttribute("status") !== "ok") {
+    throw new Error("Failed to create material item in BlueFolder");
+  }
+
+  const itemIdElem = itemXml.getElementsByTagName("itemId")[0];
+  const itemId = itemIdElem ? itemIdElem.textContent : null; // Step 2: Add the material to the specified work order
+
+  const nowStr = new Date().toLocaleString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+  const comment = `Name: ${item.name}\nPN: ${item.pn}\nSN: ${item.sn}\nStatus: ${item.status}\nDescription: ${item.description}`;
+  const materialPayload = `
+    <request>
+      <serviceRequestAddMaterial>
+        <serviceRequestId>${serviceRequestId}</serviceRequestId>
+        <dateUsed>${nowStr}</dateUsed>
+        <quantity>1</quantity>
+        <billingStatus>billable</billingStatus>
+        <itemNo>${uniqueName}</itemNo>
+        <itemDescription>Service Item</itemDescription>
+        <itemUnitCost>0.00</itemUnitCost>
+        <itemUnitPrice>0.00</itemUnitPrice>
+        <comment>${comment}</comment>
+        <commentIsPublic>false</commentIsPublic>
+        <taxable>true</taxable>
+      </serviceRequestAddMaterial>
+    </request>
+  `;
+  const materialResponse = await fetch(MATERIALS_URL, {
+    method: "POST",
+    headers: _objectSpread(_objectSpread({}, HEADERS), {}, {
+      Authorization: "Basic " + btoa(API_TOKEN + ":x")
+    }),
+    body: materialPayload
+  });
+  const materialText = await materialResponse.text();
+  const materialXml = parser.parseFromString(materialText, "application/xml");
+
+  if (materialXml.documentElement.getAttribute("status") !== "ok") {
+    throw new Error("Failed to add material to work order in BlueFolder");
+  }
+
+  return {
+    itemId,
+    materialResponse: materialText
+  };
+}
+// EXTERNAL MODULE: ./pages/NewSearch/item/[id]/NewLocal.js
+var NewLocal = __webpack_require__("7wmr");
+
+// EXTERNAL MODULE: ./pages/NewSearch/AddItem/NewItem.module.css
+var NewItem_module = __webpack_require__("bD1r");
+var NewItem_module_default = /*#__PURE__*/__webpack_require__.n(NewItem_module);
+
+// EXTERNAL MODULE: ./utils/inflowAPI.js
+var inflowAPI = __webpack_require__("nc39");
+
+// EXTERNAL MODULE: ./utils/itemFormShared.js
+var itemFormShared = __webpack_require__("KWEF");
+
 // EXTERNAL MODULE: ./context/FirebaseAdmin.js
 var FirebaseAdmin = __webpack_require__("Aroy");
 
 // CONCATENATED MODULE: ./pages/NewSearch/item/[id]/index.js
 var __jsx = external_react_default.a.createElement;
+
+function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
 
 function _id_ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
@@ -5305,24 +5987,13 @@ function _id_defineProperty(obj, key, value) { if (key in obj) { Object.definePr
 
 
 
+
  //inflow API
+
 
  // Import for SSR
 
- // === BUILD A MAP ONLY OF THOSE FIELDS THE USER ACTUALLY PICKED ===
-
-function buildLocalLocObject(loc) {
-  var _loc$section, _loc$section2;
-
-  const o = {};
-  if (loc.region) o.region = loc.region;
-  if ((_loc$section = loc.section) !== null && _loc$section !== void 0 && _loc$section.letter && (_loc$section2 = loc.section) !== null && _loc$section2 !== void 0 && _loc$section2.number) o.section = loc.section; // pick up the new singular fields, too:
-
-  if (loc.bin !== undefined && loc.bin !== "") o.bin = loc.bin;
-  if (loc.pallet !== undefined && loc.pallet !== "") o.pallet = loc.pallet;
-  return o;
-} // This will only load the component on the client-side.
-
+ // This will only load the component on the client-side.
 
 const BarcodeScannerComponent = dynamic_default()(() => Promise.resolve(/* import() */).then(__webpack_require__.t.bind(null, "lzi3", 7)), {
   ssr: false,
@@ -5348,7 +6019,13 @@ function LoadingButton({
   } = Object(external_react_["useState"])(false);
   Object(external_react_["useEffect"])(() => {
     if (isLoading) {
-      simulateNetworkRequest().then(() => setLoading(false));
+      let cancelled = false;
+      simulateNetworkRequest().then(() => {
+        if (!cancelled) setLoading(false);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [isLoading]);
 
@@ -5363,7 +6040,14 @@ function LoadingButton({
   }, isLoading ? "Loading…" : name));
 }
 
-function DisplayItem({
+function isValidMachineValue(value) {
+  if (value == null) return false;
+  if (typeof value !== "string") return Boolean(value);
+  const trimmed = value.trim();
+  return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+}
+
+function DisplayItemInner({
   initialItem,
   initialMachineData,
   error
@@ -5401,7 +6085,11 @@ function DisplayItem({
     localSN: (initialItem === null || initialItem === void 0 ? void 0 : initialItem.localSN) || "",
     arrival_date: (initialItem === null || initialItem === void 0 ? void 0 : initialItem.arrival_date) || "",
     visible: (_initialItem$visible = initialItem === null || initialItem === void 0 ? void 0 : initialItem.visible) !== null && _initialItem$visible !== void 0 ? _initialItem$visible : true
-  }); // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
+  });
+  const {
+    0: savedName,
+    1: setSavedName
+  } = Object(external_react_["useState"])((initialItem === null || initialItem === void 0 ? void 0 : initialItem.name) || ""); // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
 
   Object(external_react_["useEffect"])(() => {
     if (!initialItem) return;
@@ -5422,6 +6110,10 @@ function DisplayItem({
         trackingNumber: (_ref7 = (_initialItem$tracking2 = initialItem.trackingNumber) !== null && _initialItem$tracking2 !== void 0 ? _initialItem$tracking2 : prev.trackingNumber) !== null && _ref7 !== void 0 ? _ref7 : ""
       });
     });
+
+    if (initialItem.name) {
+      setSavedName(initialItem.name);
+    }
   }, [initialItem]);
   const {
     0: newLocalFrom,
@@ -5503,6 +6195,14 @@ function DisplayItem({
     1: setSnOptions
   } = Object(external_react_["useState"])([]);
   const {
+    0: pnSnLoaded,
+    1: setPnSnLoaded
+  } = Object(external_react_["useState"])(false);
+  const {
+    0: pnSnLoading,
+    1: setPnSnLoading
+  } = Object(external_react_["useState"])(false);
+  const {
     0: descriptions,
     1: setDescriptions
   } = Object(external_react_["useState"])([{
@@ -5520,6 +6220,14 @@ function DisplayItem({
     0: clients,
     1: setClients
   } = Object(external_react_["useState"])([]);
+  const {
+    0: clientsLoaded,
+    1: setClientsLoaded
+  } = Object(external_react_["useState"])(false);
+  const {
+    0: clientsLoading,
+    1: setClientsLoading
+  } = Object(external_react_["useState"])(false);
   const {
     0: photos,
     1: setPhotos
@@ -5655,7 +6363,15 @@ function DisplayItem({
   const {
     0: model,
     1: setModel
-  } = Object(external_react_["useState"])(""); // More info modal state.
+  } = Object(external_react_["useState"])("");
+
+  const applyMergedMachineFields = merged => {
+    if (!merged) return;
+    setOem(prev => isValidMachineValue(merged.oem) ? merged.oem : prev);
+    setModality(prev => isValidMachineValue(merged.modality) ? merged.modality : prev);
+    setModel(prev => isValidMachineValue(merged.model) ? merged.model : prev);
+  }; // More info modal state.
+
 
   const {
     0: showInfoModal,
@@ -5668,7 +6384,11 @@ function DisplayItem({
   const {
     0: machineFieldsInitialized,
     1: setMachineFieldsInitialized
-  } = Object(external_react_["useState"])(false); // near the top of DisplayItem()
+  } = Object(external_react_["useState"])(false);
+  const {
+    0: isLoading,
+    1: setIsLoading
+  } = Object(external_react_["useState"])(true); // near the top of DisplayItem()
 
   const {
     0: showLocalModalFrom,
@@ -5695,19 +6415,7 @@ function DisplayItem({
   const {
     0: showNewLocalModalCurrent,
     1: setShowNewLocalModalCurrent
-  } = Object(external_react_["useState"])(false);
-
-  function formatLoc(loc) {
-    var _loc$section3, _loc$section4;
-
-    if (!loc) return "";
-    const parts = [];
-    if (loc.region) parts.push(loc.region);
-    if ((_loc$section3 = loc.section) !== null && _loc$section3 !== void 0 && _loc$section3.letter && (_loc$section4 = loc.section) !== null && _loc$section4 !== void 0 && _loc$section4.number) parts.push(`${loc.section.letter}${loc.section.number}`);
-    if (loc.bin) parts.push(`B${loc.bin}`);
-    if (loc.pallet) parts.push(`P${loc.pallet}`);
-    return parts.join("–");
-  } // when the From-client changes, clear any old local-loc
+  } = Object(external_react_["useState"])(false); // when the From-client changes, clear any old local-loc
   // useEffect(() => {
   //   setNewLocalFrom({ region: "", section: { letter: "", number: "" }, bin: "", pallet: "" });
   // }, [selectedClientFrom]);
@@ -5732,7 +6440,6 @@ function DisplayItem({
   //     alert("Error sending to inFlow: " + err.message);
   //   }
   // };
-
 
   const handleSendToInflow = async () => {
     try {
@@ -5787,7 +6494,7 @@ function DisplayItem({
 
       };
       console.log('[inFlow] customFields to send (numbered):', customFields);
-      const created = await inflowAPI.upsertProduct({
+      const created = await inflowAPI["a" /* default */].upsertProduct({
         name,
         description,
         sku,
@@ -5826,41 +6533,57 @@ function DisplayItem({
     var _selectedClientCurren;
 
     setShowLocalLocCurrent((selectedClientCurrent === null || selectedClientCurrent === void 0 ? void 0 : (_selectedClientCurren = selectedClientCurrent.name) === null || _selectedClientCurren === void 0 ? void 0 : _selectedClientCurren.toLowerCase()) === "socalwarehouse");
-  }, [selectedClientCurrent]); // Fetch clients data.
+  }, [selectedClientCurrent]);
 
-  Object(external_react_["useEffect"])(() => {
-    async function fetchClientsData() {
-      try {
-        const clientsData = await Object(fetchAssociations["a" /* fetchClients */])();
-        console.log(clientsData);
-        setClients(clientsData);
-      } catch (error) {
-        console.error("Error fetching clients: ", error);
-      }
+  const loadClients = async () => {
+    if (clientsLoaded || clientsLoading) return;
+    setClientsLoading(true);
+
+    try {
+      const clientsData = await Object(fetchAssociations["a" /* fetchClients */])();
+      setClients(clientsData);
+      setClientsLoaded(true);
+    } catch (error) {
+      console.error("Error fetching clients: ", error);
+    } finally {
+      setClientsLoading(false);
     }
+  };
 
-    fetchClientsData();
-  }, []); // Fetch PN and SN options from Firebase.
+  const loadPnSnOptions = async () => {
+    if (pnSnLoaded || pnSnLoading) return;
+    setPnSnLoading(true);
 
-  Object(external_react_["useEffect"])(() => {
-    async function fetchPnSn() {
+    try {
       const db = Firebase["b" /* default */].firestore();
-      const snapshot = await db.collection("Test").get();
+      const snapshot = await db.collection("Test").orderBy(Firebase["b" /* default */].firestore.FieldPath.documentId()).limit(500).get();
       let pnSet = new Set();
       let snSet = new Set();
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.pn) pnSet.add(data.pn);
-        if (data.sn) snSet.add(data.sn);
-      });
-      const pnArray = [...pnSet];
-      const snArray = [...snSet];
-      setPnOptions(pnArray);
-      setSnOptions(snArray);
-    }
 
-    fetchPnSn();
-  }, []);
+        if (Array.isArray(data.pn)) {
+          data.pn.forEach(pn => pn && pnSet.add(pn));
+        } else if (data.pn) {
+          pnSet.add(data.pn);
+        }
+
+        if (Array.isArray(data.sn)) {
+          data.sn.forEach(sn => sn && snSet.add(sn));
+        } else if (data.sn) {
+          snSet.add(data.sn);
+        }
+      });
+      setPnOptions([...pnSet]);
+      setSnOptions([...snSet]);
+      setPnSnLoaded(true);
+    } catch (error) {
+      console.error("Error fetching PN/SN options:", error);
+    } finally {
+      setPnSnLoading(false);
+    }
+  };
+
   Object(external_react_["useEffect"])(() => {
     if (id) fetchData(); // always hydrate on the client
   }, [id]);
@@ -5918,192 +6641,173 @@ function DisplayItem({
   const fetchData = async () => {
     const id = (initialItem === null || initialItem === void 0 ? void 0 : initialItem.id) || idFromRouter; // <- make sure id exists here
 
+    if (!id) return;
+    setIsLoading(true);
     const db = Firebase["b" /* default */].firestore();
-    const doc = await db.collection("Test").doc(id).get();
 
-    if (doc.exists) {
-      var _machineFromData, _machineFromData$name, _machineCurrentData, _machineCurrentData$n, _selectedClientFrom$n2, _selectedClientCurren2;
+    try {
+      const doc = await db.collection("Test").doc(id).get();
 
-      console.log("test");
-      const data = doc.data();
-      const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
-      const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
-      setItems(_id_objectSpread(_id_objectSpread({}, data), {}, {
-        pn: normalizedPN,
-        sn: normalizedSN
-      }));
-      setDescriptions(data.descriptions || []);
-      setWorkOrders(data.workOrders || []);
-      if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
-      if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
+      if (doc.exists) {
+        var _machineFromData, _machineFromData$name, _machineCurrentData, _machineCurrentData$n, _selectedClientFrom$n2, _selectedClientCurren2;
 
-      if (data.DOM) {
-        setDOM(data.DOM);
-      } // …after you do setItems, setDescriptions, etc.
-      // load the “newLocal” maps
-
-
-      if (data.newLocalFrom) setNewLocalFrom(data.newLocalFrom);
-      if (data.newLocalCurrent) setNewLocalCurrent(data.newLocalCurrent); // Load PO Number if it exists.
-
-      if (data.poNumber) {
-        setItems(prev => _id_objectSpread(_id_objectSpread({}, prev), {}, {
-          poNumber: data.poNumber
+        console.log("test");
+        const data = doc.data();
+        const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
+        const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
+        setItems(_id_objectSpread(_id_objectSpread({}, data), {}, {
+          pn: normalizedPN,
+          sn: normalizedSN
         }));
-      }
+        setSavedName(data.name || "");
+        setDescriptions(data.descriptions || []);
+        setWorkOrders(data.workOrders || []);
+        if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
+        if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
 
-      if (data.ClientFrom) {
-        const clientFromDoc = await data.ClientFrom.get();
+        if (data.DOM) {
+          setDOM(data.DOM);
+        } // …after you do setItems, setDescriptions, etc.
+        // load the “newLocal” maps
 
-        if (clientFromDoc.exists) {
-          setSelectedClientFrom(_id_objectSpread({
-            id: clientFromDoc.id
-          }, clientFromDoc.data()));
+
+        if (data.newLocalFrom) setNewLocalFrom(data.newLocalFrom);
+        if (data.newLocalCurrent) setNewLocalCurrent(data.newLocalCurrent); // Load PO Number if it exists.
+
+        if (data.poNumber) {
+          setItems(prev => _id_objectSpread(_id_objectSpread({}, prev), {}, {
+            poNumber: data.poNumber
+          }));
         }
-      }
 
-      if (data.ClientCurrent) {
-        const clientCurrentDoc = await data.ClientCurrent.get();
+        if (data.ClientFrom) {
+          const clientFromDoc = await data.ClientFrom.get();
 
-        if (clientCurrentDoc.exists) {
-          setSelectedClientCurrent(_id_objectSpread({
-            id: clientCurrentDoc.id
-          }, clientCurrentDoc.data()));
+          if (clientFromDoc.exists) {
+            setSelectedClientFrom(_id_objectSpread({
+              id: clientFromDoc.id
+            }, clientFromDoc.data()));
+          }
         }
-      }
 
-      if (!data.ClientFrom && data.Machine && typeof data.Machine.get === "function") {
-        console.log("Entered resolveClientFromMachine for Machine (old style for From)");
-        await resolveClientFromMachine(data.Machine, setSelectedClientFrom, setSelectedMachine, true);
-      }
+        if (data.ClientCurrent) {
+          const clientCurrentDoc = await data.ClientCurrent.get();
 
-      if (!data.ClientCurrent && data.CurrentMachine && typeof data.CurrentMachine.get === "function") {
-        console.log("Entered resolveClientFromMachine for CurrentMachine (old style for Current)");
-        await resolveClientFromMachine(data.CurrentMachine, setSelectedClientCurrent, setSelectedCurrentMachine, false);
-      }
-
-      let machineFromData = null;
-      let machineCurrentData = null;
-
-      if (data.MachineFrom) {
-        const doc = await data.MachineFrom.get();
-        machineFromData = doc.exists ? doc.data() : null;
-        setSelectedMachine(_id_objectSpread({
-          id: doc.id
-        }, doc.data()));
-      }
-
-      if (data.MachineCurrent) {
-        const doc = await data.MachineCurrent.get();
-        machineCurrentData = doc.exists ? doc.data() : null;
-        setSelectedCurrentMachine(_id_objectSpread({
-          id: doc.id
-        }, doc.data()));
-      }
-
-      const nameFrom = (_machineFromData = machineFromData) === null || _machineFromData === void 0 ? void 0 : (_machineFromData$name = _machineFromData.name) === null || _machineFromData$name === void 0 ? void 0 : _machineFromData$name.toLowerCase();
-      const nameCurrent = (_machineCurrentData = machineCurrentData) === null || _machineCurrentData === void 0 ? void 0 : (_machineCurrentData$n = _machineCurrentData.name) === null || _machineCurrentData$n === void 0 ? void 0 : _machineCurrentData$n.toLowerCase(); // If the machine’s name is “interior socal”, show that branch:
-      // setShowLocalLocFrom(nameFrom === "interior socal");
-      // // Or if your Firestore already has a value for localLocFrom, show it anyway:
-      // if (data.localLocFrom) setShowLocalLocFrom(true);
-      // setShowLocalLocCurrent(nameCurrent === "interior socal");
-      // if (data.localLocCurrent) setShowLocalLocCurrent(true);
-      // new: combine machine-name OR client-name check, keep existing-data
-
-      setShowLocalLocFrom(nameFrom === "interior socal" || (selectedClientFrom === null || selectedClientFrom === void 0 ? void 0 : (_selectedClientFrom$n2 = selectedClientFrom.name) === null || _selectedClientFrom$n2 === void 0 ? void 0 : _selectedClientFrom$n2.toLowerCase()) === "socalwarehouse" || Boolean(data.localLocFrom));
-      setShowLocalLocCurrent(nameCurrent === "interior socal" || (selectedClientCurrent === null || selectedClientCurrent === void 0 ? void 0 : (_selectedClientCurren2 = selectedClientCurrent.name) === null || _selectedClientCurren2 === void 0 ? void 0 : _selectedClientCurren2.toLowerCase()) === "socalwarehouse" || Boolean(data.localLocCurrent));
-      const theMachineData = data.TheMachine || null;
-      setTheMachine(theMachineData);
-
-      if (theMachineData) {
-        var _theMachineData$oem, _theMachineData$modal, _theMachineData$model;
-
-        // pull both variants, prefer lowercase if it exists
-        const OEM = (_theMachineData$oem = theMachineData.oem) !== null && _theMachineData$oem !== void 0 ? _theMachineData$oem : theMachineData.OEM;
-        const Modality = (_theMachineData$modal = theMachineData.modality) !== null && _theMachineData$modal !== void 0 ? _theMachineData$modal : theMachineData.Modality;
-        const Model = (_theMachineData$model = theMachineData.model) !== null && _theMachineData$model !== void 0 ? _theMachineData$model : theMachineData.Model;
-        setTheMachine(_id_objectSpread(_id_objectSpread({}, theMachineData), {}, {
-          OEM,
-          Modality,
-          Model
-        }));
-      } // setStoredMachine(theMachineData);
-      // **right here** merge from the three sources you just fetched:
-
-
-      const merged = updateMachineFields(theMachineData, machineCurrentData, machineFromData);
-      setOem(merged.oem);
-      setModality(merged.modality);
-      setModel(merged.model);
-      console.log("SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine); // Show local loc inputs if applicable
-      // if (
-      //   selectedMachine &&
-      //   selectedMachine.name &&
-      //   selectedMachine.name.toLowerCase() === "interior socal"
-      // ) {
-      //   setShowLocalLocFrom(true);
-      // }
-      // if (
-      //   selectedCurrentMachine &&
-      //   selectedCurrentMachine.name &&
-      //   selectedCurrentMachine.name.toLowerCase() === "interior socal"
-      // ) {
-      //   setShowLocalLocCurrent(true);
-      // }
-
-      if (data.Parent) {
-        const parentDoc = await data.Parent.get();
-        setSelectedParent(_id_objectSpread({
-          id: parentDoc.id
-        }, parentDoc.data()));
-      } // Priority auto‑population of machine fields.
-      // const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
-      // // console.log("Updated machine fields:", updatedFields);
-      // setOem(updatedFields.oem);
-      // setModality(updatedFields.modality);
-      // setModel(updatedFields.model);
-
-
-      await fetchPhotos(id);
-      await checkIfAddedToWebsite(id);
-      await calculateItemFrequencyAndUsage(data.pn);
-    } else {
-      router.push({
-        pathname: "../AddItem/NewItem",
-        query: {
-          signal: id
+          if (clientCurrentDoc.exists) {
+            setSelectedClientCurrent(_id_objectSpread({
+              id: clientCurrentDoc.id
+            }, clientCurrentDoc.data()));
+          }
         }
-      });
+
+        if (!data.ClientFrom && data.Machine && typeof data.Machine.get === "function") {
+          console.log("Entered resolveClientFromMachine for Machine (old style for From)");
+          await resolveClientFromMachine(data.Machine, setSelectedClientFrom, setSelectedMachine, true);
+        }
+
+        if (!data.ClientCurrent && data.CurrentMachine && typeof data.CurrentMachine.get === "function") {
+          console.log("Entered resolveClientFromMachine for CurrentMachine (old style for Current)");
+          await resolveClientFromMachine(data.CurrentMachine, setSelectedClientCurrent, setSelectedCurrentMachine, false);
+        }
+
+        let machineFromData = null;
+        let machineCurrentData = null;
+
+        if (data.MachineFrom) {
+          const doc = await data.MachineFrom.get();
+          machineFromData = doc.exists ? doc.data() : null;
+          setSelectedMachine(_id_objectSpread({
+            id: doc.id
+          }, doc.data()));
+        }
+
+        if (data.MachineCurrent) {
+          const doc = await data.MachineCurrent.get();
+          machineCurrentData = doc.exists ? doc.data() : null;
+          setSelectedCurrentMachine(_id_objectSpread({
+            id: doc.id
+          }, doc.data()));
+        }
+
+        const nameFrom = (_machineFromData = machineFromData) === null || _machineFromData === void 0 ? void 0 : (_machineFromData$name = _machineFromData.name) === null || _machineFromData$name === void 0 ? void 0 : _machineFromData$name.toLowerCase();
+        const nameCurrent = (_machineCurrentData = machineCurrentData) === null || _machineCurrentData === void 0 ? void 0 : (_machineCurrentData$n = _machineCurrentData.name) === null || _machineCurrentData$n === void 0 ? void 0 : _machineCurrentData$n.toLowerCase(); // If the machine’s name is “interior socal”, show that branch:
+        // setShowLocalLocFrom(nameFrom === "interior socal");
+        // // Or if your Firestore already has a value for localLocFrom, show it anyway:
+        // if (data.localLocFrom) setShowLocalLocFrom(true);
+        // setShowLocalLocCurrent(nameCurrent === "interior socal");
+        // if (data.localLocCurrent) setShowLocalLocCurrent(true);
+        // new: combine machine-name OR client-name check, keep existing-data
+
+        setShowLocalLocFrom(nameFrom === "interior socal" || (selectedClientFrom === null || selectedClientFrom === void 0 ? void 0 : (_selectedClientFrom$n2 = selectedClientFrom.name) === null || _selectedClientFrom$n2 === void 0 ? void 0 : _selectedClientFrom$n2.toLowerCase()) === "socalwarehouse" || Boolean(data.localLocFrom));
+        setShowLocalLocCurrent(nameCurrent === "interior socal" || (selectedClientCurrent === null || selectedClientCurrent === void 0 ? void 0 : (_selectedClientCurren2 = selectedClientCurrent.name) === null || _selectedClientCurren2 === void 0 ? void 0 : _selectedClientCurren2.toLowerCase()) === "socalwarehouse" || Boolean(data.localLocCurrent));
+        const theMachineData = data.TheMachine || null;
+        setTheMachine(theMachineData);
+
+        if (theMachineData) {
+          var _theMachineData$oem, _theMachineData$modal, _theMachineData$model;
+
+          // pull both variants, prefer lowercase if it exists
+          const OEM = (_theMachineData$oem = theMachineData.oem) !== null && _theMachineData$oem !== void 0 ? _theMachineData$oem : theMachineData.OEM;
+          const Modality = (_theMachineData$modal = theMachineData.modality) !== null && _theMachineData$modal !== void 0 ? _theMachineData$modal : theMachineData.Modality;
+          const Model = (_theMachineData$model = theMachineData.model) !== null && _theMachineData$model !== void 0 ? _theMachineData$model : theMachineData.Model;
+          setTheMachine(_id_objectSpread(_id_objectSpread({}, theMachineData), {}, {
+            OEM,
+            Modality,
+            Model
+          }));
+        } // setStoredMachine(theMachineData);
+        // **right here** merge from the three sources you just fetched:
+
+
+        const merged = Object(itemFormShared["d" /* updateMachineFields */])(theMachineData, machineCurrentData, machineFromData);
+        applyMergedMachineFields(merged);
+        console.log("SelectedMachine:", selectedMachine, "SelectedCurrentMachine:", selectedCurrentMachine); // Show local loc inputs if applicable
+        // if (
+        //   selectedMachine &&
+        //   selectedMachine.name &&
+        //   selectedMachine.name.toLowerCase() === "interior socal"
+        // ) {
+        //   setShowLocalLocFrom(true);
+        // }
+        // if (
+        //   selectedCurrentMachine &&
+        //   selectedCurrentMachine.name &&
+        //   selectedCurrentMachine.name.toLowerCase() === "interior socal"
+        // ) {
+        //   setShowLocalLocCurrent(true);
+        // }
+
+        if (data.Parent) {
+          const parentDoc = await data.Parent.get();
+          setSelectedParent(_id_objectSpread({
+            id: parentDoc.id
+          }, parentDoc.data()));
+        } // Priority auto‑population of machine fields.
+        // const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
+        // // console.log("Updated machine fields:", updatedFields);
+        // setOem(updatedFields.oem);
+        // setModality(updatedFields.modality);
+        // setModel(updatedFields.model);
+
+
+        setIsLoading(false);
+        Promise.all([fetchPhotos(id), checkIfAddedToWebsite(id), calculateItemFrequencyAndUsage(data.pn)]).catch(err => {
+          console.error("Background item loads failed:", err);
+        });
+      } else {
+        router.push({
+          pathname: "../AddItem/NewItem",
+          query: {
+            signal: id
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching item:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }; // Returns the value for a given field from the highest-priority source.
-
-
-  function getPriorityMachineField(field, theMachine, currentMachine, fromMachine) {
-    console.log("the machine: ", theMachine, "field: ", field);
-
-    if (theMachine && theMachine[field] && theMachine[field] !== "N/A" && theMachine[field].trim() !== "") {
-      return theMachine[field];
-    }
-
-    if (currentMachine && currentMachine[field] && currentMachine[field] !== "N/A" && currentMachine[field].trim() !== "") {
-      return currentMachine[field];
-    }
-
-    if (fromMachine && fromMachine[field] && fromMachine[field] !== "N/A" && fromMachine[field].trim() !== "") {
-      return fromMachine[field];
-    }
-
-    return "";
-  } // Returns an object with updated OEM, modality, and model fields.
-
-
-  function updateMachineFields(theMachine, currentMachine, fromMachine) {
-    return {
-      oem: getPriorityMachineField("OEM", theMachine, currentMachine, fromMachine),
-      modality: getPriorityMachineField("Modality", theMachine, currentMachine, fromMachine),
-      model: getPriorityMachineField("Model", theMachine, currentMachine, fromMachine)
-    };
-  }
+  };
 
   const calculateItemFrequencyAndUsage = async pn => {
     const db = Firebase["b" /* default */].firestore();
@@ -6135,10 +6839,8 @@ function DisplayItem({
       const machineData = doc.data();
       setTheMachine(machineData); // re-merge all three sources with correct priority:
 
-      const merged = updateMachineFields(machineData, selectedCurrentMachine, selectedMachine);
-      setOem(merged.oem);
-      setModality(merged.modality);
-      setModel(merged.model);
+      const merged = Object(itemFormShared["d" /* updateMachineFields */])(machineData, selectedCurrentMachine, selectedMachine);
+      applyMergedMachineFields(merged);
       const machinesSnapshot = await db.collection("Machine").where("Model", "==", machineData.Model || machineData.model).get();
       setMachineFrequency(machinesSnapshot.size);
     } else {
@@ -6153,7 +6855,6 @@ function DisplayItem({
     try {
       const res = await listRef.listAll();
       const urls = await Promise.all(res.items.map(item => item.getDownloadURL()));
-      console.log("Fetched photo URLs:", urls);
       setPhotos(urls.map(url => ({
         url,
         file: null
@@ -6200,7 +6901,10 @@ function DisplayItem({
 
   const handleCloseClientModal = () => setShowClientModal(false);
 
-  const handleShowClientModal = () => setShowClientModal(true);
+  const handleShowClientModal = async () => {
+    await loadClients();
+    setShowClientModal(true);
+  };
 
   const handleCloseMachineModal = () => setShowMachineModal(false);
 
@@ -6362,6 +7066,8 @@ function DisplayItem({
 
 
     formattedItems.status = items.status || "";
+    formattedItems.nameLower = (items.name || "").toLowerCase();
+    formattedItems.nameTokens = Object(itemFormShared["b" /* buildNameTokens */])(items.name);
     formattedItems.DOM = DOM; // Date of Manufacture
 
     formattedItems.localLocFrom = localLocFrom || "";
@@ -6378,14 +7084,14 @@ function DisplayItem({
 
     formattedItems.pn = (items.pn || []).map(value => value === undefined ? "" : value);
     formattedItems.sn = (items.sn || []).map(value => value === undefined ? "" : value);
-    const fromDetails = buildLocalLocObject(newLocalFrom);
-    const currentDetails = buildLocalLocObject(newLocalCurrent);
+    const fromDetails = Object(itemFormShared["a" /* buildLocalLocObject */])(newLocalFrom);
+    const currentDetails = Object(itemFormShared["a" /* buildLocalLocObject */])(newLocalCurrent);
     console.log("From Details: " + fromDetails.region + " " + ((_fromDetails$section = fromDetails.section) === null || _fromDetails$section === void 0 ? void 0 : _fromDetails$section.letter) + ((_fromDetails$section2 = fromDetails.section) === null || _fromDetails$section2 === void 0 ? void 0 : _fromDetails$section2.number) + " " + fromDetails.bin + " " + fromDetails.pallet);
     console.log("Current Details: " + currentDetails.region + " " + ((_currentDetails$secti = currentDetails.section) === null || _currentDetails$secti === void 0 ? void 0 : _currentDetails$secti.letter) + ((_currentDetails$secti2 = currentDetails.section) === null || _currentDetails$secti2 === void 0 ? void 0 : _currentDetails$secti2.number) + " " + currentDetails.bin + " " + currentDetails.pallet);
 
     if (Object.keys(fromDetails).length) {
       formattedItems.newLocalFrom = fromDetails;
-      formattedItems.localLocFrom = formatLoc(newLocalFrom) || "";
+      formattedItems.localLocFrom = Object(itemFormShared["c" /* formatLoc */])(newLocalFrom) || "";
     } else {
       // all fields empty — force an empty string and remove any stray map
       console.log("entered empty fromDetails else");
@@ -6395,7 +7101,7 @@ function DisplayItem({
 
     if (Object.keys(currentDetails).length) {
       formattedItems.newLocalCurrent = currentDetails;
-      formattedItems.localLocCurrent = formatLoc(newLocalCurrent) || "";
+      formattedItems.localLocCurrent = Object(itemFormShared["c" /* formatLoc */])(newLocalCurrent) || "";
     } else {
       // all fields empty — force an empty string and remove any stray map
       formattedItems.localLocCurrent = "";
@@ -6526,7 +7232,8 @@ function DisplayItem({
 
 
       await uploadPhotos(docId);
-      console.log("Item saved and associatedParts updated!"); // Redirect to the new URL using the new document id.
+      console.log("Item saved and associatedParts updated!");
+      setSavedName(items.name || ""); // Redirect to the new URL using the new document id.
 
       router.push(`/NewSearch/item/${docId}`); // Optionally, you can also show a save confirmation modal:
 
@@ -6814,6 +7521,16 @@ function DisplayItem({
 
   const handleCloseInfoModal = () => setShowInfoModal(false);
 
+  const handleCloneToNewItem = () => {
+    if (!id) {
+      setErr("Item ID not ready yet.");
+      setShowErr(true);
+      return;
+    }
+
+    router.push(`/NewSearch/AddItem/NewItem?cloneFrom=${encodeURIComponent(id)}`);
+  };
+
   const handlePnChange = (index, value) => {
     setItems(prev => {
       const newPn = [...prev.pn];
@@ -6889,6 +7606,11 @@ function DisplayItem({
     0: showSnDropdown,
     1: setShowSnDropdown
   } = Object(external_react_["useState"])(false);
+  Object(external_react_["useEffect"])(() => {
+    if (showDropdown || showSnDropdown) {
+      loadPnSnOptions();
+    }
+  }, [showDropdown, showSnDropdown]);
 
   const handleAddNewClient = () => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
@@ -7012,7 +7734,13 @@ function DisplayItem({
     }
   };
 
-  return __jsx(LoggedIn["default"], null, __jsx("div", null, __jsx(external_react_bootstrap_["Modal"], {
+  return __jsx(LoggedIn["default"], null, isLoading && __jsx("div", {
+    className: NewItem_module_default.a.loadingOverlay
+  }, __jsx("img", {
+    src: "/magmo-logo.png",
+    alt: "Loading Magmo",
+    className: NewItem_module_default.a.loadingLogo
+  })), __jsx("div", null, __jsx(external_react_bootstrap_["Modal"], {
     show: show,
     onHide: handleClose
   }, __jsx(external_react_bootstrap_["Modal"].Header, {
@@ -7190,20 +7918,23 @@ function DisplayItem({
     freqM: machineFrequency,
     usage: usagePastYear
   }), __jsx(external_react_bootstrap_["Container"], {
-    className: "d-flex align-items-center justify-content-center",
-    style: {
-      minHeight: "100vh"
-    }
+    fluid: true,
+    className: NewItem_module_default.a.page
   }, __jsx("div", {
-    className: "w-100",
-    style: {
-      maxWidth: "600px"
-    }
+    className: NewItem_module_default.a.shell
   }, __jsx(external_react_bootstrap_["Card"], {
-    className: "align-items-center justify-content-center"
-  }, __jsx(external_react_bootstrap_["Card"].Body, null, __jsx("h2", {
-    className: "text-center mb-4"
-  }, "Item"), __jsx(external_react_bootstrap_["Form"], {
+    className: NewItem_module_default.a.card
+  }, __jsx(external_react_bootstrap_["Card"].Body, {
+    className: NewItem_module_default.a.cardBody
+  }, __jsx("div", {
+    className: NewItem_module_default.a.header
+  }, __jsx("div", {
+    className: NewItem_module_default.a.kicker
+  }, "Item"), __jsx("h2", {
+    className: NewItem_module_default.a.title
+  }, savedName || "Item Details"), __jsx("div", {
+    className: NewItem_module_default.a.subtitle
+  }, "Review and update fields, photos, and routing information.")), __jsx(external_react_bootstrap_["Form"], {
     onSubmit: handleSubmit
   }, __jsx(external_react_bootstrap_["Row"], {
     className: "mb-3"
@@ -7319,6 +8050,34 @@ function DisplayItem({
   }, "Bad"), __jsx("option", {
     value: "Unknown"
   }, "Unknown"))))), __jsx(external_react_bootstrap_["Row"], {
+    className: "mb-3"
+  }, __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Group, {
+    controlId: "localSN"
+  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Local SN"), __jsx(external_react_bootstrap_["Form"].Control, {
+    type: "text",
+    placeholder: "Enter Local SN",
+    value: items.localSN || "",
+    onChange: handleChange("localSN")
+  }))), __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Group, {
+    controlId: "arrivalDate"
+  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Arrival Date"), __jsx(external_react_bootstrap_["Form"].Control, {
+    placeholder: "Enter Arrival Date",
+    type: "date",
+    value: items.arrival_date,
+    onChange: e => {
+      const value = e.target.value;
+      setItems(prev => _id_objectSpread(_id_objectSpread({}, prev), {}, {
+        arrival_date: value
+      }));
+    }
+  }))), __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Group, {
+    controlId: "trackingNumber"
+  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Tracking Number"), __jsx(external_react_bootstrap_["Form"].Control, {
+    placeholder: "Tracking Number",
+    type: "text",
+    value: items.trackingNumber,
+    onChange: handleChange("trackingNumber")
+  })))), __jsx(external_react_bootstrap_["Row"], {
     className: "mb-3"
   }, __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Label, null, "OEM"), __jsx(external_react_bootstrap_["Form"].Control, {
     type: "text",
@@ -7500,9 +8259,10 @@ function DisplayItem({
       marginBottom: "1rem"
     }
   }, __jsx(external_react_bootstrap_["Row"], {
-    className: "mb-3"
+    className: `mb-3 ${NewItem_module_default.a.photoActionsRow}`
   }, __jsx(external_react_bootstrap_["Col"], {
-    xs: 6
+    xs: 12,
+    md: 6
   }, __jsx(external_react_bootstrap_["ButtonGroup"], null, __jsx(external_react_bootstrap_["Button"], {
     variant: "outline-secondary",
     onClick: handleShowCameraModal
@@ -7510,8 +8270,9 @@ function DisplayItem({
     variant: "outline-secondary",
     onClick: handleBrowsePhotos
   }, "Browse"))), __jsx(external_react_bootstrap_["Col"], {
-    xs: 6,
-    className: "d-flex align-items-center"
+    xs: 12,
+    md: 6,
+    className: NewItem_module_default.a.photoActionsRight
   }, __jsx(external_react_bootstrap_["Button"], {
     variant: "success",
     onClick: handleSendToInflow,
@@ -7585,7 +8346,7 @@ function DisplayItem({
     },
     onClick: () => removePhoto(index)
   }, "x")))), __jsx("div", {
-    className: "mt-3 d-flex flex-wrap align-items-center"
+    className: `mt-3 d-flex flex-wrap align-items-center ${NewItem_module_default.a.actionRow}`
   }, __jsx(external_react_bootstrap_["Button"], {
     variant: "primary",
     type: "submit",
@@ -7594,11 +8355,11 @@ function DisplayItem({
     }
   }, "Save"), __jsx(external_react_bootstrap_["Button"], {
     variant: "secondary",
-    onClick: handleShowInfoModal,
+    onClick: handleCloneToNewItem,
     style: {
       marginRight: "1rem"
     }
-  }, "More Info"), __jsx(LoadingButton, {
+  }, "Clone"), __jsx(LoadingButton, {
     type: "primary",
     name: "Back",
     route: "NewSearch/mainSearch"
@@ -7658,7 +8419,12 @@ function DisplayItem({
   }, __jsx("div", {
     id: "extra-collapse",
     className: "mt-3"
-  }, __jsx(external_react_bootstrap_["Row"], null, __jsx(external_react_bootstrap_["Form"].Group, {
+  }, __jsx("div", {
+    className: "d-flex justify-content-end mb-3"
+  }, __jsx(external_react_bootstrap_["Button"], {
+    variant: "secondary",
+    onClick: handleShowInfoModal
+  }, "More Info")), __jsx(external_react_bootstrap_["Row"], null, __jsx(external_react_bootstrap_["Form"].Group, {
     as: external_react_bootstrap_["Col"],
     controlId: "dimensions"
   }, __jsx(external_react_bootstrap_["Form"].Label, null, "Dimensions"), __jsx("div", {
@@ -7689,15 +8455,7 @@ function DisplayItem({
     type: "text",
     value: items.height,
     onChange: handleChange("height")
-  }))), __jsx(external_react_bootstrap_["Form"].Group, {
-    as: external_react_bootstrap_["Col"],
-    controlId: "trackingNumber"
-  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Tracking Number"), __jsx(external_react_bootstrap_["Form"].Control, {
-    placeholder: "Tracking Number",
-    type: "text",
-    value: items.trackingNumber,
-    onChange: handleChange("trackingNumber")
-  }))), __jsx(external_react_bootstrap_["Row"], {
+  })))), __jsx(external_react_bootstrap_["Row"], {
     className: "mt-3"
   }, __jsx(external_react_bootstrap_["Form"].Group, {
     as: external_react_bootstrap_["Col"],
@@ -7723,29 +8481,6 @@ function DisplayItem({
     placeholder: "PO Number",
     value: items.poNumber || "",
     onChange: handleChange("poNumber")
-  }))), __jsx(external_react_bootstrap_["Row"], {
-    className: "mt-3"
-  }, __jsx(external_react_bootstrap_["Form"].Group, {
-    as: external_react_bootstrap_["Col"],
-    controlId: "localSN"
-  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Local SN"), __jsx(external_react_bootstrap_["Form"].Control, {
-    type: "text",
-    placeholder: "Enter Local SN",
-    value: items.localSN || "",
-    onChange: handleChange("localSN")
-  })), __jsx(external_react_bootstrap_["Form"].Group, {
-    as: external_react_bootstrap_["Col"],
-    controlId: "arrivalDate"
-  }, __jsx(external_react_bootstrap_["Form"].Label, null, "Arrival Date"), __jsx(external_react_bootstrap_["Form"].Control, {
-    placeholder: "Enter Arrival Date",
-    type: "date",
-    value: items.arrival_date,
-    onChange: e => {
-      const value = e.target.value;
-      setItems(prev => _id_objectSpread(_id_objectSpread({}, prev), {}, {
-        arrival_date: value
-      }));
-    }
   }))))))))))), __jsx(external_react_bootstrap_["Modal"], {
     show: showCameraModal,
     onHide: handleCloseCameraModal
@@ -7789,6 +8524,17 @@ function DisplayItem({
     variant: "primary",
     onClick: savePhoto
   }, "OK")))));
+}
+
+function DisplayItemPage(props) {
+  var _router$query, _props$initialItem;
+
+  const router = Object(router_["useRouter"])();
+  const idFromRouter = (_router$query = router.query) === null || _router$query === void 0 ? void 0 : _router$query.id;
+  const key = (props === null || props === void 0 ? void 0 : (_props$initialItem = props.initialItem) === null || _props$initialItem === void 0 ? void 0 : _props$initialItem.id) || idFromRouter || "new-item";
+  return __jsx(DisplayItemInner, _extends({}, props, {
+    key: key
+  }));
 } // Server-side rendering function
 
 async function getServerSideProps(context) {
@@ -7875,9 +8621,10 @@ async function getServerSideProps(context) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return fetchPartsWithMachineData; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return fetchPartsWithMachineDataPage; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return fetchClients; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return fetchModels; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return formatDate; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return formatDate; });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("NY6m");
@@ -7893,26 +8640,409 @@ async function fetchPartsWithMachineData() {
   const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore();
   const partsSnapshot = await db.collection("Test").get();
   const parts = await Promise.all(partsSnapshot.docs.map(async partDoc => {
+    var _ref, _getRefId, _ref2, _getRefId2;
+
     const partData = partDoc.data();
     partData.id = partDoc.id; // Add document ID here
-    // console.log(partData);
 
-    if (partData.Machine && partData.Machine instanceof _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.DocumentReference) {
-      console.log(partData.Machine);
-      const machineDoc = await partData.Machine.get();
-      partData.machineData = machineDoc.exists ? machineDoc.data() : {};
+    const getRefId = ref => {
+      if (!ref) return null;
+      if (typeof ref === "string") return ref;
+      if (ref instanceof _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.DocumentReference) return ref.id;
+      if (ref.id) return ref.id;
+      return null;
+    };
 
-      if (partData.machineData.client) {
-        const clientDoc = await partData.machineData.client.get();
+    partData.clientFromId = (_ref = (_getRefId = getRefId(partData === null || partData === void 0 ? void 0 : partData.ClientFrom)) !== null && _getRefId !== void 0 ? _getRefId : partData === null || partData === void 0 ? void 0 : partData.clientFromId) !== null && _ref !== void 0 ? _ref : null;
+    partData.clientCurrentId = (_ref2 = (_getRefId2 = getRefId(partData === null || partData === void 0 ? void 0 : partData.ClientCurrent)) !== null && _getRefId2 !== void 0 ? _getRefId2 : partData === null || partData === void 0 ? void 0 : partData.clientCurrentId) !== null && _ref2 !== void 0 ? _ref2 : null; // console.log(partData);
+
+    const fetchMachineData = async ref => {
+      if (!ref) return null;
+
+      if (typeof ref.get === "function") {
+        const doc = await ref.get();
+        return doc.exists ? doc.data() : null;
+      }
+
+      if (typeof ref === "string") {
+        const doc = await db.collection("Machine").doc(ref).get();
+        return doc.exists ? doc.data() : null;
+      }
+
+      if (ref !== null && ref !== void 0 && ref.id) {
+        const doc = await db.collection("Machine").doc(ref.id).get();
+        return doc.exists ? doc.data() : null;
+      }
+
+      return null;
+    };
+
+    const machineRef = partData.Machine || partData.MachineFrom;
+    const currentMachineRef = partData.CurrentMachine || partData.MachineCurrent;
+    const machineData = await fetchMachineData(machineRef);
+    partData.machineData = machineData || {};
+
+    if (machineData !== null && machineData !== void 0 && machineData.client) {
+      const clientRef = machineData.client;
+      const clientId = getRefId(clientRef);
+
+      if (clientId && !partData.clientFromId) {
+        partData.clientFromId = clientId;
+      }
+
+      if (typeof (clientRef === null || clientRef === void 0 ? void 0 : clientRef.get) === "function") {
+        const clientDoc = await clientRef.get();
         partData.machineData.Client = clientDoc.exists ? clientDoc.data().name : "";
       }
-    } else {
-      partData.machineData = {};
+    }
+
+    const currentMachineData = await fetchMachineData(currentMachineRef);
+    partData.currentMachineData = currentMachineData || {};
+
+    if (currentMachineData !== null && currentMachineData !== void 0 && currentMachineData.client) {
+      const clientRef = currentMachineData.client;
+      const clientId = getRefId(clientRef);
+
+      if (clientId && !partData.clientCurrentId) {
+        partData.clientCurrentId = clientId;
+      }
+
+      if (typeof (clientRef === null || clientRef === void 0 ? void 0 : clientRef.get) === "function") {
+        const clientDoc = await clientRef.get();
+        partData.currentMachineData.Client = clientDoc.exists ? clientDoc.data().name : "";
+      }
     }
 
     return partData;
   }));
   return parts;
+} // Paginated version for faster list views (e.g., mainSearch).
+// Uses documentId order for stable pagination.
+
+async function fetchPartsWithMachineDataPage({
+  pageSize = 25,
+  startAfterDoc = null,
+  visibleOnly = false,
+  filterFn = null,
+  needsMachineData = true,
+  search = null
+} = {}) {
+  const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore();
+  const limit = pageSize + 1;
+
+  const getRefId = ref => {
+    if (!ref) return null;
+    if (typeof ref === "string") return ref;
+    if (ref instanceof _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.DocumentReference) return ref.id;
+    if (ref.id) return ref.id;
+    return null;
+  };
+
+  const MACHINE_SELECT_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
+
+  const withMachineSelect = query => typeof query.select === "function" ? query.select(...MACHINE_SELECT_FIELDS) : query;
+
+  const buildPart = (partDoc, machineMap, currentMachineMap) => {
+    var _ref3, _getRefId3, _ref4, _getRefId4;
+
+    const partData = partDoc.data();
+    partData.id = partDoc.id; // Add document ID here
+
+    partData.clientFromId = (_ref3 = (_getRefId3 = getRefId(partData === null || partData === void 0 ? void 0 : partData.ClientFrom)) !== null && _getRefId3 !== void 0 ? _getRefId3 : partData === null || partData === void 0 ? void 0 : partData.clientFromId) !== null && _ref3 !== void 0 ? _ref3 : null;
+    partData.clientCurrentId = (_ref4 = (_getRefId4 = getRefId(partData === null || partData === void 0 ? void 0 : partData.ClientCurrent)) !== null && _getRefId4 !== void 0 ? _getRefId4 : partData === null || partData === void 0 ? void 0 : partData.clientCurrentId) !== null && _ref4 !== void 0 ? _ref4 : null;
+    const machineRef = partData.Machine || partData.MachineFrom;
+    const currentMachineRef = partData.CurrentMachine || partData.MachineCurrent;
+    const machineId = getRefId(machineRef);
+    const currentMachineId = getRefId(currentMachineRef);
+    const machineData = machineId ? machineMap[machineId] : null;
+    const currentMachineData = currentMachineId ? currentMachineMap[currentMachineId] : null;
+    partData.machineData = machineData || {};
+    partData.currentMachineData = currentMachineData || {};
+
+    if (!partData.clientFromId && machineData !== null && machineData !== void 0 && machineData.client) {
+      partData.clientFromId = getRefId(machineData.client);
+    }
+
+    if (!partData.clientCurrentId && currentMachineData !== null && currentMachineData !== void 0 && currentMachineData.client) {
+      partData.clientCurrentId = getRefId(currentMachineData.client);
+    }
+
+    return partData;
+  };
+
+  const searchRaw = ((search === null || search === void 0 ? void 0 : search.raw) || "").toString().trim();
+  const searchLower = ((search === null || search === void 0 ? void 0 : search.lower) || "").toString().trim();
+  const searchType = (search === null || search === void 0 ? void 0 : search.type) || null;
+  const hasSearch = Boolean(searchRaw);
+
+  const toTitleCase = text => text.split(" ").filter(Boolean).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+
+  const buildSearchQuery = () => {
+    if (!hasSearch || !searchType) return {
+      mode: "scan",
+      query: null
+    };
+    const col = db.collection("Test");
+
+    switch (searchType) {
+      case "SKU":
+        return {
+          mode: "sku",
+          query: null
+        };
+
+      case "Name":
+        {
+          const titleFallback = searchRaw && searchRaw === searchRaw.toLowerCase() ? toTitleCase(searchRaw) : null;
+          const terms = searchLower ? searchLower.split(/\s+/).filter(Boolean) : [];
+          const tokens = [...terms];
+          if (searchLower && !tokens.includes(searchLower)) tokens.push(searchLower);
+          if (!tokens.length) return {
+            mode: "scan",
+            query: null
+          };
+
+          const prefixQuery = value => col.orderBy("name").startAt(value).endAt(`${value}\uf8ff`);
+
+          return {
+            mode: "query",
+            query: tokens.length === 1 ? col.where("nameTokens", "array-contains", tokens[0]) : col.where("nameTokens", "array-contains-any", tokens.slice(0, 10)),
+            fallback: titleFallback ? () => prefixQuery(titleFallback) : () => prefixQuery(searchRaw)
+          };
+        }
+
+      case "Product Number":
+        return {
+          mode: "query",
+          query: col.where("pn", "array-contains", searchRaw),
+          fallback: () => col.where("pn", "==", searchRaw)
+        };
+
+      case "Serial Number":
+        return {
+          mode: "query",
+          query: col.where("sn", "array-contains", searchRaw),
+          fallback: () => col.where("sn", "==", searchRaw)
+        };
+
+      case "Date":
+        {
+          const asDate = (() => {
+            try {
+              const d = new Date(searchRaw);
+              return isNaN(d.getTime()) ? null : d;
+            } catch {
+              return null;
+            }
+          })();
+
+          return {
+            mode: "query",
+            query: col.where("date", "==", searchRaw),
+            fallback: asDate ? () => col.where("date", "==", asDate) : null
+          };
+        }
+
+      default:
+        return {
+          mode: "scan",
+          query: null
+        };
+    }
+  };
+
+  const {
+    mode: searchMode,
+    query: searchQuery,
+    fallback: searchFallback
+  } = buildSearchQuery();
+
+  if (searchMode === "sku" && hasSearch) {
+    const docs = [];
+    const rawUpper = searchRaw.toUpperCase();
+    let doc = await db.collection("Test").doc(searchRaw).get();
+
+    if (!doc.exists && rawUpper !== searchRaw) {
+      doc = await db.collection("Test").doc(rawUpper).get();
+    }
+
+    if (doc.exists) docs.push(doc);
+    const localValues = rawUpper !== searchRaw ? [searchRaw, rawUpper] : [searchRaw];
+    const localSnap = await db.collection("Test").where("localSN", "in", localValues).limit(limit).get();
+    localSnap.forEach(d => {
+      if (!docs.find(existing => existing.id === d.id)) {
+        docs.push(d);
+      }
+    });
+    let machineMap = {};
+    let currentMachineMap = {};
+
+    if (needsMachineData && docs.length) {
+      const machineIds = new Set();
+      const currentMachineIds = new Set();
+
+      for (const docSnap of docs) {
+        const raw = docSnap.data();
+        const machineId = getRefId(raw.Machine || raw.MachineFrom);
+        const currentMachineId = getRefId(raw.CurrentMachine || raw.MachineCurrent);
+        if (machineId) machineIds.add(machineId);
+        if (currentMachineId) currentMachineIds.add(currentMachineId);
+      }
+
+      const fetchMachineMap = async ids => {
+        if (!ids.length) return {};
+        const out = {};
+        const chunks = [];
+
+        for (let i = 0; i < ids.length; i += 10) {
+          chunks.push(ids.slice(i, i + 10));
+        }
+
+        for (const chunk of chunks) {
+          const snap = await withMachineSelect(db.collection("Machine").where(_context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.FieldPath.documentId(), "in", chunk)).get();
+          snap.forEach(docSnap => {
+            out[docSnap.id] = docSnap.data() || {};
+          });
+        }
+
+        return out;
+      };
+
+      [machineMap, currentMachineMap] = await Promise.all([fetchMachineMap([...machineIds]), fetchMachineMap([...currentMachineIds])]);
+    }
+
+    const built = docs.map(docSnap => buildPart(docSnap, machineMap, currentMachineMap)).filter(item => !visibleOnly || (item === null || item === void 0 ? void 0 : item.visible) !== false).filter(item => filterFn ? filterFn(item) : true).slice(0, pageSize);
+    return {
+      parts: built,
+      lastDoc: built.length ? docs[built.length - 1] : null,
+      hasNextPage: false
+    };
+  }
+
+  let parts = [];
+  let cursor = startAfterDoc || null;
+  let lastDoc = null;
+  let pageLastDoc = null;
+  let hasNextPage = false;
+  let filled = false;
+  let usedFallback = false;
+  const scanBaseQuery = db.collection("Test").orderBy(_context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.FieldPath.documentId());
+
+  while (true) {
+    let query = searchQuery || scanBaseQuery;
+
+    if (searchMode === "query" && usedFallback && searchFallback) {
+      query = searchFallback();
+    }
+
+    if (cursor) query = query.startAfter(cursor);
+    query = query.limit(limit);
+    const snap = await query.get();
+
+    if (snap.empty) {
+      if (searchMode === "query" && searchFallback && !cursor && !usedFallback) {
+        usedFallback = true;
+        continue;
+      }
+
+      hasNextPage = false;
+      break;
+    }
+
+    const batchDocs = snap.docs;
+    let machineMap = {};
+    let currentMachineMap = {};
+
+    if (needsMachineData) {
+      const machineIds = new Set();
+      const currentMachineIds = new Set();
+
+      for (const doc of batchDocs) {
+        const raw = doc.data();
+
+        if (visibleOnly && raw.visible === false) {
+          continue;
+        }
+
+        const machineId = getRefId(raw.Machine || raw.MachineFrom);
+        const currentMachineId = getRefId(raw.CurrentMachine || raw.MachineCurrent);
+        if (machineId) machineIds.add(machineId);
+        if (currentMachineId) currentMachineIds.add(currentMachineId);
+      }
+
+      const fetchMachineMap = async ids => {
+        if (!ids.length) return {};
+        const out = {};
+        const chunks = [];
+
+        for (let i = 0; i < ids.length; i += 10) {
+          chunks.push(ids.slice(i, i + 10));
+        }
+
+        for (const chunk of chunks) {
+          const snap = await withMachineSelect(db.collection("Machine").where(_context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore.FieldPath.documentId(), "in", chunk)).get();
+          snap.forEach(doc => {
+            out[doc.id] = doc.data() || {};
+          });
+        }
+
+        return out;
+      };
+
+      [machineMap, currentMachineMap] = await Promise.all([fetchMachineMap([...machineIds]), fetchMachineMap([...currentMachineIds])]);
+    }
+
+    for (let i = 0; i < snap.docs.length; i++) {
+      const doc = batchDocs[i];
+      cursor = doc;
+      const raw = doc.data();
+
+      if (visibleOnly && raw.visible === false) {
+        continue; // skip hidden items but keep advancing the cursor
+      }
+
+      const built = buildPart(doc, machineMap, currentMachineMap);
+
+      if (filterFn && !filterFn(built)) {
+        continue;
+      }
+
+      if (!filled) {
+        parts.push(built);
+
+        if (parts.length === pageSize) {
+          filled = true;
+          pageLastDoc = doc;
+        }
+
+        continue;
+      } // We already filled the page and found an extra matching item.
+
+
+      hasNextPage = true;
+      return {
+        parts,
+        lastDoc: pageLastDoc,
+        hasNextPage
+      };
+    } // We exhausted this batch without filling the page.
+
+
+    if (snap.size < limit) {
+      hasNextPage = false;
+      break;
+    } // There might be more docs; continue scanning for visible items.
+
+
+    hasNextPage = true;
+  }
+
+  lastDoc = pageLastDoc || (parts.length ? cursor : null);
+  return {
+    parts,
+    lastDoc,
+    hasNextPage: filled ? hasNextPage : false
+  };
 }
 async function fetchClients(selectedOEM, selectedModality) {
   const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore();
@@ -7962,8 +9092,26 @@ async function fetchModels(selectedOEM, selectedModality, selectedClient) {
     if (selectedModality && machineData.Modality !== selectedModality) isValid = false;
 
     if (selectedClient && machineData.client) {
-      const clientDoc = await machineData.client.get();
-      if (!clientDoc.exists || clientDoc.data().name !== selectedClient) isValid = false;
+      var _machineData$client;
+
+      let clientDoc = null;
+
+      if (typeof ((_machineData$client = machineData.client) === null || _machineData$client === void 0 ? void 0 : _machineData$client.get) === "function") {
+        clientDoc = await machineData.client.get();
+      } else if (typeof machineData.client === "string") {
+        clientDoc = await db.collection("Client").doc(machineData.client).get();
+      }
+
+      if (!clientDoc || !clientDoc.exists) {
+        isValid = false;
+      } else {
+        const clientName = clientDoc.data().name;
+        const clientId = clientDoc.id;
+
+        if (selectedClient !== clientName && selectedClient !== clientId) {
+          isValid = false;
+        }
+      }
     }
 
     if (isValid) {
@@ -8103,6 +9251,8 @@ function createObserver(options) {
 module.exports = {
 	"clientTableContainer": "ClientTable_clientTableContainer__1e9un",
 	"clientTable": "ClientTable_clientTable__194v7",
+	"actionRow": "ClientTable_actionRow__9EfKK",
+	"actionButtons": "ClientTable_actionButtons__1Vtgg",
 	"buttonGroup": "ClientTable_buttonGroup__pSZ7y",
 	"flexButton": "ClientTable_flexButton__LoNiS"
 };

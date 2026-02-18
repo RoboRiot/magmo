@@ -88,12 +88,12 @@ module.exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 12);
+/******/ 	return __webpack_require__(__webpack_require__.s = 13);
 /******/ })
 /************************************************************************/
 /******/ ({
 
-/***/ 12:
+/***/ 13:
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__("2JcH");
@@ -123,7 +123,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("NY6m");
 /* harmony import */ var _ClientInfoModal__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("MbKa");
 /* harmony import */ var _MachineCreationModal__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("cdLA");
-/* harmony import */ var _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__("Aroy");
+/* harmony import */ var _Client_module_css__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__("IPTb");
+/* harmony import */ var _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_Client_module_css__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__("Aroy");
 var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
@@ -137,24 +139,33 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 
 
+
  // Import for SSR
 
 
 
-const Client = () => {
+const Client = ({
+  initialClient,
+  initialMachines,
+  error: initialError
+}) => {
   const router = Object(next_router__WEBPACK_IMPORTED_MODULE_1__["useRouter"])();
   const {
     0: selectedClient,
     1: setSelectedClient
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(initialClient || null);
   const {
     0: machineOptions,
     1: setMachineOptions
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(Array.isArray(initialMachines) ? initialMachines : []);
   const {
     0: error,
     1: setError
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null); // State for machine addition modals
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(initialError || null);
+  const {
+    0: isLoading,
+    1: setIsLoading
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(!initialClient && !initialError); // State for machine addition modals
 
   const {
     0: showAddMachineModal,
@@ -169,26 +180,35 @@ const Client = () => {
     1: setAvailableMachines
   } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
   Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
-    if (router.isReady) {
-      const {
-        clientId
-      } = router.query; // Extract clientId from query or URL path
+    if (!router.isReady) return;
+    const activeId = router.query.id || router.asPath.split("/").pop();
+    if (!activeId) return;
+    const hasInitial = initialClient && initialClient.id === activeId;
+    fetchClientData(activeId, {
+      silent: hasInitial
+    });
+  }, [router.isReady, router.query.id, initialClient]);
 
-      const id = clientId || router.asPath.split("/").pop();
-      fetchClientData(id);
+  const fetchClientData = async (clientId, {
+    silent = false
+  } = {}) => {
+    if (!silent) {
+      setIsLoading(true);
     }
-  }, [router.isReady]);
 
-  const fetchClientData = async clientId => {
+    setError(null);
+
     try {
       const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore();
       const clientDoc = await db.collection("Client").doc(clientId).get();
 
       if (clientDoc.exists) {
         const clientData = clientDoc.data();
-        setSelectedClient(clientData); // Fetch machine documents referenced in the client's machines array
-
-        const machinePromises = clientData.machines.map(machineRef => machineRef.get());
+        setSelectedClient(_objectSpread({
+          id: clientId
+        }, clientData));
+        const machineRefs = Array.isArray(clientData.machines) ? clientData.machines : [];
+        const machinePromises = machineRefs.map(machineRef => machineRef.get());
         const machineDocs = await Promise.all(machinePromises);
         const machines = machineDocs.map(machineDoc => _objectSpread({
           id: machineDoc.id
@@ -200,6 +220,10 @@ const Client = () => {
     } catch (error) {
       console.error("Error fetching client data:", error);
       setError("Error fetching client data");
+    } finally {
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }; // Fetch available machines (those not yet assigned to a client)
 
@@ -276,40 +300,85 @@ const Client = () => {
     setShowAddMachineModal(true);
   };
 
-  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Container"], {
-    className: "mt-5"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Row"], {
-    className: "justify-content-md-center"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
-    md: "8"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Header, null, __jsx("h4", null, "Client Machines")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Body, null, error && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Alert"], {
+  return __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.page
+  }, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.shell
+  }, __jsx("header", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.header
+  }, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.brand
+  }, __jsx("img", {
+    src: "/magmo-logo.png",
+    alt: "Magmo",
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.brandLogo
+  }), __jsx("div", null, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.brandName
+  }, "Magmo"), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.brandSub
+  }, "Client Detail"))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+    variant: "outline-secondary",
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.backButton,
+    onClick: () => router.back()
+  }, "Back")), __jsx("section", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.card
+  }, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.cardHeader
+  }, __jsx("div", null, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.cardTitle
+  }, "Client Machines"), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.cardSubtitle
+  }, "Manage machines linked to this client.")), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.cardMeta
+  }, machineOptions.length, " machines")), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.cardBody
+  }, error && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Alert"], {
     variant: "danger"
-  }, error), selectedClient ? __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx("h5", null, "Client: ", selectedClient.name), __jsx("p", null, "Location: ", selectedClient.local), __jsx("div", {
-    className: "mb-3"
+  }, error), isLoading && __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.loadingWrap
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Spinner"], {
+    animation: "border",
+    role: "status"
+  }, __jsx("span", {
+    className: "sr-only"
+  }, "Loading..."))), !isLoading && selectedClient && __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.clientSummary
+  }, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.clientName
+  }, selectedClient.name), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.clientMetaRow
+  }, __jsx("span", null, "Location: ", selectedClient.local || "Unknown"), __jsx("span", null, "Client ID: ", selectedClient.id))), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.actionRow
   }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "primary",
     onClick: openAddMachineModal
   }, "Add Existing Machine"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "secondary",
-    className: "ms-2",
+    variant: "outline-secondary",
     onClick: () => setShowCreateMachineModal(true)
-  }, "Create New Machine")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
+  }, "Create New Machine")), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.tableCard
+  }, __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.tableHeader
+  }, __jsx("span", null, "Machines"), __jsx("span", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.tableHint
+  }, "Select a machine to view details.")), __jsx("div", {
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.tableWrap
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
     striped: true,
     bordered: true,
     hover: true,
-    size: "sm"
-  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "Location"), __jsx("th", null, "OEM"), __jsx("th", null, "Modality"), __jsx("th", null, "Select"))), __jsx("tbody", null, machineOptions.map(machine => __jsx("tr", {
+    size: "sm",
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.table
+  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "Location"), __jsx("th", null, "OEM"), __jsx("th", null, "Modality"), __jsx("th", null, "Select"))), __jsx("tbody", null, machineOptions.length === 0 ? __jsx("tr", null, __jsx("td", {
+    colSpan: 5,
+    className: _Client_module_css__WEBPACK_IMPORTED_MODULE_6___default.a.emptyState
+  }, "No machines assigned yet.")) : machineOptions.map(machine => __jsx("tr", {
     key: machine.id
   }, __jsx("td", null, machine.name), __jsx("td", null, machine.local), __jsx("td", null, machine.OEM), __jsx("td", null, machine.Modality), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "primary",
+    size: "sm",
     onClick: () => handleSelectMachine(machine.id, machine.name)
-  }, "Select")))))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "primary",
-    style: {
-      marginTop: "20px"
-    },
-    onClick: () => router.back()
-  }, "Back")) : !error && __jsx("p", null, "Loading client data..."))))), __jsx(_ClientInfoModal__WEBPACK_IMPORTED_MODULE_4__["default"], {
+  }, "Select")))))))))))), __jsx(_ClientInfoModal__WEBPACK_IMPORTED_MODULE_4__["default"], {
     show: showAddMachineModal,
     handleClose: () => setShowAddMachineModal(false),
     machineOptions: availableMachines,
@@ -330,7 +399,7 @@ async function getServerSideProps(context) {
 
   try {
     // Fetch client data from Firestore using Admin SDK
-    const clientDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_6__[/* adminDb */ "a"].collection("Client").doc(id).get();
+    const clientDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_7__[/* adminDb */ "a"].collection("Client").doc(id).get();
 
     if (!clientDoc.exists) {
       return {
@@ -347,7 +416,7 @@ async function getServerSideProps(context) {
       try {
         const machinePromises = clientData.machines.map(machineRef => {
           if (machineRef.path) {
-            return _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_6__[/* adminDb */ "a"].doc(machineRef.path).get();
+            return _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_7__[/* adminDb */ "a"].doc(machineRef.path).get();
           }
 
           return null;
@@ -368,7 +437,7 @@ async function getServerSideProps(context) {
 
           if (machineData.client && machineData.client.path) {
             try {
-              const clientDoc = _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_6__[/* adminDb */ "a"].doc(machineData.client.path).get();
+              const clientDoc = _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_7__[/* adminDb */ "a"].doc(machineData.client.path).get();
 
               if (clientDoc.exists) {
                 serializedMachine.clientName = clientDoc.data().name || "";
@@ -480,6 +549,41 @@ try {
 
 /***/ }),
 
+/***/ "IPTb":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"page": "Client_page__-jqa8",
+	"shell": "Client_shell__HaaZr",
+	"header": "Client_header__1OzDo",
+	"brand": "Client_brand__TY-t-",
+	"brandLogo": "Client_brandLogo__BAtgq",
+	"brandName": "Client_brandName__1r159",
+	"brandSub": "Client_brandSub__1HMns",
+	"backButton": "Client_backButton__2uAON",
+	"card": "Client_card__3D3gL",
+	"cardHeader": "Client_cardHeader__35lxQ",
+	"cardTitle": "Client_cardTitle__29vEJ",
+	"cardSubtitle": "Client_cardSubtitle__3y6SK",
+	"cardMeta": "Client_cardMeta__1NmUj",
+	"cardBody": "Client_cardBody__2yWTw",
+	"clientSummary": "Client_clientSummary__vTrXq",
+	"clientName": "Client_clientName__2o7za",
+	"clientMetaRow": "Client_clientMetaRow__5WBls",
+	"actionRow": "Client_actionRow__1lthB",
+	"tableCard": "Client_tableCard__1eEmm",
+	"tableHeader": "Client_tableHeader__1QxeE",
+	"tableHint": "Client_tableHint__27xzx",
+	"tableWrap": "Client_tableWrap__2ruRh",
+	"table": "Client_table__2fISj",
+	"emptyState": "Client_emptyState__28E9g",
+	"loadingWrap": "Client_loadingWrap__l0kar"
+};
+
+
+/***/ }),
+
 /***/ "IZS3":
 /***/ (function(module, exports) {
 
@@ -578,7 +682,7 @@ const ClientInfoModal = ({
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
-  authDomain:  false ? undefined : "magmo-cloud.web.app",
+  authDomain: "magmo-ac10c.firebaseapp.com",
   projectId: "magmo-ac10c",
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
@@ -588,7 +692,11 @@ const FirebaseCredentials = {
 
 if (!firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.apps.length) {
   firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.initializeApp(FirebaseCredentials);
-}
+} // Some networks/proxies block Firestore's streaming transport.
+// Force long polling in the browser to avoid stalled writes/listens.
+
+
+if (false) {}
 
 const auth = firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.auth();
 /* harmony default export */ __webpack_exports__["b"] = (firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a); // import { initializeApp } from 'firebase/app';

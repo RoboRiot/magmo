@@ -1,0 +1,258 @@
+@import url(https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600&display=swap);
+.Client_page__-jqa8 {
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 560px at 12% 8%, rgba(114, 192, 255, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 88% 12%, rgba(94, 235, 195, 0.2), transparent 50%),
+    -webkit-gradient(linear, left top, left bottom, from(#f5f7fb), to(#eef1f6));
+  background:
+    -webkit-radial-gradient(12% 8%, 1100px 560px, rgba(114, 192, 255, 0.22), transparent 55%),
+    -webkit-radial-gradient(88% 12%, 900px 520px, rgba(94, 235, 195, 0.2), transparent 50%),
+    -webkit-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    -moz-radial-gradient(12% 8%, 1100px 560px, rgba(114, 192, 255, 0.22), transparent 55%),
+    -moz-radial-gradient(88% 12%, 900px 520px, rgba(94, 235, 195, 0.2), transparent 50%),
+    -moz-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    radial-gradient(1100px 560px at 12% 8%, rgba(114, 192, 255, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 88% 12%, rgba(94, 235, 195, 0.2), transparent 50%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef1f6 100%);
+  font-family: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.Client_shell__HaaZr {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.Client_header__1OzDo {
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  grid-gap: 16px;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.Client_brand__TY-t- {
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  grid-gap: 12px;
+  gap: 12px;
+}
+
+.Client_brandLogo__BAtgq {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  padding: 6px;
+  background: #ffffff;
+  -webkit-box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  object-fit: contain;
+}
+
+.Client_brandName__1r159 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.Client_brandSub__1HMns {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.Client_backButton__2uAON {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+}
+
+.Client_card__3D3gL {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  -webkit-box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.Client_cardHeader__35lxQ {
+  padding: 22px 26px;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  grid-gap: 12px;
+  gap: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: -webkit-gradient(linear, left top, right top, from(#f8fafc), to(#ffffff));
+  background: -webkit-linear-gradient(left, #f8fafc 0%, #ffffff 100%);
+  background: -moz-linear-gradient(left, #f8fafc 0%, #ffffff 100%);
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.Client_cardTitle__29vEJ {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.Client_cardSubtitle__3y6SK {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.Client_cardMeta__1NmUj {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.12);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.Client_cardBody__2yWTw {
+  padding: 24px 26px 30px;
+}
+
+.Client_clientSummary__vTrXq {
+  display: -moz-box;
+  display: flex;
+  -moz-box-orient: vertical;
+  -moz-box-direction: normal;
+       flex-direction: column;
+  grid-gap: 6px;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+
+.Client_clientName__2o7za {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.Client_clientMetaRow__5WBls {
+  display: -moz-box;
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 12px;
+  gap: 12px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.Client_actionRow__1lthB {
+  display: -moz-box;
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 12px;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.Client_tableCard__1eEmm {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.Client_tableHeader__1QxeE {
+  padding: 14px 18px;
+  font-weight: 700;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  background: #f8fafc;
+}
+
+.Client_tableHint__27xzx {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.Client_tableWrap__2ruRh {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.Client_table__2fISj {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.Client_table__2fISj thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.Client_emptyState__28E9g {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}
+
+.Client_loadingWrap__l0kar {
+  min-height: 200px;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: center;
+       justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .Client_header__1OzDo {
+    -moz-box-orient: vertical;
+    -moz-box-direction: normal;
+         flex-direction: column;
+    -moz-box-align: start;
+         align-items: flex-start;
+  }
+
+  .Client_cardHeader__35lxQ {
+    -moz-box-orient: vertical;
+    -moz-box-direction: normal;
+         flex-direction: column;
+    -moz-box-align: start;
+         align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .Client_shell__HaaZr {
+    padding: 24px 16px 48px;
+  }
+
+  .Client_actionRow__1lthB {
+    -moz-box-orient: vertical;
+    -moz-box-direction: normal;
+         flex-direction: column;
+  }
+
+  .Client_actionRow__1lthB .btn {
+    width: 100%;
+  }
+}
+

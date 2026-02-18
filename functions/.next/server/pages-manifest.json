@@ -1,4 +1,5 @@
 {
+  "/AskMagmo": "pages/AskMagmo.html",
   "/BlueFolder/bluefolder": "pages/BlueFolder/bluefolder.html",
   "/LoggedIn": "pages/LoggedIn.html",
   "/NewSearch/AddItem/NewItem": "pages/NewSearch/AddItem/NewItem.html",
@@ -20,6 +21,7 @@
   "/NewSearch/item/[id]/NewLocal": "pages/NewSearch/item/[id]/NewLocal.html",
   "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js",
   "/NewSearch/machine/[id]": "pages/NewSearch/machine/[id].js",
+  "/NewSearch/mainSearch - Copy": "pages/NewSearch/mainSearch - Copy.html",
   "/NewSearch/mainSearch": "pages/NewSearch/mainSearch.html",
   "/NewSearch/searchTest": "pages/NewSearch/searchTest.html",
   "/ServiceDocs/Explorer": "pages/ServiceDocs/Explorer.html",
@@ -34,6 +36,7 @@
   "/Warehousedb/item/[id]": "pages/Warehousedb/item/[id].html",
   "/Warehousedb/machine/[id]": "pages/Warehousedb/machine/[id].html",
   "/_app": "pages/_app.js",
+  "/api/gpt/AskMagmo": "pages/api/gpt/AskMagmo.js",
   "/api/slack/_env-dump": "pages/api/slack/_env-dump.js",
   "/api/slack/add-to-list": "pages/api/slack/add-to-list.js",
   "/api/slack/inspect-list": "pages/api/slack/inspect-list.js",

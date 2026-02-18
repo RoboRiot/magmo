@@ -1,0 +1,208 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600&display=swap");
+
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 560px at 12% 8%, rgba(114, 192, 255, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 88% 12%, rgba(94, 235, 195, 0.2), transparent 50%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef1f6 100%);
+  font-family: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandLogo {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  padding: 6px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  object-fit: contain;
+}
+
+.brandName {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brandSub {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.backButton {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cardSubtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.cardMeta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.12);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.cardBody {
+  padding: 24px 26px 30px;
+}
+
+.clientSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+
+.clientName {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.clientMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tableCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.tableHeader {
+  padding: 14px 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.tableHint {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.tableWrap {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.table {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}
+
+.loadingWrap {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 24px 16px 48px;
+  }
+
+  .actionRow {
+    flex-direction: column;
+  }
+
+  .actionRow :global(.btn) {
+    width: 100%;
+  }
+}

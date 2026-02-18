@@ -27,7 +27,7 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
+function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState({ name: false });
 
   useEffect(() => {
@@ -552,13 +552,17 @@ export default function WarehouseList() {
                   Search
                 </Button>
               </Form>
-              {LoadingButton(
-                "secondary",
-                "Add New Item",
-                "Warehousedb/ModItem"
-              )}
+              <LoadingButton
+                type="secondary"
+                name="Add New Item"
+                route="Warehousedb/ModItem"
+              />
               <a style={{ paddingLeft: "10px", paddingRight: "10px" }}></a>{" "}
-              {LoadingButton("primary", "Back", "Warehousedb/WarehouseSelect")}
+              <LoadingButton
+                type="primary"
+                name="Back"
+                route="Warehousedb/WarehouseSelect"
+              />
             </Card.Body>
           </Card>
         </div>

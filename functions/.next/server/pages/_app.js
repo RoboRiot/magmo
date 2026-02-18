@@ -88,7 +88,7 @@ module.exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 34);
+/******/ 	return __webpack_require__(__webpack_require__.s = 36);
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -103,6 +103,10 @@ __webpack_require__.r(__webpack_exports__);
 // EXTERNAL MODULE: external "react"
 var external_react_ = __webpack_require__("cDcd");
 var external_react_default = /*#__PURE__*/__webpack_require__.n(external_react_);
+
+// EXTERNAL MODULE: external "next/head"
+var head_ = __webpack_require__("xnum");
+var head_default = /*#__PURE__*/__webpack_require__.n(head_);
 
 // EXTERNAL MODULE: external "next/router"
 var router_ = __webpack_require__("4Q3z");
@@ -152,6 +156,7 @@ var _app_jsx = external_react_default.a.createElement;
 
 
 
+
  // Setup pdfjs (if used) - only on client side
 
 let pdfjs = null;
@@ -166,6 +171,19 @@ function MyApp({
 
   Object(external_react_["useEffect"])(() => {
     __webpack_require__("anle");
+  }, []);
+  Object(external_react_["useEffect"])(() => {
+    if (true) return;
+    if (!("serviceWorker" in navigator)) return;
+
+    const onLoad = () => {
+      navigator.serviceWorker.register("/sw.js").catch(error => {
+        console.warn("Service worker registration failed:", error);
+      });
+    };
+
+    window.addEventListener("load", onLoad);
+    return () => window.removeEventListener("load", onLoad);
   }, []); // NEW: On initial client mount, check if the browser URL (window.location.pathname)
   // is different from what Next's router thinks (which will be "/" when served via index.html).
   // If so, replace the route so that Next loads the proper dynamic page.
@@ -173,7 +191,28 @@ function MyApp({
   Object(external_react_["useEffect"])(() => {
     if (false) {}
   }, [router.isReady, router.asPath]);
-  return _app_jsx(AuthUserContext["a" /* AuthUserProvider */], null, _app_jsx(components_Layout, null, _app_jsx(Component, pageProps)));
+  return _app_jsx(AuthUserContext["a" /* AuthUserProvider */], null, _app_jsx(head_default.a, null, _app_jsx("link", {
+    rel: "manifest",
+    href: "/manifest.json"
+  }), _app_jsx("meta", {
+    name: "theme-color",
+    content: "#0f172a"
+  }), _app_jsx("meta", {
+    name: "application-name",
+    content: "Magmo Inventory"
+  }), _app_jsx("meta", {
+    name: "apple-mobile-web-app-capable",
+    content: "yes"
+  }), _app_jsx("meta", {
+    name: "apple-mobile-web-app-title",
+    content: "Magmo"
+  }), _app_jsx("meta", {
+    name: "apple-mobile-web-app-status-bar-style",
+    content: "default"
+  }), _app_jsx("link", {
+    rel: "apple-touch-icon",
+    href: "/apple-touch-icon.png"
+  })), _app_jsx(components_Layout, null, _app_jsx(Component, pageProps)));
 }
 
 /* harmony default export */ var _app = __webpack_exports__["default"] = (MyApp);
@@ -187,7 +226,7 @@ module.exports = require("firebase/compat/firestore");
 
 /***/ }),
 
-/***/ 34:
+/***/ 36:
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__("1TCz");
@@ -242,7 +281,7 @@ module.exports = require("next/router");
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
-  authDomain:  false ? undefined : "magmo-cloud.web.app",
+  authDomain: "magmo-ac10c.firebaseapp.com",
   projectId: "magmo-ac10c",
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
@@ -252,7 +291,11 @@ const FirebaseCredentials = {
 
 if (!firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.apps.length) {
   firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.initializeApp(FirebaseCredentials);
-}
+} // Some networks/proxies block Firestore's streaming transport.
+// Force long polling in the browser to avoid stalled writes/listens.
+
+
+if (false) {}
 
 const auth = firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.auth();
 /* harmony default export */ __webpack_exports__["b"] = (firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a); // import { initializeApp } from 'firebase/app';
@@ -423,6 +466,13 @@ module.exports = require("firebase/compat/auth");
 /***/ (function(module, exports) {
 
 
+
+/***/ }),
+
+/***/ "xnum":
+/***/ (function(module, exports) {
+
+module.exports = require("next/head");
 
 /***/ })
 

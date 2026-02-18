@@ -1,0 +1,159 @@
+@import url(https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600&display=swap);
+.Login_page__158qp {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 520px at 12% 8%, rgba(114, 192, 255, 0.24), transparent 55%),
+    radial-gradient(900px 520px at 90% 14%, rgba(94, 235, 195, 0.22), transparent 50%),
+    -webkit-gradient(linear, left top, left bottom, from(#f5f7fb), to(#eef1f6));
+  background:
+    -webkit-radial-gradient(12% 8%, 900px 520px, rgba(114, 192, 255, 0.24), transparent 55%),
+    -webkit-radial-gradient(90% 14%, 900px 520px, rgba(94, 235, 195, 0.22), transparent 50%),
+    -webkit-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    -moz-radial-gradient(12% 8%, 900px 520px, rgba(114, 192, 255, 0.24), transparent 55%),
+    -moz-radial-gradient(90% 14%, 900px 520px, rgba(94, 235, 195, 0.22), transparent 50%),
+    -moz-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    radial-gradient(900px 520px at 12% 8%, rgba(114, 192, 255, 0.24), transparent 55%),
+    radial-gradient(900px 520px at 90% 14%, rgba(94, 235, 195, 0.22), transparent 50%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef1f6 100%);
+  font-family: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  color: #0f172a;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: center;
+       justify-content: center;
+  padding: 24px;
+}
+
+.Login_shell__3o3sg {
+  width: min(520px, 100%);
+  display: -moz-box;
+  display: flex;
+  -moz-box-pack: center;
+       justify-content: center;
+}
+
+.Login_logo__1BqJS {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  -webkit-filter: drop-shadow(0 18px 32px rgba(15, 23, 42, 0.22));
+          filter: drop-shadow(0 18px 32px rgba(15, 23, 42, 0.22));
+}
+
+.Login_card__Qc14X {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  -webkit-box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+  padding: 26px 26px 28px;
+  display: -moz-box;
+  display: flex;
+  -moz-box-orient: vertical;
+  -moz-box-direction: normal;
+       flex-direction: column;
+  grid-gap: 16px;
+  gap: 16px;
+  width: 100%;
+  text-align: center;
+}
+
+.Login_cardTitle__2_wmp {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.Login_status__2LF9H {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.Login_googleButton__38Yqn {
+  display: -moz-inline-box;
+  display: inline-flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: center;
+       justify-content: center;
+  grid-gap: 12px;
+  gap: 12px;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-weight: 600;
+  border: none;
+  background: -webkit-linear-gradient(315deg, #0f172a 0%, #1f2937 100%);
+  background: -moz-linear-gradient(315deg, #0f172a 0%, #1f2937 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+  color: #ffffff;
+  -webkit-box-shadow: 0 16px 30px rgba(15, 23, 42, 0.25);
+          box-shadow: 0 16px 30px rgba(15, 23, 42, 0.25);
+  -webkit-transition: -webkit-transform 0.18s ease, -webkit-box-shadow 0.18s ease;
+  transition: -webkit-transform 0.18s ease, -webkit-box-shadow 0.18s ease;
+  -moz-transition: transform 0.18s ease, box-shadow 0.18s ease, -moz-transform 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, -webkit-transform 0.18s ease, -moz-transform 0.18s ease, -webkit-box-shadow 0.18s ease;
+}
+
+.Login_googleButton__38Yqn:hover,
+.Login_googleButton__38Yqn:focus {
+  -webkit-transform: translateY(-1px);
+     -moz-transform: translateY(-1px);
+          transform: translateY(-1px);
+  -webkit-box-shadow: 0 18px 34px rgba(15, 23, 42, 0.3);
+          box-shadow: 0 18px 34px rgba(15, 23, 42, 0.3);
+  color: #ffffff;
+}
+
+.Login_googleIcon__azDWK {
+  display: -moz-inline-box;
+  display: inline-flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: center;
+       justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.Login_testButton__10Nby {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 10px 16px;
+}
+
+@media (max-width: 900px) {
+  .Login_shell__3o3sg {
+    width: min(480px, 100%);
+  }
+}
+
+@media (max-width: 600px) {
+  .Login_page__158qp {
+    padding: 18px;
+  }
+
+  .Login_logo__1BqJS {
+    max-width: 280px;
+  }
+
+  .Login_card__Qc14X {
+    padding: 22px;
+  }
+
+  .Login_googleButton__38Yqn {
+    width: 100%;
+  }
+
+  .Login_testButton__10Nby {
+    width: 100%;
+  }
+}
+

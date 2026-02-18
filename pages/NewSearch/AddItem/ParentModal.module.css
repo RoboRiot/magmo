@@ -1,0 +1,207 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+.modalDialog {
+  max-width: min(1200px, 96vw);
+}
+
+.modalContent {
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.modalTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modalSubtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.modalBody {
+  padding: 18px 20px 22px;
+  background: #f8fafb;
+}
+
+.modalFooter {
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  background: #ffffff;
+  padding: 16px 22px;
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+}
+
+.filtersPanel {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panelTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.panelHint {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.inputGroup {
+  margin-bottom: 0;
+}
+
+.panelDivider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 8px 0;
+}
+
+.quickButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quickButton {
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.resultsPanel {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resultsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.resultsTitle {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.resultsSubtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.pagination {
+  margin: 0;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.searchInput {
+  border-radius: 12px;
+  border-color: #d8e1f0;
+  height: 40px;
+}
+
+.tableWrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  min-height: 260px;
+}
+
+.table {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.stickyHeader th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.loadingState {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingLogo {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  padding: 6px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
+  animation: magmo-spin 1s linear infinite;
+}
+
+.errorState {
+  padding: 18px;
+  text-align: center;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}
+
+@keyframes magmo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .modalGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resultsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .searchRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

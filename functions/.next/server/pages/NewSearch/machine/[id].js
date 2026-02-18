@@ -88,12 +88,12 @@ module.exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 20);
+/******/ 	return __webpack_require__(__webpack_require__.s = 21);
 /******/ })
 /************************************************************************/
 /******/ ({
 
-/***/ 20:
+/***/ 21:
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__("2cz2");
@@ -121,7 +121,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("IZS3");
 /* harmony import */ var react_bootstrap__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__("NY6m");
-/* harmony import */ var _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("Aroy");
+/* harmony import */ var _Machine_module_css__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__("ejhT");
+/* harmony import */ var _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_Machine_module_css__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__("Aroy");
 var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
@@ -133,41 +135,65 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 
 
+
  // Import for SSR
 
 
 
-const Machine = () => {
+const Machine = ({
+  initialMachine,
+  initialAssociatedParts,
+  error: initialError
+}) => {
   const router = Object(next_router__WEBPACK_IMPORTED_MODULE_1__["useRouter"])();
   const {
     0: selectedMachine,
     1: setSelectedMachine
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(initialMachine || null);
   const {
     0: associatedParts,
     1: setAssociatedParts
-  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])([]);
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(Array.isArray(initialAssociatedParts) ? initialAssociatedParts : []);
   const {
     0: error,
     1: setError
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(initialError || null);
+  const {
+    0: dragIndex,
+    1: setDragIndex
   } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: dragOverIndex,
+    1: setDragOverIndex
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  const {
+    0: isPrinting,
+    1: setIsPrinting
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: showPrintSuccess,
+    1: setShowPrintSuccess
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
   Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
     if (router.isReady) {
       const {
-        machineId
+        id
       } = router.query;
 
-      if (!machineId) {
+      if (!id) {
         const pathSegments = router.asPath.split("/");
         const machineIdFromPath = pathSegments[pathSegments.length - 1];
         console.log(`Machine ID extracted from URL path: ${machineIdFromPath}`);
         fetchMachineData(machineIdFromPath);
       } else {
-        console.log(`Machine ID from router query: ${machineId}`);
-        fetchMachineData(machineId);
+        console.log(`Machine ID from router query: ${id}`); // If SSR already hydrated, avoid re-fetching unless we truly need to.
+
+        if (!selectedMachine) {
+          fetchMachineData(id);
+        }
       }
     }
-  }, [router.isReady]);
+  }, [router.isReady, selectedMachine]);
 
   const fetchMachineData = async machineId => {
     try {
@@ -178,6 +204,7 @@ const Machine = () => {
       if (machineDoc.exists) {
         const machineData = machineDoc.data();
         setSelectedMachine(machineData);
+        setError(null);
         console.log("Machine data:", machineData); // Fetch associated parts
 
         if (machineData.associatedParts) {
@@ -220,6 +247,7 @@ const Machine = () => {
         });
       }));
       setAssociatedParts(partsData.filter(p => p));
+      setError(null);
       console.log("Associated parts data:", partsData);
     } catch (error) {
       console.error("Error fetching associated parts:", error);
@@ -228,8 +256,9 @@ const Machine = () => {
   };
 
   const handlePrintMulti = async () => {
-    // Create your payload with the mapped items.
+    setIsPrinting(true); // Create your payload with the mapped items.
     // Replace 'associatedParts' with your actual variable containing the list.
+
     const payload = {
       items: associatedParts.map(part => ({
         name: part.name,
@@ -260,14 +289,66 @@ const Machine = () => {
       });
       const result = await response.json();
       console.log("Print multi result:", result.status);
+
+      if (!response.ok || (result === null || result === void 0 ? void 0 : result.status) === "error") {
+        throw new Error((result === null || result === void 0 ? void 0 : result.message) || "Print failed.");
+      }
+
+      setShowPrintSuccess(true);
     } catch (error) {
       console.error("Error printing multiple labels:", error);
+      setError((error === null || error === void 0 ? void 0 : error.message) || "Error printing multiple labels");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
   const handleSelectPart = (id, name) => {
     console.log(`Selected part ID: ${id}, Name: ${name}`);
     router.push("../item/" + id);
+  };
+
+  const handleDragStart = index => event => {
+    var _associatedParts$inde;
+
+    if (event.target.closest("button")) {
+      event.preventDefault();
+      return;
+    }
+
+    setDragIndex(index);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", ((_associatedParts$inde = associatedParts[index]) === null || _associatedParts$inde === void 0 ? void 0 : _associatedParts$inde.id) || String(index));
+  };
+
+  const handleDragOver = index => event => {
+    event.preventDefault();
+    if (dragOverIndex !== index) setDragOverIndex(index);
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = index => event => {
+    event.preventDefault();
+
+    if (dragIndex == null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    setAssociatedParts(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const formatDate = input => {
@@ -291,40 +372,107 @@ const Machine = () => {
     return date.toLocaleDateString();
   };
 
-  return __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Container"], {
-    className: "mt-5"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Row"], {
-    className: "justify-content-md-center"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Col"], {
-    md: "8"
-  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"], null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Header, null, __jsx("h4", null, "Machine Details")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Card"].Body, null, error && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Alert"], {
+  return __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.page
+  }, isPrinting && __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.loadingOverlay
+  }, __jsx("img", {
+    src: "/magmo-logo.png",
+    alt: "Printing",
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.loadingLogo
+  })), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.shell
+  }, __jsx("header", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.header
+  }, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.brand
+  }, __jsx("img", {
+    src: "/magmo-logo.png",
+    alt: "Magmo",
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.brandLogo
+  }), __jsx("div", null, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.brandName
+  }, "Magmo"), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.brandSub
+  }, "Machine Detail"))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+    variant: "outline-secondary",
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.backButton,
+    onClick: () => router.back()
+  }, "Back")), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.card
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"], {
+    show: showPrintSuccess,
+    onHide: () => setShowPrintSuccess(false),
+    centered: true
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Header, {
+    closeButton: true
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Title, null, "Print Complete")), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Body, null, "All items were sent to the printer successfully."), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Modal"].Footer, null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+    variant: "primary",
+    onClick: () => setShowPrintSuccess(false)
+  }, "Ok"))), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.cardHeader
+  }, __jsx("div", null, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.cardTitle
+  }, "Machine Details"), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.cardSubtitle
+  }, "Drag and drop parts to reorder this list.")), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.cardMeta
+  }, associatedParts.length, " parts")), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.cardBody
+  }, error && !selectedMachine && __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Alert"], {
     variant: "danger"
-  }, error), selectedMachine ? __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx("h5", null, "Machine: ", selectedMachine.name), __jsx("p", null, "Model: ", selectedMachine.Model), __jsx("p", null, "Model: ", selectedMachine.Modality), __jsx("p", null, "Model: ", selectedMachine.OEM), __jsx("p", null, "Last PM: ", formatDate(selectedMachine.lastPM)), __jsx("p", null, "Next PM: ", formatDate(selectedMachine.nextPM)), __jsx("h5", null, "Associated Parts"), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
+  }, error), selectedMachine ? __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.machineGrid
+  }, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.machineInfo
+  }, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.machineName
+  }, selectedMachine.name || "Unnamed Machine"), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.machineMetaRow
+  }, __jsx("span", null, "OEM: ", selectedMachine.OEM || "N/A"), __jsx("span", null, "Modality: ", selectedMachine.Modality || "N/A"), __jsx("span", null, "Model: ", selectedMachine.Model || "N/A"))), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.machineDates
+  }, __jsx("div", null, __jsx("span", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.dateLabel
+  }, "Last PM"), __jsx("span", null, formatDate(selectedMachine.lastPM))), __jsx("div", null, __jsx("span", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.dateLabel
+  }, "Next PM"), __jsx("span", null, formatDate(selectedMachine.nextPM))))), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.tableCard
+  }, __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.tableHeader
+  }, "Associated Parts", __jsx("span", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.tableHint
+  }, "Click + hold to move")), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.tableWrap
+  }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Table"], {
     striped: true,
     bordered: true,
     hover: true,
-    size: "sm"
-  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "ID"), __jsx("th", null, "Part Number"), __jsx("th", null, "Serial Number"), __jsx("th", null, "Date"), __jsx("th", null, "Select"))), __jsx("tbody", null, associatedParts.map(part => __jsx("tr", {
-    key: part.id
-  }, __jsx("td", null, part.name), __jsx("td", null, part.id), __jsx("td", null, part.pn), __jsx("td", null, part.sn), __jsx("td", null, part.date), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
+    size: "sm",
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.table
+  }, __jsx("thead", null, __jsx("tr", null, __jsx("th", null, "Name"), __jsx("th", null, "ID"), __jsx("th", null, "Part Number"), __jsx("th", null, "Serial Number"), __jsx("th", null, "Date"), __jsx("th", null, "Select"))), __jsx("tbody", null, associatedParts.length === 0 && __jsx("tr", null, __jsx("td", {
+    colSpan: 6,
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.emptyState
+  }, "No associated parts found.")), associatedParts.map((part, index) => __jsx("tr", {
+    key: part.id,
+    draggable: true,
+    onDragStart: handleDragStart(index),
+    onDragOver: handleDragOver(index),
+    onDrop: handleDrop(index),
+    onDragEnd: handleDragEnd,
+    className: `${_Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.draggableRow} ${dragIndex === index ? _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.dragging : ""} ${dragOverIndex === index && dragIndex !== index ? _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.dropTarget : ""}`
+  }, __jsx("td", null, part.name), __jsx("td", null, part.id), __jsx("td", null, part.pn), __jsx("td", null, part.sn), __jsx("td", null, formatDate(part.date || part.arrival_date)), __jsx("td", null, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "primary",
+    size: "sm",
     onClick: () => handleSelectPart(part.id, part.name)
-  }, "Select")))), __jsx("tr", null, __jsx("td", {
-    colSpan: "5",
-    style: {
-      textAlign: "center",
-      paddingTop: "20px"
-    }
+  }, "Select"))))))), __jsx("div", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.tableActions
   }, __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
     variant: "secondary",
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.actionButton,
     onClick: handlePrintMulti
-  }, "Print All Items"))), __jsx(react_bootstrap__WEBPACK_IMPORTED_MODULE_2__["Button"], {
-    variant: "primary",
-    style: {
-      marginTop: "20px"
-    },
-    onClick: () => router.back()
-  }, "back")))) : !error && __jsx("p", null, "Loading machine data..."))))));
+  }, "Print All Items")))) : !error && __jsx("p", {
+    className: _Machine_module_css__WEBPACK_IMPORTED_MODULE_4___default.a.loadingText
+  }, "Loading machine data...")))));
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (Machine); // Server-side rendering function
@@ -336,7 +484,7 @@ async function getServerSideProps(context) {
 
   try {
     // Fetch machine data from Firestore using Admin SDK
-    const machineDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_4__[/* adminDb */ "a"].collection("Machine").doc(id).get();
+    const machineDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_5__[/* adminDb */ "a"].collection("Machine").doc(id).get();
 
     if (!machineDoc.exists) {
       return {
@@ -353,7 +501,7 @@ async function getServerSideProps(context) {
       try {
         const partsPromises = machineData.associatedParts.map(partRef => {
           if (partRef.path) {
-            return _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_4__[/* adminDb */ "a"].doc(partRef.path).get();
+            return _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_5__[/* adminDb */ "a"].doc(partRef.path).get();
           }
 
           return null;
@@ -369,7 +517,7 @@ async function getServerSideProps(context) {
 
           if (data.ClientFrom && data.ClientFrom.path) {
             try {
-              const clientDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_4__[/* adminDb */ "a"].doc(data.ClientFrom.path).get();
+              const clientDoc = await _context_FirebaseAdmin__WEBPACK_IMPORTED_MODULE_5__[/* adminDb */ "a"].doc(data.ClientFrom.path).get();
               clientName = clientDoc.exists ? clientDoc.data().name : "";
             } catch (error) {
               console.error("Error fetching client data:", error);
@@ -535,7 +683,7 @@ module.exports = require("react-bootstrap");
 
 const FirebaseCredentials = {
   apiKey: "AIzaSyCxC-a8b5Vhhey8GF47LpXZ1aMKYmiIhwE",
-  authDomain:  false ? undefined : "magmo-cloud.web.app",
+  authDomain: "magmo-ac10c.firebaseapp.com",
   projectId: "magmo-ac10c",
   storageBucket: "magmo-ac10c.appspot.com",
   messagingSenderId: "177857525147",
@@ -545,7 +693,11 @@ const FirebaseCredentials = {
 
 if (!firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.apps.length) {
   firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.initializeApp(FirebaseCredentials);
-}
+} // Some networks/proxies block Firestore's streaming transport.
+// Force long polling in the browser to avoid stalled writes/listens.
+
+
+if (false) {}
 
 const auth = firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a.auth();
 /* harmony default export */ __webpack_exports__["b"] = (firebase_compat_app__WEBPACK_IMPORTED_MODULE_0___default.a); // import { initializeApp } from 'firebase/app';
@@ -595,6 +747,51 @@ module.exports = require("react");
 /***/ (function(module, exports) {
 
 module.exports = require("firebase/compat/auth");
+
+/***/ }),
+
+/***/ "ejhT":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"page": "Machine_page__Y5o9l",
+	"shell": "Machine_shell__3zfu1",
+	"header": "Machine_header__3-4wd",
+	"brand": "Machine_brand__JQapu",
+	"brandLogo": "Machine_brandLogo__3V-Dh",
+	"brandName": "Machine_brandName__1c13A",
+	"brandSub": "Machine_brandSub__JB4jf",
+	"backButton": "Machine_backButton__2uGCE",
+	"card": "Machine_card__2L-2Z",
+	"cardHeader": "Machine_cardHeader__6ni_x",
+	"cardTitle": "Machine_cardTitle__M4yT1",
+	"cardSubtitle": "Machine_cardSubtitle__1RYdY",
+	"cardMeta": "Machine_cardMeta__1qWsG",
+	"cardBody": "Machine_cardBody__2Sjqg",
+	"machineGrid": "Machine_machineGrid__4QzGf",
+	"machineInfo": "Machine_machineInfo__1y9ed",
+	"machineName": "Machine_machineName__39bAg",
+	"machineMetaRow": "Machine_machineMetaRow__xgm8_",
+	"machineDates": "Machine_machineDates__3Z6ds",
+	"dateLabel": "Machine_dateLabel__3Qj0D",
+	"tableCard": "Machine_tableCard__1oYWn",
+	"tableHeader": "Machine_tableHeader__1b2pT",
+	"tableHint": "Machine_tableHint__2Q8NL",
+	"tableWrap": "Machine_tableWrap__2p2iy",
+	"table": "Machine_table__2Fkh-",
+	"draggableRow": "Machine_draggableRow__US-WQ",
+	"dragging": "Machine_dragging__2_Jvh",
+	"dropTarget": "Machine_dropTarget__jMbqd",
+	"tableActions": "Machine_tableActions__3dLhl",
+	"actionButton": "Machine_actionButton__1pAjO",
+	"emptyState": "Machine_emptyState__2xIsK",
+	"loadingText": "Machine_loadingText__3lu-N",
+	"loadingOverlay": "Machine_loadingOverlay__33z2J",
+	"loadingLogo": "Machine_loadingLogo__2GxP1",
+	"magmo-spin": "Machine_magmo-spin__2iyBb"
+};
+
 
 /***/ }),
 

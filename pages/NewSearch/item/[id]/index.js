@@ -29,23 +29,19 @@ import MachineSelectionModal from "./MachineSelectionModal";
 import { addServiceItem } from "../../../../utils/BluefolderService";
 
 import NewLocal from "./NewLocal";
+import styles from "../../AddItem/NewItem.module.css";
 
 //inflow API
 import InflowAPI from "../../../../utils/inflowAPI";
+import {
+  buildLocalLocObject,
+  formatLoc,
+  updateMachineFields,
+  buildNameTokens,
+} from "../../../../utils/itemFormShared";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
-
-// === BUILD A MAP ONLY OF THOSE FIELDS THE USER ACTUALLY PICKED ===
-function buildLocalLocObject(loc) {
-  const o = {};
-  if (loc.region) o.region = loc.region;
-  if (loc.section?.letter && loc.section?.number) o.section = loc.section;
-  // pick up the new singular fields, too:
-  if (loc.bin !== undefined && loc.bin !== "") o.bin = loc.bin;
-  if (loc.pallet !== undefined && loc.pallet !== "") o.pallet = loc.pallet;
-  return o;
-}
 
 // This will only load the component on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -64,7 +60,13 @@ function LoadingButton({ type, name, route }) {
 
   useEffect(() => {
     if (isLoading) {
-      simulateNetworkRequest().then(() => setLoading(false));
+      let cancelled = false;
+      simulateNetworkRequest().then(() => {
+        if (!cancelled) setLoading(false);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [isLoading]);
 
@@ -83,8 +85,15 @@ function LoadingButton({ type, name, route }) {
   );
 }
 
+function isValidMachineValue(value) {
+  if (value == null) return false;
+  if (typeof value !== "string") return Boolean(value);
+  const trimmed = value.trim();
+  return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+}
 
-export default function DisplayItem({ initialItem, initialMachineData, error }) {
+
+function DisplayItemInner({ initialItem, initialMachineData, error }) {
   // Feature flag to show/hide the 3 Slack buttons
   const SHOW_SLACK_BUTTONS =
     process.env.NEXT_PUBLIC_SHOW_SLACK_BUTTONS === "true";
@@ -118,6 +127,7 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
     arrival_date: initialItem?.arrival_date || "",
     visible: initialItem?.visible ?? true,
   });
+  const [savedName, setSavedName] = useState(initialItem?.name || "");
   // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
   useEffect(() => {
     if (!initialItem) return;
@@ -137,6 +147,10 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
       poNumber: initialItem.poNumber ?? prev.poNumber ?? "",
       trackingNumber: initialItem.trackingNumber ?? prev.trackingNumber ?? "",
     }));
+
+    if (initialItem.name) {
+      setSavedName(initialItem.name);
+    }
   }, [initialItem]);
 
 
@@ -197,12 +211,16 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
   // These arrays will be populated from Firebase.
   const [pnOptions, setPnOptions] = useState([]);
   const [snOptions, setSnOptions] = useState([]);
+  const [pnSnLoaded, setPnSnLoaded] = useState(false);
+  const [pnSnLoading, setPnSnLoading] = useState(false);
 
   const [descriptions, setDescriptions] = useState([
     { description: "", date: "" },
   ]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [show, setShow] = useState(false);
   const [showErr, setShowErr] = useState(false);
@@ -243,12 +261,24 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
   const [modality, setModality] = useState("");
   const [model, setModel] = useState("");
 
+  const applyMergedMachineFields = (merged) => {
+    if (!merged) return;
+    setOem((prev) => (isValidMachineValue(merged.oem) ? merged.oem : prev));
+    setModality((prev) =>
+      isValidMachineValue(merged.modality) ? merged.modality : prev
+    );
+    setModel((prev) =>
+      isValidMachineValue(merged.model) ? merged.model : prev
+    );
+  };
+
   // More info modal state.
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [itemName, setItemName] = useState("");
 
   const [machineFieldsInitialized, setMachineFieldsInitialized] =
     useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // near the top of DisplayItem()
   const [showLocalModalFrom, setShowLocalModalFrom] = useState(false);
@@ -263,17 +293,6 @@ export default function DisplayItem({ initialItem, initialMachineData, error }) 
   const [showNewLocalModalFrom, setShowNewLocalModalFrom] = useState(false);
   const [showNewLocalModalCurrent, setShowNewLocalModalCurrent] =
     useState(false);
-
-  function formatLoc(loc) {
-    if (!loc) return "";
-    const parts = [];
-    if (loc.region) parts.push(loc.region);
-    if (loc.section?.letter && loc.section?.number)
-      parts.push(`${loc.section.letter}${loc.section.number}`);
-    if (loc.bin) parts.push(`B${loc.bin}`);
-    if (loc.pallet) parts.push(`P${loc.pallet}`);
-    return parts.join("–");
-  }
 
   // when the From-client changes, clear any old local-loc
   // useEffect(() => {
@@ -403,39 +422,55 @@ const handleSendToInflow = async () => {
     );
   }, [selectedClientCurrent]);
 
-  // Fetch clients data.
-  useEffect(() => {
-    async function fetchClientsData() {
-      try {
-        const clientsData = await fetchClients();
-        console.log(clientsData);
-        setClients(clientsData);
-      } catch (error) {
-        console.error("Error fetching clients: ", error);
-      }
+  const loadClients = async () => {
+    if (clientsLoaded || clientsLoading) return;
+    setClientsLoading(true);
+    try {
+      const clientsData = await fetchClients();
+      setClients(clientsData);
+      setClientsLoaded(true);
+    } catch (error) {
+      console.error("Error fetching clients: ", error);
+    } finally {
+      setClientsLoading(false);
     }
-    fetchClientsData();
-  }, []);
+  };
 
-  // Fetch PN and SN options from Firebase.
-  useEffect(() => {
-    async function fetchPnSn() {
+  const loadPnSnOptions = async () => {
+    if (pnSnLoaded || pnSnLoading) return;
+    setPnSnLoading(true);
+    try {
       const db = firebase.firestore();
-      const snapshot = await db.collection("Test").get();
+      const snapshot = await db
+        .collection("Test")
+        .orderBy(firebase.firestore.FieldPath.documentId())
+        .limit(500)
+        .get();
       let pnSet = new Set();
       let snSet = new Set();
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.pn) pnSet.add(data.pn);
-        if (data.sn) snSet.add(data.sn);
+        if (Array.isArray(data.pn)) {
+          data.pn.forEach((pn) => pn && pnSet.add(pn));
+        } else if (data.pn) {
+          pnSet.add(data.pn);
+        }
+        if (Array.isArray(data.sn)) {
+          data.sn.forEach((sn) => sn && snSet.add(sn));
+        } else if (data.sn) {
+          snSet.add(data.sn);
+        }
       });
-      const pnArray = [...pnSet];
-      const snArray = [...snSet];
-      setPnOptions(pnArray);
-      setSnOptions(snArray);
+      setPnOptions([...pnSet]);
+      setSnOptions([...snSet]);
+      setPnSnLoaded(true);
+    } catch (error) {
+      console.error("Error fetching PN/SN options:", error);
+    } finally {
+      setPnSnLoading(false);
     }
-    fetchPnSn();
-  }, []);
+  };
+
 
   useEffect(() => {
     if (id) fetchData();           // always hydrate on the client
@@ -496,25 +531,29 @@ const handleSendToInflow = async () => {
 
   const fetchData = async () => {
     const id = initialItem?.id || idFromRouter; // <- make sure id exists here
+    if (!id) return;
+    setIsLoading(true);
     const db = firebase.firestore();
-    const doc = await db.collection("Test").doc(id).get();
-    if (doc.exists) {
-      console.log("test");
-      const data = doc.data();
-      const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
-      const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
-      setItems({
-        ...data,
-        pn: normalizedPN,
-        sn: normalizedSN,
-      });
-      setDescriptions(data.descriptions || []);
-      setWorkOrders(data.workOrders || []);
-      if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
-      if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
-      if (data.DOM) {
-        setDOM(data.DOM);
-      }
+    try {
+      const doc = await db.collection("Test").doc(id).get();
+      if (doc.exists) {
+        console.log("test");
+        const data = doc.data();
+        const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
+        const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
+        setItems({
+          ...data,
+          pn: normalizedPN,
+          sn: normalizedSN,
+        });
+        setSavedName(data.name || "");
+        setDescriptions(data.descriptions || []);
+        setWorkOrders(data.workOrders || []);
+        if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
+        if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
+        if (data.DOM) {
+          setDOM(data.DOM);
+        }
 
       // …after you do setItems, setDescriptions, etc.
 
@@ -630,9 +669,7 @@ const handleSendToInflow = async () => {
         machineCurrentData,
         machineFromData
       );
-      setOem(merged.oem);
-      setModality(merged.modality);
-      setModel(merged.model);
+      applyMergedMachineFields(merged);
 
       console.log(
         "SelectedMachine:",
@@ -668,75 +705,26 @@ const handleSendToInflow = async () => {
       // setModality(updatedFields.modality);
       // setModel(updatedFields.model);
 
-      await fetchPhotos(id);
-      await checkIfAddedToWebsite(id);
-      await calculateItemFrequencyAndUsage(data.pn);
-    } else {
-      router.push({
-        pathname: "../AddItem/NewItem",
-        query: { signal: id },
-      });
+        setIsLoading(false);
+        Promise.all([
+          fetchPhotos(id),
+          checkIfAddedToWebsite(id),
+          calculateItemFrequencyAndUsage(data.pn),
+        ]).catch((err) => {
+          console.error("Background item loads failed:", err);
+        });
+      } else {
+        router.push({
+          pathname: "../AddItem/NewItem",
+          query: { signal: id },
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching item:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Returns the value for a given field from the highest-priority source.
-  function getPriorityMachineField(
-    field,
-    theMachine,
-    currentMachine,
-    fromMachine
-  ) {
-    console.log("the machine: ", theMachine, "field: ", field);
-    if (
-      theMachine &&
-      theMachine[field] &&
-      theMachine[field] !== "N/A" &&
-      theMachine[field].trim() !== ""
-    ) {
-      return theMachine[field];
-    }
-    if (
-      currentMachine &&
-      currentMachine[field] &&
-      currentMachine[field] !== "N/A" &&
-      currentMachine[field].trim() !== ""
-    ) {
-      return currentMachine[field];
-    }
-    if (
-      fromMachine &&
-      fromMachine[field] &&
-      fromMachine[field] !== "N/A" &&
-      fromMachine[field].trim() !== ""
-    ) {
-      return fromMachine[field];
-    }
-    return "";
-  }
-
-  // Returns an object with updated OEM, modality, and model fields.
-  function updateMachineFields(theMachine, currentMachine, fromMachine) {
-    return {
-      oem: getPriorityMachineField(
-        "OEM",
-        theMachine,
-        currentMachine,
-        fromMachine
-      ),
-      modality: getPriorityMachineField(
-        "Modality",
-        theMachine,
-        currentMachine,
-        fromMachine
-      ),
-      model: getPriorityMachineField(
-        "Model",
-        theMachine,
-        currentMachine,
-        fromMachine
-      ),
-    };
-  }
 
   const calculateItemFrequencyAndUsage = async (pn) => {
     const db = firebase.firestore();
@@ -777,9 +765,7 @@ const handleSendToInflow = async () => {
         selectedCurrentMachine,
         selectedMachine
       );
-      setOem(merged.oem);
-      setModality(merged.modality);
-      setModel(merged.model);
+      applyMergedMachineFields(merged);
       const machinesSnapshot = await db
         .collection("Machine")
         .where("Model", "==", machineData.Model || machineData.model)
@@ -798,7 +784,6 @@ const handleSendToInflow = async () => {
       const urls = await Promise.all(
         res.items.map((item) => item.getDownloadURL())
       );
-      console.log("Fetched photo URLs:", urls);
       setPhotos(urls.map((url) => ({ url, file: null })));
     } catch (error) {
       console.error("Error fetching photos: ", error);
@@ -827,7 +812,10 @@ const handleSendToInflow = async () => {
   const handleCloseWoModal = () => setShowWoModal(false);
   const handleShowWoModal = () => setShowWoModal(true);
   const handleCloseClientModal = () => setShowClientModal(false);
-  const handleShowClientModal = () => setShowClientModal(true);
+  const handleShowClientModal = async () => {
+    await loadClients();
+    setShowClientModal(true);
+  };
   const handleCloseMachineModal = () => setShowMachineModal(false);
   const handleShowMachineModal = () => {
     setShowMachineModal(true);
@@ -960,6 +948,8 @@ const handleSendToInflow = async () => {
     const formattedItems = { ...items, descriptions, workOrders };
     // Remove any unused fields.
     formattedItems.status = items.status || "";
+    formattedItems.nameLower = (items.name || "").toLowerCase();
+    formattedItems.nameTokens = buildNameTokens(items.name);
     formattedItems.DOM = DOM; // Date of Manufacture
     formattedItems.localLocFrom = localLocFrom || "";
     formattedItems.localLocCurrent = localLocCurrent || "";
@@ -1171,6 +1161,8 @@ const handleSendToInflow = async () => {
       // Upload any new photos to Firebase Storage.
       await uploadPhotos(docId);
       console.log("Item saved and associatedParts updated!");
+
+      setSavedName(items.name || "");
 
       // Redirect to the new URL using the new document id.
       router.push(`/NewSearch/item/${docId}`);
@@ -1438,6 +1430,14 @@ const handleSendToInflow = async () => {
   };
 
   const handleCloseInfoModal = () => setShowInfoModal(false);
+  const handleCloneToNewItem = () => {
+    if (!id) {
+      setErr("Item ID not ready yet.");
+      setShowErr(true);
+      return;
+    }
+    router.push(`/NewSearch/AddItem/NewItem?cloneFrom=${encodeURIComponent(id)}`);
+  };
 
   const handlePnChange = (index, value) => {
     setItems((prev) => {
@@ -1496,6 +1496,12 @@ const handleSendToInflow = async () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [currentSnIndex, setCurrentSnIndex] = useState(0);
   const [showSnDropdown, setShowSnDropdown] = useState(false);
+
+  useEffect(() => {
+    if (showDropdown || showSnDropdown) {
+      loadPnSnOptions();
+    }
+  }, [showDropdown, showSnDropdown]);
 
   const handleAddNewClient = () => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
@@ -1643,6 +1649,15 @@ const handleAddToSlack = async (which = "shipping") => {
 
   return (
     <LoggedIn>
+      {isLoading && (
+        <div className={styles.loadingOverlay}>
+          <img
+            src="/magmo-logo.png"
+            alt="Loading Magmo"
+            className={styles.loadingLogo}
+          />
+        </div>
+      )}
       <div>
         <Modal show={show} onHide={handleClose}>
           <Modal.Header closeButton>
@@ -1903,14 +1918,19 @@ const handleAddToSlack = async (which = "shipping") => {
           usage={usagePastYear}
         />
 
-        <Container
-          className="d-flex align-items-center justify-content-center"
-          style={{ minHeight: "100vh" }}
-        >
-          <div className="w-100" style={{ maxWidth: "600px" }}>
-            <Card className="align-items-center justify-content-center">
-              <Card.Body>
-                <h2 className="text-center mb-4">Item</h2>
+        <Container fluid className={styles.page}>
+          <div className={styles.shell}>
+            <Card className={styles.card}>
+              <Card.Body className={styles.cardBody}>
+                <div className={styles.header}>
+                  <div className={styles.kicker}>Item</div>
+                  <h2 className={styles.title}>
+                    {savedName || "Item Details"}
+                  </h2>
+                  <div className={styles.subtitle}>
+                    Review and update fields, photos, and routing information.
+                  </div>
+                </div>
                 <Form onSubmit={handleSubmit}>
                   {/* Row for Name and PN */}
                   <Row className="mb-3">
@@ -2079,6 +2099,48 @@ const handleAddToSlack = async (which = "shipping") => {
                           <option value="Bad">Bad</option>
                           <option value="Unknown">Unknown</option>
                         </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  {/* Row for Local SN, Arrival Date, Tracking */}
+                  <Row className="mb-3">
+                    <Col>
+                      <Form.Group controlId="localSN">
+                        <Form.Label>Local SN</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter Local SN"
+                          value={items.localSN || ""}
+                          onChange={handleChange("localSN")}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col>
+                      <Form.Group controlId="arrivalDate">
+                        <Form.Label>Arrival Date</Form.Label>
+                        <Form.Control
+                          placeholder="Enter Arrival Date"
+                          type="date"
+                          value={items.arrival_date}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setItems((prev) => ({
+                              ...prev,
+                              arrival_date: value,
+                            }));
+                          }}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col>
+                      <Form.Group controlId="trackingNumber">
+                        <Form.Label>Tracking Number</Form.Label>
+                        <Form.Control
+                          placeholder="Tracking Number"
+                          type="text"
+                          value={items.trackingNumber}
+                          onChange={handleChange("trackingNumber")}
+                        />
                       </Form.Group>
                     </Col>
                   </Row>
@@ -2434,8 +2496,8 @@ const handleAddToSlack = async (which = "shipping") => {
                   </div>
                   {/* Photo and Website Options */}
                   <div style={{ marginBottom: "1rem" }}>
-                    <Row className="mb-3">
-                      <Col xs={6}>
+                    <Row className={`mb-3 ${styles.photoActionsRow}`}>
+                      <Col xs={12} md={6}>
                         <ButtonGroup>
                           <Button
                             variant="outline-secondary"
@@ -2451,7 +2513,7 @@ const handleAddToSlack = async (which = "shipping") => {
                           </Button>
                         </ButtonGroup>
                       </Col>
-                      <Col xs={6} className="d-flex align-items-center">
+                      <Col xs={12} md={6} className={styles.photoActionsRight}>
                         <Button
                           variant="success"
                           onClick={handleSendToInflow}
@@ -2551,7 +2613,7 @@ const handleAddToSlack = async (which = "shipping") => {
                     </div>
                   )}
                   {/* Action Buttons */}
-                  <div className="mt-3 d-flex flex-wrap align-items-center">
+                  <div className={`mt-3 d-flex flex-wrap align-items-center ${styles.actionRow}`}>
                     <Button
                       variant="primary"
                       type="submit"
@@ -2561,10 +2623,10 @@ const handleAddToSlack = async (which = "shipping") => {
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={handleShowInfoModal}
+                      onClick={handleCloneToNewItem}
                       style={{ marginRight: "1rem" }}
                     >
-                      More Info
+                      Clone
                     </Button>
                     <LoadingButton
                       type="primary"
@@ -2621,6 +2683,11 @@ const handleAddToSlack = async (which = "shipping") => {
                   </div>
                   <Collapse in={showExtra}>
                     <div id="extra-collapse" className="mt-3">
+                      <div className="d-flex justify-content-end mb-3">
+                        <Button variant="secondary" onClick={handleShowInfoModal}>
+                          More Info
+                        </Button>
+                      </div>
                       <Row>
                         <Form.Group as={Col} controlId="dimensions">
                           <Form.Label>Dimensions</Form.Label>
@@ -2648,15 +2715,6 @@ const handleAddToSlack = async (which = "shipping") => {
                               onChange={handleChange("height")}
                             />
                           </div>
-                        </Form.Group>
-                        <Form.Group as={Col} controlId="trackingNumber">
-                          <Form.Label>Tracking Number</Form.Label>
-                          <Form.Control
-                            placeholder="Tracking Number"
-                            type="text"
-                            value={items.trackingNumber}
-                            onChange={handleChange("trackingNumber")}
-                          />
                         </Form.Group>
                       </Row>
 
@@ -2688,34 +2746,7 @@ const handleAddToSlack = async (which = "shipping") => {
                             onChange={handleChange("poNumber")}
                           />
                         </Form.Group>
-                      </Row>
-                      <Row className="mt-3">
-                        <Form.Group as={Col} controlId="localSN">
-                          <Form.Label>Local SN</Form.Label>
-                          <Form.Control
-                            type="text"
-                            placeholder="Enter Local SN"
-                            value={items.localSN || ""}
-                            onChange={handleChange("localSN")}
-                          />
-                        </Form.Group>
-                        <Form.Group as={Col} controlId="arrivalDate">
-                          <Form.Label>Arrival Date</Form.Label>
-                          <Form.Control
-                            placeholder="Enter Arrival Date"
-                            type="date"
-                            value={items.arrival_date}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setItems((prev) => ({
-                                ...prev,
-                                arrival_date: value,
-                              }));
-                            }}
-                          />
-                        </Form.Group>
-                      </Row>
-                    </div>
+                      </Row></div>
                   </Collapse>
                 </Form>
               </Card.Body>
@@ -2797,6 +2828,13 @@ const handleAddToSlack = async (which = "shipping") => {
   );
 }
 
+export default function DisplayItemPage(props) {
+  const router = useRouter();
+  const idFromRouter = router.query?.id;
+  const key = props?.initialItem?.id || idFromRouter || "new-item";
+  return <DisplayItemInner {...props} key={key} />;
+}
+
 // Server-side rendering function
 export async function getServerSideProps(context) {
   const { id } = context.params;
@@ -2865,4 +2903,8 @@ export async function getServerSideProps(context) {
     return { props: { error: "Failed to load item data" } };
   }
 }
+
+
+
+
 

@@ -42,6 +42,16 @@ if (!Firebase.apps.length) {
   Firebase.initializeApp(FirebaseCredentials);
 }
 
+// Some networks/proxies block Firestore's streaming transport.
+// Force long polling in the browser to avoid stalled writes/listens.
+if (typeof window !== "undefined") {
+  try {
+    Firebase.firestore().settings({ experimentalForceLongPolling: true });
+  } catch (error) {
+    // Ignore if Firestore has already been initialized with settings.
+  }
+}
+
 export const auth = Firebase.auth();
 export default Firebase;
 

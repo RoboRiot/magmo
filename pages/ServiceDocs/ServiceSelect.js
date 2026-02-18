@@ -12,7 +12,7 @@ function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
-function LoadingButton(type, name, route) {
+function LoadingButton({ type, name, route }) {
   const [isLoading, setLoading] = useState({ name: false });
 
   useEffect(() => {
@@ -62,13 +62,17 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Service Docs</h2>
               <div class="d-grid gap-3">
-                {LoadingButton("primary", "Explorer", "ServiceDocs/Explorer")}
+                <LoadingButton
+                  type="primary"
+                  name="Explorer"
+                  route="ServiceDocs/Explorer"
+                />
 
-                {LoadingButton(
-                  "secondary",
-                  "Google Keep",
-                  "http://mri.advancedimagingparts.com/login"
-                )}
+                <LoadingButton
+                  type="secondary"
+                  name="Google Keep"
+                  route="http://mri.advancedimagingparts.com/login"
+                />
 
                 <Form className="d-flex">
                   <FormControl

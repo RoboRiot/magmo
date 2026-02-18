@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Modal,
-  Container,
-  Card,
-  Row,
-  Col,
   InputGroup,
   Dropdown,
   FormControl,
@@ -12,28 +8,31 @@ import {
   NavDropdown,
   Form,
   Table,
+  Pagination,
 } from "react-bootstrap";
 import {
-  fetchPartsWithMachineData,
+  fetchPartsWithMachineDataPage,
   fetchClients,
   fetchModels,
   formatDate,
 } from "../../../utils/fetchAssociations";
-import { useAuth } from "../../../context/AuthUserContext";
-import LoggedIn from "../../LoggedIn";
 import ClientTable from "../../../utils/ClientTable";
 import ModelTable from "../../../utils/ModelTable";
-import PartTable from "../../../utils/PartTable";
-import styles from "../../../styles/MainSearch.module.css";
-import firebase from "../../../context/Firebase";
+import styles from "./ParentModal.module.css";
 
 const CLIENT_WAREHOUSE = "igor-house";
 const CLIENT_UNASSIGNED = "unassigned";
+const PAGE_SIZE = 20;
 
-const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
+const ParentModal = ({ show, handleClose, setSelectedParent }) => {
   const [info, setInfo] = useState([]);
-  const [backupInfo, setBackupInfo] = useState([]);
-  // const [ids, setID] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageCursors, setPageCursors] = useState([]);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [queryEpoch, setQueryEpoch] = useState(0);
+  const [loadError, setLoadError] = useState(null);
+
   const [search, setSearch] = useState("");
   const [select, setSelect] = useState("Name");
   const [showList, setShowList] = useState(false);
@@ -44,7 +43,6 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   const [clients, setClients] = useState([]);
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientButtonText, setClientButtonText] = useState("Select Option");
-  const [hoverIndex, setHoverIndex] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [models, setModels] = useState([]);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -52,84 +50,134 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [modelSearchTerm, setModelSearchTerm] = useState("");
 
-  useEffect(() => {
-    async function fetchData() {
-      const data = await fetchPartsWithMachineData();
-      setInfo(data);
-      setBackupInfo(data);
-      // setID(data.map((item) => item.id)); // Ensure IDs are correctly set here
-    }
-    fetchData();
-  }, []);
+  const getMachineField = (item, key) => {
+    if (!item) return null;
+    return (
+      item?.machineData?.[key] ??
+      item?.machineData?.[key?.toLowerCase?.()] ??
+      item?.currentMachineData?.[key] ??
+      item?.currentMachineData?.[key?.toLowerCase?.()] ??
+      null
+    );
+  };
 
-  const handleCloseClientModal = () => setShowClientModal(false);
-  const handleShowClientModal = () => setShowClientModal(true);
+  const resetPagination = () => {
+    setPage(1);
+    setPageCursors([]);
+    setHasNextPage(false);
+  };
 
-  const handleCloseModelModal = () => setShowModelModal(false);
-  const handleShowModelModal = () => setShowModelModal(true);
-
-  // Handle search input changes
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
-  // Filter items based on search criteria
-  function searchFilter() {
-    const temp = backupInfo.filter((item) => {
-      if (item.machineData) {
-        if (selectedOEM && item.machineData.OEM !== selectedOEM) return false;
-        if (selectedModality && item.machineData.Modality !== selectedModality)
-          return false;
-        if (selectedClient && item.machineData.Client !== selectedClient)
-          return false;
-        if (selectedModel && item.machineData.Model !== selectedModel)
-          return false;
+  const matchesFilters = useCallback(
+    (item) => {
+      if (!item) return false;
+      if (selectedOEM) {
+        const OEM = getMachineField(item, "OEM");
+        if (OEM !== selectedOEM) return false;
       }
+      if (selectedModality) {
+        const Modality = getMachineField(item, "Modality");
+        if (Modality !== selectedModality) return false;
+      }
+      if (selectedModel) {
+        const Model = getMachineField(item, "Model");
+        if (Model !== selectedModel) return false;
+      }
+      if (selectedClient) {
+        const clientRef = getMachineField(item, "client");
+        const clientId =
+          typeof clientRef === "string"
+            ? clientRef
+            : clientRef?.id || null;
+        if (clientId !== selectedClient) return false;
+      }
+      return true;
+    },
+    [selectedOEM, selectedModality, selectedModel, selectedClient]
+  );
 
-      if (
-        select === "Name" &&
-        item.name.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
-      if (select === "Date") {
-        const [month, day, year] = item.date.split("/");
-        const reformattedDate = `${year}-${month}-${day}`;
-        return reformattedDate === search;
+  const fetchData = useCallback(
+    async (requestedPage = 1) => {
+      if (!show) return;
+      const startAfterDoc =
+        requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
+      if (requestedPage > 1 && !startAfterDoc) {
+        setPage(1);
+        return;
       }
-      if (select === "Work Order" && Number(item.wo) === Number(search))
-        return true;
-      if (select === "Product Number" && Number(item.pn) === Number(search))
-        return true;
-      if (
-        select === "Description" &&
-        item.desc.toLowerCase().includes(search.toLowerCase())
-      )
-        return true;
-      return false;
-    });
-    setInfo(temp);
-  }
+      setIsLoading(true);
+      setLoadError(null);
+      const searchLower = (search || "").toLowerCase().trim();
+      try {
+        const { parts: data, lastDoc, hasNextPage: nextPage } =
+          await fetchPartsWithMachineDataPage({
+            pageSize: PAGE_SIZE,
+            startAfterDoc,
+            visibleOnly: true,
+            filterFn:
+              selectedOEM || selectedModality || selectedModel || selectedClient
+                ? matchesFilters
+                : null,
+            search: searchLower
+              ? {
+                  type: select,
+                  raw: search,
+                  lower: searchLower,
+                }
+              : null,
+            needsMachineData:
+              Boolean(selectedOEM) ||
+              Boolean(selectedModality) ||
+              Boolean(selectedModel) ||
+              Boolean(selectedClient),
+          });
+        setInfo(data);
+        setHasNextPage(nextPage);
+        setPageCursors((prev) => {
+          const next = requestedPage === 1 ? [] : [...prev];
+          if (lastDoc) {
+            next[requestedPage - 1] = lastDoc;
+          }
+          return next;
+        });
+      } catch (error) {
+        console.error("Parent modal load failed:", error);
+        setLoadError(error?.message || "Failed to load items.");
+        setInfo([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      show,
+      pageCursors,
+      search,
+      select,
+      selectedOEM,
+      selectedModality,
+      selectedModel,
+      selectedClient,
+      matchesFilters,
+    ]
+  );
 
-  // Sort items based on column
-  function sortCheckAll(pos) {
-    const sortedInfo = [...info].sort((a, b) => {
-      if (pos === 0 || pos === 5) {
-        return b[select].localeCompare(a[select]);
-      }
-      if (pos === 1) {
-        return Date.parse(b[select]) - Date.parse(a[select]);
-      }
-      return Number(b[select]) - Number(a[select]);
-    });
-    setInfo(sortedInfo);
-  }
+  useEffect(() => {
+    if (!show) return;
+    resetPagination();
+    setQueryEpoch((v) => v + 1);
+  }, [show, selectedOEM, selectedModality, selectedModel, selectedClient, search, select]);
 
-  // Row selection handler
+  useEffect(() => {
+    if (!show) return;
+    fetchData(page);
+  }, [show, page, queryEpoch, fetchData]);
+
   const rowSelect = (item) => {
-    // item.id must be present in fetchPartsWithMachineData() results
     setSelectedParent({ id: item.id, name: item.name, pn: item.pn });
     handleClose();
   };
 
-  // Dropdown handlers
   const [dropdown1Text, setDropdown1Text] = useState("Select Option");
   const [dropdown2Text, setDropdown2Text] = useState("Select Option");
 
@@ -153,40 +201,36 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
     }
   };
 
-  useEffect(() => {
-    searchFilter();
-  }, [selectedOEM, selectedModality, selectedClient, selectedModel, search]);
-
-  // Fetch clients and show modal
   const handleClientClick = async () => {
-    console.log("clicked");
     const clientsData = await fetchClients(selectedOEM, selectedModality);
     setClients(clientsData);
-    setClientSearchTerm(""); // Reset search term
+    setClientSearchTerm("");
     setShowClientModal(true);
   };
 
-  // Client selection handler
-  const handleClientSelect = (clientName) => {
-    setClientButtonText(clientName || "Select Option");
-    setSelectedClient(clientName || null);
+  const handleClientSelect = (clientId) => {
+    if (!clientId) {
+      setClientButtonText("Select Option");
+      setSelectedClient(null);
+      setShowClientModal(false);
+      return;
+    }
+    const client = clients.find((c) => c.id === clientId);
+    setClientButtonText(client?.name || "Select Option");
+    setSelectedClient(clientId);
     setShowClientModal(false);
   };
 
-  // Client info handler
   const handleClientInfo = (clientId, clientName) => {
     console.log(`Client ID: ${clientId}, Client Name: ${clientName}`);
   };
 
-  // Clear client selection handler
   const handleClearClientSelection = () => {
     setClientButtonText("Select Option");
     setSelectedClient(null);
     setShowClientModal(false);
-    searchFilter();
   };
 
-  // Fetch models and show modal
   const handleModelClick = async () => {
     const modelsData = await fetchModels(
       selectedOEM,
@@ -194,273 +238,345 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
       selectedClient
     );
     setModels(modelsData);
-    setModelSearchTerm(""); // Reset search term
+    setModelSearchTerm("");
     setShowModelModal(true);
   };
 
-  // Model selection handler
   const handleModelSelect = (modelName) => {
     setModelButtonText(modelName || "Select Option");
     setSelectedModel(modelName || null);
     setShowModelModal(false);
   };
 
-  // Clear model selection handler
   const handleClearModelSelection = () => {
     setModelButtonText("Select Option");
     setSelectedModel(null);
     setShowModelModal(false);
-    searchFilter();
   };
 
   const handleWarehouseClick = () => {
     setClientButtonText(CLIENT_WAREHOUSE);
     setSelectedClient(CLIENT_WAREHOUSE);
-    searchFilter();
   };
 
   const handleUnassignedClick = () => {
     setClientButtonText(CLIENT_UNASSIGNED);
     setSelectedClient(CLIENT_UNASSIGNED);
-    searchFilter();
   };
 
-  return (
-    <Modal show={show} onHide={handleClose} size="lg" centered scrollable dialogClassName="parent-modal-dialog" >
-      <Modal.Header closeButton>
-        <Modal.Title>Select Parent</Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: "75vh", overflowY: "auto" }}>
-        <Container
-          className="d-flex align-items-center justify-content-center"
-          style={{ minHeight: "unset" }}
+  const totalKnownPages = Math.max(
+    1,
+    pageCursors.filter(Boolean).length + (hasNextPage ? 1 : 0)
+  );
+  const pageButtons = (() => {
+    const buttons = [];
+    const maxVisible = 6;
+
+    const pushPage = (p) =>
+      buttons.push(
+        <Pagination.Item
+          key={`page-${p}`}
+          active={p === page}
+          onClick={() => setPage(p)}
         >
-          <div className="w-100" style={{ maxWidth: "1200px" }}>
-            <Card>
-              <Card.Body>
-                <Row>
-                  <Col md={4}>
-                    {/* Dropdowns */}
-                    <div>
-                      <InputGroup className="mb-3">
-                        <InputGroup.Text>OEM</InputGroup.Text>
-                        <Dropdown onSelect={handleSelect1}>
-                          <Dropdown.Toggle
-                            variant="outline-secondary"
-                            id="dropdown-button-1"
-                            className="w-100"
-                          >
-                            {dropdown1Text}
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu className="w-100">
-                            <Dropdown.Item eventKey="unassigned">
-                              Select Option
-                            </Dropdown.Item>
-                            <Dropdown.Item eventKey="GE">GE</Dropdown.Item>
-                            <Dropdown.Item eventKey="Toshiba">
-                              Toshiba
-                            </Dropdown.Item>
-                            <Dropdown.Item eventKey="Siemens">
-                              Siemens
-                            </Dropdown.Item>
-                            <Dropdown.Item eventKey="Philips">
-                              Philips
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      </InputGroup>
+          {p}
+        </Pagination.Item>
+      );
 
-                      <InputGroup className="mb-3">
-                        <InputGroup.Text>Modality</InputGroup.Text>
-                        <Dropdown onSelect={handleSelect2}>
-                          <Dropdown.Toggle
-                            variant="outline-secondary"
-                            id="dropdown-button-2"
-                            className="w-100"
-                          >
-                            {dropdown2Text}
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu className="w-100">
-                            <Dropdown.Item eventKey="unassigned">
-                              Select Option
-                            </Dropdown.Item>
-                            <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
-                            <Dropdown.Item eventKey="MRI">MRI</Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      </InputGroup>
+    const pushEllipsis = (key) =>
+      buttons.push(<Pagination.Ellipsis key={key} disabled />);
 
-                      {/* Buttons */}
-                      <div>
-                        <InputGroup className="mb-3">
-                          <InputGroup.Text>Client</InputGroup.Text>
-                          <Button
-                            variant="outline-secondary"
-                            className="w-100"
-                            onClick={handleClientClick}
-                          >
-                            {clientButtonText}
-                          </Button>
-                        </InputGroup>
-                        <InputGroup className="mb-3">
-                          <InputGroup.Text>Client-2</InputGroup.Text>
-                          <Button
-                            variant="outline-secondary"
-                            className="w-100"
-                            disabled
-                          >
-                            Select Option
-                          </Button>
-                        </InputGroup>
-                        <InputGroup className="mb-3">
-                          <InputGroup.Text>Model</InputGroup.Text>
-                          <Button
-                            variant="outline-secondary"
-                            className="w-100"
-                            onClick={handleModelClick}
-                          >
-                            {modelButtonText}
-                          </Button>
-                        </InputGroup>
-                        {/* Divider */}
-                        <div className={styles.divider}></div>
-                        <InputGroup className="mb-3">
-                          <InputGroup.Text>Warehouse</InputGroup.Text>
-                          <div className={styles.buttonGroup}>
-                            <Button
-                              variant="outline-secondary"
-                              className={styles.flexButton}
-                              onClick={handleWarehouseClick}
-                            >
-                              Warehouse
-                            </Button>
-                            <Button
-                              variant="outline-secondary"
-                              className={styles.flexButton}
-                              onClick={handleUnassignedClick}
-                            >
-                              Unassigned
-                            </Button>
-                          </div>
-                        </InputGroup>
-                      </div>
-                    </div>
-                  </Col>
+    if (totalKnownPages <= maxVisible) {
+      for (let i = 1; i <= totalKnownPages; i += 1) pushPage(i);
+      return buttons;
+    }
 
-                  <Col md={8}>
-                    <div className={styles.tableContainer}>
-                      <Table striped bordered hover size="sm" className="mb-0">
-                        <thead className={styles.stickyHeader}>
-                          <tr>
-                            <th onClick={() => sortCheckAll(0)}>Name</th>
-                            <th onClick={() => sortCheckAll(1)}>Date</th>
-                            <th onClick={() => sortCheckAll(2)}>Work Order</th>
-                            <th onClick={() => sortCheckAll(3)}>
-                              Product Number
-                            </th>
-                            <th onClick={() => sortCheckAll(4)}>
-                              Serial Number
-                            </th>
-                            <th>Select</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {info.map((item) => (
-                            <tr className="clickable-row" key={item.id}>
-                              <td>{item.name}</td>
-                              <td>{formatDate(item.date)}</td>
-                              <td>
-                                {item.workOrders && item.workOrders.length > 0
-                                  ? item.workOrders[item.workOrders.length - 1]
-                                      .workOrder
-                                  : "N/A"}
-                              </td>
-                              <td>{item.pn}</td>
-                              <td>{item.sn}</td>
-                              <td>
-                                <Button
-                                  variant="primary"
-                                  onClick={() => rowSelect(item)}
-                                >
-                                  Select
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                      <div className={styles.searchContainer}>
-                        <Form className="d-flex pb-2">
-                          <FormControl
-                            type={showListSearch}
-                            placeholder="Search"
-                            className="me-2 flex-grow-1"
-                            aria-label="Search"
-                            value={search}
-                            onChange={searchChangeHandler}
-                            style={{ flex: "1" }}
-                          />
-                          <NavDropdown
-                            title={select}
-                            id="collasible-nav-dropdown"
-                            show={showList}
-                            onMouseEnter={() => setShowList(true)}
-                            onMouseLeave={() => setShowList(false)}
-                            style={{ marginTop: "-5px" }}
-                          >
-                            <NavDropdown.Item
-                              onClick={() =>
-                                setSelect("Name") & setShowListSearch("text")
-                              }
-                            >
-                              Name
-                            </NavDropdown.Item>
-                            <NavDropdown.Item
-                              onClick={() =>
-                                setSelect("Date") & setShowListSearch("date")
-                              }
-                            >
-                              Date
-                            </NavDropdown.Item>
-                            <NavDropdown.Item
-                              onClick={() =>
-                                setSelect("Work Order") &
-                                setShowListSearch("number")
-                              }
-                            >
-                              Work Order
-                            </NavDropdown.Item>
-                            <NavDropdown.Item
-                              onClick={() =>
-                                setSelect("Product Number") &
-                                setShowListSearch("number")
-                              }
-                            >
-                              Product Number
-                            </NavDropdown.Item>
-                            <NavDropdown.Item
-                              onClick={() =>
-                                setSelect("Description") &
-                                setShowListSearch("text")
-                              }
-                            >
-                              Description
-                            </NavDropdown.Item>
-                          </NavDropdown>
-                          {/* <Button variant="info" onClick={searchFilter}>
-                            Search
-                          </Button> */}
-                        </Form>
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
+    let start = Math.max(2, page - 1);
+    let end = Math.min(totalKnownPages - 1, page + 1);
+    const desiredWindow = maxVisible - 2;
+    let currentWindow = end - start + 1;
+    let remaining = desiredWindow - currentWindow;
+
+    while (remaining > 0) {
+      if (start > 2) {
+        start -= 1;
+        remaining -= 1;
+      }
+      if (remaining > 0 && end < totalKnownPages - 1) {
+        end += 1;
+        remaining -= 1;
+      }
+      if (start === 2 && end === totalKnownPages - 1) break;
+    }
+
+    pushPage(1);
+    if (start > 2) pushEllipsis("start-ellipsis");
+    for (let i = start; i <= end; i += 1) pushPage(i);
+    if (end < totalKnownPages - 1) pushEllipsis("end-ellipsis");
+    pushPage(totalKnownPages);
+    if (hasNextPage) pushEllipsis("more-ellipsis");
+
+    return buttons;
+  })();
+
+  return (
+    <Modal
+      show={show}
+      onHide={handleClose}
+      size="xl"
+      centered
+      dialogClassName={styles.modalDialog}
+      contentClassName={styles.modalContent}
+    >
+      <Modal.Header closeButton className={styles.modalHeader}>
+        <div>
+          <div className={styles.modalTitle}>Select Parent</div>
+          <div className={styles.modalSubtitle}>
+            Search and choose a parent item for this part.
           </div>
-        </Container>
+        </div>
+      </Modal.Header>
+      <Modal.Body className={styles.modalBody}>
+        <div className={styles.modalGrid}>
+          <aside className={styles.filtersPanel}>
+            <div className={styles.panelTitle}>Filters</div>
+            <div className={styles.panelHint}>
+              Narrow results with machine and client filters.
+            </div>
+            <InputGroup className={styles.inputGroup}>
+              <InputGroup.Text>OEM</InputGroup.Text>
+              <Dropdown onSelect={handleSelect1} className="w-100">
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="dropdown-button-1"
+                  className="w-100"
+                >
+                  {dropdown1Text}
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="w-100">
+                  <Dropdown.Item eventKey="unassigned">
+                    Select Option
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="GE">GE</Dropdown.Item>
+                  <Dropdown.Item eventKey="Toshiba">Toshiba</Dropdown.Item>
+                  <Dropdown.Item eventKey="Siemens">Siemens</Dropdown.Item>
+                  <Dropdown.Item eventKey="Philips">Philips</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </InputGroup>
+
+            <InputGroup className={styles.inputGroup}>
+              <InputGroup.Text>Modality</InputGroup.Text>
+              <Dropdown onSelect={handleSelect2} className="w-100">
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="dropdown-button-2"
+                  className="w-100"
+                >
+                  {dropdown2Text}
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="w-100">
+                  <Dropdown.Item eventKey="unassigned">
+                    Select Option
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="CT">CT</Dropdown.Item>
+                  <Dropdown.Item eventKey="MRI">MRI</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </InputGroup>
+
+            <InputGroup className={styles.inputGroup}>
+              <InputGroup.Text>Client</InputGroup.Text>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
+                onClick={handleClientClick}
+              >
+                {clientButtonText}
+              </Button>
+            </InputGroup>
+
+            <InputGroup className={styles.inputGroup}>
+              <InputGroup.Text>Model</InputGroup.Text>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
+                onClick={handleModelClick}
+              >
+                {modelButtonText}
+              </Button>
+            </InputGroup>
+
+            <div className={styles.panelDivider}></div>
+            <div className={styles.panelTitle}>Quick</div>
+            <div className={styles.quickButtons}>
+              <Button
+                variant="outline-secondary"
+                className={styles.quickButton}
+                onClick={handleWarehouseClick}
+              >
+                Warehouse
+              </Button>
+              <Button
+                variant="outline-secondary"
+                className={styles.quickButton}
+                onClick={handleUnassignedClick}
+              >
+                Unassigned
+              </Button>
+            </div>
+          </aside>
+
+          <section className={styles.resultsPanel}>
+            <div className={styles.resultsHeader}>
+              <div>
+                <div className={styles.resultsTitle}>Results</div>
+                <div className={styles.resultsSubtitle}>
+                  {isLoading ? "Loading items" : `${info.length} items`}
+                </div>
+              </div>
+              <Pagination size="sm" className={styles.pagination}>
+                <Pagination.Prev
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                />
+                {pageButtons}
+                <Pagination.Next
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!hasNextPage}
+                />
+              </Pagination>
+            </div>
+
+            <div className={styles.searchRow}>
+              <FormControl
+                type={showListSearch}
+                placeholder="Search"
+                className={styles.searchInput}
+                aria-label="Search"
+                value={search}
+                onChange={searchChangeHandler}
+              />
+              <NavDropdown
+                title={select}
+                id="parent-search-dropdown"
+                show={showList}
+                onMouseEnter={() => setShowList(true)}
+                onMouseLeave={() => setShowList(false)}
+              >
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Name");
+                    setShowListSearch("text");
+                  }}
+                >
+                  Name
+                </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Date");
+                    setShowListSearch("date");
+                  }}
+                >
+                  Date
+                </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Work Order");
+                    setShowListSearch("text");
+                  }}
+                >
+                  Work Order
+                </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Product Number");
+                    setShowListSearch("text");
+                  }}
+                >
+                  Product Number
+                </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Serial Number");
+                    setShowListSearch("text");
+                  }}
+                >
+                  Serial Number
+                </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("Description");
+                    setShowListSearch("text");
+                  }}
+                >
+                  Description
+                </NavDropdown.Item>
+              </NavDropdown>
+            </div>
+
+            <div className={styles.tableWrap}>
+              {isLoading ? (
+                <div className={styles.loadingState}>
+                  <img
+                    src="/magmo-logo.png"
+                    alt="Loading"
+                    className={styles.loadingLogo}
+                  />
+                </div>
+              ) : loadError ? (
+                <div className={styles.errorState}>{loadError}</div>
+              ) : (
+                <Table striped bordered hover size="sm" className={styles.table}>
+                  <thead className={styles.stickyHeader}>
+                    <tr>
+                      <th>Name</th>
+                      <th>Date</th>
+                      <th>Work Order</th>
+                      <th>Product Number</th>
+                      <th>Serial Number</th>
+                      <th>Select</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {info.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className={styles.emptyState}>
+                          No items found.
+                        </td>
+                      </tr>
+                    )}
+                    {info.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td>{formatDate(item.date)}</td>
+                        <td>
+                          {item.workOrders && item.workOrders.length > 0
+                            ? item.workOrders[item.workOrders.length - 1]
+                                .workOrder
+                            : "N/A"}
+                        </td>
+                        <td>{item.pn}</td>
+                        <td>{item.sn}</td>
+                        <td>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => rowSelect(item)}
+                          >
+                            Select
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+          </section>
+        </div>
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer className={styles.modalFooter}>
         <Button variant="secondary" onClick={handleClose}>
           Cancel
         </Button>
@@ -474,7 +590,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
           Clear Selection
         </Button>
       </Modal.Footer>
-      <Modal show={showClientModal} onHide={handleCloseClientModal}>
+      <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Select Client</Modal.Title>
         </Modal.Header>
@@ -488,17 +604,19 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
           />
           <ClientTable
             clients={clients.filter((client) =>
-              client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+              (client.name || "")
+                .toLowerCase()
+                .includes(clientSearchTerm.toLowerCase())
             )}
             disableInfo={true}
             onSelectClient={handleClientSelect}
             onInfoClick={handleClientInfo}
-            clearSelection={() => handleClientSelect(null)} // Clear selection handler
+            clearSelection={handleClearClientSelection}
           />
         </Modal.Body>
       </Modal>
 
-      <Modal show={showModelModal} onHide={handleCloseModelModal}>
+      <Modal show={showModelModal} onHide={() => setShowModelModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Select Model</Modal.Title>
         </Modal.Header>
@@ -517,23 +635,12 @@ const ParentModal = ({ show, handleClose, setSelectedParent, parts }) => {
                 : false
             )}
             onSelectModel={handleModelSelect}
-            clearSelection={() => handleModelSelect(null)} // Clear selection handler
+            clearSelection={handleClearModelSelection}
           />
         </Modal.Body>
       </Modal>
     </Modal>
   );
 };
-<style jsx global>{`
-  /* Constrain the modal dialog width to viewport */
-  .parent-modal-dialog {
-    max-width: 95vw;
-    margin: 0 auto;
-  }
-  /* If the table container has a fixed height already, keep it—but ensure it never exceeds body */
-  .parent-modal-dialog .modal-body .${styles.tableContainer} {
-    max-height: 70vh;
-    overflow: auto;
-  }
-`}</style>
+
 export default ParentModal;
