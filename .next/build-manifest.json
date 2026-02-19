@@ -14,15 +14,15 @@
     "static/development/_ssgManifest.js"
   ],
   "pages": {
-    "/NewSearch/inventory/inventoryManage": [
+    "/NewSearch/item/[id]": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/NewSearch/inventory/inventoryManage.js"
+      "static/chunks/pages/NewSearch/item/[id].js"
     ],
-    "/Warehousedb/WarehouseSelect": [
+    "/NewSearch/mainSearch": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/Warehousedb/WarehouseSelect.js"
+      "static/chunks/pages/NewSearch/mainSearch.js"
     ],
     "/_app": [
       "static/chunks/webpack.js",
@@ -33,6 +33,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
+    ],
+    "/next/dist/pages/_error": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/next/dist/pages/_error.js"
     ]
   },
   "ampFirstPages": []

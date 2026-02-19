@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
   Form,
@@ -34,6 +34,15 @@ import {
   updateMachineFields,
   buildNameTokens,
 } from "../../../utils/itemFormShared";
+import MultiSelectDropdown from "../../../components/MultiSelectDropdown";
+import {
+  fetchTrackerCatalog,
+  buildAllOems,
+  buildModelsForSelection,
+  syncTrackerFromSelections,
+  deleteTrackerOem,
+  deleteTrackerModel,
+} from "../../../utils/trackerCatalog";
 import styles from "./NewItem.module.css";
 
 // Load BarcodeScannerComponent only on the client-side.
@@ -107,10 +116,10 @@ export default function NewItem() {
 
   // DOM is the Date of Manufacture input (user provided).
   const [DOM, setDOM] = useState("");
-  // OEM, Modality, Model fields.
-  const [oem, setOem] = useState("");
-  const [modality, setModality] = useState("");
-  const [model, setModel] = useState("");
+  // OEM, Modality, Model fields (multi-select).
+  const [selectedModalities, setSelectedModalities] = useState([]);
+  const [selectedOems, setSelectedOems] = useState([]);
+  const [selectedModels, setSelectedModels] = useState([]);
 
   // Local location states.
   const [newLocalFrom, setNewLocalFrom] = useState({
@@ -168,6 +177,14 @@ export default function NewItem() {
   // For extra (dimensions/price/DOM) section collapse.
   const [showExtra, setShowExtra] = useState(false);
 
+  const [trackerCatalog, setTrackerCatalog] = useState({
+    modalities: [],
+    oemsByModality: {},
+    modelsByModalityOem: {},
+    meta: {},
+  });
+  const [trackerLoading, setTrackerLoading] = useState(false);
+
   // For PN/SN "add new" functionality.
   const [addingNewPn, setAddingNewPn] = useState(false);
   const [newPn, setNewPn] = useState("");
@@ -215,6 +232,51 @@ export default function NewItem() {
       newObj[key] = obj[key] === undefined ? "" : obj[key];
     });
     return newObj;
+  };
+
+  const normalizeSelection = (value) => {
+    if (Array.isArray(value)) {
+      return value
+        .map((v) => String(v).trim())
+        .filter((v) => v && v.toLowerCase() !== "n/a");
+    }
+    if (value == null) return [];
+    const normalized = String(value).trim();
+    if (!normalized || normalized.toLowerCase() === "n/a") return [];
+    return [normalized];
+  };
+
+  const uniqueSelection = (values) => Array.from(new Set(values || []));
+
+  const selectionToStoredValue = (values) => {
+    const cleaned = uniqueSelection(normalizeSelection(values));
+    if (cleaned.length === 0) return "";
+    if (cleaned.length === 1) return cleaned[0];
+    return cleaned;
+  };
+
+  const selectionToPrintValue = (values) => {
+    const cleaned = uniqueSelection(normalizeSelection(values));
+    if (cleaned.length === 0) return "";
+    if (cleaned.length === 1) return cleaned[0];
+    return "Multi";
+  };
+
+  const mergeOptionsWithSelection = (options, selected) => {
+    const map = new Map();
+    (options || []).forEach((value) => {
+      if (value == null) return;
+      const normalized = String(value).trim();
+      if (!normalized) return;
+      map.set(normalized.toLowerCase(), normalized);
+    });
+    (selected || []).forEach((value) => {
+      if (value == null) return;
+      const normalized = String(value).trim();
+      if (!normalized) return;
+      map.set(normalized.toLowerCase(), normalized);
+    });
+    return Array.from(map.values());
   };
 
   useEffect(() => {
@@ -344,12 +406,31 @@ export default function NewItem() {
         if (data.TheMachine && !cancelled) {
           setTheMachine(data.TheMachine);
           setMachineFieldsInitialized(false);
-          if (!oem || oem === "N/A")
-            setOem(data.TheMachine.oem || data.TheMachine.OEM || "");
-          if (!modality || modality === "N/A")
-            setModality(data.TheMachine.modality || data.TheMachine.Modality || "");
-          if (!model || model === "N/A")
-            setModel(data.TheMachine.model || data.TheMachine.Model || "");
+          if (!selectedOems.length) {
+            setSelectedOems(
+              uniqueSelection(
+                normalizeSelection(data.TheMachine.oem || data.TheMachine.OEM)
+              )
+            );
+          }
+          if (!selectedModalities.length) {
+            setSelectedModalities(
+              uniqueSelection(
+                normalizeSelection(
+                  data.TheMachine.modality || data.TheMachine.Modality
+                )
+              )
+            );
+          }
+          if (!selectedModels.length) {
+            setSelectedModels(
+              uniqueSelection(
+                normalizeSelection(
+                  data.TheMachine.model || data.TheMachine.Model
+                )
+              )
+            );
+          }
         }
 
         const parentDoc = await resolveDoc(data.Parent, "Test");
@@ -408,7 +489,13 @@ export default function NewItem() {
     return () => {
       cancelled = true;
     };
-  }, [router.isReady, router.query.cloneFrom, oem, modality, model]);
+  }, [
+    router.isReady,
+    router.query.cloneFrom,
+    selectedOems,
+    selectedModalities,
+    selectedModels,
+  ]);
 
   // -------------------- Since this is "add" mode, we do not fetch an existing document.
   // However, we still fetch global PN and SN options and clients for selection.
@@ -424,6 +511,62 @@ export default function NewItem() {
     }
     fetchClientsData();
   }, []);
+
+  const loadTracker = useCallback(
+    async (force = false) => {
+      if (trackerLoading) return;
+      if (!force && trackerCatalog.modalities.length) return;
+      setTrackerLoading(true);
+      try {
+        const catalog = await fetchTrackerCatalog();
+        setTrackerCatalog(catalog);
+      } catch (error) {
+        console.error("Failed to load tracker catalog:", error);
+      } finally {
+        setTrackerLoading(false);
+      }
+    },
+    [trackerLoading, trackerCatalog.modalities.length]
+  );
+
+  useEffect(() => {
+    loadTracker();
+  }, [loadTracker]);
+
+  const allOemOptions = useMemo(
+    () => buildAllOems(trackerCatalog),
+    [trackerCatalog]
+  );
+
+  const modelOptions = useMemo(
+    () =>
+      buildModelsForSelection(
+        trackerCatalog,
+        selectedModalities,
+        selectedOems
+      ),
+    [trackerCatalog, selectedModalities, selectedOems]
+  );
+
+  // Keep selected models even if they are not in the catalog yet.
+  // The tracker sync will add any missing models automatically.
+
+  const modalityOptionsForUI = useMemo(
+    () => mergeOptionsWithSelection(trackerCatalog.modalities, selectedModalities),
+    [trackerCatalog.modalities, selectedModalities]
+  );
+
+  const oemOptionsForUI = useMemo(
+    () => mergeOptionsWithSelection(allOemOptions, selectedOems),
+    [allOemOptions, selectedOems]
+  );
+
+  const modelOptionsForUI = useMemo(
+    () => mergeOptionsWithSelection(modelOptions, selectedModels),
+    [modelOptions, selectedModels]
+  );
+
+  // Tracker updates are only performed on Save.
 
   const loadPnSnOptions = async () => {
     if (pnSnLoaded || pnSnLoading) return;
@@ -474,10 +617,22 @@ export default function NewItem() {
         selectedMachine
       );
 
-      // Only set fields if they are empty or "N/A"
-      if (!oem || oem === "N/A") setOem(updatedFields.oem);
-      if (!modality || modality === "N/A") setModality(updatedFields.modality);
-      if (!model || model === "N/A") setModel(updatedFields.model);
+      // Only set fields if they are empty
+      if (!selectedOems.length) {
+        setSelectedOems(
+          uniqueSelection(normalizeSelection(updatedFields.oem))
+        );
+      }
+      if (!selectedModalities.length) {
+        setSelectedModalities(
+          uniqueSelection(normalizeSelection(updatedFields.modality))
+        );
+      }
+      if (!selectedModels.length) {
+        setSelectedModels(
+          uniqueSelection(normalizeSelection(updatedFields.model))
+        );
+      }
 
       setMachineFieldsInitialized(true);
     }
@@ -486,6 +641,9 @@ export default function NewItem() {
     selectedCurrentMachine,
     selectedMachine,
     machineFieldsInitialized,
+    selectedOems.length,
+    selectedModalities.length,
+    selectedModels.length,
   ]);
 
   const [signal, setSignal] = useState(null);
@@ -631,6 +789,42 @@ export default function NewItem() {
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
 
+  const handleDeleteOemOption = async (oemName) => {
+    if (!oemName) return;
+    try {
+      await deleteTrackerOem({ oem: oemName, catalog: trackerCatalog });
+      setSelectedOems((prev) => prev.filter((value) => value !== oemName));
+      await loadTracker(true);
+    } catch (error) {
+      console.error("Failed to delete OEM:", error);
+    }
+  };
+
+  const handleDeleteModelOption = async (modelName) => {
+    if (!modelName) return;
+    if (!selectedModalities.length || !selectedOems.length) return;
+    try {
+      const ops = [];
+      selectedModalities.forEach((modalityValue) => {
+        selectedOems.forEach((oemValue) => {
+          ops.push(
+            deleteTrackerModel({
+              modality: modalityValue,
+              oem: oemValue,
+              model: modelName,
+              catalog: trackerCatalog,
+            })
+          );
+        });
+      });
+      await Promise.allSettled(ops);
+      setSelectedModels((prev) => prev.filter((value) => value !== modelName));
+      await loadTracker(true);
+    } catch (error) {
+      console.error("Failed to delete model:", error);
+    }
+  };
+
   // -------------------- Work Orders / Descriptions Handlers (unchanged)
   const addDescription = () => {
     setDescriptions([...descriptions, { description: "", date: "" }]);
@@ -717,12 +911,25 @@ export default function NewItem() {
       setTheMachine(machineData);
 
       // Ensure OEM, Modality, and Model update properly only if necessary
-      if (!oem || oem === "N/A")
-        setOem(machineData.oem || machineData.OEM || "");
-      if (!modality || modality === "N/A")
-        setModality(machineData.modality || machineData.Modality || "");
-      if (!model || model === "N/A")
-        setModel(machineData.model || machineData.Model || "");
+      if (!selectedOems.length) {
+        setSelectedOems(
+          uniqueSelection(normalizeSelection(machineData.oem || machineData.OEM))
+        );
+      }
+      if (!selectedModalities.length) {
+        setSelectedModalities(
+          uniqueSelection(
+            normalizeSelection(machineData.modality || machineData.Modality)
+          )
+        );
+      }
+      if (!selectedModels.length) {
+        setSelectedModels(
+          uniqueSelection(
+            normalizeSelection(machineData.model || machineData.Model)
+          )
+        );
+      }
 
       // Set machine frequency count
       const machinesSnapshot = await db
@@ -810,11 +1017,18 @@ export default function NewItem() {
     const userEmail = currentUser ? currentUser.email : "unknown";
 
     // Always use the current state values for OEM, modality, and model.
+    const storedOem = selectionToStoredValue(selectedOems);
+    const storedModality = selectionToStoredValue(selectedModalities);
+    const storedModel = selectionToStoredValue(selectedModels);
+
     const machineData = {
       ...(TheMachine || {}),
-      oem: oem,
-      modality: modality,
-      model: model,
+      oem: storedOem,
+      OEM: storedOem,
+      modality: storedModality,
+      Modality: storedModality,
+      model: storedModel,
+      Model: storedModel,
     };
 
     const formattedItems = { ...items, descriptions, workOrders };
@@ -1002,6 +1216,22 @@ export default function NewItem() {
       }
 
       console.log("Item saved!");
+      try {
+        const selections = {
+          modalities: selectedModalities,
+          oems: selectedOems,
+          models: selectedModels,
+        };
+        const updated = await syncTrackerFromSelections({
+          selections,
+          catalog: trackerCatalog,
+        });
+        if (updated) {
+          loadTracker(true);
+        }
+      } catch (error) {
+        console.error("Failed to sync tracker selections:", error);
+      }
 
       if (!forceNew) {
         setSavedDocId(docId);
@@ -1107,9 +1337,9 @@ export default function NewItem() {
       descriptions: descriptions,
       date: items.date || new Date().toISOString().split("T")[0],
       DOM: DOM,
-      oem: oem,
-      modality: modality,
-      model: model,
+      oem: selectionToPrintValue(selectedOems),
+      modality: selectionToPrintValue(selectedModalities),
+      model: selectionToPrintValue(selectedModels),
       poNumber: items.poNumber,
       arrival_date: items.arrival_date,
       trackingNumber: items.trackingNumber,
@@ -1166,9 +1396,9 @@ export default function NewItem() {
           : { workOrder: "", date: "" };
 
       const customFields = {
-        custom1: (oem || "").trim(),
-        custom2: (modality || "").trim(),
-        custom3: (model || "").trim(),
+        custom1: selectionToPrintValue(selectedOems),
+        custom2: selectionToPrintValue(selectedModalities),
+        custom3: selectionToPrintValue(selectedModels),
         custom4: (description || "").trim(),
         custom5: (mostRecentWO.workOrder || "").trim(),
         custom6: (selectedClientFrom?.name || "").trim(),
@@ -1990,37 +2220,46 @@ export default function NewItem() {
                 {/* Row for OEM, Modality, Model */}
                 <Row className="mb-3">
                   <Col>
-                    <Form.Group controlId="oem">
-                      <Form.Label>OEM</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="OEM"
-                        value={oem}
-                        onChange={(e) => setOem(e.target.value)}
-                      />
-                    </Form.Group>
+                    <MultiSelectDropdown
+                      label="OEM"
+                      placeholder={trackerLoading ? "Loading..." : "Select OEM"}
+                      options={oemOptionsForUI}
+                      selected={selectedOems}
+                      onChange={setSelectedOems}
+                      enableDelete
+                      onDeleteOption={handleDeleteOemOption}
+                      disabled={trackerLoading}
+                    />
                   </Col>
                   <Col>
-                    <Form.Group controlId="modality">
-                      <Form.Label>Modality</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Modality"
-                        value={modality}
-                        onChange={(e) => setModality(e.target.value)}
-                      />
-                    </Form.Group>
+                    <MultiSelectDropdown
+                      label="Modality"
+                      placeholder={trackerLoading ? "Loading..." : "Select Modality"}
+                      options={modalityOptionsForUI}
+                      selected={selectedModalities}
+                      onChange={setSelectedModalities}
+                      disabled={trackerLoading}
+                    />
                   </Col>
                   <Col>
-                    <Form.Group controlId="model">
-                      <Form.Label>Model</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Model"
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                      />
-                    </Form.Group>
+                    <MultiSelectDropdown
+                      label="Model"
+                      placeholder={
+                        selectedModalities.length && selectedOems.length
+                          ? "Select Model"
+                          : "Select Modality + OEM"
+                      }
+                      options={modelOptionsForUI}
+                      selected={selectedModels}
+                      onChange={setSelectedModels}
+                      enableDelete
+                      onDeleteOption={handleDeleteModelOption}
+                      disabled={
+                        trackerLoading ||
+                        !selectedModalities.length ||
+                        !selectedOems.length
+                      }
+                    />
                   </Col>
                 </Row>
                 {/* Work Orders and Descriptions Section */}

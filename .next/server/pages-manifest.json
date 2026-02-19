@@ -2,6 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/Warehousedb/WarehouseSelect": "pages/Warehousedb/WarehouseSelect.js",
-  "/NewSearch/inventory/inventoryManage": "pages/NewSearch/inventory/inventoryManage.js"
+  "/NewSearch/mainSearch": "pages/NewSearch/mainSearch.js",
+  "/api/tracker/catalog": "pages/api/tracker/catalog.js",
+  "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js",
+  "/next/dist/pages/_error": "pages/next/dist/pages/_error.js"
 }

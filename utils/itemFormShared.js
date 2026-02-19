@@ -20,9 +20,15 @@ export function formatLoc(loc) {
 }
 
 function isValidField(value) {
+  if (Array.isArray(value)) {
+    return value.some((entry) => {
+      const trimmed = String(entry || "").trim();
+      return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+    });
+  }
   if (typeof value !== "string") return Boolean(value);
   const trimmed = value.trim();
-  return trimmed !== "" && trimmed !== "N/A";
+  return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
 }
 
 export function getPriorityMachineField(

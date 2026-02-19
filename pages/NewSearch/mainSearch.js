@@ -121,6 +121,14 @@ function normalizeText(value) {
   return String(value).toLowerCase().trim();
 }
 
+function fieldMatchesSelection(value, selected) {
+  if (!selected) return true;
+  if (Array.isArray(value)) {
+    return value.some((entry) => fieldMatchesSelection(entry, selected));
+  }
+  return normalizeText(value) === normalizeText(selected);
+}
+
 function getMachineField(item, key) {
   if (!item) return null;
   const lower = key.toLowerCase();
@@ -332,16 +340,15 @@ export default function MainSearch() {
       const Modality = getMachineField(item, "Modality");
       const Model = getMachineField(item, "Model");
 
-      if (selectedOEM && normalizeText(OEM) !== normalizeText(selectedOEM)) {
+      if (!fieldMatchesSelection(OEM, selectedOEM)) {
         return false;
       }
       if (
-        selectedModality &&
-        normalizeText(Modality) !== normalizeText(selectedModality)
+        !fieldMatchesSelection(Modality, selectedModality)
       ) {
         return false;
       }
-      if (selectedModel && normalizeText(Model) !== normalizeText(selectedModel)) {
+      if (!fieldMatchesSelection(Model, selectedModel)) {
         return false;
       }
 
@@ -801,12 +808,11 @@ export default function MainSearch() {
     const filtered = augmentedInfo.filter((item) => {
       const OEM = getMachineField(item, "OEM");
       const Modality = getMachineField(item, "Modality");
-      if (selectedOEM && normalizeText(OEM) !== normalizeText(selectedOEM)) {
+      if (!fieldMatchesSelection(OEM, selectedOEM)) {
         return false;
       }
       if (
-        selectedModality &&
-        normalizeText(Modality) !== normalizeText(selectedModality)
+        !fieldMatchesSelection(Modality, selectedModality)
       ) {
         return false;
       }
