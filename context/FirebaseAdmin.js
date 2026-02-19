@@ -12,21 +12,26 @@ try {
 
 // Initialize Firebase Admin if it hasn't been initialized
 if (!getApps().length) {
-  // Only initialize if we have valid credentials
   const clientEmail =
     process.env.FIREBASE_CLIENT_EMAIL ||
     process.env.FIREBASE_FUNCTIONS_CLIENT_EMAIL ||
     process.env.FIREBASE_ADMIN_CLIENT_EMAIL ||
-    (functions ? functions.config().admin?.client_email || functions.config().ssr?.firebase_client_email : undefined);
+    (functions
+      ? functions.config().admin?.client_email ||
+        functions.config().ssr?.firebase_client_email
+      : undefined);
 
   const privateKey =
     process.env.FIREBASE_PRIVATE_KEY ||
     process.env.FIREBASE_FUNCTIONS_PRIVATE_KEY ||
     process.env.FIREBASE_ADMIN_PRIVATE_KEY ||
-    (functions ? functions.config().admin?.private_key || functions.config().ssr?.firebase_private_key : undefined);
+    (functions
+      ? functions.config().admin?.private_key ||
+        functions.config().ssr?.firebase_private_key
+      : undefined);
 
-  if (clientEmail && privateKey) {
-    try {
+  try {
+    if (clientEmail && privateKey) {
       initializeApp({
         credential: cert({
           projectId: "magmo-ac10c",
@@ -35,14 +40,16 @@ if (!getApps().length) {
         }),
         databaseURL: "https://magmo-ac10c.firebaseio.com",
       });
-    } catch (error) {
-      console.warn("Firebase Admin initialization failed:", error.message);
-      // Don't throw error during build process
+    } else {
+      // Fall back to Application Default Credentials (e.g. Cloud Functions/Run)
+      initializeApp({
+        projectId: "magmo-ac10c",
+        databaseURL: "https://magmo-ac10c.firebaseio.com",
+      });
     }
-  } else {
-    console.warn(
-      "Firebase Admin credentials not available, skipping initialization"
-    );
+  } catch (error) {
+    console.warn("Firebase Admin initialization failed:", error.message);
+    // Don't throw error during build process
   }
 }
 

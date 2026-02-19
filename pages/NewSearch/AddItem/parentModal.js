@@ -50,6 +50,19 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [modelSearchTerm, setModelSearchTerm] = useState("");
 
+  const normalizeText = (value) => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return true;
+    if (Array.isArray(value)) {
+      return value.some((entry) => fieldMatchesSelection(entry, selected));
+    }
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const getMachineField = (item, key) => {
     if (!item) return null;
     return (
@@ -57,6 +70,8 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
       item?.machineData?.[key?.toLowerCase?.()] ??
       item?.currentMachineData?.[key] ??
       item?.currentMachineData?.[key?.toLowerCase?.()] ??
+      item?.TheMachine?.[key] ??
+      item?.TheMachine?.[key?.toLowerCase?.()] ??
       null
     );
   };
@@ -74,15 +89,15 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
       if (!item) return false;
       if (selectedOEM) {
         const OEM = getMachineField(item, "OEM");
-        if (OEM !== selectedOEM) return false;
+        if (!fieldMatchesSelection(OEM, selectedOEM)) return false;
       }
       if (selectedModality) {
         const Modality = getMachineField(item, "Modality");
-        if (Modality !== selectedModality) return false;
+        if (!fieldMatchesSelection(Modality, selectedModality)) return false;
       }
       if (selectedModel) {
         const Model = getMachineField(item, "Model");
-        if (Model !== selectedModel) return false;
+        if (!fieldMatchesSelection(Model, selectedModel)) return false;
       }
       if (selectedClient) {
         const clientRef = getMachineField(item, "client");

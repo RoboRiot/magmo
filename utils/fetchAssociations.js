@@ -412,6 +412,19 @@ export async function fetchPartsWithMachineDataPage({
 }
 
 export async function fetchClients(selectedOEM, selectedModality) {
+  const normalizeText = (value) => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return false;
+    if (Array.isArray(value)) {
+      return value.some((entry) => fieldMatchesSelection(entry, selected));
+    }
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const db = firebase.firestore();
   const clientsSnapshot = await db.collection("Client").get();
   const clients = clientsSnapshot.docs.map((doc) => ({
@@ -429,8 +442,16 @@ export async function fetchClients(selectedOEM, selectedModality) {
           const machineDoc = await machineRef.get();
           const machineData = machineDoc.data();
           if (
-            (selectedOEM && machineData.OEM === selectedOEM) ||
-            (selectedModality && machineData.Modality === selectedModality)
+            (selectedOEM &&
+              fieldMatchesSelection(
+                machineData.OEM ?? machineData.oem,
+                selectedOEM
+              )) ||
+            (selectedModality &&
+              fieldMatchesSelection(
+                machineData.Modality ?? machineData.modality,
+                selectedModality
+              ))
           ) {
             match = true;
             break;
@@ -454,6 +475,19 @@ export async function fetchModels(
   selectedModality,
   selectedClient
 ) {
+  const normalizeText = (value) => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return true;
+    if (Array.isArray(value)) {
+      return value.some((entry) => fieldMatchesSelection(entry, selected));
+    }
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const db = firebase.firestore();
   const machinesSnapshot = await db.collection("Machine").get();
   const models = new Set();
@@ -463,8 +497,14 @@ export async function fetchModels(
       const machineData = machineDoc.data();
       let isValid = true;
 
-      if (selectedOEM && machineData.OEM !== selectedOEM) isValid = false;
-      if (selectedModality && machineData.Modality !== selectedModality)
+      if (!fieldMatchesSelection(machineData.OEM ?? machineData.oem, selectedOEM))
+        isValid = false;
+      if (
+        !fieldMatchesSelection(
+          machineData.Modality ?? machineData.modality,
+          selectedModality
+        )
+      )
         isValid = false;
       if (selectedClient && machineData.client) {
         let clientDoc = null;
@@ -485,7 +525,12 @@ export async function fetchModels(
       }
 
       if (isValid) {
-        models.add(machineData.Model);
+        const modelValue = machineData.Model ?? machineData.model;
+        if (Array.isArray(modelValue)) {
+          modelValue.forEach((entry) => entry && models.add(entry));
+        } else if (modelValue) {
+          models.add(modelValue);
+        }
       }
     })
   );
