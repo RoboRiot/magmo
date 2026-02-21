@@ -3,7 +3,7 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/NewSearch/mainSearch": "pages/NewSearch/mainSearch.js",
-  "/api/tracker/catalog": "pages/api/tracker/catalog.js",
   "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js",
+  "/api/tracker/catalog": "pages/api/tracker/catalog.js",
   "/next/dist/pages/_error": "pages/next/dist/pages/_error.js"
 }
