@@ -2,8 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/NewSearch/mainSearch": "pages/NewSearch/mainSearch.js",
-  "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js",
-  "/api/tracker/catalog": "pages/api/tracker/catalog.js",
-  "/next/dist/pages/_error": "pages/next/dist/pages/_error.js"
+  "/NewSearch/item/[id]": "pages/NewSearch/item/[id].js"
 }
