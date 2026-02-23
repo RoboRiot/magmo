@@ -30,8 +30,18 @@ if (!getApps().length) {
         functions.config().ssr?.firebase_private_key
       : undefined);
 
+  const hasExplicitAdminCreds = Boolean(clientEmail && privateKey);
+  const isGoogleRuntime = Boolean(
+    process.env.K_SERVICE ||
+      process.env.FUNCTION_TARGET ||
+      process.env.GAE_ENV ||
+      process.env.GOOGLE_CLOUD_PROJECT
+  );
+  const canUseAdc =
+    isGoogleRuntime || Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
   try {
-    if (clientEmail && privateKey) {
+    if (hasExplicitAdminCreds) {
       initializeApp({
         credential: cert({
           projectId: "magmo-ac10c",
@@ -40,12 +50,16 @@ if (!getApps().length) {
         }),
         databaseURL: "https://magmo-ac10c.firebaseio.com",
       });
-    } else {
+    } else if (canUseAdc) {
       // Fall back to Application Default Credentials (e.g. Cloud Functions/Run)
       initializeApp({
         projectId: "magmo-ac10c",
         databaseURL: "https://magmo-ac10c.firebaseio.com",
       });
+    } else {
+      console.warn(
+        "Firebase Admin not initialized: missing service account credentials in local environment."
+      );
     }
   } catch (error) {
     console.warn("Firebase Admin initialization failed:", error.message);

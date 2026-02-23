@@ -331,19 +331,23 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [selectedOems, setSelectedOems] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
 
-  const applyMergedMachineFields = (merged) => {
+  const applyMergedMachineFields = (merged, { force = false } = {}) => {
     if (!merged) return;
+    const nextOems = uniqueSelection(normalizeSelection(merged.oem));
+    const nextModalities = uniqueSelection(normalizeSelection(merged.modality));
+    const nextModels = uniqueSelection(normalizeSelection(merged.model));
+
     setSelectedOems((prev) => {
-      if (prev.length) return prev;
-      return uniqueSelection(normalizeSelection(merged.oem));
+      if (!force && prev.length) return prev;
+      return nextOems;
     });
     setSelectedModalities((prev) => {
-      if (prev.length) return prev;
-      return uniqueSelection(normalizeSelection(merged.modality));
+      if (!force && prev.length) return prev;
+      return nextModalities;
     });
     setSelectedModels((prev) => {
-      if (prev.length) return prev;
-      return uniqueSelection(normalizeSelection(merged.model));
+      if (!force && prev.length) return prev;
+      return nextModels;
     });
   };
 
@@ -936,7 +940,7 @@ const handleSendToInflow = async () => {
         selectedCurrentMachine,
         selectedMachine
       );
-      applyMergedMachineFields(merged);
+      applyMergedMachineFields(merged, { force: true });
       const machinesSnapshot = await db
         .collection("Machine")
         .where("Model", "==", machineData.Model || machineData.model)
@@ -3050,6 +3054,9 @@ export async function getServerSideProps(context) {
   const { id } = context.params;
 
   try {
+    if (!adminDb) {
+      return { props: { error: "Firebase Admin not configured for SSR." } };
+    }
     const itemDoc = await adminDb.collection("Test").doc(id).get();
     if (!itemDoc.exists) return { notFound: true };
 

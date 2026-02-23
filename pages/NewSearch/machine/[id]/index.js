@@ -403,6 +403,13 @@ export async function getServerSideProps(context) {
   const { id } = context.params;
 
   try {
+    if (!adminDb) {
+      return {
+        props: {
+          error: "Firebase Admin not configured for SSR.",
+        },
+      };
+    }
     // Fetch machine data from Firestore using Admin SDK
     const machineDoc = await adminDb.collection("Machine").doc(id).get();
 
