@@ -188,6 +188,10 @@ export default async function handler(req, res) {
       return res.status(405).json({ ok: false, error: "method_not_allowed" });
     }
 
+    const { requireFirebaseAuth } = await import("../../../utils/apiAuth");
+    await requireFirebaseAuth(req, res);
+    if (res.writableEnded) return;
+
     const token = process.env.SLACK_BOT_TOKEN;
     if (!token) {
       return res

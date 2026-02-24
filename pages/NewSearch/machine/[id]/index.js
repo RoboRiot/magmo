@@ -438,6 +438,13 @@ export async function getServerSideProps(context) {
           .filter(Boolean);
 
         const partsDocs = await Promise.all(partsPromises);
+        const toDisplayValue = (value) => {
+          if (Array.isArray(value)) {
+            return value.filter((v) => v != null && v !== "").join(", ");
+          }
+          return value ?? "";
+        };
+
         associatedParts = await Promise.all(
           partsDocs.map(async (doc) => {
             if (!doc.exists) {
@@ -458,7 +465,10 @@ export async function getServerSideProps(context) {
 
             return {
               id: doc.id,
-              ...data,
+              name: data.name || "",
+              pn: toDisplayValue(data.pn),
+              sn: toDisplayValue(data.sn),
+              date: data.date || data.arrival_date || "",
               clientName,
             };
           })

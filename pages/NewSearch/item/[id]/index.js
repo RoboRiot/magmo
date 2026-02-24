@@ -1809,9 +1809,13 @@ const handleAddToSlack = async (which = "shipping") => {
       ? photos.map(p => p?.url).filter(Boolean)
       : [];
 
+    const idToken = await firebase.auth().currentUser?.getIdToken();
     const resp = await fetch("/api/slack/add-to-list", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+      },
       body: JSON.stringify({
         listKey: which,
         title,
@@ -3070,22 +3074,8 @@ export async function getServerSideProps(context) {
       ? itemData.sn
       : (itemData.sn ? [itemData.sn] : []);
 
-    // fetch machineData (optional; you already had this)
-    let machineData = {};
-    if (itemData.Machine && itemData.Machine.path) {
-      try {
-        const machineDoc = await adminDb.doc(itemData.Machine.path).get();
-        if (machineDoc.exists) {
-          machineData = machineDoc.data();
-          if (machineData.client && machineData.client.path) {
-            const clientDoc = await adminDb.doc(machineData.client.path).get();
-            if (clientDoc.exists) machineData.Client = clientDoc.data().name;
-          }
-        }
-      } catch (e) {
-        console.error("Error fetching machine data:", e);
-      }
-    }
+    // Optional machine data was removed from SSR props to avoid
+    // passing non-serializable Firestore references.
 
     const serializedItem = {
       id,
@@ -3112,7 +3102,6 @@ export async function getServerSideProps(context) {
     return {
       props: {
         initialItem: serializedItem,
-        initialMachineData: machineData,
       },
     };
   } catch (error) {

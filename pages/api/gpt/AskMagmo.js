@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { OpenAI } from "openai";
 import cosineSim from "../../../utils/cosineSim";
+import { requireFirebaseAuth } from "../../../utils/apiAuth";
 
 // how many best chunks to send to the model
 const TOP_K = 5;
@@ -46,6 +47,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    await requireFirebaseAuth(req, res);
+    if (res.writableEnded) return;
+
     const { question } = req.body || {};
 
     if (!question || typeof question !== "string") {
