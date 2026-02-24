@@ -3,7 +3,7 @@ import { Modal, Button, Spinner } from "react-bootstrap";
 import firebase from "../context/Firebase";
 import styles from "./WarehouseMapModal.module.css";
 
-const REGION_ORDER = ["E", "F", "G", "A", "D", "C", "B"];
+const REGION_ORDER = ["E", "F", "G", "H", "I", "A", "D", "C", "B"];
 const NO_PALLET = "NoPallet";
 const LETTERS = Array.from({ length: 26 }, (_, i) =>
   String.fromCharCode(65 + i)

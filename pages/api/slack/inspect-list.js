@@ -1,5 +1,9 @@
 // pages/api/slack/inspect-list.js
 export default async function handler(req, res) {
+  const { requireFirebaseAuth } = await import("../../../utils/apiAuth");
+  await requireFirebaseAuth(req, res);
+  if (res.writableEnded) return;
+
   const token = process.env.SLACK_BOT_TOKEN;
   const { listId } = req.query;
   if (!token || !listId) return res.status(400).json({ error: "token or listId missing" });

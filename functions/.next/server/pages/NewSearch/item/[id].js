@@ -6,7 +6,7 @@ module.exports =
 /******/ 	// object to store loaded chunks
 /******/ 	// "0" means "already loaded"
 /******/ 	var installedChunks = {
-/******/ 		18: 0
+/******/ 		19: 0
 /******/ 	};
 /******/
 /******/ 	// The require function
@@ -1200,10 +1200,13 @@ module.exports = _interopRequireDefault;
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return adminDb; });
-/* harmony import */ var firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("txAr");
-/* harmony import */ var firebase_admin_app__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("YFVX");
-/* harmony import */ var firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("mw/K");
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(fs__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("txAr");
+/* harmony import */ var firebase_admin_app__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__("YFVX");
+/* harmony import */ var firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_2__);
+
 
  // Import Firebase Functions for config access
 
@@ -1217,28 +1220,49 @@ try {
 } // Initialize Firebase Admin if it hasn't been initialized
 
 
-if (!Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__["getApps"])().length) {
-  var _functions$config$adm, _functions$config$ssr, _functions$config$adm2, _functions$config$ssr2;
+if (!Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__["getApps"])().length) {
+  var _serviceAccount, _functions$config$adm, _functions$config$ssr, _serviceAccount2, _functions$config$adm2, _functions$config$ssr2, _serviceAccount3;
 
-  // Only initialize if we have valid credentials
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_FUNCTIONS_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL || (functions ? ((_functions$config$adm = functions.config().admin) === null || _functions$config$adm === void 0 ? void 0 : _functions$config$adm.client_email) || ((_functions$config$ssr = functions.config().ssr) === null || _functions$config$ssr === void 0 ? void 0 : _functions$config$ssr.firebase_client_email) : undefined);
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_FUNCTIONS_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY || (functions ? ((_functions$config$adm2 = functions.config().admin) === null || _functions$config$adm2 === void 0 ? void 0 : _functions$config$adm2.private_key) || ((_functions$config$ssr2 = functions.config().ssr) === null || _functions$config$ssr2 === void 0 ? void 0 : _functions$config$ssr2.firebase_private_key) : undefined);
+  const serviceAccountPath = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_PATH || process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  let serviceAccount = null;
 
-  if (clientEmail && privateKey) {
+  if (serviceAccountPath) {
     try {
-      Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__["initializeApp"])({
-        credential: Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__["cert"])({
-          projectId: "magmo-ac10c",
+      const raw = fs__WEBPACK_IMPORTED_MODULE_0___default.a.readFileSync(serviceAccountPath, "utf8");
+      serviceAccount = JSON.parse(raw);
+    } catch (error) {
+      console.warn("Firebase Admin service account file could not be loaded:", error.message);
+    }
+  }
+
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_FUNCTIONS_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL || ((_serviceAccount = serviceAccount) === null || _serviceAccount === void 0 ? void 0 : _serviceAccount.client_email) || (functions ? ((_functions$config$adm = functions.config().admin) === null || _functions$config$adm === void 0 ? void 0 : _functions$config$adm.client_email) || ((_functions$config$ssr = functions.config().ssr) === null || _functions$config$ssr === void 0 ? void 0 : _functions$config$ssr.firebase_client_email) : undefined);
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_FUNCTIONS_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY || ((_serviceAccount2 = serviceAccount) === null || _serviceAccount2 === void 0 ? void 0 : _serviceAccount2.private_key) || (functions ? ((_functions$config$adm2 = functions.config().admin) === null || _functions$config$adm2 === void 0 ? void 0 : _functions$config$adm2.private_key) || ((_functions$config$ssr2 = functions.config().ssr) === null || _functions$config$ssr2 === void 0 ? void 0 : _functions$config$ssr2.firebase_private_key) : undefined);
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || ((_serviceAccount3 = serviceAccount) === null || _serviceAccount3 === void 0 ? void 0 : _serviceAccount3.project_id) || "magmo-ac10c";
+  const hasExplicitAdminCreds = Boolean(clientEmail && privateKey);
+  const isGoogleRuntime = Boolean(process.env.K_SERVICE || process.env.FUNCTION_TARGET || process.env.GAE_ENV || process.env.GOOGLE_CLOUD_PROJECT);
+  const canUseAdc = isGoogleRuntime || Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+  try {
+    if (hasExplicitAdminCreds) {
+      Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__["initializeApp"])({
+        credential: Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__["cert"])({
+          projectId,
           clientEmail: clientEmail,
           privateKey: privateKey.replace(/\\n/g, "\n")
         }),
         databaseURL: "https://magmo-ac10c.firebaseio.com"
       });
-    } catch (error) {
-      console.warn("Firebase Admin initialization failed:", error.message); // Don't throw error during build process
+    } else if (canUseAdc) {
+      // Fall back to Application Default Credentials (e.g. Cloud Functions/Run)
+      Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__["initializeApp"])({
+        projectId,
+        databaseURL: "https://magmo-ac10c.firebaseio.com"
+      });
+    } else {
+      console.warn("Firebase Admin not initialized: missing service account credentials in local environment.");
     }
-  } else {
-    console.warn("Firebase Admin credentials not available, skipping initialization");
+  } catch (error) {
+    console.warn("Firebase Admin initialization failed:", error.message); // Don't throw error during build process
   }
 } // Only export Firestore if Firebase Admin is properly initialized
 
@@ -1246,8 +1270,8 @@ if (!Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__["getApps"])().length
 let adminDb = null;
 
 try {
-  if (Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_0__["getApps"])().length > 0) {
-    adminDb = Object(firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_1__["getFirestore"])();
+  if (Object(firebase_admin_app__WEBPACK_IMPORTED_MODULE_1__["getApps"])().length > 0) {
+    adminDb = Object(firebase_admin_firestore__WEBPACK_IMPORTED_MODULE_2__["getFirestore"])();
   }
 } catch (error) {
   console.warn("Firebase Admin not available:", error.message);
@@ -1324,9 +1348,16 @@ function formatLoc(loc) {
 }
 
 function isValidField(value) {
+  if (Array.isArray(value)) {
+    return value.some(entry => {
+      const trimmed = String(entry || "").trim();
+      return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+    });
+  }
+
   if (typeof value !== "string") return Boolean(value);
   const trimmed = value.trim();
-  return trimmed !== "" && trimmed !== "N/A";
+  return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
 }
 
 function getPriorityMachineField(field, theMachine, currentMachine, fromMachine) {
@@ -2075,6 +2106,170 @@ function resolveRewrites(asPath, pages, rewrites, query, resolveHref, locales) {
     matchedPage,
     resolvedHref
   };
+}
+
+/***/ }),
+
+/***/ "PWR/":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return MultiSelectDropdown; });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("cDcd");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__("zrED");
+/* harmony import */ var _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1__);
+var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
+
+
+
+function normalizeValue(value) {
+  if (value == null) return "";
+  return String(value).trim();
+}
+
+function MultiSelectDropdown({
+  label,
+  placeholder = "Select Option",
+  options = [],
+  selected = [],
+  onChange,
+  searchable = true,
+  disabled = false,
+  enableDelete = false,
+  onDeleteOption
+}) {
+  const {
+    0: open,
+    1: setOpen
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false);
+  const {
+    0: query,
+    1: setQuery
+  } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
+  const menuRef = Object(react__WEBPACK_IMPORTED_MODULE_0__["useRef"])(null);
+  const holdTimerRef = Object(react__WEBPACK_IMPORTED_MODULE_0__["useRef"])(null);
+  const holdTriggeredRef = Object(react__WEBPACK_IMPORTED_MODULE_0__["useRef"])(false);
+  const selectedSet = Object(react__WEBPACK_IMPORTED_MODULE_0__["useMemo"])(() => new Set((selected || []).map(normalizeValue).filter(Boolean)), [selected]);
+  const filteredOptions = Object(react__WEBPACK_IMPORTED_MODULE_0__["useMemo"])(() => {
+    const search = query.trim().toLowerCase();
+    const normalized = (options || []).map(normalizeValue).filter(Boolean);
+    if (!search) return normalized;
+    return normalized.filter(option => option.toLowerCase().includes(search));
+  }, [options, query]);
+
+  const toggleOption = value => {
+    const normalized = normalizeValue(value);
+    if (!normalized || typeof onChange !== "function") return;
+    const next = new Set(selectedSet);
+
+    if (next.has(normalized)) {
+      next.delete(normalized);
+    } else {
+      next.add(normalized);
+    }
+
+    onChange(Array.from(next));
+  };
+
+  const startHold = value => {
+    if (!enableDelete || typeof onDeleteOption !== "function") return;
+    holdTriggeredRef.current = false;
+    clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = setTimeout(() => {
+      holdTriggeredRef.current = true;
+      const confirmed = window.confirm(`Delete "${value}" from the list?`);
+
+      if (confirmed) {
+        onDeleteOption(value);
+      }
+    }, 650);
+  };
+
+  const cancelHold = () => {
+    clearTimeout(holdTimerRef.current);
+  };
+
+  const handleOptionClick = value => {
+    if (holdTriggeredRef.current) {
+      holdTriggeredRef.current = false;
+      return;
+    }
+
+    toggleOption(value);
+  };
+
+  const displayText = Object(react__WEBPACK_IMPORTED_MODULE_0__["useMemo"])(() => {
+    if (!selectedSet.size) return placeholder;
+    const values = Array.from(selectedSet);
+    if (values.length === 1) return values[0];
+    return `Multi (${values.length})`;
+  }, [placeholder, selectedSet]);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    const handleOutside = event => {
+      if (!menuRef.current) return;
+
+      if (!menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener("mousedown", handleOutside);
+      document.addEventListener("touchstart", handleOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [open]);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    if (!open) setQuery("");
+  }, [open]);
+  return __jsx("div", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.wrapper,
+    ref: menuRef
+  }, label ? __jsx("div", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.label
+  }, label) : null, __jsx("button", {
+    type: "button",
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.toggle,
+    onClick: () => setOpen(prev => !prev),
+    disabled: disabled
+  }, __jsx("span", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.toggleText
+  }, displayText), __jsx("span", null, open ? "▲" : "▼")), open && __jsx("div", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.menu
+  }, searchable && __jsx("input", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.search,
+    placeholder: "Search...",
+    value: query,
+    onChange: event => setQuery(event.target.value)
+  }), __jsx("div", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.list
+  }, !filteredOptions.length && __jsx("div", {
+    className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.emptyState
+  }, "No results"), filteredOptions.map(option => {
+    const checked = selectedSet.has(option);
+    return __jsx("div", {
+      key: option,
+      className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.option,
+      onMouseDown: () => startHold(option),
+      onMouseUp: cancelHold,
+      onMouseLeave: cancelHold,
+      onTouchStart: () => startHold(option),
+      onTouchEnd: cancelHold,
+      onClick: () => handleOptionClick(option)
+    }, __jsx("input", {
+      type: "checkbox",
+      className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.optionCheckbox,
+      checked: checked,
+      readOnly: true
+    }), __jsx("span", {
+      className: _MultiSelectDropdown_module_css__WEBPACK_IMPORTED_MODULE_1___default.a.optionLabel
+    }, option));
+  }))));
 }
 
 /***/ }),
@@ -2861,7 +3056,7 @@ var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 
 
 
-const REGION_ORDER = ["E", "F", "G", "A", "D", "C", "B"];
+const REGION_ORDER = ["E", "F", "G", "H", "I", "A", "D", "C", "B"];
 const NO_PALLET = "NoPallet";
 const LETTERS = Array.from({
   length: 26
@@ -4710,6 +4905,8 @@ module.exports = {
 	"regionE": "WarehouseMapModal_regionE__1uVAv",
 	"regionF": "WarehouseMapModal_regionF__2Ghcs",
 	"regionG": "WarehouseMapModal_regionG__2IToq",
+	"regionH": "WarehouseMapModal_regionH__25VLK",
+	"regionI": "WarehouseMapModal_regionI__2qCDk",
 	"regionA": "WarehouseMapModal_regionA__3Pn0Z",
 	"regionD": "WarehouseMapModal_regionD__IcyCo",
 	"regionC": "WarehouseMapModal_regionC__3lNq2",
@@ -4793,6 +4990,13 @@ const LoggedIn = ({
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (LoggedIn);
+
+/***/ }),
+
+/***/ "mw/K":
+/***/ (function(module, exports) {
+
+module.exports = require("fs");
 
 /***/ }),
 
@@ -5305,11 +5509,26 @@ const ParentModal = ({
     1: setModelSearchTerm
   } = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("");
 
+  const normalizeText = value => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return true;
+
+    if (Array.isArray(value)) {
+      return value.some(entry => fieldMatchesSelection(entry, selected));
+    }
+
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const getMachineField = (item, key) => {
-    var _ref, _ref2, _ref3, _item$machineData$key, _item$machineData, _item$machineData2, _key$toLowerCase, _item$currentMachineD, _item$currentMachineD2, _key$toLowerCase2;
+    var _ref, _ref2, _ref3, _ref4, _ref5, _item$machineData$key, _item$machineData, _item$machineData2, _key$toLowerCase, _item$currentMachineD, _item$currentMachineD2, _key$toLowerCase2, _item$TheMachine, _item$TheMachine2, _key$toLowerCase3;
 
     if (!item) return null;
-    return (_ref = (_ref2 = (_ref3 = (_item$machineData$key = item === null || item === void 0 ? void 0 : (_item$machineData = item.machineData) === null || _item$machineData === void 0 ? void 0 : _item$machineData[key]) !== null && _item$machineData$key !== void 0 ? _item$machineData$key : item === null || item === void 0 ? void 0 : (_item$machineData2 = item.machineData) === null || _item$machineData2 === void 0 ? void 0 : _item$machineData2[key === null || key === void 0 ? void 0 : (_key$toLowerCase = key.toLowerCase) === null || _key$toLowerCase === void 0 ? void 0 : _key$toLowerCase.call(key)]) !== null && _ref3 !== void 0 ? _ref3 : item === null || item === void 0 ? void 0 : (_item$currentMachineD = item.currentMachineData) === null || _item$currentMachineD === void 0 ? void 0 : _item$currentMachineD[key]) !== null && _ref2 !== void 0 ? _ref2 : item === null || item === void 0 ? void 0 : (_item$currentMachineD2 = item.currentMachineData) === null || _item$currentMachineD2 === void 0 ? void 0 : _item$currentMachineD2[key === null || key === void 0 ? void 0 : (_key$toLowerCase2 = key.toLowerCase) === null || _key$toLowerCase2 === void 0 ? void 0 : _key$toLowerCase2.call(key)]) !== null && _ref !== void 0 ? _ref : null;
+    return (_ref = (_ref2 = (_ref3 = (_ref4 = (_ref5 = (_item$machineData$key = item === null || item === void 0 ? void 0 : (_item$machineData = item.machineData) === null || _item$machineData === void 0 ? void 0 : _item$machineData[key]) !== null && _item$machineData$key !== void 0 ? _item$machineData$key : item === null || item === void 0 ? void 0 : (_item$machineData2 = item.machineData) === null || _item$machineData2 === void 0 ? void 0 : _item$machineData2[key === null || key === void 0 ? void 0 : (_key$toLowerCase = key.toLowerCase) === null || _key$toLowerCase === void 0 ? void 0 : _key$toLowerCase.call(key)]) !== null && _ref5 !== void 0 ? _ref5 : item === null || item === void 0 ? void 0 : (_item$currentMachineD = item.currentMachineData) === null || _item$currentMachineD === void 0 ? void 0 : _item$currentMachineD[key]) !== null && _ref4 !== void 0 ? _ref4 : item === null || item === void 0 ? void 0 : (_item$currentMachineD2 = item.currentMachineData) === null || _item$currentMachineD2 === void 0 ? void 0 : _item$currentMachineD2[key === null || key === void 0 ? void 0 : (_key$toLowerCase2 = key.toLowerCase) === null || _key$toLowerCase2 === void 0 ? void 0 : _key$toLowerCase2.call(key)]) !== null && _ref3 !== void 0 ? _ref3 : item === null || item === void 0 ? void 0 : (_item$TheMachine = item.TheMachine) === null || _item$TheMachine === void 0 ? void 0 : _item$TheMachine[key]) !== null && _ref2 !== void 0 ? _ref2 : item === null || item === void 0 ? void 0 : (_item$TheMachine2 = item.TheMachine) === null || _item$TheMachine2 === void 0 ? void 0 : _item$TheMachine2[key === null || key === void 0 ? void 0 : (_key$toLowerCase3 = key.toLowerCase) === null || _key$toLowerCase3 === void 0 ? void 0 : _key$toLowerCase3.call(key)]) !== null && _ref !== void 0 ? _ref : null;
   };
 
   const resetPagination = () => {
@@ -5325,17 +5544,17 @@ const ParentModal = ({
 
     if (selectedOEM) {
       const OEM = getMachineField(item, "OEM");
-      if (OEM !== selectedOEM) return false;
+      if (!fieldMatchesSelection(OEM, selectedOEM)) return false;
     }
 
     if (selectedModality) {
       const Modality = getMachineField(item, "Modality");
-      if (Modality !== selectedModality) return false;
+      if (!fieldMatchesSelection(Modality, selectedModality)) return false;
     }
 
     if (selectedModel) {
       const Model = getMachineField(item, "Model");
-      if (Model !== selectedModel) return false;
+      if (!fieldMatchesSelection(Model, selectedModel)) return false;
     }
 
     if (selectedClient) {
@@ -5957,6 +6176,12 @@ var inflowAPI = __webpack_require__("nc39");
 // EXTERNAL MODULE: ./utils/itemFormShared.js
 var itemFormShared = __webpack_require__("KWEF");
 
+// EXTERNAL MODULE: ./components/MultiSelectDropdown.js
+var MultiSelectDropdown = __webpack_require__("PWR/");
+
+// EXTERNAL MODULE: ./utils/trackerCatalog.js
+var utils_trackerCatalog = __webpack_require__("wYaD");
+
 // EXTERNAL MODULE: ./context/FirebaseAdmin.js
 var FirebaseAdmin = __webpack_require__("Aroy");
 
@@ -5989,6 +6214,8 @@ function _id_defineProperty(obj, key, value) { if (key in obj) { Object.definePr
 
 
  //inflow API
+
+
 
 
  // Import for SSR
@@ -6042,9 +6269,63 @@ function LoadingButton({
 
 function isValidMachineValue(value) {
   if (value == null) return false;
+
+  if (Array.isArray(value)) {
+    return value.some(v => {
+      const trimmed = String(v || "").trim();
+      return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+    });
+  }
+
   if (typeof value !== "string") return Boolean(value);
   const trimmed = value.trim();
   return trimmed !== "" && trimmed.toLowerCase() !== "n/a";
+}
+
+function normalizeSelection(value) {
+  if (Array.isArray(value)) {
+    return value.map(v => String(v).trim()).filter(v => v && v.toLowerCase() !== "n/a");
+  }
+
+  if (value == null) return [];
+  const normalized = String(value).trim();
+  if (!normalized || normalized.toLowerCase() === "n/a") return [];
+  return [normalized];
+}
+
+function uniqueSelection(values) {
+  return Array.from(new Set(values || []));
+}
+
+function selectionToStoredValue(values) {
+  const cleaned = uniqueSelection(normalizeSelection(values));
+  if (cleaned.length === 0) return "";
+  if (cleaned.length === 1) return cleaned[0];
+  return cleaned;
+}
+
+function selectionToPrintValue(values) {
+  const cleaned = uniqueSelection(normalizeSelection(values));
+  if (cleaned.length === 0) return "";
+  if (cleaned.length === 1) return cleaned[0];
+  return "Multi";
+}
+
+function mergeOptionsWithSelection(options, selected) {
+  const map = new Map();
+  (options || []).forEach(value => {
+    if (value == null) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    map.set(normalized.toLowerCase(), normalized);
+  });
+  (selected || []).forEach(value => {
+    if (value == null) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    map.set(normalized.toLowerCase(), normalized);
+  });
+  return Array.from(map.values());
 }
 
 function DisplayItemInner({
@@ -6336,6 +6617,19 @@ function DisplayItemInner({
   const {
     0: showExtra,
     1: setShowExtra
+  } = Object(external_react_["useState"])(false);
+  const {
+    0: trackerCatalog,
+    1: setTrackerCatalog
+  } = Object(external_react_["useState"])({
+    modalities: [],
+    oemsByModality: {},
+    modelsByModalityOem: {},
+    meta: {}
+  });
+  const {
+    0: trackerLoading,
+    1: setTrackerLoading
   } = Object(external_react_["useState"])(false); // State for the local warehouse location inputs.
 
   const {
@@ -6350,26 +6644,40 @@ function DisplayItemInner({
   const {
     0: DOM,
     1: setDOM
-  } = Object(external_react_["useState"])(""); // New state for OEM, Modality, and Model.
+  } = Object(external_react_["useState"])(""); // New state for OEM, Modality, and Model (multi-select).
 
   const {
-    0: oem,
-    1: setOem
-  } = Object(external_react_["useState"])("");
+    0: selectedModalities,
+    1: setSelectedModalities
+  } = Object(external_react_["useState"])([]);
   const {
-    0: modality,
-    1: setModality
-  } = Object(external_react_["useState"])("");
+    0: selectedOems,
+    1: setSelectedOems
+  } = Object(external_react_["useState"])([]);
   const {
-    0: model,
-    1: setModel
-  } = Object(external_react_["useState"])("");
+    0: selectedModels,
+    1: setSelectedModels
+  } = Object(external_react_["useState"])([]);
 
-  const applyMergedMachineFields = merged => {
+  const applyMergedMachineFields = (merged, {
+    force = false
+  } = {}) => {
     if (!merged) return;
-    setOem(prev => isValidMachineValue(merged.oem) ? merged.oem : prev);
-    setModality(prev => isValidMachineValue(merged.modality) ? merged.modality : prev);
-    setModel(prev => isValidMachineValue(merged.model) ? merged.model : prev);
+    const nextOems = uniqueSelection(normalizeSelection(merged.oem));
+    const nextModalities = uniqueSelection(normalizeSelection(merged.modality));
+    const nextModels = uniqueSelection(normalizeSelection(merged.model));
+    setSelectedOems(prev => {
+      if (!force && prev.length) return prev;
+      return nextOems;
+    });
+    setSelectedModalities(prev => {
+      if (!force && prev.length) return prev;
+      return nextModalities;
+    });
+    setSelectedModels(prev => {
+      if (!force && prev.length) return prev;
+      return nextModels;
+    });
   }; // More info modal state.
 
 
@@ -6472,11 +6780,11 @@ function DisplayItemInner({
       }; // Build the numbered fields (match your inFlow “Field 1..10”)
 
       const customFields = {
-        custom1: (oem || '').trim(),
+        custom1: selectionToPrintValue(selectedOems),
         // OEM   (dropdown)
-        custom2: (modality || '').trim(),
+        custom2: selectionToPrintValue(selectedModalities),
         // Modality (dropdown)
-        custom3: (model || '').trim(),
+        custom3: selectionToPrintValue(selectedModels),
         // Model (dropdown)
         custom4: (description || '').trim(),
         // Description (text) - optional duplicate
@@ -6549,6 +6857,67 @@ function DisplayItemInner({
       setClientsLoading(false);
     }
   };
+
+  const loadTracker = Object(external_react_["useCallback"])(async (force = false) => {
+    if (trackerLoading) return;
+    if (!force && trackerCatalog.modalities.length) return;
+    setTrackerLoading(true);
+
+    try {
+      const catalog = await Object(utils_trackerCatalog["e" /* fetchTrackerCatalog */])();
+      setTrackerCatalog(catalog);
+    } catch (error) {
+      console.error("Failed to load tracker catalog:", error);
+    } finally {
+      setTrackerLoading(false);
+    }
+  }, [trackerLoading, trackerCatalog.modalities.length]);
+  Object(external_react_["useEffect"])(() => {
+    loadTracker();
+  }, [loadTracker]);
+  const allOemOptions = Object(external_react_["useMemo"])(() => Object(utils_trackerCatalog["a" /* buildAllOems */])(trackerCatalog), [trackerCatalog]);
+  const modelOptions = Object(external_react_["useMemo"])(() => Object(utils_trackerCatalog["b" /* buildModelsForSelection */])(trackerCatalog, selectedModalities, selectedOems), [trackerCatalog, selectedModalities, selectedOems]); // Keep selected models even if they are not in the catalog yet.
+
+  const modalityOptionsForUI = Object(external_react_["useMemo"])(() => mergeOptionsWithSelection(trackerCatalog.modalities, selectedModalities), [trackerCatalog.modalities, selectedModalities]);
+  const oemOptionsForUI = Object(external_react_["useMemo"])(() => mergeOptionsWithSelection(allOemOptions, selectedOems), [allOemOptions, selectedOems]);
+  const modelOptionsForUI = Object(external_react_["useMemo"])(() => mergeOptionsWithSelection(modelOptions, selectedModels), [modelOptions, selectedModels]); // Tracker updates are only performed on Save.
+
+  const handleDeleteOemOption = Object(external_react_["useCallback"])(async oem => {
+    if (!oem) return;
+
+    try {
+      await Object(utils_trackerCatalog["d" /* deleteTrackerOem */])({
+        oem,
+        catalog: trackerCatalog
+      });
+      setSelectedOems(prev => prev.filter(value => value !== oem));
+      loadTracker(true);
+    } catch (error) {
+      console.error("Failed to delete OEM:", error);
+    }
+  }, [trackerCatalog, loadTracker]);
+  const handleDeleteModelOption = Object(external_react_["useCallback"])(async model => {
+    if (!model || !selectedModalities.length || !selectedOems.length) return;
+
+    try {
+      const ops = [];
+      selectedModalities.forEach(modalityValue => {
+        selectedOems.forEach(oemValue => {
+          ops.push(Object(utils_trackerCatalog["c" /* deleteTrackerModel */])({
+            modality: modalityValue,
+            oem: oemValue,
+            model,
+            catalog: trackerCatalog
+          }));
+        });
+      });
+      await Promise.allSettled(ops);
+      setSelectedModels(prev => prev.filter(value => value !== model));
+      loadTracker(true);
+    } catch (error) {
+      console.error("Failed to delete model:", error);
+    }
+  }, [selectedModalities, selectedOems, trackerCatalog, loadTracker]);
 
   const loadPnSnOptions = async () => {
     if (pnSnLoaded || pnSnLoading) return;
@@ -6840,7 +7209,9 @@ function DisplayItemInner({
       setTheMachine(machineData); // re-merge all three sources with correct priority:
 
       const merged = Object(itemFormShared["d" /* updateMachineFields */])(machineData, selectedCurrentMachine, selectedMachine);
-      applyMergedMachineFields(merged);
+      applyMergedMachineFields(merged, {
+        force: true
+      });
       const machinesSnapshot = await db.collection("Machine").where("Model", "==", machineData.Model || machineData.model).get();
       setMachineFrequency(machinesSnapshot.size);
     } else {
@@ -7053,10 +7424,17 @@ function DisplayItemInner({
     const currentUser = Firebase["b" /* default */].auth().currentUser;
     const userEmail = currentUser ? currentUser.email : "unknown"; // Always use the current state values for OEM, modality, and model.
 
+    const storedOem = selectionToStoredValue(selectedOems);
+    const storedModality = selectionToStoredValue(selectedModalities);
+    const storedModel = selectionToStoredValue(selectedModels);
+
     const machineData = _id_objectSpread(_id_objectSpread({}, TheMachine || {}), {}, {
-      oem: oem,
-      modality: modality,
-      model: model
+      oem: storedOem,
+      OEM: storedOem,
+      modality: storedModality,
+      Modality: storedModality,
+      model: storedModel,
+      Model: storedModel
     });
 
     const formattedItems = _id_objectSpread(_id_objectSpread({}, items), {}, {
@@ -7228,6 +7606,25 @@ function DisplayItemInner({
             });
           }
         }
+      } // Update Tracker only on Save.
+
+
+      try {
+        const selections = {
+          modalities: selectedModalities,
+          oems: selectedOems,
+          models: selectedModels
+        };
+        const updated = await Object(utils_trackerCatalog["f" /* syncTrackerFromSelections */])({
+          selections,
+          catalog: trackerCatalog
+        });
+
+        if (updated) {
+          loadTracker(true);
+        }
+      } catch (error) {
+        console.error("Failed to sync tracker selections:", error);
       } // Upload any new photos to Firebase Storage.
 
 
@@ -7362,9 +7759,9 @@ function DisplayItemInner({
       }],
       date: items.dateCreated || "",
       DOM: DOM,
-      oem: oem,
-      modality: modality,
-      model: model,
+      oem: selectionToPrintValue(selectedOems),
+      modality: selectionToPrintValue(selectedModalities),
+      model: selectionToPrintValue(selectedModels),
       poNumber: items.poNumber,
       arrival_date: items.arrival_date // NEW: Include arrival_date
 
@@ -7685,7 +8082,7 @@ function DisplayItemInner({
 
   const handleAddToSlack = async (which = "shipping") => {
     try {
-      var _sort$, _ref8, _items$trackingNumber, _json$debug, _json$debug2;
+      var _sort$, _ref8, _items$trackingNumber, _firebase$auth$curren, _json$debug, _json$debug2;
 
       const safeName = ((items === null || items === void 0 ? void 0 : items.name) || id || "Untitled").trim();
       const title = `${safeName}${id ? ` (${id})` : ""}`;
@@ -7697,11 +8094,14 @@ function DisplayItemInner({
       const tracking = (_ref8 = (_items$trackingNumber = items === null || items === void 0 ? void 0 : items.trackingNumber) !== null && _items$trackingNumber !== void 0 ? _items$trackingNumber : items === null || items === void 0 ? void 0 : items.tracking) !== null && _ref8 !== void 0 ? _ref8 : "";
       const local_sn = id || (items === null || items === void 0 ? void 0 : items.localSN) || "";
       const photoUrls = Array.isArray(photos) ? photos.map(p => p === null || p === void 0 ? void 0 : p.url).filter(Boolean) : [];
+      const idToken = await ((_firebase$auth$curren = Firebase["b" /* default */].auth().currentUser) === null || _firebase$auth$curren === void 0 ? void 0 : _firebase$auth$curren.getIdToken());
       const resp = await fetch("/api/slack/add-to-list", {
         method: "POST",
-        headers: {
+        headers: _id_objectSpread({
           "Content-Type": "application/json"
-        },
+        }, idToken ? {
+          Authorization: `Bearer ${idToken}`
+        } : {}),
         body: JSON.stringify({
           listKey: which,
           title,
@@ -8079,21 +8479,31 @@ function DisplayItemInner({
     onChange: handleChange("trackingNumber")
   })))), __jsx(external_react_bootstrap_["Row"], {
     className: "mb-3"
-  }, __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Label, null, "OEM"), __jsx(external_react_bootstrap_["Form"].Control, {
-    type: "text",
-    placeholder: "OEM",
-    value: oem,
-    onChange: e => setOem(e.target.value)
-  })), __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Label, null, "Modality"), __jsx(external_react_bootstrap_["Form"].Control, {
-    type: "text",
-    placeholder: "Modality",
-    value: modality,
-    onChange: e => setModality(e.target.value)
-  })), __jsx(external_react_bootstrap_["Col"], null, __jsx(external_react_bootstrap_["Form"].Label, null, "Model"), __jsx(external_react_bootstrap_["Form"].Control, {
-    type: "text",
-    placeholder: "Model",
-    value: model,
-    onChange: e => setModel(e.target.value)
+  }, __jsx(external_react_bootstrap_["Col"], null, __jsx(MultiSelectDropdown["a" /* default */], {
+    label: "OEM",
+    placeholder: trackerLoading ? "Loading..." : "Select OEM",
+    options: oemOptionsForUI,
+    selected: selectedOems,
+    onChange: setSelectedOems,
+    enableDelete: true,
+    onDeleteOption: handleDeleteOemOption,
+    disabled: trackerLoading
+  })), __jsx(external_react_bootstrap_["Col"], null, __jsx(MultiSelectDropdown["a" /* default */], {
+    label: "Modality",
+    placeholder: trackerLoading ? "Loading..." : "Select Modality",
+    options: modalityOptionsForUI,
+    selected: selectedModalities,
+    onChange: setSelectedModalities,
+    disabled: trackerLoading
+  })), __jsx(external_react_bootstrap_["Col"], null, __jsx(MultiSelectDropdown["a" /* default */], {
+    label: "Model",
+    placeholder: selectedModalities.length && selectedOems.length ? "Select Model" : "Select Modality + OEM",
+    options: modelOptionsForUI,
+    selected: selectedModels,
+    onChange: setSelectedModels,
+    enableDelete: true,
+    onDeleteOption: handleDeleteModelOption,
+    disabled: trackerLoading || !selectedModalities.length || !selectedOems.length
   }))), __jsx("div", {
     style: {
       marginBottom: "1rem",
@@ -8543,6 +8953,14 @@ async function getServerSideProps(context) {
   } = context.params;
 
   try {
+    if (!FirebaseAdmin["a" /* adminDb */]) {
+      return {
+        props: {
+          error: "Firebase Admin not configured for SSR."
+        }
+      };
+    }
+
     const itemDoc = await FirebaseAdmin["a" /* adminDb */].collection("Test").doc(id).get();
     if (!itemDoc.exists) return {
       notFound: true
@@ -8550,26 +8968,8 @@ async function getServerSideProps(context) {
     const itemData = itemDoc.data(); // normalize to arrays for consistent client-side handling
 
     const pnArray = Array.isArray(itemData.pn) ? itemData.pn : itemData.pn ? [itemData.pn] : [];
-    const snArray = Array.isArray(itemData.sn) ? itemData.sn : itemData.sn ? [itemData.sn] : []; // fetch machineData (optional; you already had this)
-
-    let machineData = {};
-
-    if (itemData.Machine && itemData.Machine.path) {
-      try {
-        const machineDoc = await FirebaseAdmin["a" /* adminDb */].doc(itemData.Machine.path).get();
-
-        if (machineDoc.exists) {
-          machineData = machineDoc.data();
-
-          if (machineData.client && machineData.client.path) {
-            const clientDoc = await FirebaseAdmin["a" /* adminDb */].doc(machineData.client.path).get();
-            if (clientDoc.exists) machineData.Client = clientDoc.data().name;
-          }
-        }
-      } catch (e) {
-        console.error("Error fetching machine data:", e);
-      }
-    }
+    const snArray = Array.isArray(itemData.sn) ? itemData.sn : itemData.sn ? [itemData.sn] : []; // Optional machine data was removed from SSR props to avoid
+    // passing non-serializable Firestore references.
 
     const serializedItem = {
       id,
@@ -8593,8 +8993,7 @@ async function getServerSideProps(context) {
     };
     return {
       props: {
-        initialItem: serializedItem,
-        initialMachineData: machineData
+        initialItem: serializedItem
       }
     };
   } catch (error) {
@@ -9045,6 +9444,21 @@ async function fetchPartsWithMachineDataPage({
   };
 }
 async function fetchClients(selectedOEM, selectedModality) {
+  const normalizeText = value => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return false;
+
+    if (Array.isArray(value)) {
+      return value.some(entry => fieldMatchesSelection(entry, selected));
+    }
+
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore();
   const clientsSnapshot = await db.collection("Client").get();
   const clients = clientsSnapshot.docs.map(doc => _objectSpread({
@@ -9059,10 +9473,12 @@ async function fetchClients(selectedOEM, selectedModality) {
 
       if (selectedOEM || selectedModality) {
         for (const machineRef of client.machines) {
+          var _machineData$OEM, _machineData$Modality;
+
           const machineDoc = await machineRef.get();
           const machineData = machineDoc.data();
 
-          if (selectedOEM && machineData.OEM === selectedOEM || selectedModality && machineData.Modality === selectedModality) {
+          if (selectedOEM && fieldMatchesSelection((_machineData$OEM = machineData.OEM) !== null && _machineData$OEM !== void 0 ? _machineData$OEM : machineData.oem, selectedOEM) || selectedModality && fieldMatchesSelection((_machineData$Modality = machineData.Modality) !== null && _machineData$Modality !== void 0 ? _machineData$Modality : machineData.modality, selectedModality)) {
             match = true;
             break;
           } else {
@@ -9082,14 +9498,31 @@ async function fetchClients(selectedOEM, selectedModality) {
   return clients;
 }
 async function fetchModels(selectedOEM, selectedModality, selectedClient) {
+  const normalizeText = value => {
+    if (value == null) return "";
+    return String(value).toLowerCase().trim();
+  };
+
+  const fieldMatchesSelection = (value, selected) => {
+    if (!selected) return true;
+
+    if (Array.isArray(value)) {
+      return value.some(entry => fieldMatchesSelection(entry, selected));
+    }
+
+    return normalizeText(value) === normalizeText(selected);
+  };
+
   const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_1__[/* default */ "b"].firestore();
   const machinesSnapshot = await db.collection("Machine").get();
   const models = new Set();
   await Promise.all(machinesSnapshot.docs.map(async machineDoc => {
+    var _machineData$OEM2, _machineData$Modality2;
+
     const machineData = machineDoc.data();
     let isValid = true;
-    if (selectedOEM && machineData.OEM !== selectedOEM) isValid = false;
-    if (selectedModality && machineData.Modality !== selectedModality) isValid = false;
+    if (!fieldMatchesSelection((_machineData$OEM2 = machineData.OEM) !== null && _machineData$OEM2 !== void 0 ? _machineData$OEM2 : machineData.oem, selectedOEM)) isValid = false;
+    if (!fieldMatchesSelection((_machineData$Modality2 = machineData.Modality) !== null && _machineData$Modality2 !== void 0 ? _machineData$Modality2 : machineData.modality, selectedModality)) isValid = false;
 
     if (selectedClient && machineData.client) {
       var _machineData$client;
@@ -9115,7 +9548,15 @@ async function fetchModels(selectedOEM, selectedModality, selectedClient) {
     }
 
     if (isValid) {
-      models.add(machineData.Model);
+      var _machineData$Model;
+
+      const modelValue = (_machineData$Model = machineData.Model) !== null && _machineData$Model !== void 0 ? _machineData$Model : machineData.model;
+
+      if (Array.isArray(modelValue)) {
+        modelValue.forEach(entry => entry && models.add(entry));
+      } else if (modelValue) {
+        models.add(modelValue);
+      }
     }
   }));
   return Array.from(models);
@@ -9257,6 +9698,523 @@ module.exports = {
 	"flexButton": "ClientTable_flexButton__LoNiS"
 };
 
+
+/***/ }),
+
+/***/ "wYaD":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return fetchTrackerCatalog; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return buildAllOems; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return buildModelsForSelection; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return syncTrackerFromSelections; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return deleteTrackerOem; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return deleteTrackerModel; });
+/* harmony import */ var _context_Firebase__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("NY6m");
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+
+const OEM_FIELD_CANDIDATES = ["oems", "OEMs", "oem", "OEM"];
+const MODEL_FIELD_CANDIDATES = ["models", "Models", "model", "Model", "list", "items"];
+const DEFAULT_OEM_FIELD = "oems";
+
+const isPlainObject = value => value != null && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date);
+
+const normalizeKey = value => {
+  if (value == null) return "";
+  return String(value).trim().toLowerCase();
+};
+
+const hasUpper = value => /[A-Z]/.test(String(value || ""));
+
+const pickPreferredCase = (current, incoming) => {
+  if (!current) return incoming;
+  if (!incoming) return current;
+  const currentUpper = hasUpper(current);
+  const incomingUpper = hasUpper(incoming);
+  if (incomingUpper && !currentUpper) return incoming;
+  if (currentUpper && !incomingUpper) return current;
+  return current;
+};
+
+const normalizeArray = value => {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === "") return [];
+  return [value];
+};
+
+const normalizeList = values => {
+  const out = [];
+  (values || []).forEach(value => {
+    if (value == null) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    if (normalizeKey(normalized) === "nan") return;
+    out.push(normalized);
+  });
+  return Array.from(new Set(out));
+};
+
+const normalizeListCaseInsensitive = values => {
+  const map = new Map();
+  (values || []).forEach(value => {
+    if (value == null) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    const key = normalizeKey(normalized);
+    if (!key || key === "nan") return;
+    const current = map.get(key);
+    map.set(key, pickPreferredCase(current, normalized));
+  });
+  return Array.from(map.values());
+};
+
+const pickModelField = obj => {
+  if (!isPlainObject(obj)) return null;
+
+  for (const key of MODEL_FIELD_CANDIDATES) {
+    if (Array.isArray(obj[key])) return key;
+  }
+
+  const arrayKey = Object.keys(obj).find(key => Array.isArray(obj[key]));
+  return arrayKey || null;
+};
+
+const extractModels = value => {
+  if (Array.isArray(value)) {
+    return {
+      models: normalizeList(value),
+      modelField: null
+    };
+  }
+
+  if (isPlainObject(value)) {
+    const modelField = pickModelField(value);
+    const models = modelField ? normalizeList(value[modelField]) : [];
+    return {
+      models,
+      modelField
+    };
+  }
+
+  if (value != null && value !== "") {
+    return {
+      models: normalizeList([value]),
+      modelField: null
+    };
+  }
+
+  return {
+    models: [],
+    modelField: null
+  };
+};
+
+const extractOemMap = data => {
+  const oemMap = {};
+  const modelFieldByOem = {};
+  let oemField = null;
+
+  for (const key of OEM_FIELD_CANDIDATES) {
+    if (Array.isArray(data === null || data === void 0 ? void 0 : data[key])) {
+      oemField = key;
+      data[key].forEach(entry => {
+        if (entry == null) return;
+
+        if (isPlainObject(entry)) {
+          const name = entry.name || entry.oem || entry.OEM || entry.label || entry.value;
+          if (!name) return;
+          const normalizedName = String(name).trim();
+          if (!normalizedName) return;
+          const {
+            models
+          } = extractModels(entry.models || entry.list || entry.items);
+          oemMap[normalizedName] = normalizeList([...(oemMap[normalizedName] || []), ...models]);
+          return;
+        }
+
+        const normalized = String(entry || "").trim();
+        if (!normalized) return;
+        oemMap[normalized] = normalizeList([...(oemMap[normalized] || [])]);
+      });
+    } else if (isPlainObject(data === null || data === void 0 ? void 0 : data[key])) {
+      oemField = key;
+      Object.entries(data[key]).forEach(([oem, value]) => {
+        const {
+          models,
+          modelField
+        } = extractModels(value);
+        oemMap[oem] = normalizeList([...(oemMap[oem] || []), ...models]);
+
+        if (modelField) {
+          modelFieldByOem[oem] = modelField;
+        }
+      });
+    }
+  }
+
+  if (!oemField) {
+    Object.entries(data || {}).forEach(([key, value]) => {
+      if (!value) return;
+      if (key.startsWith("_")) return;
+
+      if (isPlainObject(value) || Array.isArray(value)) {
+        const {
+          models,
+          modelField
+        } = extractModels(value);
+
+        if (models.length || modelField) {
+          oemMap[key] = normalizeList([...(oemMap[key] || []), ...models]);
+
+          if (modelField) {
+            modelFieldByOem[key] = modelField;
+          }
+        }
+      }
+    });
+  }
+
+  return {
+    oemMap,
+    oemField,
+    modelFieldByOem
+  };
+};
+
+const buildCatalogMetaFromMaps = ({
+  modalities = [],
+  oemsByModality = {},
+  modelsByModalityOem = {},
+  usesSubcollections = false,
+  syncDisabled = false,
+  source = "client"
+}) => {
+  const meta = {
+    oemFieldByModality: {},
+    modelFieldByModalityOem: {},
+    modalityKeyByLower: {},
+    oemKeyByModalityLower: {},
+    modelKeyByModalityOemLower: {},
+    usesSubcollections,
+    syncDisabled,
+    source
+  };
+  const normalizedModalities = normalizeListCaseInsensitive(modalities);
+  normalizedModalities.forEach(modality => {
+    const modalityLower = normalizeKey(modality);
+    meta.modalityKeyByLower[modalityLower] = pickPreferredCase(meta.modalityKeyByLower[modalityLower], modality);
+    const oems = (oemsByModality === null || oemsByModality === void 0 ? void 0 : oemsByModality[modality]) || [];
+    const oemLowerMap = meta.oemKeyByModalityLower[modalityLower] || {};
+    meta.oemKeyByModalityLower[modalityLower] = oemLowerMap;
+    const modelLowerMap = meta.modelKeyByModalityOemLower[modalityLower] || {};
+    meta.modelKeyByModalityOemLower[modalityLower] = modelLowerMap;
+    oems.forEach(oem => {
+      var _modelsByModalityOem$;
+
+      const oemLower = normalizeKey(oem);
+      oemLowerMap[oemLower] = pickPreferredCase(oemLowerMap[oemLower], oem);
+      const models = (modelsByModalityOem === null || modelsByModalityOem === void 0 ? void 0 : (_modelsByModalityOem$ = modelsByModalityOem[modality]) === null || _modelsByModalityOem$ === void 0 ? void 0 : _modelsByModalityOem$[oem]) || [];
+      modelLowerMap[oemLower] = modelLowerMap[oemLower] || {};
+      models.forEach(model => {
+        const modelLower = normalizeKey(model);
+        if (!modelLower) return;
+        modelLowerMap[oemLower][modelLower] = pickPreferredCase(modelLowerMap[oemLower][modelLower], model);
+      });
+    });
+  });
+  return {
+    modalities: normalizedModalities,
+    oemsByModality,
+    modelsByModalityOem,
+    meta
+  };
+};
+
+async function fetchTrackerCatalog() {
+  if (false) {}
+
+  const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore();
+  let snap;
+
+  try {
+    snap = await db.collection("Tracker").get({
+      source: "server"
+    });
+  } catch (error) {
+    snap = await db.collection("Tracker").get();
+  }
+
+  console.log("Tracker catalog client docs:", snap.docs.map(doc => doc.id));
+  const modalities = [];
+  const oemsByModality = {};
+  const modelsByModalityOem = {};
+  const meta = {
+    oemFieldByModality: {},
+    modelFieldByModalityOem: {},
+    modalityKeyByLower: {},
+    oemKeyByModalityLower: {},
+    modelKeyByModalityOemLower: {}
+  };
+  snap.forEach(doc => {
+    const modality = doc.id;
+    const modalityLower = normalizeKey(modality);
+    const existingModality = meta.modalityKeyByLower[modalityLower];
+    const canonicalModality = pickPreferredCase(existingModality, modality);
+    meta.modalityKeyByLower[modalityLower] = canonicalModality;
+    const data = doc.data() || {};
+    const {
+      oemMap,
+      oemField,
+      modelFieldByOem
+    } = extractOemMap(data);
+
+    if (existingModality && existingModality !== canonicalModality) {
+      oemsByModality[canonicalModality] = normalizeListCaseInsensitive([...(oemsByModality[existingModality] || []), ...(oemsByModality[canonicalModality] || [])]);
+      modelsByModalityOem[canonicalModality] = _objectSpread(_objectSpread({}, modelsByModalityOem[existingModality] || {}), modelsByModalityOem[canonicalModality] || {});
+      meta.modelFieldByModalityOem[canonicalModality] = _objectSpread(_objectSpread({}, meta.modelFieldByModalityOem[existingModality] || {}), meta.modelFieldByModalityOem[canonicalModality] || {});
+
+      if (!meta.oemFieldByModality[canonicalModality]) {
+        meta.oemFieldByModality[canonicalModality] = meta.oemFieldByModality[existingModality] || oemField;
+      }
+
+      delete oemsByModality[existingModality];
+      delete modelsByModalityOem[existingModality];
+      delete meta.oemFieldByModality[existingModality];
+      delete meta.modelFieldByModalityOem[existingModality];
+    }
+
+    modalities.push(canonicalModality);
+
+    if (!meta.oemFieldByModality[canonicalModality]) {
+      meta.oemFieldByModality[canonicalModality] = oemField;
+    }
+
+    meta.modelFieldByModalityOem[canonicalModality] = _objectSpread(_objectSpread({}, meta.modelFieldByModalityOem[canonicalModality] || {}), modelFieldByOem || {});
+    const oems = Object.keys(oemMap);
+    const mergedOems = normalizeListCaseInsensitive([...(oemsByModality[canonicalModality] || []), ...oems]);
+    oemsByModality[canonicalModality] = mergedOems;
+    modelsByModalityOem[canonicalModality] = modelsByModalityOem[canonicalModality] || {};
+    const oemLowerMap = meta.oemKeyByModalityLower[modalityLower] || {};
+    meta.oemKeyByModalityLower[modalityLower] = oemLowerMap;
+    const modelLowerMap = meta.modelKeyByModalityOemLower[modalityLower] || {};
+    meta.modelKeyByModalityOemLower[modalityLower] = modelLowerMap;
+    oems.forEach(oem => {
+      const oemLower = normalizeKey(oem);
+      const existingOem = oemLowerMap[oemLower];
+      const canonicalOem = pickPreferredCase(existingOem, oem);
+      oemLowerMap[oemLower] = canonicalOem;
+
+      if (existingOem && existingOem !== canonicalOem) {
+        modelsByModalityOem[canonicalModality][canonicalOem] = normalizeListCaseInsensitive([...(modelsByModalityOem[canonicalModality][existingOem] || []), ...(modelsByModalityOem[canonicalModality][canonicalOem] || [])]);
+        delete modelsByModalityOem[canonicalModality][existingOem];
+      }
+
+      const existingModels = modelsByModalityOem[canonicalModality][canonicalOem] || [];
+      const mergedModels = normalizeListCaseInsensitive([...existingModels, ...(oemMap[oem] || [])]);
+      modelsByModalityOem[canonicalModality][canonicalOem] = mergedModels;
+      modelLowerMap[oemLower] = modelLowerMap[oemLower] || {};
+      mergedModels.forEach(model => {
+        modelLowerMap[oemLower][normalizeKey(model)] = model;
+      });
+    });
+  });
+  return buildCatalogMetaFromMaps({
+    modalities,
+    oemsByModality,
+    modelsByModalityOem,
+    usesSubcollections: true,
+    syncDisabled: false,
+    source: "client"
+  });
+}
+function buildAllOems(catalog) {
+  const map = new Map();
+  Object.values((catalog === null || catalog === void 0 ? void 0 : catalog.oemsByModality) || {}).forEach(oems => {
+    (oems || []).forEach(oem => {
+      const key = normalizeKey(oem);
+      if (!key) return;
+      const current = map.get(key);
+      map.set(key, pickPreferredCase(current, oem));
+    });
+  });
+  return Array.from(map.values());
+}
+function buildModelsForSelection(catalog, modalities = [], oems = []) {
+  const modelSet = new Set();
+  const modals = normalizeList(modalities);
+  const oemList = normalizeList(oems);
+  modals.forEach(modality => {
+    var _catalog$meta, _catalog$meta$modalit, _catalog$modelsByModa;
+
+    const modalityLower = normalizeKey(modality);
+    const canonicalModality = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta = catalog.meta) === null || _catalog$meta === void 0 ? void 0 : (_catalog$meta$modalit = _catalog$meta.modalityKeyByLower) === null || _catalog$meta$modalit === void 0 ? void 0 : _catalog$meta$modalit[modalityLower]) || modality;
+    const oemMap = (catalog === null || catalog === void 0 ? void 0 : (_catalog$modelsByModa = catalog.modelsByModalityOem) === null || _catalog$modelsByModa === void 0 ? void 0 : _catalog$modelsByModa[canonicalModality]) || {};
+    oemList.forEach(oem => {
+      var _catalog$meta2, _catalog$meta2$oemKey, _catalog$meta2$oemKey2;
+
+      const oemLower = normalizeKey(oem);
+      const canonicalOem = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta2 = catalog.meta) === null || _catalog$meta2 === void 0 ? void 0 : (_catalog$meta2$oemKey = _catalog$meta2.oemKeyByModalityLower) === null || _catalog$meta2$oemKey === void 0 ? void 0 : (_catalog$meta2$oemKey2 = _catalog$meta2$oemKey[modalityLower]) === null || _catalog$meta2$oemKey2 === void 0 ? void 0 : _catalog$meta2$oemKey2[oemLower]) || oem;
+      const models = (oemMap === null || oemMap === void 0 ? void 0 : oemMap[canonicalOem]) || [];
+      models.forEach(model => modelSet.add(model));
+    });
+  });
+  return Array.from(modelSet);
+}
+async function syncTrackerFromSelections({
+  selections,
+  catalog
+}) {
+  var _catalog$meta3;
+
+  const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore();
+  const trackerRef = db.collection("Tracker");
+  const selectedModalities = normalizeList((selections === null || selections === void 0 ? void 0 : selections.modalities) || []);
+  const selectedOems = normalizeList((selections === null || selections === void 0 ? void 0 : selections.oems) || []);
+  const selectedModels = normalizeList((selections === null || selections === void 0 ? void 0 : selections.models) || []);
+  if (!selectedModalities.length) return false;
+  if (catalog !== null && catalog !== void 0 && (_catalog$meta3 = catalog.meta) !== null && _catalog$meta3 !== void 0 && _catalog$meta3.syncDisabled) return false;
+  const ops = [];
+
+  for (const modality of selectedModalities) {
+    var _catalog$meta4, _catalog$meta4$modali, _catalog$oemsByModali, _catalog$meta5, _catalog$meta5$oemFie, _catalog$modalities;
+
+    const modalityLower = normalizeKey(modality);
+    const canonicalModality = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta4 = catalog.meta) === null || _catalog$meta4 === void 0 ? void 0 : (_catalog$meta4$modali = _catalog$meta4.modalityKeyByLower) === null || _catalog$meta4$modali === void 0 ? void 0 : _catalog$meta4$modali[modalityLower]) || modalityLower;
+    const docRef = trackerRef.doc(canonicalModality);
+    const existingOemsRaw = (catalog === null || catalog === void 0 ? void 0 : (_catalog$oemsByModali = catalog.oemsByModality) === null || _catalog$oemsByModali === void 0 ? void 0 : _catalog$oemsByModali[canonicalModality]) || [];
+    const existingOemsLower = new Set(existingOemsRaw.map(value => normalizeKey(value)));
+    const oemField = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta5 = catalog.meta) === null || _catalog$meta5 === void 0 ? void 0 : (_catalog$meta5$oemFie = _catalog$meta5.oemFieldByModality) === null || _catalog$meta5$oemFie === void 0 ? void 0 : _catalog$meta5$oemFie[canonicalModality]) || DEFAULT_OEM_FIELD;
+
+    if (!(catalog !== null && catalog !== void 0 && (_catalog$modalities = catalog.modalities) !== null && _catalog$modalities !== void 0 && _catalog$modalities.some(existing => normalizeKey(existing) === modalityLower))) {
+      ops.push(docRef.set({
+        [DEFAULT_OEM_FIELD]: {}
+      }, {
+        merge: true
+      }));
+    }
+
+    for (const oem of selectedOems) {
+      var _catalog$meta6, _catalog$meta6$oemKey, _catalog$meta6$oemKey2;
+
+      const oemLower = normalizeKey(oem);
+      const canonicalOem = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta6 = catalog.meta) === null || _catalog$meta6 === void 0 ? void 0 : (_catalog$meta6$oemKey = _catalog$meta6.oemKeyByModalityLower) === null || _catalog$meta6$oemKey === void 0 ? void 0 : (_catalog$meta6$oemKey2 = _catalog$meta6$oemKey[modalityLower]) === null || _catalog$meta6$oemKey2 === void 0 ? void 0 : _catalog$meta6$oemKey2[oemLower]) || oemLower;
+
+      if (!existingOemsLower.has(oemLower)) {
+        ops.push(docRef.set({
+          [oemField]: {
+            [canonicalOem]: []
+          }
+        }, {
+          merge: true
+        }));
+      }
+    }
+
+    for (const oem of selectedOems) {
+      var _catalog$meta7, _catalog$meta7$oemKey, _catalog$meta7$oemKey2, _catalog$modelsByModa2, _catalog$modelsByModa3, _catalog$meta8, _catalog$meta8$modelK, _catalog$meta8$modelK2, _catalog$meta9, _catalog$meta9$modelF, _catalog$meta9$modelF2;
+
+      const oemLower = normalizeKey(oem);
+      const canonicalOem = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta7 = catalog.meta) === null || _catalog$meta7 === void 0 ? void 0 : (_catalog$meta7$oemKey = _catalog$meta7.oemKeyByModalityLower) === null || _catalog$meta7$oemKey === void 0 ? void 0 : (_catalog$meta7$oemKey2 = _catalog$meta7$oemKey[modalityLower]) === null || _catalog$meta7$oemKey2 === void 0 ? void 0 : _catalog$meta7$oemKey2[oemLower]) || oemLower;
+      const knownModels = (catalog === null || catalog === void 0 ? void 0 : (_catalog$modelsByModa2 = catalog.modelsByModalityOem) === null || _catalog$modelsByModa2 === void 0 ? void 0 : (_catalog$modelsByModa3 = _catalog$modelsByModa2[canonicalModality]) === null || _catalog$modelsByModa3 === void 0 ? void 0 : _catalog$modelsByModa3[canonicalOem]) || [];
+      const knownLower = new Set(knownModels.map(value => normalizeKey(value)));
+      const modelCaseMap = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta8 = catalog.meta) === null || _catalog$meta8 === void 0 ? void 0 : (_catalog$meta8$modelK = _catalog$meta8.modelKeyByModalityOemLower) === null || _catalog$meta8$modelK === void 0 ? void 0 : (_catalog$meta8$modelK2 = _catalog$meta8$modelK[modalityLower]) === null || _catalog$meta8$modelK2 === void 0 ? void 0 : _catalog$meta8$modelK2[oemLower]) || {};
+      const modelField = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta9 = catalog.meta) === null || _catalog$meta9 === void 0 ? void 0 : (_catalog$meta9$modelF = _catalog$meta9.modelFieldByModalityOem) === null || _catalog$meta9$modelF === void 0 ? void 0 : (_catalog$meta9$modelF2 = _catalog$meta9$modelF[canonicalModality]) === null || _catalog$meta9$modelF2 === void 0 ? void 0 : _catalog$meta9$modelF2[canonicalOem]) || null;
+
+      for (const model of selectedModels) {
+        const modelLower = normalizeKey(model);
+        if (!modelLower || knownLower.has(modelLower)) continue;
+        const canonicalModel = modelCaseMap[modelLower] || model;
+        const path = modelField ? `${oemField}.${canonicalOem}.${modelField}` : `${oemField}.${canonicalOem}`;
+        ops.push(docRef.update({
+          [path]: _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore.FieldValue.arrayUnion(canonicalModel)
+        }));
+      }
+    }
+  }
+
+  if (ops.length) {
+    await Promise.allSettled(ops);
+    return true;
+  }
+
+  return false;
+}
+async function deleteTrackerOem({
+  oem,
+  catalog
+}) {
+  var _catalog$meta10;
+
+  if (!oem) return;
+  const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore();
+  const trackerRef = db.collection("Tracker");
+  const modalities = (catalog === null || catalog === void 0 ? void 0 : catalog.modalities) || [];
+  const usesSubcollections = Boolean(catalog === null || catalog === void 0 ? void 0 : (_catalog$meta10 = catalog.meta) === null || _catalog$meta10 === void 0 ? void 0 : _catalog$meta10.usesSubcollections);
+  const ops = modalities.map(modality => {
+    var _catalog$meta11, _catalog$meta11$modal, _catalog$meta12, _catalog$meta12$oemKe, _catalog$meta12$oemKe2, _catalog$meta13, _catalog$meta13$oemFi, _catalog$meta14, _catalog$meta14$oemFi;
+
+    const modalityLower = normalizeKey(modality);
+    const canonicalModality = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta11 = catalog.meta) === null || _catalog$meta11 === void 0 ? void 0 : (_catalog$meta11$modal = _catalog$meta11.modalityKeyByLower) === null || _catalog$meta11$modal === void 0 ? void 0 : _catalog$meta11$modal[modalityLower]) || modality;
+    const docRef = trackerRef.doc(canonicalModality);
+    const canonicalOem = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta12 = catalog.meta) === null || _catalog$meta12 === void 0 ? void 0 : (_catalog$meta12$oemKe = _catalog$meta12.oemKeyByModalityLower) === null || _catalog$meta12$oemKe === void 0 ? void 0 : (_catalog$meta12$oemKe2 = _catalog$meta12$oemKe[modalityLower]) === null || _catalog$meta12$oemKe2 === void 0 ? void 0 : _catalog$meta12$oemKe2[normalizeKey(oem)]) || oem;
+
+    if (usesSubcollections) {
+      return docRef.collection(canonicalOem).get().then(snap => {
+        const deletions = [];
+        snap.forEach(doc => {
+          deletions.push(doc.ref.delete());
+        });
+        return Promise.allSettled(deletions);
+      }).catch(() => null);
+    }
+
+    const oemField = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta13 = catalog.meta) === null || _catalog$meta13 === void 0 ? void 0 : (_catalog$meta13$oemFi = _catalog$meta13.oemFieldByModality) === null || _catalog$meta13$oemFi === void 0 ? void 0 : _catalog$meta13$oemFi[canonicalModality]) || DEFAULT_OEM_FIELD;
+    const update = {
+      [`${oemField}.${canonicalOem}`]: _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore.FieldValue.delete()
+    };
+
+    if (!(catalog !== null && catalog !== void 0 && (_catalog$meta14 = catalog.meta) !== null && _catalog$meta14 !== void 0 && (_catalog$meta14$oemFi = _catalog$meta14.oemFieldByModality) !== null && _catalog$meta14$oemFi !== void 0 && _catalog$meta14$oemFi[canonicalModality])) {
+      update[canonicalOem] = _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore.FieldValue.delete();
+    }
+
+    return docRef.update(update).catch(() => null);
+  });
+  await Promise.allSettled(ops);
+}
+async function deleteTrackerModel({
+  modality,
+  oem,
+  model,
+  catalog
+}) {
+  var _catalog$meta15, _catalog$meta15$modal, _catalog$meta16, _catalog$meta16$oemKe, _catalog$meta16$oemKe2, _catalog$meta17, _catalog$meta18, _catalog$meta18$oemFi, _catalog$meta19, _catalog$meta19$model, _catalog$meta19$model2;
+
+  if (!modality || !oem || !model) return;
+  const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore();
+  const modalityLower = normalizeKey(modality);
+  const canonicalModality = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta15 = catalog.meta) === null || _catalog$meta15 === void 0 ? void 0 : (_catalog$meta15$modal = _catalog$meta15.modalityKeyByLower) === null || _catalog$meta15$modal === void 0 ? void 0 : _catalog$meta15$modal[modalityLower]) || modality;
+  const docRef = db.collection("Tracker").doc(canonicalModality);
+  const canonicalOem = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta16 = catalog.meta) === null || _catalog$meta16 === void 0 ? void 0 : (_catalog$meta16$oemKe = _catalog$meta16.oemKeyByModalityLower) === null || _catalog$meta16$oemKe === void 0 ? void 0 : (_catalog$meta16$oemKe2 = _catalog$meta16$oemKe[modalityLower]) === null || _catalog$meta16$oemKe2 === void 0 ? void 0 : _catalog$meta16$oemKe2[normalizeKey(oem)]) || oem;
+
+  if (catalog !== null && catalog !== void 0 && (_catalog$meta17 = catalog.meta) !== null && _catalog$meta17 !== void 0 && _catalog$meta17.usesSubcollections) {
+    const modelKey = normalizeKey(model);
+    await docRef.collection(canonicalOem).doc(modelKey).delete().catch(() => null);
+    return;
+  }
+
+  const oemField = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta18 = catalog.meta) === null || _catalog$meta18 === void 0 ? void 0 : (_catalog$meta18$oemFi = _catalog$meta18.oemFieldByModality) === null || _catalog$meta18$oemFi === void 0 ? void 0 : _catalog$meta18$oemFi[canonicalModality]) || DEFAULT_OEM_FIELD;
+  const modelField = (catalog === null || catalog === void 0 ? void 0 : (_catalog$meta19 = catalog.meta) === null || _catalog$meta19 === void 0 ? void 0 : (_catalog$meta19$model = _catalog$meta19.modelFieldByModalityOem) === null || _catalog$meta19$model === void 0 ? void 0 : (_catalog$meta19$model2 = _catalog$meta19$model[canonicalModality]) === null || _catalog$meta19$model2 === void 0 ? void 0 : _catalog$meta19$model2[canonicalOem]) || null;
+  const path = modelField ? `${oemField}.${canonicalOem}.${modelField}` : `${oemField}.${canonicalOem}`;
+  await docRef.update({
+    [path]: _context_Firebase__WEBPACK_IMPORTED_MODULE_0__[/* default */ "b"].firestore.FieldValue.arrayRemove(model)
+  });
+}
 
 /***/ }),
 
@@ -9679,6 +10637,27 @@ function pathToRegexp(path, keys, options) {
 }
 exports.pathToRegexp = pathToRegexp;
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "zrED":
+/***/ (function(module, exports) {
+
+// Exports
+module.exports = {
+	"wrapper": "MultiSelectDropdown_wrapper__2P2Dt",
+	"label": "MultiSelectDropdown_label__qyP4J",
+	"toggle": "MultiSelectDropdown_toggle__2PTvG",
+	"toggleText": "MultiSelectDropdown_toggleText__2KrJh",
+	"menu": "MultiSelectDropdown_menu__2vmP7",
+	"search": "MultiSelectDropdown_search__13iqi",
+	"list": "MultiSelectDropdown_list__3-1U_",
+	"option": "MultiSelectDropdown_option__1miiB",
+	"optionCheckbox": "MultiSelectDropdown_optionCheckbox__3yJ_6",
+	"optionLabel": "MultiSelectDropdown_optionLabel__1GhtQ",
+	"emptyState": "MultiSelectDropdown_emptyState__2z6bN"
+};
+
 
 /***/ })
 

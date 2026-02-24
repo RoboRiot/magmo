@@ -7,6 +7,11 @@ if (!process.env.SLACK_BOT_TOKEN) {
 }
 
 export default function handler(req, res) {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
   res.status(200).json({
     cwd: process.cwd(),
     TASKS_ID: process.env.SLACK_LIST_TASKS_ID || null,

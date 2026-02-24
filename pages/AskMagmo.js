@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useAuth } from "../context/AuthUserContext";
 import { useRouter } from "next/router";
 import LoggedIn from "./LoggedIn";
+import firebase from "../context/Firebase";
 
 export default function AskMagmo() {
   const { authUser, loading } = useAuth();
@@ -57,10 +58,15 @@ export default function AskMagmo() {
     setIsSending(true);
 
     try {
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+
       // 2. Call our backend route with the question
       const res = await fetch("/api/gpt/AskMagmo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ question: userMsg }),
       });
 

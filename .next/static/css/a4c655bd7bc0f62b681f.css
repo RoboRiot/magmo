@@ -1,0 +1,359 @@
+@import url(https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap);
+.Machine_page__Y5o9l {
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 560px at 12% 8%, rgba(114, 192, 255, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 88% 12%, rgba(94, 235, 195, 0.2), transparent 50%),
+    -webkit-gradient(linear, left top, left bottom, from(#f5f7fb), to(#eef1f6));
+  background:
+    -webkit-radial-gradient(12% 8%, 1100px 560px, rgba(114, 192, 255, 0.22), transparent 55%),
+    -webkit-radial-gradient(88% 12%, 900px 520px, rgba(94, 235, 195, 0.2), transparent 50%),
+    -webkit-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    -moz-radial-gradient(12% 8%, 1100px 560px, rgba(114, 192, 255, 0.22), transparent 55%),
+    -moz-radial-gradient(88% 12%, 900px 520px, rgba(94, 235, 195, 0.2), transparent 50%),
+    -moz-linear-gradient(top, #f5f7fb 0%, #eef1f6 100%);
+  background:
+    radial-gradient(1100px 560px at 12% 8%, rgba(114, 192, 255, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 88% 12%, rgba(94, 235, 195, 0.2), transparent 50%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef1f6 100%);
+  font-family: "Space Grotesk", "Source Serif 4", "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.Machine_shell__3zfu1 {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.Machine_header__3-4wd {
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  grid-gap: 16px;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.Machine_brand__JQapu {
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  grid-gap: 12px;
+  gap: 12px;
+}
+
+.Machine_brandLogo__3V-Dh {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  padding: 6px;
+  background: #ffffff;
+  -webkit-box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  object-fit: contain;
+}
+
+.Machine_brandName__1c13A {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.Machine_brandSub__JB4jf {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.Machine_backButton__2uGCE {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+}
+
+.Machine_card__2L-2Z {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  -webkit-box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.Machine_cardHeader__6ni_x {
+  padding: 22px 26px;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  grid-gap: 12px;
+  gap: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: -webkit-gradient(linear, left top, right top, from(#f8fafc), to(#ffffff));
+  background: -webkit-linear-gradient(left, #f8fafc 0%, #ffffff 100%);
+  background: -moz-linear-gradient(left, #f8fafc 0%, #ffffff 100%);
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.Machine_cardTitle__M4yT1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.Machine_cardSubtitle__1RYdY {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.Machine_cardMeta__1qWsG {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.12);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.Machine_cardBody__2Sjqg {
+  padding: 24px 26px 30px;
+}
+
+.Machine_machineGrid__4QzGf {
+  display: -moz-box;
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 18px;
+  gap: 18px;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  padding: 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 22px;
+}
+
+.Machine_machineInfo__1y9ed {
+  display: -moz-box;
+  display: flex;
+  -moz-box-orient: vertical;
+  -moz-box-direction: normal;
+       flex-direction: column;
+  grid-gap: 8px;
+  gap: 8px;
+}
+
+.Machine_machineName__39bAg {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.Machine_machineMetaRow__xgm8_ {
+  display: -moz-box;
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 12px;
+  gap: 12px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.Machine_machineDates__3Z6ds {
+  display: -moz-box;
+  display: flex;
+  grid-gap: 18px;
+  gap: 18px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.Machine_dateLabel__3Qj0D {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.Machine_tableCard__1oYWn {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.Machine_tableHeader__1b2pT {
+  padding: 14px 18px;
+  font-weight: 700;
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: justify;
+       justify-content: space-between;
+  background: #f8fafc;
+}
+
+.Machine_tableHint__2Q8NL {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.Machine_tableWrap__2p2iy {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.Machine_table__2Fkh- {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.Machine_table__2Fkh- thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.Machine_draggableRow__US-WQ {
+  cursor: -webkit-grab;
+  cursor: -moz-grab;
+  cursor: grab;
+  -webkit-transition: background 0.15s ease, -webkit-box-shadow 0.15s ease;
+  transition: background 0.15s ease, -webkit-box-shadow 0.15s ease;
+  -moz-transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, -webkit-box-shadow 0.15s ease;
+}
+
+.Machine_draggableRow__US-WQ:hover {
+  background: #f1f5f9;
+}
+
+.Machine_dragging__2_Jvh {
+  opacity: 0.55;
+  background: #e2e8f0;
+}
+
+.Machine_dropTarget__jMbqd {
+  -webkit-box-shadow: inset 0 -2px 0 #0ea5e9;
+          box-shadow: inset 0 -2px 0 #0ea5e9;
+}
+
+.Machine_tableActions__3dLhl {
+  padding: 14px 18px 18px;
+  display: -moz-box;
+  display: flex;
+  -moz-box-pack: end;
+       justify-content: flex-end;
+}
+
+.Machine_actionButton__1pAjO {
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.Machine_emptyState__2xIsK {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}
+
+.Machine_loadingText__3lu-N {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.Machine_loadingOverlay__33z2J {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+  display: -moz-box;
+  display: flex;
+  -moz-box-align: center;
+       align-items: center;
+  -moz-box-pack: center;
+       justify-content: center;
+  z-index: 9999;
+}
+
+.Machine_loadingLogo__2GxP1 {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  padding: 8px;
+  background: #ffffff;
+  -webkit-box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+          box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+  -webkit-animation: Machine_magmo-spin__2iyBb 1s linear infinite;
+          animation: Machine_magmo-spin__2iyBb 1s linear infinite;
+}
+
+@-webkit-keyframes Machine_magmo-spin__2iyBb {
+  from {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg);
+  }
+}
+
+@keyframes Machine_magmo-spin__2iyBb {
+  from {
+    -webkit-transform: rotate(0deg);
+       -moz-transform: rotate(0deg);
+            transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+       -moz-transform: rotate(360deg);
+            transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .Machine_shell__3zfu1 {
+    padding: 24px 16px 48px;
+  }
+
+  .Machine_cardHeader__6ni_x {
+    -moz-box-orient: vertical;
+    -moz-box-direction: normal;
+         flex-direction: column;
+    -moz-box-align: start;
+         align-items: flex-start;
+  }
+
+  .Machine_machineGrid__4QzGf {
+    -moz-box-orient: vertical;
+    -moz-box-direction: normal;
+         flex-direction: column;
+    -moz-box-align: start;
+         align-items: flex-start;
+  }
+
+  .Machine_tableActions__3dLhl {
+    -moz-box-pack: stretch;
+         justify-content: stretch;
+  }
+
+  .Machine_actionButton__1pAjO {
+    width: 100%;
+  }
+}
+

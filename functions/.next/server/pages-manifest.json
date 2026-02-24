@@ -40,6 +40,7 @@
   "/api/slack/_env-dump": "pages/api/slack/_env-dump.js",
   "/api/slack/add-to-list": "pages/api/slack/add-to-list.js",
   "/api/slack/inspect-list": "pages/api/slack/inspect-list.js",
+  "/api/tracker/catalog": "pages/api/tracker/catalog.js",
   "/dashboard": "pages/dashboard.html",
   "/drive": "pages/drive.html",
   "/": "pages/index.html",

@@ -1499,9 +1499,13 @@ export default function NewItem() {
         ? photos.map((p) => p?.url).filter(Boolean)
         : [];
 
+      const idToken = await firebase.auth().currentUser?.getIdToken();
       const resp = await fetch("/api/slack/add-to-list", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           listKey: which,
           title,
