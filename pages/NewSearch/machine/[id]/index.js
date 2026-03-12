@@ -12,6 +12,226 @@ import styles from "../Machine.module.css";
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
 
+const getRefId = (ref) => {
+  if (!ref) return null;
+  if (typeof ref === "string") return ref;
+  if (ref.id) return ref.id;
+  return null;
+};
+
+const resolveDocData = async (db, collection, refOrId) => {
+  if (!refOrId) return null;
+  try {
+    if (typeof refOrId.get === "function") {
+      const doc = await refOrId.get();
+      return doc.exists ? { id: doc.id, ...doc.data() } : null;
+    }
+    const id = getRefId(refOrId);
+    if (!id) return null;
+    const doc = await db.collection(collection).doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+  } catch (error) {
+    console.error(`Error fetching ${collection} doc:`, error);
+    return null;
+  }
+};
+
+const formatDateForPrint = (input) => {
+  if (!input) return "";
+  if (input.seconds) {
+    const date = new Date(input.seconds * 1000);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  }
+  if (typeof input.toDate === "function") {
+    const date = input.toDate();
+    return date instanceof Date && !isNaN(date.getTime())
+      ? date.toLocaleDateString()
+      : "";
+  }
+  if (input instanceof Date) {
+    return isNaN(input.getTime()) ? "" : input.toLocaleDateString();
+  }
+  if (typeof input === "number") {
+    const date = new Date(input);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  }
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (!trimmed) return "";
+    const date = new Date(trimmed);
+    return isNaN(date.getTime()) ? trimmed : date.toLocaleDateString();
+  }
+  return "";
+};
+
+const pickLatestDescription = (data) => {
+  const descs = Array.isArray(data?.descriptions) ? data.descriptions : [];
+  if (!descs.length) return data?.description || "";
+  let latest = descs[0];
+  for (const entry of descs) {
+    if (!entry) continue;
+    if (!latest) {
+      latest = entry;
+      continue;
+    }
+    const entryDate = new Date(entry.date || 0);
+    const latestDate = new Date(latest.date || 0);
+    if (!isNaN(entryDate.getTime()) && entryDate > latestDate) {
+      latest = entry;
+    }
+  }
+  return latest?.description || data?.description || "";
+};
+
+const getMachineField = (data, key) => {
+  const lower = key.toLowerCase();
+  return (
+    data?.machineData?.[key] ??
+    data?.machineData?.[lower] ??
+    data?.currentMachineData?.[key] ??
+    data?.currentMachineData?.[lower] ??
+    data?.TheMachine?.[key] ??
+    data?.TheMachine?.[lower] ??
+    data?.theMachineData?.[key] ??
+    data?.theMachineData?.[lower] ??
+    data?.[key] ??
+    data?.[lower] ??
+    ""
+  );
+};
+
+const resolveClientName = async (db, data, machineData) => {
+  if (data?.clientName) return data.clientName;
+  if (typeof data?.client === "string") return data.client;
+
+  const directClient =
+    (await resolveDocData(db, "Client", data?.client)) ||
+    (await resolveDocData(db, "Client", data?.ClientFrom)) ||
+    (await resolveDocData(db, "Client", data?.clientFromId)) ||
+    (await resolveDocData(db, "Client", data?.ClientCurrent)) ||
+    (await resolveDocData(db, "Client", data?.clientCurrentId));
+  if (directClient?.name) return directClient.name;
+
+  const machineClientName =
+    data?.machineData?.Client ||
+    data?.currentMachineData?.Client ||
+    machineData?.Client ||
+    "";
+  if (machineClientName) return machineClientName;
+
+  const machineClient =
+    (await resolveDocData(db, "Client", machineData?.client)) ||
+    (await resolveDocData(db, "Client", data?.machineData?.client));
+  if (machineClient?.name) return machineClient.name;
+
+  return "";
+};
+
+const resolvePartForPrint = async (db, part) => {
+  if (!part) return null;
+  let data = part;
+
+  try {
+    const hasArrival = Boolean(
+      data?.arrival_date || data?.arrivalDate || data?.date
+    );
+    const hasPo = Boolean(data?.poNumber || data?.po_number || data?.po);
+    const hasDescriptions = Boolean(
+      data?.description ||
+        (Array.isArray(data?.descriptions) && data.descriptions.length)
+    );
+    const hasMachineSource = Boolean(
+      data?.TheMachine ||
+        data?.machineData ||
+        data?.Machine ||
+        data?.MachineFrom ||
+        data?.CurrentMachine ||
+        data?.MachineCurrent
+    );
+    const hasClientSource = Boolean(
+      data?.clientName || data?.client || data?.ClientFrom || data?.clientFromId
+    );
+
+    const needsPartDoc =
+      data?.id &&
+      (!hasArrival ||
+        !hasPo ||
+        !hasDescriptions ||
+        !hasMachineSource ||
+        !hasClientSource);
+
+    if (needsPartDoc) {
+      const partDoc = await resolveDocData(db, "Test", data.id);
+      if (partDoc) {
+        data = { ...data, ...partDoc };
+      }
+    }
+
+    const machineRef =
+      data?.MachineFrom ||
+      data?.Machine ||
+      data?.CurrentMachine ||
+      data?.MachineCurrent;
+    let machineData = data?.TheMachine || data?.machineData || null;
+    const needsMachineData = !(
+      getMachineField({ ...data, machineData }, "OEM") ||
+      getMachineField({ ...data, machineData }, "Modality") ||
+      getMachineField({ ...data, machineData }, "Model")
+    );
+
+    if (needsMachineData && machineRef) {
+      const machineDoc = await resolveDocData(db, "Machine", machineRef);
+      if (machineDoc) {
+        machineData = machineDoc;
+        data = { ...data, machineData: machineDoc };
+      }
+    }
+
+    const arrivalRaw =
+      data?.arrival_date ||
+      data?.arrivalDate ||
+      data?.date ||
+      data?.arrival ||
+      "";
+    const arrivalDate = formatDateForPrint(arrivalRaw);
+
+    const description = pickLatestDescription(data);
+    const poNumber = data?.poNumber || data?.po_number || data?.po || "";
+    const localSn =
+      data?.local_sn || data?.localSN || data?.localsn || data?.id || "";
+
+    const OEM = getMachineField(data, "OEM");
+    const modality = getMachineField(data, "Modality");
+    const model = getMachineField(data, "Model");
+    const client = await resolveClientName(db, data, machineData);
+
+    return {
+      name: data?.name || data?.itemName || "",
+      arrival_date: arrivalDate,
+      poNumber: poNumber || "",
+      OEM: OEM || "",
+      modality: modality || "",
+      model: model || "",
+      local_sn: localSn || "",
+      client: client || "",
+      description: description || "",
+    };
+  } catch (error) {
+    console.error("Error preparing item for print:", error);
+    return {
+      name: data?.name || data?.itemName || "",
+      arrival_date: formatDateForPrint(data?.arrival_date || data?.date || ""),
+      poNumber: data?.poNumber || "",
+      OEM: "",
+      modality: "",
+      model: "",
+      local_sn: data?.local_sn || data?.localSN || data?.id || "",
+      client: data?.clientName || "",
+      description: data?.description || "",
+    };
+  }
+};
+
 const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }) => {
   const router = useRouter();
   const [selectedMachine, setSelectedMachine] = useState(
@@ -84,8 +304,21 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
           }
           const data = doc.data() || {};
           let clientName = "";
-          if (data.ClientFrom?.get) {
+          if (data.clientName) {
+            clientName = data.clientName;
+          } else if (data.ClientFrom?.get) {
             const clientDoc = await data.ClientFrom.get();
+            clientName = clientDoc.exists ? clientDoc.data().name : "";
+          } else if (typeof data.clientFromId === "string") {
+            const clientDoc = await db
+              .collection("Client")
+              .doc(data.clientFromId)
+              .get();
+            clientName = clientDoc.exists ? clientDoc.data().name : "";
+          } else if (typeof data.client === "string") {
+            clientName = data.client;
+          } else if (data.client?.get) {
+            const clientDoc = await data.client.get();
             clientName = clientDoc.exists ? clientDoc.data().name : "";
           }
           return { id: doc.id, ...data, clientName };
@@ -103,29 +336,20 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
 
   const handlePrintMulti = async () => {
     setIsPrinting(true);
-    // Create your payload with the mapped items.
-    // Replace 'associatedParts' with your actual variable containing the list.
+    const db = firebase.firestore();
+    const resolvedItems = await Promise.all(
+      associatedParts.map((part) => resolvePartForPrint(db, part))
+    );
     const payload = {
-      items: associatedParts.map((part) => ({
-        name: part.name,
-        arrival_date: part.arrival_date, // Ensure your part has a 'date' field.
-        poNumber: part.poNumber || "",
-        OEM: part.TheMachine ? part.TheMachine.oem || "" : "",
-        modality: part.TheMachine ? part.TheMachine.modality || "" : "",
-        model: part.TheMachine ? part.TheMachine.model || "" : "",
-        local_sn: part.id, // Using document id as the local serial number.
-        client: part.clientName || "",
-        description:
-          part.description ||
-          (part.descriptions && part.descriptions.length > 0
-            ? part.descriptions[0].description
-            : ""),
-      })),
+      items: resolvedItems.filter(Boolean),
       test_print: true, // Hard-coded here if you want to test printing one item
       index: 1, // Hard-coded index (1-based)
     };
 
     try {
+      if (!payload.items.length) {
+        throw new Error("No items available to print.");
+      }
       const response = await fetch(
         "https://9d70-174-76-22-138.ngrok-free.app/print_multi",
         {
