@@ -140,6 +140,196 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 
 
+const getRefId = ref => {
+  if (!ref) return null;
+  if (typeof ref === "string") return ref;
+  if (ref.id) return ref.id;
+  return null;
+};
+
+const resolveDocData = async (db, collection, refOrId) => {
+  if (!refOrId) return null;
+
+  try {
+    if (typeof refOrId.get === "function") {
+      const doc = await refOrId.get();
+      return doc.exists ? _objectSpread({
+        id: doc.id
+      }, doc.data()) : null;
+    }
+
+    const id = getRefId(refOrId);
+    if (!id) return null;
+    const doc = await db.collection(collection).doc(id).get();
+    return doc.exists ? _objectSpread({
+      id: doc.id
+    }, doc.data()) : null;
+  } catch (error) {
+    console.error(`Error fetching ${collection} doc:`, error);
+    return null;
+  }
+};
+
+const formatDateForPrint = input => {
+  if (!input) return "";
+
+  if (input.seconds) {
+    const date = new Date(input.seconds * 1000);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  }
+
+  if (typeof input.toDate === "function") {
+    const date = input.toDate();
+    return date instanceof Date && !isNaN(date.getTime()) ? date.toLocaleDateString() : "";
+  }
+
+  if (input instanceof Date) {
+    return isNaN(input.getTime()) ? "" : input.toLocaleDateString();
+  }
+
+  if (typeof input === "number") {
+    const date = new Date(input);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  }
+
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (!trimmed) return "";
+    const date = new Date(trimmed);
+    return isNaN(date.getTime()) ? trimmed : date.toLocaleDateString();
+  }
+
+  return "";
+};
+
+const pickLatestDescription = data => {
+  var _latest;
+
+  const descs = Array.isArray(data === null || data === void 0 ? void 0 : data.descriptions) ? data.descriptions : [];
+  if (!descs.length) return (data === null || data === void 0 ? void 0 : data.description) || "";
+  let latest = descs[0];
+
+  for (const entry of descs) {
+    if (!entry) continue;
+
+    if (!latest) {
+      latest = entry;
+      continue;
+    }
+
+    const entryDate = new Date(entry.date || 0);
+    const latestDate = new Date(latest.date || 0);
+
+    if (!isNaN(entryDate.getTime()) && entryDate > latestDate) {
+      latest = entry;
+    }
+  }
+
+  return ((_latest = latest) === null || _latest === void 0 ? void 0 : _latest.description) || (data === null || data === void 0 ? void 0 : data.description) || "";
+};
+
+const getMachineField = (data, key) => {
+  var _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _data$machineData$key, _data$machineData, _data$machineData2, _data$currentMachineD, _data$currentMachineD2, _data$TheMachine, _data$TheMachine2, _data$theMachineData, _data$theMachineData2;
+
+  const lower = key.toLowerCase();
+  return (_ref = (_ref2 = (_ref3 = (_ref4 = (_ref5 = (_ref6 = (_ref7 = (_ref8 = (_ref9 = (_data$machineData$key = data === null || data === void 0 ? void 0 : (_data$machineData = data.machineData) === null || _data$machineData === void 0 ? void 0 : _data$machineData[key]) !== null && _data$machineData$key !== void 0 ? _data$machineData$key : data === null || data === void 0 ? void 0 : (_data$machineData2 = data.machineData) === null || _data$machineData2 === void 0 ? void 0 : _data$machineData2[lower]) !== null && _ref9 !== void 0 ? _ref9 : data === null || data === void 0 ? void 0 : (_data$currentMachineD = data.currentMachineData) === null || _data$currentMachineD === void 0 ? void 0 : _data$currentMachineD[key]) !== null && _ref8 !== void 0 ? _ref8 : data === null || data === void 0 ? void 0 : (_data$currentMachineD2 = data.currentMachineData) === null || _data$currentMachineD2 === void 0 ? void 0 : _data$currentMachineD2[lower]) !== null && _ref7 !== void 0 ? _ref7 : data === null || data === void 0 ? void 0 : (_data$TheMachine = data.TheMachine) === null || _data$TheMachine === void 0 ? void 0 : _data$TheMachine[key]) !== null && _ref6 !== void 0 ? _ref6 : data === null || data === void 0 ? void 0 : (_data$TheMachine2 = data.TheMachine) === null || _data$TheMachine2 === void 0 ? void 0 : _data$TheMachine2[lower]) !== null && _ref5 !== void 0 ? _ref5 : data === null || data === void 0 ? void 0 : (_data$theMachineData = data.theMachineData) === null || _data$theMachineData === void 0 ? void 0 : _data$theMachineData[key]) !== null && _ref4 !== void 0 ? _ref4 : data === null || data === void 0 ? void 0 : (_data$theMachineData2 = data.theMachineData) === null || _data$theMachineData2 === void 0 ? void 0 : _data$theMachineData2[lower]) !== null && _ref3 !== void 0 ? _ref3 : data === null || data === void 0 ? void 0 : data[key]) !== null && _ref2 !== void 0 ? _ref2 : data === null || data === void 0 ? void 0 : data[lower]) !== null && _ref !== void 0 ? _ref : "";
+};
+
+const resolveClientName = async (db, data, machineData) => {
+  var _data$machineData3, _data$currentMachineD3, _data$machineData4;
+
+  if (data !== null && data !== void 0 && data.clientName) return data.clientName;
+  if (typeof (data === null || data === void 0 ? void 0 : data.client) === "string") return data.client;
+  const directClient = (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : data.client)) || (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : data.ClientFrom)) || (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : data.clientFromId)) || (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : data.ClientCurrent)) || (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : data.clientCurrentId));
+  if (directClient !== null && directClient !== void 0 && directClient.name) return directClient.name;
+  const machineClientName = (data === null || data === void 0 ? void 0 : (_data$machineData3 = data.machineData) === null || _data$machineData3 === void 0 ? void 0 : _data$machineData3.Client) || (data === null || data === void 0 ? void 0 : (_data$currentMachineD3 = data.currentMachineData) === null || _data$currentMachineD3 === void 0 ? void 0 : _data$currentMachineD3.Client) || (machineData === null || machineData === void 0 ? void 0 : machineData.Client) || "";
+  if (machineClientName) return machineClientName;
+  const machineClient = (await resolveDocData(db, "Client", machineData === null || machineData === void 0 ? void 0 : machineData.client)) || (await resolveDocData(db, "Client", data === null || data === void 0 ? void 0 : (_data$machineData4 = data.machineData) === null || _data$machineData4 === void 0 ? void 0 : _data$machineData4.client));
+  if (machineClient !== null && machineClient !== void 0 && machineClient.name) return machineClient.name;
+  return "";
+};
+
+const resolvePartForPrint = async (db, part) => {
+  if (!part) return null;
+  let data = part;
+
+  try {
+    var _data, _data2, _data3, _data4, _data5, _data6, _data7, _data8, _data9, _data10, _data11, _data12, _data13, _data14, _data15, _data16, _data17, _data18, _data19, _data20, _data21, _data22, _data23, _data24, _data25, _data26, _data27, _data28, _data29, _data30, _data31, _data32, _data33, _data34, _data35, _data36, _data37, _data38;
+
+    const hasArrival = Boolean(((_data = data) === null || _data === void 0 ? void 0 : _data.arrival_date) || ((_data2 = data) === null || _data2 === void 0 ? void 0 : _data2.arrivalDate) || ((_data3 = data) === null || _data3 === void 0 ? void 0 : _data3.date));
+    const hasPo = Boolean(((_data4 = data) === null || _data4 === void 0 ? void 0 : _data4.poNumber) || ((_data5 = data) === null || _data5 === void 0 ? void 0 : _data5.po_number) || ((_data6 = data) === null || _data6 === void 0 ? void 0 : _data6.po));
+    const hasDescriptions = Boolean(((_data7 = data) === null || _data7 === void 0 ? void 0 : _data7.description) || Array.isArray((_data8 = data) === null || _data8 === void 0 ? void 0 : _data8.descriptions) && data.descriptions.length);
+    const hasMachineSource = Boolean(((_data9 = data) === null || _data9 === void 0 ? void 0 : _data9.TheMachine) || ((_data10 = data) === null || _data10 === void 0 ? void 0 : _data10.machineData) || ((_data11 = data) === null || _data11 === void 0 ? void 0 : _data11.Machine) || ((_data12 = data) === null || _data12 === void 0 ? void 0 : _data12.MachineFrom) || ((_data13 = data) === null || _data13 === void 0 ? void 0 : _data13.CurrentMachine) || ((_data14 = data) === null || _data14 === void 0 ? void 0 : _data14.MachineCurrent));
+    const hasClientSource = Boolean(((_data15 = data) === null || _data15 === void 0 ? void 0 : _data15.clientName) || ((_data16 = data) === null || _data16 === void 0 ? void 0 : _data16.client) || ((_data17 = data) === null || _data17 === void 0 ? void 0 : _data17.ClientFrom) || ((_data18 = data) === null || _data18 === void 0 ? void 0 : _data18.clientFromId));
+    const needsPartDoc = ((_data19 = data) === null || _data19 === void 0 ? void 0 : _data19.id) && (!hasArrival || !hasPo || !hasDescriptions || !hasMachineSource || !hasClientSource);
+
+    if (needsPartDoc) {
+      const partDoc = await resolveDocData(db, "Test", data.id);
+
+      if (partDoc) {
+        data = _objectSpread(_objectSpread({}, data), partDoc);
+      }
+    }
+
+    const machineRef = ((_data20 = data) === null || _data20 === void 0 ? void 0 : _data20.MachineFrom) || ((_data21 = data) === null || _data21 === void 0 ? void 0 : _data21.Machine) || ((_data22 = data) === null || _data22 === void 0 ? void 0 : _data22.CurrentMachine) || ((_data23 = data) === null || _data23 === void 0 ? void 0 : _data23.MachineCurrent);
+    let machineData = ((_data24 = data) === null || _data24 === void 0 ? void 0 : _data24.TheMachine) || ((_data25 = data) === null || _data25 === void 0 ? void 0 : _data25.machineData) || null;
+    const needsMachineData = !(getMachineField(_objectSpread(_objectSpread({}, data), {}, {
+      machineData
+    }), "OEM") || getMachineField(_objectSpread(_objectSpread({}, data), {}, {
+      machineData
+    }), "Modality") || getMachineField(_objectSpread(_objectSpread({}, data), {}, {
+      machineData
+    }), "Model"));
+
+    if (needsMachineData && machineRef) {
+      const machineDoc = await resolveDocData(db, "Machine", machineRef);
+
+      if (machineDoc) {
+        machineData = machineDoc;
+        data = _objectSpread(_objectSpread({}, data), {}, {
+          machineData: machineDoc
+        });
+      }
+    }
+
+    const arrivalRaw = ((_data26 = data) === null || _data26 === void 0 ? void 0 : _data26.arrival_date) || ((_data27 = data) === null || _data27 === void 0 ? void 0 : _data27.arrivalDate) || ((_data28 = data) === null || _data28 === void 0 ? void 0 : _data28.date) || ((_data29 = data) === null || _data29 === void 0 ? void 0 : _data29.arrival) || "";
+    const arrivalDate = formatDateForPrint(arrivalRaw);
+    const description = pickLatestDescription(data);
+    const poNumber = ((_data30 = data) === null || _data30 === void 0 ? void 0 : _data30.poNumber) || ((_data31 = data) === null || _data31 === void 0 ? void 0 : _data31.po_number) || ((_data32 = data) === null || _data32 === void 0 ? void 0 : _data32.po) || "";
+    const localSn = ((_data33 = data) === null || _data33 === void 0 ? void 0 : _data33.local_sn) || ((_data34 = data) === null || _data34 === void 0 ? void 0 : _data34.localSN) || ((_data35 = data) === null || _data35 === void 0 ? void 0 : _data35.localsn) || ((_data36 = data) === null || _data36 === void 0 ? void 0 : _data36.id) || "";
+    const OEM = getMachineField(data, "OEM");
+    const modality = getMachineField(data, "Modality");
+    const model = getMachineField(data, "Model");
+    const client = await resolveClientName(db, data, machineData);
+    return {
+      name: ((_data37 = data) === null || _data37 === void 0 ? void 0 : _data37.name) || ((_data38 = data) === null || _data38 === void 0 ? void 0 : _data38.itemName) || "",
+      arrival_date: arrivalDate,
+      poNumber: poNumber || "",
+      OEM: OEM || "",
+      modality: modality || "",
+      model: model || "",
+      local_sn: localSn || "",
+      client: client || "",
+      description: description || ""
+    };
+  } catch (error) {
+    var _data39, _data40, _data41, _data42, _data43, _data44, _data45, _data46, _data47, _data48;
+
+    console.error("Error preparing item for print:", error);
+    return {
+      name: ((_data39 = data) === null || _data39 === void 0 ? void 0 : _data39.name) || ((_data40 = data) === null || _data40 === void 0 ? void 0 : _data40.itemName) || "",
+      arrival_date: formatDateForPrint(((_data41 = data) === null || _data41 === void 0 ? void 0 : _data41.arrival_date) || ((_data42 = data) === null || _data42 === void 0 ? void 0 : _data42.date) || ""),
+      poNumber: ((_data43 = data) === null || _data43 === void 0 ? void 0 : _data43.poNumber) || "",
+      OEM: "",
+      modality: "",
+      model: "",
+      local_sn: ((_data44 = data) === null || _data44 === void 0 ? void 0 : _data44.local_sn) || ((_data45 = data) === null || _data45 === void 0 ? void 0 : _data45.localSN) || ((_data46 = data) === null || _data46 === void 0 ? void 0 : _data46.id) || "",
+      client: ((_data47 = data) === null || _data47 === void 0 ? void 0 : _data47.clientName) || "",
+      description: ((_data48 = data) === null || _data48 === void 0 ? void 0 : _data48.description) || ""
+    };
+  }
+};
+
 const Machine = ({
   initialMachine,
   initialAssociatedParts,
@@ -225,7 +415,7 @@ const Machine = ({
       const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore();
       const partsDocs = await Promise.all(associatedPartsRefs.map(ref => ref.get()));
       const partsData = await Promise.all(partsDocs.map(async doc => {
-        var _data$ClientFrom;
+        var _data$ClientFrom, _data$client;
 
         if (!doc.exists) {
           // skip or return an empty object
@@ -235,8 +425,18 @@ const Machine = ({
         const data = doc.data() || {};
         let clientName = "";
 
-        if ((_data$ClientFrom = data.ClientFrom) !== null && _data$ClientFrom !== void 0 && _data$ClientFrom.get) {
+        if (data.clientName) {
+          clientName = data.clientName;
+        } else if ((_data$ClientFrom = data.ClientFrom) !== null && _data$ClientFrom !== void 0 && _data$ClientFrom.get) {
           const clientDoc = await data.ClientFrom.get();
+          clientName = clientDoc.exists ? clientDoc.data().name : "";
+        } else if (typeof data.clientFromId === "string") {
+          const clientDoc = await db.collection("Client").doc(data.clientFromId).get();
+          clientName = clientDoc.exists ? clientDoc.data().name : "";
+        } else if (typeof data.client === "string") {
+          clientName = data.client;
+        } else if ((_data$client = data.client) !== null && _data$client !== void 0 && _data$client.get) {
+          const clientDoc = await data.client.get();
           clientName = clientDoc.exists ? clientDoc.data().name : "";
         }
 
@@ -256,23 +456,11 @@ const Machine = ({
   };
 
   const handlePrintMulti = async () => {
-    setIsPrinting(true); // Create your payload with the mapped items.
-    // Replace 'associatedParts' with your actual variable containing the list.
-
+    setIsPrinting(true);
+    const db = _context_Firebase__WEBPACK_IMPORTED_MODULE_3__[/* default */ "b"].firestore();
+    const resolvedItems = await Promise.all(associatedParts.map(part => resolvePartForPrint(db, part)));
     const payload = {
-      items: associatedParts.map(part => ({
-        name: part.name,
-        arrival_date: part.arrival_date,
-        // Ensure your part has a 'date' field.
-        poNumber: part.poNumber || "",
-        OEM: part.TheMachine ? part.TheMachine.oem || "" : "",
-        modality: part.TheMachine ? part.TheMachine.modality || "" : "",
-        model: part.TheMachine ? part.TheMachine.model || "" : "",
-        local_sn: part.id,
-        // Using document id as the local serial number.
-        client: part.clientName || "",
-        description: part.description || (part.descriptions && part.descriptions.length > 0 ? part.descriptions[0].description : "")
-      })),
+      items: resolvedItems.filter(Boolean),
       test_print: true,
       // Hard-coded here if you want to test printing one item
       index: 1 // Hard-coded index (1-based)
@@ -280,6 +468,10 @@ const Machine = ({
     };
 
     try {
+      if (!payload.items.length) {
+        throw new Error("No items available to print.");
+      }
+
       const response = await fetch("https://9d70-174-76-22-138.ngrok-free.app/print_multi", {
         method: "POST",
         headers: {
