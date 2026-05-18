@@ -352,6 +352,19 @@
   filter: brightness(0.98);
 }
 
+.trailerActionButton {
+  background: linear-gradient(135deg, #f97316, #ef4444) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.28);
+}
+
+.trailerActionButton:hover,
+.trailerActionButton:focus {
+  color: #ffffff !important;
+  filter: brightness(0.98);
+}
+
 .loadingOverlay {
   position: fixed;
   top: 0;

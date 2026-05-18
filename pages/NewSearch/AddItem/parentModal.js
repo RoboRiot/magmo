@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   Modal,
   InputGroup,
@@ -23,15 +29,52 @@ import styles from "./ParentModal.module.css";
 const CLIENT_WAREHOUSE = "igor-house";
 const CLIENT_UNASSIGNED = "unassigned";
 const PAGE_SIZE = 20;
+const LOAD_TIMEOUT_MS = 20000;
 
-const ParentModal = ({ show, handleClose, setSelectedParent }) => {
+const dedupeById = (items = []) => {
+  const seen = new Set();
+  return (items || []).filter((item) => {
+    const id = item?.id;
+    if (!id) return false;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+};
+
+const normalizeDisplayValue = (value) => {
+  if (Array.isArray(value)) {
+    const text = value.map((entry) => String(entry ?? "").trim()).filter(Boolean);
+    return text.length ? text.join(", ") : "N/A";
+  }
+  if (value === undefined || value === null) return "N/A";
+  const text = String(value).trim();
+  return text || "N/A";
+};
+
+const ParentModal = ({
+  show,
+  handleClose,
+  setSelectedParent,
+  onConfirm,
+  selectionMode = "single",
+  selectedItems = [],
+  excludeIds = [],
+  title = "Select Parent",
+  subtitle = "Search and choose a parent item for this part.",
+}) => {
+  const isMultiSelect = selectionMode === "multiple";
   const [info, setInfo] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageCursors, setPageCursors] = useState([]);
+  const pageCursorsRef = useRef([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [queryEpoch, setQueryEpoch] = useState(0);
   const [loadError, setLoadError] = useState(null);
+  const isMountedRef = useRef(false);
+  const showRef = useRef(show);
+  const fetchSeqRef = useRef(0);
 
   const [search, setSearch] = useState("");
   const [select, setSelect] = useState("Name");
@@ -49,6 +92,12 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
   const [modelButtonText, setModelButtonText] = useState("Select Option");
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [modelSearchTerm, setModelSearchTerm] = useState("");
+  const [draftSelected, setDraftSelected] = useState([]);
+
+  const excludedIdSet = useMemo(
+    () => new Set((excludeIds || []).map((id) => String(id))),
+    [excludeIds]
+  );
 
   const normalizeText = (value) => {
     if (value == null) return "";
@@ -81,6 +130,34 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
     setPageCursors([]);
     setHasNextPage(false);
   };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      fetchSeqRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    showRef.current = show;
+    if (!show) {
+      fetchSeqRef.current += 1;
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [show]);
+
+  useEffect(() => {
+    pageCursorsRef.current = pageCursors;
+  }, [pageCursors]);
+
+  useEffect(() => {
+    if (!show) return;
+    const normalized = dedupeById(selectedItems || []);
+    setDraftSelected(isMultiSelect ? normalized : normalized.slice(0, 1));
+  }, [show, selectedItems, isMultiSelect]);
 
   const searchChangeHandler = (event) => setSearch(event.target.value);
 
@@ -115,38 +192,61 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
   const fetchData = useCallback(
     async (requestedPage = 1) => {
       if (!show) return;
+      const fetchSeq = ++fetchSeqRef.current;
       const startAfterDoc =
-        requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
+        requestedPage > 1
+          ? pageCursorsRef.current[requestedPage - 2]
+          : null;
       if (requestedPage > 1 && !startAfterDoc) {
-        setPage(1);
+        if (isMountedRef.current && fetchSeq === fetchSeqRef.current) {
+          setPage(1);
+        }
         return;
       }
-      setIsLoading(true);
-      setLoadError(null);
+      if (isMountedRef.current && showRef.current) {
+        setIsLoading(true);
+        setLoadError(null);
+      }
       const searchLower = (search || "").toLowerCase().trim();
+      let timeoutId;
       try {
-        const { parts: data, lastDoc, hasNextPage: nextPage } =
-          await fetchPartsWithMachineDataPage({
-            pageSize: PAGE_SIZE,
-            startAfterDoc,
-            visibleOnly: true,
-            filterFn:
-              selectedOEM || selectedModality || selectedModel || selectedClient
-                ? matchesFilters
-                : null,
-            search: searchLower
-              ? {
-                  type: select,
-                  raw: search,
-                  lower: searchLower,
-                }
+        const dataPromise = fetchPartsWithMachineDataPage({
+          pageSize: PAGE_SIZE,
+          startAfterDoc,
+          visibleOnly: true,
+          filterFn:
+            selectedOEM || selectedModality || selectedModel || selectedClient
+              ? matchesFilters
               : null,
-            needsMachineData:
-              Boolean(selectedOEM) ||
-              Boolean(selectedModality) ||
-              Boolean(selectedModel) ||
-              Boolean(selectedClient),
-          });
+          search: searchLower
+            ? {
+                type: select,
+                raw: search,
+                lower: searchLower,
+              }
+            : null,
+          needsMachineData:
+            Boolean(selectedOEM) ||
+            Boolean(selectedModality) ||
+            Boolean(selectedModel) ||
+            Boolean(selectedClient),
+        });
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error("Loading timed out. Please retry."));
+          }, LOAD_TIMEOUT_MS);
+        });
+        const { parts: data, lastDoc, hasNextPage: nextPage } =
+          await Promise.race([dataPromise, timeoutPromise]);
+
+        if (
+          !isMountedRef.current ||
+          !showRef.current ||
+          fetchSeq !== fetchSeqRef.current
+        ) {
+          return;
+        }
+
         setInfo(data);
         setHasNextPage(nextPage);
         setPageCursors((prev) => {
@@ -154,26 +254,43 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
           if (lastDoc) {
             next[requestedPage - 1] = lastDoc;
           }
-          return next;
+          if (next.length !== prev.length) return next;
+          const isSame = next.every(
+            (doc, index) => (doc?.id || null) === (prev[index]?.id || null)
+          );
+          return isSame ? prev : next;
         });
       } catch (error) {
+        if (
+          !isMountedRef.current ||
+          !showRef.current ||
+          fetchSeq !== fetchSeqRef.current
+        ) {
+          return;
+        }
         console.error("Parent modal load failed:", error);
         setLoadError(error?.message || "Failed to load items.");
         setInfo([]);
       } finally {
-        setIsLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (
+          isMountedRef.current &&
+          showRef.current &&
+          fetchSeq === fetchSeqRef.current
+        ) {
+          setIsLoading(false);
+        }
       }
     },
     [
       show,
-      pageCursors,
       search,
       select,
       selectedOEM,
       selectedModality,
       selectedModel,
       selectedClient,
-      matchesFilters,
+      matchesFilters
     ]
   );
 
@@ -188,8 +305,48 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
     fetchData(page);
   }, [show, page, queryEpoch, fetchData]);
 
-  const rowSelect = (item) => {
-    setSelectedParent({ id: item.id, name: item.name, pn: item.pn });
+  const selectedIdSet = useMemo(
+    () => new Set(draftSelected.map((item) => item.id)),
+    [draftSelected]
+  );
+
+  const displayInfo = useMemo(() => {
+    const filtered = (info || []).filter(
+      (item) => item?.id && !excludedIdSet.has(String(item.id))
+    );
+    return filtered.sort((a, b) => {
+      const aSelected = selectedIdSet.has(a.id) ? 1 : 0;
+      const bSelected = selectedIdSet.has(b.id) ? 1 : 0;
+      if (aSelected !== bSelected) return bSelected - aSelected;
+      return String(a?.name || "").localeCompare(String(b?.name || ""));
+    });
+  }, [info, excludedIdSet, selectedIdSet]);
+
+  const toggleDraftSelection = (item) => {
+    if (!item?.id) return;
+    setDraftSelected((prev) => {
+      const exists = prev.some((entry) => entry.id === item.id);
+      if (isMultiSelect) {
+        if (exists) {
+          return prev.filter((entry) => entry.id !== item.id);
+        }
+        return dedupeById([...prev, item]);
+      }
+      return exists ? [] : [item];
+    });
+  };
+
+  const removeDraftSelection = (itemId) => {
+    setDraftSelected((prev) => prev.filter((entry) => entry.id !== itemId));
+  };
+
+  const handleConfirmSelection = () => {
+    const normalized = dedupeById(draftSelected);
+    if (typeof onConfirm === "function") {
+      onConfirm(normalized);
+    } else if (typeof setSelectedParent === "function") {
+      setSelectedParent(normalized[0] || null);
+    }
     handleClose();
   };
 
@@ -344,10 +501,10 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
       contentClassName={styles.modalContent}
     >
       <Modal.Header closeButton className={styles.modalHeader}>
-        <div>
-          <div className={styles.modalTitle}>Select Parent</div>
+          <div>
+          <div className={styles.modalTitle}>{title}</div>
           <div className={styles.modalSubtitle}>
-            Search and choose a parent item for this part.
+            {subtitle}
           </div>
         </div>
       </Modal.Header>
@@ -447,7 +604,7 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
               <div>
                 <div className={styles.resultsTitle}>Results</div>
                 <div className={styles.resultsSubtitle}>
-                  {isLoading ? "Loading items" : `${info.length} items`}
+                  {isLoading ? "Loading items" : `${displayInfo.length} items`}
                 </div>
               </div>
               <Pagination size="sm" className={styles.pagination}>
@@ -461,6 +618,36 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
                   disabled={!hasNextPage}
                 />
               </Pagination>
+            </div>
+
+            <div className={styles.selectedPanel}>
+              <div className={styles.selectedTitle}>
+                {isMultiSelect
+                  ? `Selected Children (${draftSelected.length})`
+                  : "Selected Parent"}
+              </div>
+              {draftSelected.length === 0 ? (
+                <div className={styles.selectedEmpty}>
+                  {isMultiSelect
+                    ? "No children selected yet."
+                    : "No parent selected yet."}
+                </div>
+              ) : (
+                <div className={styles.selectedList}>
+                  {draftSelected.map((item) => (
+                    <div key={item.id} className={styles.selectedChip}>
+                      <span>{item?.name || item?.id}</span>
+                      <button
+                        type="button"
+                        className={styles.removeChip}
+                        onClick={() => removeDraftSelection(item.id)}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className={styles.searchRow}>
@@ -527,6 +714,14 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
                 >
                   Description
                 </NavDropdown.Item>
+                <NavDropdown.Item
+                  onClick={() => {
+                    setSelect("SKU");
+                    setShowListSearch("text");
+                  }}
+                >
+                  SKU
+                </NavDropdown.Item>
               </NavDropdown>
             </div>
 
@@ -554,15 +749,20 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {info.length === 0 && (
+                    {displayInfo.length === 0 && (
                       <tr>
                         <td colSpan={6} className={styles.emptyState}>
                           No items found.
                         </td>
                       </tr>
                     )}
-                    {info.map((item) => (
-                      <tr key={item.id}>
+                    {displayInfo.map((item) => {
+                      const isSelected = selectedIdSet.has(item.id);
+                      return (
+                      <tr
+                        key={item.id}
+                        className={isSelected ? styles.selectedRow : ""}
+                      >
                         <td>{item.name}</td>
                         <td>{formatDate(item.date)}</td>
                         <td>
@@ -571,19 +771,26 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
                                 .workOrder
                             : "N/A"}
                         </td>
-                        <td>{item.pn}</td>
-                        <td>{item.sn}</td>
+                        <td>{normalizeDisplayValue(item.pn)}</td>
+                        <td>{normalizeDisplayValue(item.sn)}</td>
                         <td>
                           <Button
-                            variant="primary"
+                            variant={isSelected ? "success" : "outline-primary"}
                             size="sm"
-                            onClick={() => rowSelect(item)}
+                            onClick={() => toggleDraftSelection(item)}
                           >
-                            Select
+                            {isSelected
+                              ? isMultiSelect
+                                ? "Selected"
+                                : "Current"
+                              : isMultiSelect
+                              ? "Add"
+                              : "Select"}
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </Table>
               )}
@@ -597,12 +804,12 @@ const ParentModal = ({ show, handleClose, setSelectedParent }) => {
         </Button>
         <Button
           variant="warning"
-          onClick={() => {
-            setSelectedParent(null);
-            handleClose();
-          }}
+          onClick={() => setDraftSelected([])}
         >
           Clear Selection
+        </Button>
+        <Button variant="primary" onClick={handleConfirmSelection}>
+          OK
         </Button>
       </Modal.Footer>
       <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>

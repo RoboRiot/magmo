@@ -16,12 +16,16 @@ export default function MultiSelectDropdown({
   disabled = false,
   enableDelete = false,
   onDeleteOption,
+  enableAdd = false,
+  addPlaceholder = "Add new option",
+  addButtonLabel = "Add",
+  onAddOption,
+  addDisabled = false,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [draftOption, setDraftOption] = useState("");
   const menuRef = useRef(null);
-  const holdTimerRef = useRef(null);
-  const holdTriggeredRef = useRef(false);
 
   const selectedSet = useMemo(
     () => new Set((selected || []).map(normalizeValue).filter(Boolean)),
@@ -51,29 +55,37 @@ export default function MultiSelectDropdown({
     onChange(Array.from(next));
   };
 
-  const startHold = (value) => {
-    if (!enableDelete || typeof onDeleteOption !== "function") return;
-    holdTriggeredRef.current = false;
-    clearTimeout(holdTimerRef.current);
-    holdTimerRef.current = setTimeout(() => {
-      holdTriggeredRef.current = true;
-      const confirmed = window.confirm(`Delete "${value}" from the list?`);
-      if (confirmed) {
-        onDeleteOption(value);
-      }
-    }, 650);
-  };
-
-  const cancelHold = () => {
-    clearTimeout(holdTimerRef.current);
-  };
-
-  const handleOptionClick = (value) => {
-    if (holdTriggeredRef.current) {
-      holdTriggeredRef.current = false;
-      return;
+  const requestDelete = (value, event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
     }
-    toggleOption(value);
+    if (!enableDelete || typeof onDeleteOption !== "function") return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${value}" from the list?`
+    );
+    if (confirmed) {
+      onDeleteOption(value);
+    }
+  };
+
+  const handleAdd = async (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (!enableAdd || typeof onAddOption !== "function") return;
+    const normalized = normalizeValue(draftOption);
+    if (!normalized) return;
+
+    try {
+      const result = await onAddOption(normalized);
+      if (result !== false) {
+        setDraftOption("");
+      }
+    } catch (error) {
+      console.error("Failed to add option:", error);
+    }
   };
 
   const displayText = useMemo(() => {
@@ -101,7 +113,10 @@ export default function MultiSelectDropdown({
   }, [open]);
 
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      setDraftOption("");
+    }
   }, [open]);
 
   return (
@@ -126,6 +141,34 @@ export default function MultiSelectDropdown({
               onChange={(event) => setQuery(event.target.value)}
             />
           )}
+          {enableAdd && (
+            <div className={styles.addRow}>
+              <input
+                className={styles.addInput}
+                placeholder={addPlaceholder}
+                value={draftOption}
+                onChange={(event) => setDraftOption(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleAdd(event);
+                  }
+                }}
+                disabled={disabled || addDisabled}
+              />
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={handleAdd}
+                disabled={
+                  disabled ||
+                  addDisabled ||
+                  !normalizeValue(draftOption)
+                }
+              >
+                {addButtonLabel}
+              </button>
+            </div>
+          )}
           <div className={styles.list}>
             {!filteredOptions.length && (
               <div className={styles.emptyState}>No results</div>
@@ -136,20 +179,28 @@ export default function MultiSelectDropdown({
                 <div
                   key={option}
                   className={styles.option}
-                  onMouseDown={() => startHold(option)}
-                  onMouseUp={cancelHold}
-                  onMouseLeave={cancelHold}
-                  onTouchStart={() => startHold(option)}
-                  onTouchEnd={cancelHold}
-                  onClick={() => handleOptionClick(option)}
+                  onClick={() => toggleOption(option)}
                 >
-                  <input
-                    type="checkbox"
-                    className={styles.optionCheckbox}
-                    checked={checked}
-                    readOnly
-                  />
-                  <span className={styles.optionLabel}>{option}</span>
+                  <div className={styles.optionMain}>
+                    <input
+                      type="checkbox"
+                      className={styles.optionCheckbox}
+                      checked={checked}
+                      readOnly
+                    />
+                    <span className={styles.optionLabel}>{option}</span>
+                  </div>
+                  {enableDelete && typeof onDeleteOption === "function" ? (
+                    <button
+                      type="button"
+                      className={styles.deleteButton}
+                      aria-label={`Delete ${option}`}
+                      title={`Delete ${option}`}
+                      onClick={(event) => requestDelete(option, event)}
+                    >
+                      x
+                    </button>
+                  ) : null}
                 </div>
               );
             })}

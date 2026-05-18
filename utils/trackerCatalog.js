@@ -391,6 +391,7 @@ export async function syncTrackerFromSelections({
   if (catalog?.meta?.syncDisabled) return false;
 
   const ops = [];
+  const usesSubcollections = Boolean(catalog?.meta?.usesSubcollections);
 
   for (const modality of selectedModalities) {
     const modalityLower = normalizeKey(modality);
@@ -424,6 +425,31 @@ export async function syncTrackerFromSelections({
           docRef.set({ [oemField]: { [canonicalOem]: [] } }, { merge: true })
         );
       }
+    }
+
+    if (usesSubcollections) {
+      for (const oem of selectedOems) {
+        const oemLower = normalizeKey(oem);
+        const canonicalOem =
+          catalog?.meta?.oemKeyByModalityLower?.[modalityLower]?.[oemLower] ||
+          oemLower;
+        for (const model of selectedModels) {
+          const modelLower = normalizeKey(model);
+          if (!modelLower) continue;
+          const modelCaseMap =
+            catalog?.meta?.modelKeyByModalityOemLower?.[modalityLower]?.[
+              oemLower
+            ] || {};
+          const canonicalModel = modelCaseMap[modelLower] || model;
+          ops.push(
+            docRef
+              .collection(canonicalOem)
+              .doc(modelLower)
+              .set({ name: canonicalModel }, { merge: true })
+          );
+        }
+      }
+      continue;
     }
 
     for (const oem of selectedOems) {
@@ -460,7 +486,12 @@ export async function syncTrackerFromSelections({
   }
 
   if (ops.length) {
-    await Promise.allSettled(ops);
+    const results = await Promise.allSettled(ops);
+    const failures = results.filter((result) => result.status === "rejected");
+    if (failures.length) {
+      const firstError = failures[0]?.reason;
+      throw firstError || new Error("Tracker sync failed.");
+    }
     return true;
   }
   return false;

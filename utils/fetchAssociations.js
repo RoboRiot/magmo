@@ -1,12 +1,27 @@
 import React from 'react'
 import firebase from "../context/Firebase";
+import {
+  isInteriorSocalMachineData,
+  stripEmbeddedMachineAssociations,
+} from "./warehouseAssociations";
+
+const MACHINE_LIST_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
+
+function sanitizeMachineDataForList(data) {
+  if (!data) return null;
+  const sanitized = {};
+  MACHINE_LIST_FIELDS.forEach((key) => {
+    if (data[key] !== undefined) sanitized[key] = data[key];
+  });
+  return sanitized;
+}
 
 export async function fetchPartsWithMachineData() {
   const db = firebase.firestore();
   const partsSnapshot = await db.collection("Test").get();
   const parts = await Promise.all(
     partsSnapshot.docs.map(async (partDoc) => {
-      const partData = partDoc.data();
+      const partData = stripEmbeddedMachineAssociations(partDoc.data() || {});
       partData.id = partDoc.id; // Add document ID here
       const getRefId = (ref) => {
         if (!ref) return null;
@@ -24,15 +39,21 @@ export async function fetchPartsWithMachineData() {
         if (!ref) return null;
         if (typeof ref.get === "function") {
           const doc = await ref.get();
-          return doc.exists ? doc.data() : null;
+          if (!doc.exists) return null;
+          const data = doc.data() || {};
+          return sanitizeMachineDataForList(data);
         }
         if (typeof ref === "string") {
           const doc = await db.collection("Machine").doc(ref).get();
-          return doc.exists ? doc.data() : null;
+          if (!doc.exists) return null;
+          const data = doc.data() || {};
+          return sanitizeMachineDataForList(data);
         }
         if (ref?.id) {
           const doc = await db.collection("Machine").doc(ref.id).get();
-          return doc.exists ? doc.data() : null;
+          if (!doc.exists) return null;
+          const data = doc.data() || {};
+          return sanitizeMachineDataForList(data);
         }
         return null;
       };
@@ -90,6 +111,11 @@ export async function fetchPartsWithMachineDataPage({
 } = {}) {
   const db = firebase.firestore();
   const limit = pageSize + 1;
+  const startedAt = Date.now();
+  let scannedDocs = 0;
+  let scannedBatches = 0;
+  let machineQueryCount = 0;
+  const scanBatchLimit = Math.max(limit, Math.min(250, pageSize * 8));
 
   const getRefId = (ref) => {
     if (!ref) return null;
@@ -104,9 +130,77 @@ export async function fetchPartsWithMachineDataPage({
     typeof query.select === "function"
       ? query.select(...MACHINE_SELECT_FIELDS)
       : query;
+  const machineCache = new Map();
+
+  const fetchMachineMap = async (ids) => {
+    if (!ids.length) return {};
+
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+    if (!uniqueIds.length) return {};
+
+    const missingIds = uniqueIds.filter((id) => !machineCache.has(id));
+    for (let i = 0; i < missingIds.length; i += 10) {
+      const chunk = missingIds.slice(i, i + 10);
+      machineQueryCount += 1;
+      const snap = await withMachineSelect(
+        db
+          .collection("Machine")
+          .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
+      ).get();
+
+      const found = new Set();
+      snap.forEach((docSnap) => {
+        found.add(docSnap.id);
+        const machineData = docSnap.data() || {};
+        if (isInteriorSocalMachineData(machineData)) {
+          docSnap.ref
+            .set(
+              {
+                associatedParts: firebase.firestore.FieldValue.delete(),
+                skipAssociatedParts: true,
+                associatedPartsSkippedReason: "interior-socal-warehouse",
+              },
+              { merge: true }
+            )
+            .catch((error) => {
+              console.error(
+                "Failed to clear Interior SoCal associatedParts:",
+                error
+              );
+            });
+        }
+        machineCache.set(docSnap.id, sanitizeMachineDataForList(machineData));
+      });
+
+      // Cache misses too, so we don't re-query the same non-existent ids.
+      chunk.forEach((id) => {
+        if (!found.has(id)) machineCache.set(id, null);
+      });
+    }
+
+    const out = {};
+    uniqueIds.forEach((id) => {
+      const data = machineCache.get(id);
+      if (data) out[id] = data;
+    });
+    return out;
+  };
+
+  let activeSearchMode = "scan";
+  const buildDebug = () => ({
+    searchMode: activeSearchMode,
+    scannedDocs,
+    scannedBatches,
+    machineQueryCount,
+    scanBatchLimit:
+      activeSearchMode === "scan" || activeSearchMode === "scan-fallback"
+        ? scanBatchLimit
+        : limit,
+    elapsedMs: Date.now() - startedAt,
+  });
 
   const buildPart = (partDoc, machineMap, currentMachineMap) => {
-    const partData = partDoc.data();
+    const partData = stripEmbeddedMachineAssociations(partDoc.data() || {});
     partData.id = partDoc.id; // Add document ID here
     partData.clientFromId =
       getRefId(partData?.ClientFrom) ?? partData?.clientFromId ?? null;
@@ -140,7 +234,34 @@ export async function fetchPartsWithMachineDataPage({
 
   const searchRaw = (search?.raw || "").toString().trim();
   const searchLower = (search?.lower || "").toString().trim();
-  const searchType = search?.type || null;
+  const normalizeSearchType = (value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    switch (normalized) {
+      case "name":
+        return "Name";
+      case "date":
+        return "Date";
+      case "work order":
+      case "workorder":
+        return "Work Order";
+      case "product number":
+      case "productnumber":
+        return "Product Number";
+      case "serial number":
+      case "serialnumber":
+        return "Serial Number";
+      case "description":
+        return "Description";
+      case "sku":
+        return "SKU";
+      default:
+        return null;
+    }
+  };
+  const searchType = normalizeSearchType(search?.type);
   const hasSearch = Boolean(searchRaw);
 
   const toTitleCase = (text) =>
@@ -151,38 +272,104 @@ export async function fetchPartsWithMachineDataPage({
       .join(" ");
 
   const buildSearchQuery = () => {
-    if (!hasSearch || !searchType) return { mode: "scan", query: null };
+    if (!hasSearch || !searchType) {
+      return { mode: "scan", query: null, fallback: null, allowScanFallback: false };
+    }
     const col = db.collection("Test");
 
     switch (searchType) {
       case "SKU":
-        return { mode: "sku", query: null };
+        return { mode: "sku", query: null, fallback: null, allowScanFallback: false };
       case "Name": {
+        const terms = searchLower
+          ? searchLower.split(/[^a-z0-9]+/).filter(Boolean)
+          : [];
+        const uniqueTerms = Array.from(new Set(terms));
+        const queryTerms = uniqueTerms.length
+          ? uniqueTerms
+          : searchLower
+          ? [searchLower]
+          : [];
+        const rankedTerms = [...queryTerms].sort((a, b) => {
+          if (b.length !== a.length) return b.length - a.length;
+          return a.localeCompare(b);
+        });
+        const primaryToken = rankedTerms[0] || null;
+        const fallbackTokens = rankedTerms.slice(0, 10);
+        if (!primaryToken) {
+          return {
+            mode: "scan",
+            query: null,
+            fallback: null,
+            allowScanFallback: false,
+          };
+        }
         const titleFallback =
           searchRaw && searchRaw === searchRaw.toLowerCase()
             ? toTitleCase(searchRaw)
             : null;
-        const terms = searchLower ? searchLower.split(/\s+/).filter(Boolean) : [];
-        const tokens = [...terms];
-        if (searchLower && !tokens.includes(searchLower)) tokens.push(searchLower);
-        if (!tokens.length) return { mode: "scan", query: null };
-
         const prefixQuery = (value) =>
           col.orderBy("name").startAt(value).endAt(`${value}\uf8ff`);
 
         return {
           mode: "query",
-          query:
-            tokens.length === 1
-              ? col.where("nameTokens", "array-contains", tokens[0])
-              : col.where(
-                  "nameTokens",
-                  "array-contains-any",
-                  tokens.slice(0, 10)
-                ),
-          fallback: titleFallback
+          query: col.where("nameTokens", "array-contains", primaryToken),
+          fallback: fallbackTokens.length > 1
+            ? () => col.where("nameTokens", "array-contains-any", fallbackTokens)
+            : titleFallback
             ? () => prefixQuery(titleFallback)
             : () => prefixQuery(searchRaw),
+          allowScanFallback: false,
+        };
+      }
+      case "Work Order": {
+        const normalizedSearch = searchLower.replace(/\s+/g, " ").trim();
+        const compactSearch = normalizedSearch.replace(/[^a-z0-9]+/g, "");
+        const splitTokens = compactSearch
+          ? compactSearch.match(/[a-z]+|\d+/g) || []
+          : normalizedSearch
+          .split(/[^a-z0-9]+/)
+          .map((token) => token.trim())
+          .filter(Boolean);
+        const candidateTokens = Array.from(
+          new Set(
+            [compactSearch, normalizedSearch, ...splitTokens].filter(
+              (token) => Boolean(token) && token.length >= 2
+            )
+          )
+        );
+        const rankedTokens = [...candidateTokens].sort((a, b) => {
+          if (b.length !== a.length) return b.length - a.length;
+          return a.localeCompare(b);
+        });
+        const primaryToken =
+          (compactSearch && compactSearch.length >= 2 && compactSearch) ||
+          rankedTokens[0] ||
+          null;
+        const fallbackTokens = rankedTokens
+          .filter((token) => token !== primaryToken)
+          .filter((token) => token.length >= 3)
+          .slice(0, 8);
+        if (!primaryToken) {
+          return {
+            mode: "scan",
+            query: null,
+            fallback: null,
+            allowScanFallback: false,
+          };
+        }
+        return {
+          mode: "query",
+          query: col.where("workOrderTokens", "array-contains", primaryToken),
+          fallback:
+            fallbackTokens.length > 1
+              ? () =>
+                  col.where("workOrderTokens", "array-contains-any", fallbackTokens)
+              : fallbackTokens.length === 1
+              ? () => col.where("workOrderTokens", "array-contains", fallbackTokens[0])
+              : null,
+          // Avoid expensive full scans on the interactive search path.
+          allowScanFallback: false,
         };
       }
       case "Product Number":
@@ -190,12 +377,14 @@ export async function fetchPartsWithMachineDataPage({
           mode: "query",
           query: col.where("pn", "array-contains", searchRaw),
           fallback: () => col.where("pn", "==", searchRaw),
+          allowScanFallback: false,
         };
       case "Serial Number":
         return {
           mode: "query",
           query: col.where("sn", "array-contains", searchRaw),
           fallback: () => col.where("sn", "==", searchRaw),
+          allowScanFallback: false,
         };
       case "Date": {
         const asDate = (() => {
@@ -210,15 +399,21 @@ export async function fetchPartsWithMachineDataPage({
           mode: "query",
           query: col.where("date", "==", searchRaw),
           fallback: asDate ? () => col.where("date", "==", asDate) : null,
+          allowScanFallback: false,
         };
       }
       default:
-        return { mode: "scan", query: null };
+        return { mode: "scan", query: null, fallback: null, allowScanFallback: false };
     }
   };
 
-  const { mode: searchMode, query: searchQuery, fallback: searchFallback } =
-    buildSearchQuery();
+  const {
+    mode: searchMode,
+    query: searchQuery,
+    fallback: searchFallback,
+    allowScanFallback,
+  } = buildSearchQuery();
+  activeSearchMode = searchMode;
 
   if (searchMode === "sku" && hasSearch) {
     const docs = [];
@@ -241,6 +436,8 @@ export async function fetchPartsWithMachineDataPage({
         docs.push(d);
       }
     });
+    scannedDocs += docs.length;
+    scannedBatches += 1;
 
     let machineMap = {};
     let currentMachineMap = {};
@@ -256,25 +453,6 @@ export async function fetchPartsWithMachineDataPage({
         if (machineId) machineIds.add(machineId);
         if (currentMachineId) currentMachineIds.add(currentMachineId);
       }
-      const fetchMachineMap = async (ids) => {
-        if (!ids.length) return {};
-        const out = {};
-        const chunks = [];
-        for (let i = 0; i < ids.length; i += 10) {
-          chunks.push(ids.slice(i, i + 10));
-        }
-        for (const chunk of chunks) {
-          const snap = await withMachineSelect(
-            db
-              .collection("Machine")
-              .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-          ).get();
-          snap.forEach((docSnap) => {
-            out[docSnap.id] = docSnap.data() || {};
-          });
-        }
-        return out;
-      };
       [machineMap, currentMachineMap] = await Promise.all([
         fetchMachineMap([...machineIds]),
         fetchMachineMap([...currentMachineIds]),
@@ -291,6 +469,7 @@ export async function fetchPartsWithMachineDataPage({
       parts: built,
       lastDoc: built.length ? docs[built.length - 1] : null,
       hasNextPage: false,
+      debug: buildDebug(),
     };
   }
 
@@ -301,22 +480,43 @@ export async function fetchPartsWithMachineDataPage({
   let hasNextPage = false;
   let filled = false;
   let usedFallback = false;
+  let usingScanFallback = searchMode === "scan";
   const scanBaseQuery = db
     .collection("Test")
     .orderBy(firebase.firestore.FieldPath.documentId());
 
   while (true) {
-    let query = searchQuery || scanBaseQuery;
-    if (searchMode === "query" && usedFallback && searchFallback) {
+    scannedBatches += 1;
+    let query = usingScanFallback ? scanBaseQuery : searchQuery || scanBaseQuery;
+    if (!usingScanFallback && searchMode === "query" && usedFallback && searchFallback) {
       query = searchFallback();
     }
     if (cursor) query = query.startAfter(cursor);
-    query = query.limit(limit);
+    const batchLimit = usingScanFallback ? scanBatchLimit : limit;
+    query = query.limit(batchLimit);
 
     const snap = await query.get();
     if (snap.empty) {
-      if (searchMode === "query" && searchFallback && !cursor && !usedFallback) {
+      if (
+        !usingScanFallback &&
+        searchMode === "query" &&
+        searchFallback &&
+        !cursor &&
+        !usedFallback
+      ) {
         usedFallback = true;
+        continue;
+      }
+      if (
+        !usingScanFallback &&
+        searchMode === "query" &&
+        allowScanFallback &&
+        !startAfterDoc
+      ) {
+        usingScanFallback = true;
+        activeSearchMode = "scan-fallback";
+        cursor = null;
+        usedFallback = false;
         continue;
       }
       hasNextPage = false;
@@ -324,6 +524,7 @@ export async function fetchPartsWithMachineDataPage({
     }
 
     const batchDocs = snap.docs;
+    scannedDocs += batchDocs.length;
     let machineMap = {};
     let currentMachineMap = {};
 
@@ -342,26 +543,6 @@ export async function fetchPartsWithMachineDataPage({
         if (machineId) machineIds.add(machineId);
         if (currentMachineId) currentMachineIds.add(currentMachineId);
       }
-
-        const fetchMachineMap = async (ids) => {
-          if (!ids.length) return {};
-          const out = {};
-          const chunks = [];
-          for (let i = 0; i < ids.length; i += 10) {
-            chunks.push(ids.slice(i, i + 10));
-          }
-          for (const chunk of chunks) {
-            const snap = await withMachineSelect(
-              db
-                .collection("Machine")
-                .where(firebase.firestore.FieldPath.documentId(), "in", chunk)
-            ).get();
-            snap.forEach((doc) => {
-              out[doc.id] = doc.data() || {};
-            });
-          }
-        return out;
-      };
 
       [machineMap, currentMachineMap] = await Promise.all([
         fetchMachineMap([...machineIds]),
@@ -394,11 +575,11 @@ export async function fetchPartsWithMachineDataPage({
 
       // We already filled the page and found an extra matching item.
       hasNextPage = true;
-      return { parts, lastDoc: pageLastDoc, hasNextPage };
+      return { parts, lastDoc: pageLastDoc, hasNextPage, debug: buildDebug() };
     }
 
     // We exhausted this batch without filling the page.
-    if (snap.size < limit) {
+    if (snap.size < batchLimit) {
       hasNextPage = false;
       break;
     }
@@ -408,7 +589,12 @@ export async function fetchPartsWithMachineDataPage({
   }
 
   lastDoc = pageLastDoc || (parts.length ? cursor : null);
-  return { parts, lastDoc, hasNextPage: filled ? hasNextPage : false };
+  return {
+    parts,
+    lastDoc,
+    hasNextPage: filled ? hasNextPage : false,
+    debug: buildDebug(),
+  };
 }
 
 export async function fetchClients(selectedOEM, selectedModality) {
@@ -434,37 +620,61 @@ export async function fetchClients(selectedOEM, selectedModality) {
 
   // Filter clients based on OEM and Modality if selected
   if (selectedOEM || selectedModality) {
-    const filteredClients = [];
-    for (const client of clients) {
-      let match = true;
-      if (selectedOEM || selectedModality) {
-        for (const machineRef of client.machines) {
-          const machineDoc = await machineRef.get();
-          const machineData = machineDoc.data();
-          if (
-            (selectedOEM &&
-              fieldMatchesSelection(
-                machineData.OEM ?? machineData.oem,
-                selectedOEM
-              )) ||
-            (selectedModality &&
-              fieldMatchesSelection(
-                machineData.Modality ?? machineData.modality,
-                selectedModality
-              ))
-          ) {
-            match = true;
-            break;
-          } else {
-            match = false;
+    const filtered = await Promise.all(
+      clients.map(async (client) => {
+        const machineRefs = Array.isArray(client.machines) ? client.machines : [];
+        if (!machineRefs.length) return null;
+
+        const machineDocs = await Promise.all(
+          machineRefs
+            .filter((machineRef) => machineRef && typeof machineRef.get === "function")
+            .map((machineRef) => machineRef.get())
+        );
+
+        const hasMatch = machineDocs.some((machineDoc) => {
+          if (!machineDoc?.exists) return false;
+          const rawMachineData = machineDoc.data() || {};
+          if (isInteriorSocalMachineData(rawMachineData)) {
+            machineDoc.ref
+              .set(
+                {
+                  associatedParts: firebase.firestore.FieldValue.delete(),
+                  skipAssociatedParts: true,
+                  associatedPartsSkippedReason: "interior-socal-warehouse",
+                },
+                { merge: true }
+              )
+              .catch((error) => {
+                console.error(
+                  "Failed to clear Interior SoCal associatedParts:",
+                  error
+                );
+              });
           }
-        }
-      }
-      if (match) {
-        filteredClients.push(client);
-      }
-    }
-    return filteredClients;
+          const machineData = sanitizeMachineDataForList(rawMachineData) || {};
+          if (
+            selectedOEM &&
+            fieldMatchesSelection(machineData.OEM ?? machineData.oem, selectedOEM)
+          ) {
+            return true;
+          }
+          if (
+            selectedModality &&
+            fieldMatchesSelection(
+              machineData.Modality ?? machineData.modality,
+              selectedModality
+            )
+          ) {
+            return true;
+          }
+          return false;
+        });
+
+        return hasMatch ? client : null;
+      })
+    );
+
+    return filtered.filter(Boolean);
   }
 
   return clients;
@@ -491,10 +701,46 @@ export async function fetchModels(
   const db = firebase.firestore();
   const machinesSnapshot = await db.collection("Machine").get();
   const models = new Set();
+  const clientCache = new Map();
+
+  const getClientByRef = async (clientRef) => {
+    if (!clientRef) return null;
+    const clientId =
+      typeof clientRef === "string" ? clientRef : clientRef?.id || null;
+    if (!clientId) return null;
+    if (clientCache.has(clientId)) return clientCache.get(clientId);
+
+    let clientDoc = null;
+    if (typeof clientRef?.get === "function") {
+      clientDoc = await clientRef.get();
+    } else if (typeof clientRef === "string") {
+      clientDoc = await db.collection("Client").doc(clientRef).get();
+    }
+    const payload = clientDoc?.exists
+      ? { id: clientDoc.id, ...(clientDoc.data() || {}) }
+      : null;
+    clientCache.set(clientId, payload);
+    return payload;
+  };
 
   await Promise.all(
     machinesSnapshot.docs.map(async (machineDoc) => {
-      const machineData = machineDoc.data();
+      const rawMachineData = machineDoc.data() || {};
+      if (isInteriorSocalMachineData(rawMachineData)) {
+        machineDoc.ref
+          .set(
+            {
+              associatedParts: firebase.firestore.FieldValue.delete(),
+              skipAssociatedParts: true,
+              associatedPartsSkippedReason: "interior-socal-warehouse",
+            },
+            { merge: true }
+          )
+          .catch((error) => {
+            console.error("Failed to clear Interior SoCal associatedParts:", error);
+          });
+      }
+      const machineData = sanitizeMachineDataForList(rawMachineData) || {};
       let isValid = true;
 
       if (!fieldMatchesSelection(machineData.OEM ?? machineData.oem, selectedOEM))
@@ -507,17 +753,12 @@ export async function fetchModels(
       )
         isValid = false;
       if (selectedClient && machineData.client) {
-        let clientDoc = null;
-        if (typeof machineData.client?.get === "function") {
-          clientDoc = await machineData.client.get();
-        } else if (typeof machineData.client === "string") {
-          clientDoc = await db.collection("Client").doc(machineData.client).get();
-        }
-        if (!clientDoc || !clientDoc.exists) {
+        const clientData = await getClientByRef(machineData.client);
+        if (!clientData) {
           isValid = false;
         } else {
-          const clientName = clientDoc.data().name;
-          const clientId = clientDoc.id;
+          const clientName = clientData.name;
+          const clientId = clientData.id;
           if (selectedClient !== clientName && selectedClient !== clientId) {
             isValid = false;
           }

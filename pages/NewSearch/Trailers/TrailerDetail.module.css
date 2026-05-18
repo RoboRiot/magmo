@@ -1,0 +1,141 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px circle at 10% -10%, rgba(14, 165, 233, 0.18), transparent 60%),
+    radial-gradient(700px circle at 85% 0%, rgba(251, 146, 60, 0.22), transparent 55%),
+    #f7f9fc;
+}
+
+.shell {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  padding: 18px;
+}
+
+.loadingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.helperText {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.helperText a {
+  color: #0369a1;
+  text-decoration: none;
+}
+
+.helperText a:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.tableCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.tableHeader {
+  padding: 14px 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.tableHint {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.tableWrap {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.table {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.draggableRow {
+  cursor: grab;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.draggableRow:hover {
+  background: #f1f5f9;
+}
+
+.dragging {
+  opacity: 0.55;
+  background: #e2e8f0;
+}
+
+.dropTarget {
+  box-shadow: inset 0 -2px 0 #0ea5e9;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 18px;
+  color: #94a3b8;
+}

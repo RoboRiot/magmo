@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Modal, Button, Spinner } from "react-bootstrap";
+import Link from "next/link";
+import { Modal, Button } from "react-bootstrap";
 import firebase from "../context/Firebase";
 import styles from "./WarehouseMapModal.module.css";
 
@@ -9,6 +10,45 @@ const LETTERS = Array.from({ length: 26 }, (_, i) =>
   String.fromCharCode(65 + i)
 );
 const NUMBERS = Array.from({ length: 50 }, (_, i) => i + 1);
+
+function normalizeLocation(loc = {}) {
+  let row = "";
+  let col = "";
+
+  if (loc?.section && typeof loc.section === "object") {
+    if (loc.section.letter !== undefined && loc.section.letter !== null) {
+      row = String(loc.section.letter).trim().toUpperCase();
+    }
+    if (loc.section.number !== undefined && loc.section.number !== null) {
+      col = String(loc.section.number).trim();
+    }
+  } else if (typeof loc?.section === "string") {
+    const trimmed = loc.section.trim();
+    row = trimmed.slice(0, 1).toUpperCase();
+    col = trimmed.slice(1).trim();
+  }
+
+  const pallet =
+    loc?.pallet !== undefined && loc?.pallet !== null
+      ? String(loc.pallet).trim()
+      : "";
+  const bin =
+    loc?.bin !== undefined && loc?.bin !== null ? String(loc.bin).trim() : "";
+
+  return { row, col, pallet, bin };
+}
+
+function formatSimpleField(value) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((entry) => String(entry ?? "").trim())
+      .filter(Boolean);
+    return normalized.length ? normalized.join(", ") : "-";
+  }
+  if (value === undefined || value === null) return "-";
+  const normalized = String(value).trim();
+  return normalized || "-";
+}
 
 export default function WarehouseMapModal({
   show = false,
@@ -27,10 +67,17 @@ export default function WarehouseMapModal({
   const [mapBin, setMapBin] = useState("");
   const [mapCellPallets, setMapCellPallets] = useState({});
   const [mapPalletBins, setMapPalletBins] = useState({});
+  const [mapCellState, setMapCellState] = useState({});
+  const [mapItems, setMapItems] = useState([]);
+  const [mapItemsContext, setMapItemsContext] = useState("");
+  const [mapItemsLoading, setMapItemsLoading] = useState(false);
+  const [mapItemsLoaded, setMapItemsLoaded] = useState(false);
+  const [mapItemsError, setMapItemsError] = useState("");
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
   const [directoryLoaded, setDirectoryLoaded] = useState(false);
   const lastShowRef = useRef(false);
+  const itemCacheRef = useRef({});
 
   const notifySelectionChange = useCallback(
     (selection) => {
@@ -63,6 +110,9 @@ export default function WarehouseMapModal({
     if (!regionId) return;
     setMapLoading(true);
     setMapError("");
+    setMapCellPallets({});
+    setMapPalletBins({});
+    setMapCellState({});
     try {
       const snap = await firebase
         .firestore()
@@ -72,35 +122,38 @@ export default function WarehouseMapModal({
 
       const cellPallets = {};
       const palletBins = {};
+      const cellState = {};
       snap.forEach((doc) => {
-        const loc = doc.data()?.newLocalCurrent || {};
-        let row = loc.section?.letter;
-        let col = loc.section?.number;
-        if ((!row || !col) && typeof loc.section === "string") {
-          const trimmed = loc.section.trim();
-          row = trimmed.slice(0, 1);
-          col = trimmed.slice(1);
-        }
-        if (col !== undefined && col !== null) {
-          col = String(col);
-        }
+        const loc = normalizeLocation(doc.data()?.newLocalCurrent || {});
+        const row = loc.row;
+        const col = loc.col;
         const pallet = loc.pallet;
         const bin = loc.bin;
         if (!row || !col) return;
+
         const cellKey = `${row}-${col}`;
-        const hasBin = bin !== undefined && bin !== null && `${bin}` !== "";
+        const hasBin = Boolean(bin);
         const hasPallet =
           pallet !== undefined && pallet !== null && `${pallet}` !== "";
-        if (!hasPallet && !hasBin) return;
 
-        const palletId = hasPallet ? String(pallet) : NO_PALLET;
-        if (!cellPallets[cellKey]) cellPallets[cellKey] = new Set();
-        cellPallets[cellKey].add(palletId);
-
+        if (!cellState[cellKey]) {
+          cellState[cellKey] = { hasItems: false, hasBins: false };
+        }
+        cellState[cellKey].hasItems = true;
         if (hasBin) {
-          const palletKey = `${cellKey}-P${palletId}`;
-          if (!palletBins[palletKey]) palletBins[palletKey] = new Set();
-          palletBins[palletKey].add(String(bin));
+          cellState[cellKey].hasBins = true;
+        }
+
+        if (hasPallet || hasBin) {
+          const palletId = hasPallet ? String(pallet) : NO_PALLET;
+          if (!cellPallets[cellKey]) cellPallets[cellKey] = new Set();
+          cellPallets[cellKey].add(palletId);
+
+          if (hasBin) {
+            const palletKey = `${cellKey}-P${palletId}`;
+            if (!palletBins[palletKey]) palletBins[palletKey] = new Set();
+            palletBins[palletKey].add(String(bin));
+          }
         }
       });
 
@@ -125,6 +178,7 @@ export default function WarehouseMapModal({
 
       setMapCellPallets(cellObj);
       setMapPalletBins(palletObj);
+      setMapCellState(cellState);
     } catch (error) {
       console.error("Failed to load map inventory", error);
       setMapError("Failed to load map inventory.");
@@ -156,6 +210,11 @@ export default function WarehouseMapModal({
 
     loadDirectory();
     setMapError("");
+    setMapItems([]);
+    setMapItemsContext("");
+    setMapItemsError("");
+    setMapItemsLoaded(false);
+    setMapItemsLoading(false);
     const {
       region,
       sectionLetter,
@@ -173,6 +232,82 @@ export default function WarehouseMapModal({
     if (region) loadRegionInventory(region);
   }, [show, initialSelection, loadDirectory, loadRegionInventory]);
 
+  const clearItemPanel = useCallback(() => {
+    setMapItems([]);
+    setMapItemsContext("");
+    setMapItemsError("");
+    setMapItemsLoaded(false);
+    setMapItemsLoading(false);
+  }, []);
+
+  const loadItemsForSelection = useCallback(
+    async ({
+      region,
+      row,
+      col,
+      bin = "",
+      pallet = "",
+      contextLabel = "",
+    }) => {
+      if (!region || !row || !col) {
+        clearItemPanel();
+        return;
+      }
+
+      const normalizedBin = bin ? String(bin) : "";
+      const normalizedPallet = pallet ? String(pallet) : "";
+      const cacheKey = `${region}|${row}|${col}|${normalizedPallet}|${normalizedBin}`;
+      setMapItemsContext(contextLabel);
+      setMapItemsError("");
+      setMapItemsLoaded(false);
+
+      if (itemCacheRef.current[cacheKey]) {
+        setMapItemsLoading(false);
+        setMapItems(itemCacheRef.current[cacheKey]);
+        setMapItemsLoaded(true);
+        return;
+      }
+
+      setMapItemsLoading(true);
+      try {
+        const snap = await firebase
+          .firestore()
+          .collection("Test")
+          .where("newLocalCurrent.region", "==", region)
+          .get();
+
+        const items = [];
+        snap.forEach((doc) => {
+          const data = doc.data() || {};
+          const loc = normalizeLocation(data.newLocalCurrent || {});
+
+          if (loc.row !== row || loc.col !== String(col)) return;
+          if (normalizedPallet && loc.pallet !== normalizedPallet) return;
+          if (normalizedBin && loc.bin !== normalizedBin) return;
+
+          items.push({
+            id: doc.id,
+            name: formatSimpleField(data.name),
+            pn: formatSimpleField(data.pn),
+            sn: formatSimpleField(data.sn),
+          });
+        });
+
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        itemCacheRef.current[cacheKey] = items;
+        setMapItems(items);
+      } catch (error) {
+        console.error("Failed to load map items", error);
+        setMapItemsError("Failed to load items for this selection.");
+        setMapItems([]);
+      } finally {
+        setMapItemsLoading(false);
+        setMapItemsLoaded(true);
+      }
+    },
+    [clearItemPanel]
+  );
+
   const handleSelectRegion = (regionId) => {
     const selection = {
       region: regionId,
@@ -187,12 +322,22 @@ export default function WarehouseMapModal({
     setMapPallet("");
     setMapBin("");
     setMapStep("grid");
+    clearItemPanel();
     notifySelectionChange(selection);
     loadRegionInventory(regionId);
   };
 
   const handleSelectCell = (rowLetter, colNumber) => {
     const colValue = String(colNumber);
+    const cellKey = `${rowLetter}-${colValue}`;
+    const hasItems = Boolean(mapCellState?.[cellKey]?.hasItems);
+    const hasPallets = Boolean(mapCellPallets?.[cellKey]?.length);
+    const palletsForCell = mapCellPallets?.[cellKey] || [];
+    const realPallets = palletsForCell.filter((pallet) => pallet !== NO_PALLET);
+    const hasOnlyNoPalletBins =
+      realPallets.length === 0 &&
+      palletsForCell.includes(NO_PALLET) &&
+      Boolean(mapPalletBins?.[`${cellKey}-P${NO_PALLET}`]?.length);
     const selection = {
       region: mapRegion,
       sectionLetter: rowLetter,
@@ -204,8 +349,24 @@ export default function WarehouseMapModal({
     setMapCol(colValue);
     setMapPallet("");
     setMapBin("");
-    setMapStep("pallets");
+    if (hasOnlyNoPalletBins) {
+      setMapPallet(NO_PALLET);
+      setMapStep("bins");
+    } else {
+      setMapStep(hasPallets ? "pallets" : "grid");
+    }
     notifySelectionChange(selection);
+
+    if (hasItems) {
+      loadItemsForSelection({
+        region: mapRegion,
+        row: rowLetter,
+        col: colValue,
+        contextLabel: `Items in Region ${mapRegion} - Section ${rowLetter}${colValue}`,
+      });
+    } else {
+      clearItemPanel();
+    }
   };
 
   const handleSelectPallet = (palletId) => {
@@ -224,6 +385,44 @@ export default function WarehouseMapModal({
     notifySelectionChange(selection);
   };
 
+  const handleSelectPalletOnly = (palletId) => {
+    const palletValue = String(palletId);
+    const normalizedPallet = palletValue === NO_PALLET ? "" : palletValue;
+    const selection = {
+      region: mapRegion,
+      sectionLetter: mapRow,
+      sectionNumber: mapCol,
+      pallet: normalizedPallet,
+      bin: "",
+    };
+    setMapPallet(palletValue);
+    setMapBin("");
+    notifySelectionChange(selection);
+    loadItemsForSelection({
+      region: mapRegion,
+      row: mapRow,
+      col: mapCol,
+      pallet: normalizedPallet,
+      bin: "",
+      contextLabel: `Items in Region ${mapRegion} - Section ${mapRow}${mapCol} - Pallet ${normalizedPallet}`,
+    });
+  };
+
+  const handleViewPallet = (palletId) => {
+    if (typeof onView !== "function") return;
+    const palletValue = String(palletId);
+    const normalizedPallet = palletValue === NO_PALLET ? "" : palletValue;
+    const selection = {
+      region: mapRegion,
+      sectionLetter: mapRow,
+      sectionNumber: mapCol,
+      pallet: normalizedPallet,
+      bin: "",
+    };
+    notifySelectionChange(selection);
+    onView(selection);
+  };
+
   const handleSelectBin = (binId) => {
     const binValue = String(binId);
     const normalizedPallet = mapPallet === NO_PALLET ? "" : mapPallet;
@@ -236,12 +435,29 @@ export default function WarehouseMapModal({
     };
     setMapBin(binValue);
     notifySelectionChange(selection);
+    loadItemsForSelection({
+      region: mapRegion,
+      row: mapRow,
+      col: mapCol,
+      pallet: normalizedPallet,
+      bin: binValue,
+      contextLabel: `Items in Region ${mapRegion} - Section ${mapRow}${mapCol} - Bin ${binValue}`,
+    });
   };
 
   const handleBack = () => {
-    if (mapStep === "bins") setMapStep("pallets");
+    if (mapStep === "bins") {
+      if (mapPallet === NO_PALLET) {
+        setMapStep("grid");
+        return;
+      }
+      setMapStep("pallets");
+    }
     else if (mapStep === "pallets") setMapStep("grid");
-    else if (mapStep === "grid") setMapStep("regions");
+    else if (mapStep === "grid") {
+      setMapStep("regions");
+      clearItemPanel();
+    }
   };
 
   const handleView = () => {
@@ -263,9 +479,13 @@ export default function WarehouseMapModal({
       </Modal.Header>
       <Modal.Body>
         {mapLoading && (
-          <div className={styles.mapLoading}>
-            <Spinner animation="border" />
-            <span>Loading map data...</span>
+          <div className={styles.loadingState}>
+            <img
+              src="/magmo-logo.png"
+              alt="Loading Magmo"
+              className={styles.loadingLogo}
+            />
+            <div className={styles.loadingText}>Loading map data...</div>
           </div>
         )}
         {mapError && <div className={styles.mapError}>{mapError}</div>}
@@ -298,12 +518,37 @@ export default function WarehouseMapModal({
             <div className={styles.mapHint}>
               Region {mapRegion}: choose a row and column
             </div>
+            <div className={styles.legend}>
+              <span className={styles.legendItem}>
+                <span
+                  className={`${styles.legendSwatch} ${styles.legendBins}`}
+                />
+                Bin
+              </span>
+              <span className={styles.legendItem}>
+                <span
+                  className={`${styles.legendSwatch} ${styles.legendItems}`}
+                />
+                Item
+              </span>
+              <span className={styles.legendItem}>
+                <span
+                  className={`${styles.legendSwatch} ${styles.legendEmpty}`}
+                />
+                Empty
+              </span>
+            </div>
             {(() => {
               const dims = getRegionDimensions(mapRegion);
               const rows = LETTERS.slice(0, dims.rows || 0).reverse();
               const cols = NUMBERS.slice(0, dims.cols || 0);
               if (!rows.length || !cols.length) {
-                const sectionKeys = Object.keys(mapCellPallets || {})
+                const sectionKeys = Array.from(
+                  new Set([
+                    ...Object.keys(mapCellPallets || {}),
+                    ...Object.keys(mapCellState || {}),
+                  ])
+                )
                   .filter(Boolean)
                   .map((key) => {
                     const [row, col] = key.split("-");
@@ -334,7 +579,13 @@ export default function WarehouseMapModal({
                         <button
                           key={key}
                           type="button"
-                          className={styles.palletButton}
+                          className={`${styles.palletButton} ${
+                            mapCellState?.[key]?.hasBins
+                              ? styles.gridCellBins
+                              : mapCellState?.[key]?.hasItems
+                              ? styles.gridCellItems
+                              : styles.gridCellEmpty
+                          }`}
                           onClick={() => handleSelectCell(row, col)}
                         >
                           {row}
@@ -354,20 +605,25 @@ export default function WarehouseMapModal({
                     {rows.map((row) =>
                       cols.map((col) => {
                         const cellKey = `${row}-${col}`;
-                        const hasPallets = Boolean(
-                          mapCellPallets[cellKey]?.length
+                        const hasBins = Boolean(mapCellState[cellKey]?.hasBins);
+                        const hasItems = Boolean(
+                          mapCellState[cellKey]?.hasItems
                         );
+                        const isSelected =
+                          mapRow === row && mapCol === String(col);
                         return (
                           <button
                             key={cellKey}
                             type="button"
                             className={`${styles.gridCell} ${
-                              hasPallets ? "" : styles.gridCellDisabled
-                            }`}
-                            onClick={() =>
-                              hasPallets && handleSelectCell(row, col)
-                            }
-                            disabled={!hasPallets}
+                              hasBins
+                                ? styles.gridCellBins
+                                : hasItems
+                                ? styles.gridCellItems
+                                : styles.gridCellEmpty
+                            } ${isSelected ? styles.gridCellSelected : ""}
+                            `}
+                            onClick={() => handleSelectCell(row, col)}
                           >
                             <span>
                               {row}
@@ -391,35 +647,49 @@ export default function WarehouseMapModal({
               {mapCol}: select a pallet
             </div>
             <div className={styles.palletGrid}>
-              {(mapCellPallets[`${mapRow}-${mapCol}`] || []).map((pallet) => {
-                const palletKey = `${mapRow}-${mapCol}-P${pallet}`;
-                const bins = mapPalletBins[palletKey] || [];
-                return (
-                  <button
-                    key={pallet}
-                    type="button"
-                    className={styles.palletButton}
-                    onClick={() => {
-                      if (bins.length === 0 && typeof onView === "function") {
-                        const selection = {
-                          region: mapRegion,
-                          sectionLetter: mapRow,
-                          sectionNumber: mapCol,
-                          pallet: pallet === NO_PALLET ? "" : String(pallet),
-                          bin: "",
-                        };
-                        notifySelectionChange(selection);
-                        onView(selection);
-                        return;
-                      }
-                      handleSelectPallet(pallet);
-                    }}
-                  >
-                    {pallet === NO_PALLET ? "No Pallet" : `Pallet ${pallet}`}
-                  </button>
-                );
-              })}
-              {!(mapCellPallets[`${mapRow}-${mapCol}`] || []).length && (
+              {(mapCellPallets[`${mapRow}-${mapCol}`] || [])
+                .filter((pallet) => pallet !== NO_PALLET)
+                .map((pallet) => {
+                  const palletKey = `${mapRow}-${mapCol}-P${pallet}`;
+                  const bins = mapPalletBins[palletKey] || [];
+                  const hasBins = bins.length > 0;
+                  return (
+                    <div key={pallet} className={styles.palletCard}>
+                      <button
+                        type="button"
+                        className={styles.palletButton}
+                        disabled={!hasBins}
+                        onClick={() => handleSelectPallet(pallet)}
+                      >
+                        {`Pallet ${pallet}`}
+                      </button>
+                      <div className={styles.palletMeta}>
+                        {hasBins
+                          ? `${bins.length} bin${bins.length === 1 ? "" : "s"}`
+                          : "No bins"}
+                      </div>
+                      <div className={styles.palletActions}>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleViewPallet(pallet)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSelectPalletOnly(pallet)}
+                        >
+                          Select
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              {!(mapCellPallets[`${mapRow}-${mapCol}`] || [])
+                .filter((pallet) => pallet !== NO_PALLET)
+                .length && (
                 <div className={styles.mapEmpty}>
                   No pallets available here.
                 </div>
@@ -456,6 +726,49 @@ export default function WarehouseMapModal({
             </div>
           </div>
         )}
+
+        {!mapLoading &&
+          (mapItemsLoading || mapItemsLoaded || Boolean(mapItemsError)) && (
+            <div className={styles.itemsPanel}>
+              <div className={styles.itemsTitle}>
+                {mapItemsContext || "Items"}
+              </div>
+              {mapItemsLoading && (
+                <div className={styles.inlineLoadingState}>
+                  <img
+                    src="/magmo-logo.png"
+                    alt="Loading Magmo"
+                    className={styles.loadingLogo}
+                  />
+                  <div className={styles.loadingText}>Loading items...</div>
+                </div>
+              )}
+              {!mapItemsLoading && mapItemsError && (
+                <div className={styles.mapError}>{mapItemsError}</div>
+              )}
+              {!mapItemsLoading && !mapItemsError && mapItems.length === 0 && (
+                <div className={styles.mapEmpty}>No items found here.</div>
+              )}
+              {!mapItemsLoading && !mapItemsError && mapItems.length > 0 && (
+                <div className={styles.itemList}>
+                  <div className={styles.itemHeader}>
+                    <span>Name</span>
+                    <span>PN</span>
+                    <span>SN</span>
+                  </div>
+                  {mapItems.map((item) => (
+                    <Link key={item.id} href={`/NewSearch/item/${item.id}`}>
+                      <a className={styles.itemRow} onClick={onHide}>
+                        <span>{item.name}</span>
+                        <span>{item.pn}</span>
+                        <span>{item.sn}</span>
+                      </a>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
       </Modal.Body>
       <Modal.Footer className={styles.mapFooter}>
         <Button

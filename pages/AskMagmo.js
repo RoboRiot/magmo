@@ -25,6 +25,19 @@ export default function AskMagmo() {
 
   const scrollRef = useRef(null);
 
+  const handleBack = () => {
+    if (
+      typeof window !== "undefined" &&
+      document.referrer &&
+      document.referrer.startsWith(window.location.origin)
+    ) {
+      router.back();
+      return;
+    }
+
+    router.push("/Warehousedb/WarehouseSelect");
+  };
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !authUser) {
@@ -155,6 +168,22 @@ export default function AskMagmo() {
               }}
             >
               <Card.Body style={{ padding: "2rem" }}>
+                <div className="mb-3">
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={handleBack}
+                    style={{
+                      borderRadius: "10px",
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Back
+                  </Button>
+                </div>
+
                 {/* Header / Branding */}
                 <div className="text-center mb-4">
                   <div

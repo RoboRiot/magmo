@@ -4,7 +4,41 @@ import { useRouter } from "next/router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/global.css";
 import Layout from "../components/Layout";
-import { AuthUserProvider } from "../context/AuthUserContext";
+import { AuthUserProvider, useAuth } from "../context/AuthUserContext";
+
+const PUBLIC_ROUTES = new Set(["/", "/404", "/500"]);
+
+function AuthGate({ children }) {
+  const router = useRouter();
+  const { authUser, loading } = useAuth();
+  const isPublicRoute = PUBLIC_ROUTES.has(router.pathname);
+
+  useEffect(() => {
+    if (!router.isReady || isPublicRoute || loading) return;
+    if (authUser) return;
+
+    const destination =
+      typeof router.asPath === "string" && router.asPath.trim()
+        ? router.asPath
+        : "/";
+    router.replace(`/?redirect=${encodeURIComponent(destination)}`);
+  }, [authUser, isPublicRoute, loading, router]);
+
+  if (isPublicRoute) return children;
+  if (loading) {
+    return (
+      <div
+        className="d-flex align-items-center justify-content-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <h3>Loading...</h3>
+      </div>
+    );
+  }
+  if (!authUser) return null;
+
+  return children;
+}
 
 // Setup pdfjs (if used) - only on client side
 let pdfjs = null;
@@ -15,7 +49,7 @@ if (typeof window !== "undefined") {
     pdfjs = pdfjsModule;
     pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   } catch (error) {
-    console.warn("PDF.js not available:", error);
+    // Avoid noisy runtime warnings on pages that do not use PDF rendering.
   }
 }
 
@@ -60,13 +94,16 @@ function MyApp({ Component, pageProps }) {
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0f172a" />
         <meta name="application-name" content="Magmo Inventory" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Magmo" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </Head>
       <Layout>
-        <Component {...pageProps} />
+        <AuthGate>
+          <Component {...pageProps} />
+        </AuthGate>
       </Layout>
     </AuthUserProvider>
   );

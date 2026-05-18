@@ -12,3 +12,13 @@ functions/.env.local
 functions/.env.*.local
 # Keep example
 !functions/.env.example
+
+# Other local env/debug files
+env_backup.txt
+extensions/*.env
+firebase-debug.log
+5-6-2026_Test.json
+
+# Generated Next.js build output
+.next/
+functions/.next/

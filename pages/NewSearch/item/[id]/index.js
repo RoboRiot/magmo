@@ -12,6 +12,7 @@ import {
   Collapse,
   InputGroup,
   ButtonGroup,
+  Table,
 } from "react-bootstrap";
 
 import Link from "next/link";
@@ -21,13 +22,11 @@ import LoggedIn from "../../../LoggedIn";
 import { useRouter } from "next/router";
 import { fetchClients } from "../../../../utils/fetchAssociations";
 import ClientTable from "../../../../utils/ClientTable";
-import ClientInfoModal from "../../ClientInfoModal";
 import ParentModal from "../../AddItem/parentModal";
 import dynamic from "next/dynamic";
 import InfoModal from "../../InfoModal";
 import MachineSelectionModal from "./MachineSelectionModal";
-import { addServiceItem } from "../../../../utils/BluefolderService";
-
+import MachineCreationModal from "../../MachineCreationModal";
 import NewLocal from "./NewLocal";
 import styles from "../../AddItem/NewItem.module.css";
 
@@ -38,6 +37,7 @@ import {
   formatLoc,
   updateMachineFields,
   buildNameTokens,
+  buildWorkOrderTokens,
 } from "../../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../../components/MultiSelectDropdown";
 import {
@@ -48,6 +48,12 @@ import {
   deleteTrackerOem,
   deleteTrackerModel,
 } from "../../../../utils/trackerCatalog";
+import {
+  addAssociatedPartToMachine,
+  buildMachineSummary,
+  stripAssociatedPartsFromMachineSnapshot,
+  stripEmbeddedMachineAssociations,
+} from "../../../../utils/warehouseAssociations";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -161,7 +167,9 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     process.env.NEXT_PUBLIC_SHOW_SLACK_BUTTONS === "true";
 
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, authUser } = useAuth();
+  const isAdminUser =
+    authUser?.isAdmin === true || String(authUser?.role || "").toLowerCase() === "admin";
   // const { id } = router.query;
   const { id: idFromRouter } = router.query;
   const initialId = initialItem?.id || idFromRouter;
@@ -185,7 +193,7 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     height: initialItem?.height ?? "",
     poNumber: initialItem?.poNumber ?? "",
     trackingNumber: initialItem?.trackingNumber ?? "",
-    localSN: initialItem?.localSN || "",
+    localSN: initialItem?.localSN || initialId || "",
     arrival_date: initialItem?.arrival_date || "",
     visible: initialItem?.visible ?? true,
   });
@@ -196,6 +204,11 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
 
     setDescriptions(initialItem.descriptions || []);
     setWorkOrders(initialItem.workOrders || []);
+    setSelectionHistory(
+      Array.isArray(initialItem.selectionHistory)
+        ? initialItem.selectionHistory
+        : []
+    );
     setDOM(initialItem.DOM || "");
 
     setItems(prev => ({
@@ -208,12 +221,59 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       height: initialItem.height ?? prev.height ?? "",
       poNumber: initialItem.poNumber ?? prev.poNumber ?? "",
       trackingNumber: initialItem.trackingNumber ?? prev.trackingNumber ?? "",
+      localSN: initialItem.localSN ?? prev.localSN ?? initialItem.id ?? "",
     }));
 
     if (initialItem.name) {
       setSavedName(initialItem.name);
     }
   }, [initialItem]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const logQuickbooksAuthDebug = async () => {
+      try {
+        const currentUser = firebase.auth().currentUser;
+        const tokenResult = currentUser
+          ? await currentUser.getIdTokenResult()
+          : null;
+
+        if (isCancelled) return;
+
+        console.group("[Quickbooks Debug] Access Check");
+        console.log("route item id:", id);
+        console.log("authUser (context):", authUser);
+        console.log("authUser.role:", authUser?.role || null);
+        console.log("authUser.isAdmin:", authUser?.isAdmin ?? null);
+        console.log("computed isAdminUser:", isAdminUser);
+        console.log(
+          "firebase.currentUser.email:",
+          currentUser?.email || null
+        );
+        console.log("firebase token claims:", tokenResult?.claims || null);
+        console.log("firebase token claims.role:", tokenResult?.claims?.role ?? null);
+        console.log(
+          "firebase token claims.isAdmin:",
+          tokenResult?.claims?.isAdmin ?? null
+        );
+        if (!isAdminUser) {
+          console.warn(
+            "Quickbooks button is disabled because computed isAdminUser is false."
+          );
+        }
+        console.groupEnd();
+      } catch (debugError) {
+        console.error("[Quickbooks Debug] Failed to read auth claims:", debugError);
+      }
+    };
+
+    logQuickbooksAuthDebug();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [authUser, id, isAdminUser]);
 
 
 
@@ -289,22 +349,36 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [Err, setErr] = useState("N/A");
   const [showDescModal, setShowDescModal] = useState(false);
   const [showWoModal, setShowWoModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
+  const [showChildModal, setShowChildModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
-  const [selectedClient, setSelectedClient] = useState(null);
+  const cameraContainerRef = useRef(null);
 
   const [selectedParent, setSelectedParent] = useState(null);
+  const [selectedChildren, setSelectedChildren] = useState([]);
+  const [originalChildIds, setOriginalChildIds] = useState([]);
   const [TheMachine, setTheMachine] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
-  const [search, setSearch] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
+  const [machineSearch, setMachineSearch] = useState("");
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showCreateMachineModal, setShowCreateMachineModal] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: "",
+    location: "",
+  });
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("environment");
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [addToWebsite, setAddToWebsite] = useState(false);
   const [machinePick, setMachinePick] = useState(false);
   const [freqItem, setFreqItem] = useState(0);
@@ -312,6 +386,8 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [machineFrequency, setMachineFrequency] = useState(0);
   // State for the extra (dimensions/price/DOM/PO Number) section.
   const [showExtra, setShowExtra] = useState(false);
+  const [bluefolderLoading, setBluefolderLoading] = useState(false);
+  const [slackLoadingKey, setSlackLoadingKey] = useState("");
 
   const [trackerCatalog, setTrackerCatalog] = useState({
     modalities: [],
@@ -330,6 +406,94 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [selectedModalities, setSelectedModalities] = useState([]);
   const [selectedOems, setSelectedOems] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
+  const [selectionHistory, setSelectionHistory] = useState(
+    Array.isArray(initialItem?.selectionHistory)
+      ? initialItem.selectionHistory
+      : []
+  );
+  const cameraVideoConstraints = useMemo(
+    () => ({
+      facingMode: { ideal: cameraFacing },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30, max: 60 },
+    }),
+    [cameraFacing]
+  );
+
+  const getMostRecentWorkOrderEntry = (orders = []) => {
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return { workOrder: "", date: "" };
+    }
+
+    let bestIndex = 0;
+    let bestParsedDate = Date.parse(orders[0]?.date || "");
+    let bestHasDate = Number.isFinite(bestParsedDate);
+
+    for (let index = 1; index < orders.length; index++) {
+      const parsedDate = Date.parse(orders[index]?.date || "");
+      const hasDate = Number.isFinite(parsedDate);
+
+      if (hasDate && !bestHasDate) {
+        bestIndex = index;
+        bestParsedDate = parsedDate;
+        bestHasDate = true;
+        continue;
+      }
+
+      if (hasDate && bestHasDate && parsedDate > bestParsedDate) {
+        bestIndex = index;
+        bestParsedDate = parsedDate;
+        continue;
+      }
+
+      if (!hasDate && !bestHasDate) {
+        // If neither entry has a date, treat the latest row in the list as newest.
+        bestIndex = index;
+      }
+    }
+
+    return orders[bestIndex] || { workOrder: "", date: "" };
+  };
+
+  const buildSelectionHistorySnapshot = () => {
+    const latestWorkOrder = getMostRecentWorkOrderEntry(workOrders);
+    return {
+      fromClientId: selectedClientFrom?.id || "",
+      fromClientName: (selectedClientFrom?.name || "").trim(),
+      fromMachineId: selectedMachine?.id || "",
+      fromMachineName: (selectedMachine?.name || "").trim(),
+      currentClientId: selectedClientCurrent?.id || "",
+      currentClientName: (selectedClientCurrent?.name || "").trim(),
+      currentMachineId: selectedCurrentMachine?.id || "",
+      currentMachineName: (selectedCurrentMachine?.name || "").trim(),
+      workOrder: (latestWorkOrder?.workOrder || "").trim(),
+    };
+  };
+
+  const hasSelectionSnapshotValues = (snapshot) =>
+    [
+      snapshot?.fromClientId,
+      snapshot?.fromClientName,
+      snapshot?.fromMachineId,
+      snapshot?.fromMachineName,
+      snapshot?.currentClientId,
+      snapshot?.currentClientName,
+      snapshot?.currentMachineId,
+      snapshot?.currentMachineName,
+      snapshot?.workOrder,
+    ].some((value) => String(value || "").trim() !== "");
+
+  const areSelectionSnapshotsEqual = (a, b) =>
+    a?.fromClientId === b?.fromClientId &&
+    a?.fromClientName === b?.fromClientName &&
+    a?.fromMachineId === b?.fromMachineId &&
+    a?.fromMachineName === b?.fromMachineName &&
+    a?.currentClientId === b?.currentClientId &&
+    a?.currentClientName === b?.currentClientName &&
+    a?.currentMachineId === b?.currentMachineId &&
+    a?.currentMachineName === b?.currentMachineName &&
+    a?.workOrder === b?.workOrder;
 
   const applyMergedMachineFields = (merged, { force = false } = {}) => {
     if (!merged) return;
@@ -372,6 +536,13 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [showNewLocalModalFrom, setShowNewLocalModalFrom] = useState(false);
   const [showNewLocalModalCurrent, setShowNewLocalModalCurrent] =
     useState(false);
+
+  const createEmptyLocal = () => ({
+    region: "",
+    section: { letter: "", number: "" },
+    bin: "",
+    pallet: "",
+  });
 
   // when the From-client changes, clear any old local-loc
   // useEffect(() => {
@@ -488,18 +659,33 @@ const handleSendToInflow = async () => {
   // }, [TheMachine, selectedCurrentMachine, selectedMachine]);
 
   // whenever the “From” client changes:
+  const isSocalWarehouseClient = (client) =>
+    client?.name?.toLowerCase() === "socalwarehouse";
+
+  const isInteriorSocalMachine = (machine) =>
+    machine?.name?.toLowerCase() === "interior socal";
+
+  const shouldShowLocalLocation = (client, machine, localLoc = "") =>
+    isSocalWarehouseClient(client) ||
+    isInteriorSocalMachine(machine) ||
+    Boolean(localLoc);
+
   useEffect(() => {
     setShowLocalLocFrom(
-      selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+      shouldShowLocalLocation(selectedClientFrom, selectedMachine, localLocFrom)
     );
-  }, [selectedClientFrom]);
+  }, [selectedClientFrom, selectedMachine, localLocFrom]);
 
   // whenever the “Current” client changes:
   useEffect(() => {
     setShowLocalLocCurrent(
-      selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+      shouldShowLocalLocation(
+        selectedClientCurrent,
+        selectedCurrentMachine,
+        localLocCurrent
+      )
     );
-  }, [selectedClientCurrent]);
+  }, [selectedClientCurrent, selectedCurrentMachine, localLocCurrent]);
 
   const loadClients = async () => {
     if (clientsLoaded || clientsLoading) return;
@@ -568,7 +754,20 @@ const handleSendToInflow = async () => {
     [modelOptions, selectedModels]
   );
 
-  // Tracker updates are only performed on Save.
+  const canManageModels =
+    !trackerLoading && selectedModalities.length > 0 && selectedOems.length > 0;
+
+  const handleOemSelectionChange = useCallback((nextSelection) => {
+    setSelectedOems(nextSelection || []);
+    setSelectedModels([]);
+  }, []);
+
+  const handleModalitySelectionChange = useCallback((nextSelection) => {
+    setSelectedModalities(nextSelection || []);
+    setSelectedModels([]);
+  }, []);
+
+  // Tracker list mutations can happen inline (add/delete), while general sync also runs on Save.
 
   const handleDeleteOemOption = useCallback(
     async (oem) => {
@@ -610,6 +809,52 @@ const handleSendToInflow = async () => {
     },
     [selectedModalities, selectedOems, trackerCatalog, loadTracker]
   );
+
+  const handleAddModelOption = useCallback(async (incomingModel) => {
+    if (!canManageModels) return;
+
+    const normalizedModel = String(incomingModel || "").trim();
+    if (!normalizedModel) return;
+
+    const alreadyExists = modelOptionsForUI.some(
+      (value) =>
+        String(value || "").trim().toLowerCase() ===
+        normalizedModel.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setSelectedModels((prev) =>
+        uniqueSelection([...normalizeSelection(prev), normalizedModel])
+      );
+      return true;
+    }
+
+    try {
+      await syncTrackerFromSelections({
+        selections: {
+          modalities: selectedModalities,
+          oems: selectedOems,
+          models: [normalizedModel],
+        },
+        catalog: trackerCatalog,
+      });
+      setSelectedModels((prev) =>
+        uniqueSelection([...normalizeSelection(prev), normalizedModel])
+      );
+      loadTracker(true);
+      return true;
+    } catch (error) {
+      console.error("Failed to add model:", error);
+      return false;
+    }
+  }, [
+    canManageModels,
+    modelOptionsForUI,
+    selectedModalities,
+    selectedOems,
+    trackerCatalog,
+    loadTracker,
+  ]);
 
   const loadPnSnOptions = async () => {
     if (pnSnLoaded || pnSnLoading) return;
@@ -659,7 +904,9 @@ const handleSendToInflow = async () => {
   ) {
     const machineDoc = await machineRef.get();
     if (machineDoc.exists) {
-      const machineData = machineDoc.data();
+      const machineData = stripAssociatedPartsFromMachineSnapshot(
+        machineDoc.data() || {}
+      );
       setMachine({ id: machineDoc.id, ...machineData });
 
       // Determine if the machine is "interior socal"
@@ -695,11 +942,8 @@ const handleSendToInflow = async () => {
         setShowLocalLocCurrent(shouldShow);
       }
 
-      if (machineData.client && typeof machineData.client.get === "function") {
-        const clientDoc = await machineData.client.get();
-        if (clientDoc.exists) {
-          setClient({ id: clientDoc.id, ...clientDoc.data() });
-        }
+      if (clientDoc && clientDoc.exists) {
+        setClient({ id: clientDoc.id, ...clientDoc.data() });
       }
     }
   }
@@ -708,22 +952,39 @@ const handleSendToInflow = async () => {
     const id = initialItem?.id || idFromRouter; // <- make sure id exists here
     if (!id) return;
     setIsLoading(true);
+    const loadStartedAt = Date.now();
     const db = firebase.firestore();
     try {
       const doc = await db.collection("Test").doc(id).get();
       if (doc.exists) {
         console.log("test");
-        const data = doc.data();
+        const data = stripEmbeddedMachineAssociations(doc.data() || {});
         const normalizedPN = Array.isArray(data.pn) ? data.pn : [data.pn];
         const normalizedSN = Array.isArray(data.sn) ? data.sn : [data.sn];
+        const resolvedLocalSn = String(
+          data.localSN || data.local_sn || id || ""
+        ).trim();
         setItems({
           ...data,
           pn: normalizedPN,
           sn: normalizedSN,
+          localSN: resolvedLocalSn,
         });
+        if (!String(data.localSN || "").trim() && resolvedLocalSn) {
+          db
+            .collection("Test")
+            .doc(id)
+            .set({ localSN: resolvedLocalSn, local_sn: resolvedLocalSn }, { merge: true })
+            .catch((err) => {
+              console.error("Failed to backfill localSN:", err);
+            });
+        }
         setSavedName(data.name || "");
         setDescriptions(data.descriptions || []);
         setWorkOrders(data.workOrders || []);
+        setSelectionHistory(
+          Array.isArray(data.selectionHistory) ? data.selectionHistory : []
+        );
         if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
         if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
         if (data.DOM) {
@@ -741,23 +1002,32 @@ const handleSendToInflow = async () => {
         setItems((prev) => ({ ...prev, poNumber: data.poNumber }));
       }
 
-      if (data.ClientFrom) {
-        const clientFromDoc = await data.ClientFrom.get();
-        if (clientFromDoc.exists) {
-          setSelectedClientFrom({
-            id: clientFromDoc.id,
-            ...clientFromDoc.data(),
-          });
-        }
+      const [clientFromDoc, clientCurrentDoc] = await Promise.all([
+        data.ClientFrom && typeof data.ClientFrom.get === "function"
+          ? data.ClientFrom.get()
+          : Promise.resolve(null),
+        data.ClientCurrent && typeof data.ClientCurrent.get === "function"
+          ? data.ClientCurrent.get()
+          : Promise.resolve(null),
+      ]);
+      const resolvedClientFromName = clientFromDoc?.exists
+        ? clientFromDoc.data()?.name
+        : null;
+      const resolvedClientCurrentName = clientCurrentDoc?.exists
+        ? clientCurrentDoc.data()?.name
+        : null;
+
+      if (clientFromDoc?.exists) {
+        setSelectedClientFrom({
+          id: clientFromDoc.id,
+          ...clientFromDoc.data(),
+        });
       }
-      if (data.ClientCurrent) {
-        const clientCurrentDoc = await data.ClientCurrent.get();
-        if (clientCurrentDoc.exists) {
-          setSelectedClientCurrent({
-            id: clientCurrentDoc.id,
-            ...clientCurrentDoc.data(),
-          });
-        }
+      if (clientCurrentDoc?.exists) {
+        setSelectedClientCurrent({
+          id: clientCurrentDoc.id,
+          ...clientCurrentDoc.data(),
+        });
       }
 
       if (
@@ -794,15 +1064,26 @@ const handleSendToInflow = async () => {
       let machineFromData = null;
       let machineCurrentData = null;
 
-      if (data.MachineFrom) {
-        const doc = await data.MachineFrom.get();
-        machineFromData = doc.exists ? doc.data() : null;
-        setSelectedMachine({ id: doc.id, ...doc.data() });
+      const [machineFromDoc, machineCurrentDoc] = await Promise.all([
+        data.MachineFrom && typeof data.MachineFrom.get === "function"
+          ? data.MachineFrom.get()
+          : Promise.resolve(null),
+        data.MachineCurrent && typeof data.MachineCurrent.get === "function"
+          ? data.MachineCurrent.get()
+          : Promise.resolve(null),
+      ]);
+
+      if (machineFromDoc?.exists) {
+        machineFromData = stripAssociatedPartsFromMachineSnapshot(
+          machineFromDoc.data() || {}
+        );
+        setSelectedMachine({ id: machineFromDoc.id, ...machineFromData });
       }
-      if (data.MachineCurrent) {
-        const doc = await data.MachineCurrent.get();
-        machineCurrentData = doc.exists ? doc.data() : null;
-        setSelectedCurrentMachine({ id: doc.id, ...doc.data() });
+      if (machineCurrentDoc?.exists) {
+        machineCurrentData = stripAssociatedPartsFromMachineSnapshot(
+          machineCurrentDoc.data() || {}
+        );
+        setSelectedCurrentMachine({ id: machineCurrentDoc.id, ...machineCurrentData });
       }
       const nameFrom = machineFromData?.name?.toLowerCase();
       const nameCurrent = machineCurrentData?.name?.toLowerCase();
@@ -817,12 +1098,12 @@ const handleSendToInflow = async () => {
       // new: combine machine-name OR client-name check, keep existing-data
       setShowLocalLocFrom(
         nameFrom === "interior socal" ||
-          selectedClientFrom?.name?.toLowerCase() === "socalwarehouse" ||
+          resolvedClientFromName?.toLowerCase() === "socalwarehouse" ||
           Boolean(data.localLocFrom)
       );
       setShowLocalLocCurrent(
         nameCurrent === "interior socal" ||
-          selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse" ||
+          resolvedClientCurrentName?.toLowerCase() === "socalwarehouse" ||
           Boolean(data.localLocCurrent)
       );
 
@@ -868,10 +1149,26 @@ const handleSendToInflow = async () => {
       //   setShowLocalLocCurrent(true);
       // }
 
-      if (data.Parent) {
-        const parentDoc = await data.Parent.get();
+      const currentItemRef = db.collection("Test").doc(id);
+      const [parentDoc, childrenSnap] = await Promise.all([
+        data.Parent && typeof data.Parent.get === "function"
+          ? data.Parent.get()
+          : Promise.resolve(null),
+        db.collection("Test").where("Parent", "==", currentItemRef).get(),
+      ]);
+      if (parentDoc?.exists) {
         setSelectedParent({ id: parentDoc.id, ...parentDoc.data() });
+      } else {
+        setSelectedParent(null);
       }
+      const children = childrenSnap.docs
+        .filter((childDoc) => childDoc.id !== id)
+        .map((childDoc) => ({
+          id: childDoc.id,
+          ...childDoc.data(),
+        }));
+      setSelectedChildren(children);
+      setOriginalChildIds(children.map((child) => child.id));
 
       // Priority auto‑population of machine fields.
       // const updatedFields = updateMachineFields(storedMachine, selectedCurrentMachine, selectedMachine);
@@ -880,6 +1177,18 @@ const handleSendToInflow = async () => {
       // setModality(updatedFields.modality);
       // setModel(updatedFields.model);
 
+        const loadMs = Date.now() - loadStartedAt;
+        if (loadMs > 1500) {
+          console.warn("[item][slow-load]", {
+            id,
+            loadMs,
+            hasClientFrom: Boolean(data.ClientFrom),
+            hasClientCurrent: Boolean(data.ClientCurrent),
+            hasMachineFrom: Boolean(data.MachineFrom),
+            hasMachineCurrent: Boolean(data.MachineCurrent),
+            hasParent: Boolean(data.Parent),
+          });
+        }
         setIsLoading(false);
         Promise.all([
           fetchPhotos(id),
@@ -932,7 +1241,7 @@ const handleSendToInflow = async () => {
     const db = firebase.firestore();
     const doc = await db.collection("Machine").doc(machineId).get();
     if (doc.exists) {
-      const machineData = doc.data();
+      const machineData = stripAssociatedPartsFromMachineSnapshot(doc.data() || {});
       setTheMachine(machineData);
       // re-merge all three sources with correct priority:
       const merged = updateMachineFields(
@@ -986,56 +1295,330 @@ const handleSendToInflow = async () => {
   const handleShowDescModal = () => setShowDescModal(true);
   const handleCloseWoModal = () => setShowWoModal(false);
   const handleShowWoModal = () => setShowWoModal(true);
-  const handleCloseClientModal = () => setShowClientModal(false);
+  const handleCloseHistoryModal = () => setShowHistoryModal(false);
+  const handleShowHistoryModal = () => setShowHistoryModal(true);
+  const handleQuickbooksButton = () => {
+    console.log("[Quickbooks Debug] Quickbooks button clicked", {
+      id,
+      authUser,
+      isAdminUser,
+    });
+    alert("test");
+  };
+  const handleCloseClientModal = () => {
+    setShowClientModal(false);
+    setClientSearch("");
+  };
   const handleShowClientModal = async () => {
     await loadClients();
+    setClientSearch("");
     setShowClientModal(true);
   };
-  const handleCloseMachineModal = () => setShowMachineModal(false);
+  const handleCloseMachineModal = () => {
+    setShowMachineModal(false);
+    setMachineSearch("");
+  };
   const handleShowMachineModal = () => {
     setShowMachineModal(true);
+    setMachineSearch("");
     setShowClientModal(false);
+  };
+  const handleCloseAddClientModal = () => {
+    setShowAddClientModal(false);
+    setNewClient({ name: "", location: "" });
+  };
+  const handleShowAddClientModal = () => {
+    setShowAddClientModal(true);
+  };
+  const handleCloseCreateMachineModal = () => {
+    setShowCreateMachineModal(false);
+  };
+  const handleShowCreateMachineModal = () => {
+    const activeClient = machinePick ? selectedClientFrom : selectedClientCurrent;
+    if (!activeClient?.id) {
+      setErr("Please select a client before creating a machine.");
+      setShowErr(true);
+      return;
+    }
+    setShowCreateMachineModal(true);
   };
   const handleCloseParentModal = () => setShowParentModal(false);
   const handleShowParentModal = () => setShowParentModal(true);
+  const handleCloseChildModal = () => setShowChildModal(false);
+  const handleShowChildModal = () => setShowChildModal(true);
 
-  // When a client is selected from the client table.
-  const handleClientInfo = async (clientId) => {
-    // Clear any previously selected machine and local loc info for this branch.
-    if (machinePick) {
-      setSelectedMachine(null);
-      setShowLocalLocFrom(false);
-    } else {
-      setSelectedCurrentMachine(null);
-      setShowLocalLocCurrent(false);
+  const handleConfirmParentSelection = async (items = []) => {
+    const nextParent = items[0] || null;
+    setSelectedParent(nextParent);
+
+    if (!id) return;
+    const db = firebase.firestore();
+    const itemRef = db.collection("Test").doc(id);
+
+    try {
+      if (nextParent && nextParent.id) {
+        await itemRef.set(
+          { Parent: db.collection("Test").doc(nextParent.id) },
+          { merge: true }
+        );
+      } else {
+        await itemRef
+          .update({ Parent: firebase.firestore.FieldValue.delete() })
+          .catch((error) => {
+            if (error?.code === "not-found") return;
+            throw error;
+          });
+      }
+    } catch (error) {
+      console.error("Error updating parent relation:", error);
+      setErr("Failed to update parent relation.");
+      setShowErr(true);
+    }
+  };
+
+  const handleConfirmChildrenSelection = async (items = []) => {
+    const safeItemId = String(id || "").trim();
+    const dedupedChildren = Array.from(
+      new Set((items || []).map((child) => String(child?.id || "").trim()))
+    )
+      .filter(Boolean)
+      .filter((childId) => childId !== safeItemId)
+      .map((childId) => (items || []).find((child) => child?.id === childId))
+      .filter(Boolean);
+
+    setSelectedChildren(dedupedChildren);
+
+    if (!safeItemId) {
+      setOriginalChildIds(dedupedChildren.map((child) => child.id));
+      return;
     }
 
     const db = firebase.firestore();
-    const clientDoc = await db.collection("Client").doc(clientId).get();
-    if (clientDoc.exists) {
+    const parentRef = db.collection("Test").doc(safeItemId);
+    const nextChildIds = dedupedChildren.map((child) => child.id);
+    const removedChildIds = (originalChildIds || []).filter(
+      (childId) => !nextChildIds.includes(childId)
+    );
+
+    try {
+      const applyParentPromises = nextChildIds.map((childId) =>
+        db.collection("Test").doc(childId).set({ Parent: parentRef }, { merge: true })
+      );
+      const clearParentPromises = removedChildIds.map((childId) =>
+        db
+          .collection("Test")
+          .doc(childId)
+          .update({ Parent: firebase.firestore.FieldValue.delete() })
+          .catch((error) => {
+            if (error?.code === "not-found") return;
+            throw error;
+          })
+      );
+      await Promise.all([...applyParentPromises, ...clearParentPromises]);
+      setOriginalChildIds(nextChildIds);
+    } catch (error) {
+      console.error("Error updating child relations:", error);
+      setErr("Failed to update child relations.");
+      setShowErr(true);
+    }
+  };
+
+  const handleClearClientSelection = () => {
+    const isFromBranch = machinePick;
+
+    if (isFromBranch) {
+      setSelectedClientFrom(null);
+      setSelectedMachine(null);
+      setShowLocalLocFrom(false);
+      setLocalLocFrom("");
+      setNewLocalFrom(createEmptyLocal());
+    } else {
+      setSelectedClientCurrent(null);
+      setSelectedCurrentMachine(null);
+      setShowLocalLocCurrent(false);
+      setLocalLocCurrent("");
+      setNewLocalCurrent(createEmptyLocal());
+    }
+
+    setMachineOptions([]);
+    handleCloseClientModal();
+  };
+
+  // When a client is selected from the client table.
+  const handleClientInfo = async (clientId) => {
+    const isFromBranch = machinePick;
+    if (!clientId) {
+      handleClearClientSelection();
+      return;
+    }
+
+    // Clear any previously selected machine and local loc info for this branch.
+    if (isFromBranch) {
+      setSelectedMachine(null);
+      setShowLocalLocFrom(false);
+      setLocalLocFrom("");
+      setNewLocalFrom(createEmptyLocal());
+    } else {
+      setSelectedCurrentMachine(null);
+      setShowLocalLocCurrent(false);
+      setLocalLocCurrent("");
+      setNewLocalCurrent(createEmptyLocal());
+    }
+
+    try {
+      const db = firebase.firestore();
+      const clientDoc = await db.collection("Client").doc(clientId).get();
+      if (!clientDoc.exists) return;
+
       const clientData = { id: clientDoc.id, ...clientDoc.data() };
-      if (machinePick) {
+      if (isFromBranch) {
         setSelectedClientFrom(clientData);
       } else {
         setSelectedClientCurrent(clientData);
       }
-      // after setting selectedClientFrom/Current:
+
       if (clientData.name === "SoCalWarehouse") {
-        if (machinePick) setShowLocalLocFrom(true);
+        if (isFromBranch) setShowLocalLocFrom(true);
         else setShowLocalLocCurrent(true);
       }
-      // Fetch machines for this client:
-      const machinePromises = clientData.machines.map((machineRef) =>
-        machineRef.get()
-      );
+
+      const machineRefs = Array.isArray(clientData.machines)
+        ? clientData.machines
+        : [];
+      const machinePromises = machineRefs
+        .filter((machineRef) => machineRef && typeof machineRef.get === "function")
+        .map((machineRef) => machineRef.get());
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
         id: machineDoc.id,
-        ...machineDoc.data(),
+        ...stripAssociatedPartsFromMachineSnapshot(machineDoc.data() || {}),
       }));
       setMachineOptions(machines);
-      // Close the client modal
       handleCloseClientModal();
+    } catch (error) {
+      console.error("Error selecting client:", error);
+      setErr("Failed to select client.");
+      setShowErr(true);
+    }
+  };
+
+  const handleCreateClientFromModal = async () => {
+    const name = (newClient.name || "").trim();
+    const local = (newClient.location || "").trim();
+    const isFromBranch = machinePick;
+
+    if (!name) {
+      setErr("Client name is required.");
+      setShowErr(true);
+      return;
+    }
+
+    setSavingClient(true);
+    try {
+      const db = firebase.firestore();
+      const clientId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
+      const payload = {
+        name,
+        local,
+        machines: [],
+      };
+
+      await db.collection("Client").doc(clientId).set(payload, { merge: true });
+
+      const createdClient = { id: clientId, ...payload };
+      setClients((prev) => {
+        const next = [...prev.filter((client) => client.id !== clientId), createdClient];
+        return next.sort((a, b) =>
+          String(a?.name || "").localeCompare(String(b?.name || ""))
+        );
+      });
+
+      if (isFromBranch) {
+        setSelectedClientFrom(createdClient);
+        setSelectedMachine(null);
+        setShowLocalLocFrom(name.toLowerCase() === "socalwarehouse");
+        setLocalLocFrom("");
+        setNewLocalFrom(createEmptyLocal());
+      } else {
+        setSelectedClientCurrent(createdClient);
+        setSelectedCurrentMachine(null);
+        setShowLocalLocCurrent(name.toLowerCase() === "socalwarehouse");
+        setLocalLocCurrent("");
+        setNewLocalCurrent(createEmptyLocal());
+      }
+      setMachineOptions([]);
+      handleCloseAddClientModal();
+      handleCloseClientModal();
+    } catch (error) {
+      console.error("Error creating client:", error);
+      setErr("Failed to create client.");
+      setShowErr(true);
+    } finally {
+      setSavingClient(false);
+    }
+  };
+
+  const handleCreateMachineForClient = async (newMachine) => {
+    const isFromBranch = machinePick;
+    const activeClient = isFromBranch ? selectedClientFrom : selectedClientCurrent;
+    if (!activeClient?.id) {
+      setErr("Please select a client before creating a machine.");
+      setShowErr(true);
+      return;
+    }
+
+    try {
+      const db = firebase.firestore();
+      const machineId = `AIS${Math.floor(10000 + Math.random() * 90000)}`;
+      const machineRef = db.collection("Machine").doc(machineId);
+      const clientRef = db.collection("Client").doc(activeClient.id);
+      const machinePayload = {
+        ...newMachine,
+        id: machineId,
+        client: clientRef,
+      };
+
+      await machineRef.set(machinePayload);
+      await clientRef.set(
+        {
+          machines: firebase.firestore.FieldValue.arrayUnion(machineRef),
+        },
+        { merge: true }
+      );
+
+      const createdMachine = { id: machineId, ...newMachine };
+      setMachineOptions((prev) => [
+        ...prev.filter((machine) => machine.id !== machineId),
+        createdMachine,
+      ]);
+      setShowCreateMachineModal(false);
+      handleSetSelectedMachine(createdMachine);
+    } catch (error) {
+      console.error("Error creating machine:", error);
+      setErr("Failed to create machine.");
+      setShowErr(true);
+    }
+  };
+
+  const handleDeleteHistoryEntry = async (indexToDelete) => {
+    const nextHistory = (selectionHistory || []).filter(
+      (_, index) => index !== indexToDelete
+    );
+    setSelectionHistory(nextHistory);
+
+    const itemId = String(id || "").trim();
+    if (!itemId) return;
+
+    try {
+      const db = firebase.firestore();
+      await db
+        .collection("Test")
+        .doc(itemId)
+        .set({ selectionHistory: nextHistory }, { merge: true });
+    } catch (error) {
+      console.error("Error deleting history entry:", error);
+      setErr("Failed to delete history entry.");
+      setShowErr(true);
     }
   };
 
@@ -1125,12 +1708,30 @@ const handleSendToInflow = async () => {
       model: storedModel,
       Model: storedModel,
     };
+    const currentSelectionSnapshot = buildSelectionHistorySnapshot();
+    const safeHistory = Array.isArray(selectionHistory) ? selectionHistory : [];
+    const lastHistoryEntry =
+      safeHistory.length > 0 ? safeHistory[safeHistory.length - 1] : null;
+    const shouldAppendHistory =
+      hasSelectionSnapshotValues(currentSelectionSnapshot) &&
+      !areSelectionSnapshotsEqual(lastHistoryEntry, currentSelectionSnapshot);
+    const nextSelectionHistory = shouldAppendHistory
+      ? [
+          ...safeHistory,
+          {
+            ...currentSelectionSnapshot,
+            savedAt: new Date().toISOString(),
+          },
+        ]
+      : safeHistory;
 
     const formattedItems = { ...items, descriptions, workOrders };
+    formattedItems.selectionHistory = nextSelectionHistory;
     // Remove any unused fields.
     formattedItems.status = items.status || "";
     formattedItems.nameLower = (items.name || "").toLowerCase();
     formattedItems.nameTokens = buildNameTokens(items.name);
+    formattedItems.workOrderTokens = buildWorkOrderTokens(workOrders);
     formattedItems.DOM = DOM; // Date of Manufacture
     formattedItems.localLocFrom = localLocFrom || "";
     formattedItems.localLocCurrent = localLocCurrent || "";
@@ -1138,7 +1739,7 @@ const handleSendToInflow = async () => {
     formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
-    formattedItems.TheMachine = machineData || {};
+    formattedItems.TheMachine = buildMachineSummary(machineData);
     formattedItems.addedToWebsite = addToWebsite;
 
     // NEW: Add the user's email under the field "user"
@@ -1233,6 +1834,53 @@ const handleSendToInflow = async () => {
       formattedItems.newLocalCurrent = currentDetails;
     }
 
+    const syncChildrenForItem = async (targetDocId) => {
+      const safeTargetId = String(targetDocId || "").trim();
+      if (!safeTargetId) return;
+      const parentRef = db.collection("Test").doc(safeTargetId);
+      const nextChildIds = Array.from(
+        new Set(
+          (selectedChildren || [])
+            .map((child) => String(child?.id || "").trim())
+            .filter(Boolean)
+        )
+      ).filter((childId) => childId !== safeTargetId);
+      const previousChildIds = Array.from(
+        new Set((originalChildIds || []).map((childId) => String(childId || "").trim()))
+      ).filter(Boolean);
+      const removedChildIds = previousChildIds.filter(
+        (childId) => !nextChildIds.includes(childId)
+      );
+
+      const applyParentPromises = nextChildIds.map((childId) =>
+        db.collection("Test").doc(childId).set({ Parent: parentRef }, { merge: true })
+      );
+      const clearParentPromises = removedChildIds.map((childId) =>
+        db
+          .collection("Test")
+          .doc(childId)
+          .update({ Parent: firebase.firestore.FieldValue.delete() })
+          .catch((error) => {
+            if (error?.code === "not-found") return;
+            throw error;
+          })
+      );
+
+      if (applyParentPromises.length || clearParentPromises.length) {
+        await Promise.all([...applyParentPromises, ...clearParentPromises]);
+      }
+      setOriginalChildIds(nextChildIds);
+    };
+
+    const withLocalSn = (payload, value) => {
+      const localSn = String(value || "").trim();
+      return {
+        ...payload,
+        localSN: localSn,
+        local_sn: localSn,
+      };
+    };
+
     let docId = id;
     try {
       if (docId) {
@@ -1241,34 +1889,29 @@ const handleSendToInflow = async () => {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : docId;
+        const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
           // Migrate: Create a new document with the newDocId.
-          await db.collection("Test").doc(newDocId).set(formattedItems);
+          await db.collection("Test").doc(newDocId).set(payloadWithLocalSn);
 
           if (selectedMachine && selectedMachine.id) {
-            const machineRef = db.collection("Machine").doc(selectedMachine.id);
-            const machineDoc = await machineRef.get();
-            if (machineDoc.exists) {
-              await machineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(newDocId)
-                ),
-              });
-            }
+            await addAssociatedPartToMachine({
+              db,
+              firebase,
+              machineId: selectedMachine.id,
+              partId: newDocId,
+              machineData: selectedMachine,
+            });
           }
 
           if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            const currentMachineRef = db
-              .collection("Machine")
-              .doc(selectedCurrentMachine.id);
-            const currentMachineDoc = await currentMachineRef.get();
-            if (currentMachineDoc.exists) {
-              await currentMachineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(newDocId)
-                ),
-              });
-            }
+            await addAssociatedPartToMachine({
+              db,
+              firebase,
+              machineId: selectedCurrentMachine.id,
+              partId: newDocId,
+              machineData: selectedCurrentMachine,
+            });
           }
           // Delete the old document.
           await db.collection("Test").doc(docId).delete();
@@ -1276,33 +1919,30 @@ const handleSendToInflow = async () => {
           docId = newDocId;
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
-          const cleanFormattedItems = shallowClean(formattedItems);
+          const cleanFormattedItems = shallowClean(payloadWithLocalSn);
+          if (!selectedParent || !selectedParent.id) {
+            cleanFormattedItems.Parent = firebase.firestore.FieldValue.delete();
+          }
           await db.collection("Test").doc(docId).update(cleanFormattedItems);
 
           if (selectedMachine && selectedMachine.id) {
-            const machineRef = db.collection("Machine").doc(selectedMachine.id);
-            const machineDoc = await machineRef.get();
-            if (machineDoc.exists) {
-              await machineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(docId)
-                ),
-              });
-            }
+            await addAssociatedPartToMachine({
+              db,
+              firebase,
+              machineId: selectedMachine.id,
+              partId: docId,
+              machineData: selectedMachine,
+            });
           }
 
           if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            const currentMachineRef = db
-              .collection("Machine")
-              .doc(selectedCurrentMachine.id);
-            const currentMachineDoc = await currentMachineRef.get();
-            if (currentMachineDoc.exists) {
-              await currentMachineRef.update({
-                associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                  db.collection("Test").doc(docId)
-                ),
-              });
-            }
+            await addAssociatedPartToMachine({
+              db,
+              firebase,
+              machineId: selectedCurrentMachine.id,
+              partId: docId,
+              machineData: selectedCurrentMachine,
+            });
           }
         }
       } else {
@@ -1311,34 +1951,31 @@ const handleSendToInflow = async () => {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : generateCustomID();
-        await db.collection("Test").doc(docId).set(formattedItems);
+        const payloadWithLocalSn = withLocalSn(formattedItems, docId);
+        await db.collection("Test").doc(docId).set(payloadWithLocalSn);
 
         if (selectedMachine && selectedMachine.id) {
-          const machineRef = db.collection("Machine").doc(selectedMachine.id);
-          const machineDoc = await machineRef.get();
-          if (machineDoc.exists) {
-            await machineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
-          }
+          await addAssociatedPartToMachine({
+            db,
+            firebase,
+            machineId: selectedMachine.id,
+            partId: docId,
+            machineData: selectedMachine,
+          });
         }
 
         if (selectedCurrentMachine && selectedCurrentMachine.id) {
-          const currentMachineRef = db
-            .collection("Machine")
-            .doc(selectedCurrentMachine.id);
-          const currentMachineDoc = await currentMachineRef.get();
-          if (currentMachineDoc.exists) {
-            await currentMachineRef.update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(docId)
-              ),
-            });
-          }
+          await addAssociatedPartToMachine({
+            db,
+            firebase,
+            machineId: selectedCurrentMachine.id,
+            partId: docId,
+            machineData: selectedCurrentMachine,
+          });
         }
       }
+      await syncChildrenForItem(docId);
+      setItems((prev) => ({ ...prev, localSN: docId }));
       // Update Tracker only on Save.
       try {
         const selections = {
@@ -1362,6 +1999,7 @@ const handleSendToInflow = async () => {
       console.log("Item saved and associatedParts updated!");
 
       setSavedName(items.name || "");
+      setSelectionHistory(nextSelectionHistory);
 
       // Redirect to the new URL using the new document id.
       router.push(`/NewSearch/item/${docId}`);
@@ -1377,12 +2015,54 @@ const handleSendToInflow = async () => {
   const [showLocalLocFrom, setShowLocalLocFrom] = useState(false);
   const [showLocalLocCurrent, setShowLocalLocCurrent] = useState(false);
 
+  const cloneLocalLocation = (value) => ({
+    region: value?.region || "",
+    section: {
+      letter: value?.section?.letter || "",
+      number: value?.section?.number || "",
+    },
+    bin: value?.bin || "",
+    pallet: value?.pallet || "",
+  });
+
+  const handleSwapFromCurrent = () => {
+    const nextFromClient = selectedClientCurrent;
+    const nextCurrentClient = selectedClientFrom;
+    const nextFromMachine = selectedCurrentMachine;
+    const nextCurrentMachine = selectedMachine;
+    const nextNewLocalFrom = cloneLocalLocation(newLocalCurrent);
+    const nextNewLocalCurrent = cloneLocalLocation(newLocalFrom);
+    const nextLocalLocFrom = localLocCurrent;
+    const nextLocalLocCurrent = localLocFrom;
+
+    setSelectedClientFrom(nextFromClient);
+    setSelectedClientCurrent(nextCurrentClient);
+    setSelectedMachine(nextFromMachine);
+    setSelectedCurrentMachine(nextCurrentMachine);
+    setNewLocalFrom(nextNewLocalFrom);
+    setNewLocalCurrent(nextNewLocalCurrent);
+    setLocalLocFrom(nextLocalLocFrom);
+    setLocalLocCurrent(nextLocalLocCurrent);
+    setShowLocalLocFrom(
+      shouldShowLocalLocation(nextFromClient, nextFromMachine, nextLocalLocFrom)
+    );
+    setShowLocalLocCurrent(
+      shouldShowLocalLocation(
+        nextCurrentClient,
+        nextCurrentMachine,
+        nextLocalLocCurrent
+      )
+    );
+  };
+
   // When a machine is selected from the modal.
   const handleSetSelectedMachine = (machine) => {
+    if (!machine?.id) return;
+    const isFromBranch = machinePick;
     // const condition = (name) => name && name.toLowerCase() === "interior socal";
     const isSocalInterior = machine.name?.toLowerCase() === "interior socal";
 
-    if (machinePick) {
+    if (isFromBranch) {
       setSelectedMachine({ id: machine.id, name: machine.name });
       setShowLocalLocFrom(
         isSocalInterior ||
@@ -1396,8 +2076,7 @@ const handleSendToInflow = async () => {
       );
     }
     fetchMachine(machine.id);
-    // Close the machine modal (assuming you're using showMachineModal to control it)
-    setShowMachineModal(false);
+    handleCloseMachineModal();
   };
 
   const uploadPhotos = async (docID) => {
@@ -1408,7 +2087,7 @@ const handleSendToInflow = async () => {
           `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
         );
         const metadata = {
-          contentType: "image/png",
+          contentType: photos[i]?.file?.type || "image/jpeg",
         };
         await photoRef.put(photos[i].file, metadata);
         const url = await photoRef.getDownloadURL();
@@ -1431,7 +2110,9 @@ const handleSendToInflow = async () => {
       try {
         const machineDoc = await items.Machine.get();
         if (machineDoc.exists) {
-          const machineData = machineDoc.data();
+          const machineData = stripAssociatedPartsFromMachineSnapshot(
+            machineDoc.data() || {}
+          );
           if (
             machineData.client &&
             typeof machineData.client.get === "function"
@@ -1487,15 +2168,30 @@ const handleSendToInflow = async () => {
 
     console.log("Payload for printing:", payload);
     try {
-      const response = await fetch(
-        "https://9d70-174-76-22-138.ngrok-free.app/print-label",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/print/label", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await response.json();
+      if (!response.ok || result?.ok === false) {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map((entry) => `${entry.url} => ${entry.status ?? entry.error}`)
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || `Print proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
       console.log("Print result:", result.status);
 
       if (result.status.includes("successfully.")) {
@@ -1564,6 +2260,7 @@ const handleSendToInflow = async () => {
   };
 
   const handleShowCameraModal = () => {
+    setCapturedPhoto(null);
     setShowCameraModal(true);
   };
 
@@ -1572,10 +2269,19 @@ const handleSendToInflow = async () => {
     setCapturedPhoto(null);
   };
 
-  const handleCapture = (err, result) => {
-    if (result) {
-      setCapturedPhoto(result);
+  const handleCapture = (err) => {
+    if (err) {
+      const errorName = err?.name || "";
+      if (errorName !== "NotFoundException") {
+        console.warn("Camera scan update warning:", err);
+      }
     }
+  };
+
+  const handleCameraError = (error) => {
+    console.error("Camera access error:", error);
+    setErr("Camera access failed. Check browser permissions and try again.");
+    setShowErr(true);
   };
 
   const savePhoto = () => {
@@ -1589,27 +2295,93 @@ const handleSendToInflow = async () => {
 
   const removePhoto = (index) => {
     setPhotos(photos.filter((_, i) => i !== index));
+    if (showPhotoViewer) {
+      const nextLength = Math.max((photos || []).length - 1, 0);
+      if (nextLength === 0) {
+        setShowPhotoViewer(false);
+        setActivePhotoIndex(0);
+      } else if (index <= activePhotoIndex) {
+        setActivePhotoIndex((prev) => Math.max(prev - 1, 0));
+      }
+    }
   };
 
-  const mostRecentWorkOrder =
-    workOrders && workOrders.length > 0
-      ? workOrders.reduce((latest, current) => {
-          const latestDate = new Date(latest.date);
-          const currentDate = new Date(current.date);
-          return currentDate > latestDate ? current : latest;
-        }, workOrders[0])
-      : {};
+  const openPhotoViewer = (index) => {
+    setActivePhotoIndex(index);
+    setShowPhotoViewer(true);
+  };
+
+  const closePhotoViewer = () => {
+    setShowPhotoViewer(false);
+  };
+
+  const showPreviousPhoto = () => {
+    if (!photos.length) return;
+    setActivePhotoIndex((prev) =>
+      prev === 0 ? photos.length - 1 : prev - 1
+    );
+  };
+
+  const showNextPhoto = () => {
+    if (!photos.length) return;
+    setActivePhotoIndex((prev) =>
+      prev === photos.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  useEffect(() => {
+    if (!showPhotoViewer) return;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowPhotoViewer(false);
+      }
+      if (event.key === "ArrowLeft" && photos.length) {
+        setActivePhotoIndex((prev) =>
+          prev === 0 ? photos.length - 1 : prev - 1
+        );
+      }
+      if (event.key === "ArrowRight" && photos.length) {
+        setActivePhotoIndex((prev) =>
+          prev === photos.length - 1 ? 0 : prev + 1
+        );
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPhotoViewer, photos.length]);
+
+  const mostRecentWorkOrder = getMostRecentWorkOrderEntry(workOrders);
 
   const capturePhoto = () => {
-    const video = document.querySelector("video");
+    const cameraContainer = cameraContainerRef.current;
+    const video = cameraContainer
+      ? cameraContainer.querySelector("video")
+      : document.querySelector("video");
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setErr("Camera is not ready yet. Please wait a second and try again.");
+      setShowErr(true);
+      return;
+    }
+
+    const maxEdge = 1920;
+    const largestEdge = Math.max(video.videoWidth, video.videoHeight);
+    const scale = largestEdge > maxEdge ? maxEdge / largestEdge : 1;
+
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const context = canvas.getContext("2d");
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
+      if (!blob) {
+        setErr("Unable to capture photo. Please try again.");
+        setShowErr(true);
+        return;
+      }
       setCapturedPhoto(blob);
-    }, "image/png");
+    }, "image/jpeg", 0.95);
   };
 
   const handleShowInfoModal = async () => {
@@ -1703,22 +2475,45 @@ const handleSendToInflow = async () => {
   }, [showDropdown, showSnDropdown]);
 
   const handleAddNewClient = () => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    router.push(
-      `../client/AIS${randomNum}/addClient?from=item&itemId=${id || ""}`
-    );
+    setNewClient({ name: "", location: "" });
+    handleCloseClientModal();
+    handleShowAddClientModal();
+  };
+
+  const handleClearMachineSelection = () => {
+    const isFromBranch = machinePick;
+    if (isFromBranch) {
+      setSelectedMachine(null);
+      setShowLocalLocFrom(false);
+      setLocalLocFrom("");
+      setNewLocalFrom(createEmptyLocal());
+    } else {
+      setSelectedCurrentMachine(null);
+      setShowLocalLocCurrent(false);
+      setLocalLocCurrent("");
+      setNewLocalCurrent(createEmptyLocal());
+    }
+    handleCloseMachineModal();
+  };
+
+  const openMachineModalForBranch = (isFromBranch) => {
+    setMachinePick(isFromBranch);
+    handleShowMachineModal();
   };
 
   const handleBluefolderButton = async () => {
-    // Check that the work order field is filled out (using workOrders[0].workOrder as current)
-    const currentWorkOrder =
-      workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "";
+    if (bluefolderLoading) return;
+
+    // Always send the most recent work order (by date), not the first-created entry.
+    const currentWorkOrder = (mostRecentWorkOrder?.workOrder || "").trim();
     if (!currentWorkOrder) {
       alert(
         "Please fill out the work order field before adding to BlueFolder."
       );
       return;
     }
+
+    const resolvedLocalSn = String(items.localSN || id || "").trim();
 
     // Build the payload to send to your proxy endpoint.
     const payload = {
@@ -1728,25 +2523,45 @@ const handleSendToInflow = async () => {
       status: items.status,
       description: descriptions[selectedDesc]?.description || "",
       workOrder: currentWorkOrder,
-      localsn: items.localSN || "",
+      localsn: resolvedLocalSn,
+      taxable: false,
+      taxableDefault: false,
+      tax: false,
     };
 
+    setBluefolderLoading(true);
     try {
-      // Replace with your ngrok URL and appropriate endpoint path (e.g., /api/bluefolder)
-      const response = await fetch(
-        "https://9d70-174-76-22-138.ngrok-free.app/bluefolder",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/bluefolder/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await response.json();
+      if (!response.ok || result?.ok === false) {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map((entry) => `${entry.url} => ${entry.status ?? entry.error}`)
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || `BlueFolder proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
       alert("BlueFolder service item added successfully!");
       console.log("BlueFolder result:", result);
     } catch (error) {
       console.error("BlueFolder error:", error);
-      alert("Error adding data to BlueFolder.");
+      alert(`Error adding data to BlueFolder: ${error?.message || "Unknown error"}`);
+    } finally {
+      setBluefolderLoading(false);
     }
   };
 
@@ -1782,6 +2597,8 @@ const handleSendToInflow = async () => {
 
 // Slack integration handler (client) — replace your existing handleAddToSlack with this
 const handleAddToSlack = async (which = "shipping") => {
+  if (slackLoadingKey) return;
+  setSlackLoadingKey(which);
   try {
     const safeName = (items?.name || id || "Untitled").trim();
     const title = `${safeName}${id ? ` (${id})` : ""}`;
@@ -1846,6 +2663,8 @@ const handleAddToSlack = async (which = "shipping") => {
     console.error(e);
     setErr("Error adding to Slack");
     setShowErr(true);
+  } finally {
+    setSlackLoadingKey("");
   }
 };
 
@@ -1948,14 +2767,11 @@ const handleAddToSlack = async (which = "shipping") => {
             <Modal.Title>Work Orders</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Button
-              variant="primary"
-              className="mb-3"
-              onClick={addWorkOrder}
-              style={{ marginBottom: "1rem" }}
-            >
-              Add Work Order
-            </Button>
+            <div className="mb-3" style={{ marginBottom: "1rem" }}>
+              <Button variant="primary" onClick={addWorkOrder}>
+                Add Work Order
+              </Button>
+            </div>
             {workOrders.map((wo, index) => (
               <Row key={index} className="mb-3">
                 <Col>
@@ -1995,13 +2811,153 @@ const handleAddToSlack = async (which = "shipping") => {
           </Modal.Body>
         </Modal>
 
-        <ClientInfoModal
-          show={showMachineModal}
-          handleClose={handleCloseMachineModal}
-          selectedClient={selectedClient}
-          machineOptions={machineOptions}
-          setSelectedMachine={handleSetSelectedMachine}
-        />
+        <Modal show={showHistoryModal} onHide={handleCloseHistoryModal} size="xl">
+          <Modal.Header closeButton>
+            <Modal.Title>Selection History</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Table striped bordered hover size="sm" responsive>
+              <thead>
+                <tr>
+                  <th>Saved At</th>
+                  <th>From Client</th>
+                  <th>From Machine</th>
+                  <th>Current Client</th>
+                  <th>Current Machine</th>
+                  <th>Work Order</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(selectionHistory || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-muted">
+                      No history yet. A row will be added on Save when From/Current/Machine/WO changes.
+                    </td>
+                  </tr>
+                ) : (
+                  selectionHistory.map((entry, index) => (
+                    <tr key={`${entry?.savedAt || "history"}-${index}`}>
+                      <td>
+                        {entry?.savedAt
+                          ? new Date(entry.savedAt).toLocaleString()
+                          : "-"}
+                      </td>
+                      <td>{entry?.fromClientName || "-"}</td>
+                      <td>{entry?.fromMachineName || "-"}</td>
+                      <td>{entry?.currentClientName || "-"}</td>
+                      <td>{entry?.currentMachineName || "-"}</td>
+                      <td>{entry?.workOrder || "-"}</td>
+                      <td>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteHistoryEntry(index)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseHistoryModal}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        <Modal show={showMachineModal} onHide={handleCloseMachineModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              Select Machine
+              {(machinePick ? selectedClientFrom?.name : selectedClientCurrent?.name)
+                ? ` for ${machinePick ? selectedClientFrom?.name : selectedClientCurrent?.name}`
+                : ""}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <FormControl
+              type="text"
+              placeholder="Search by machine name"
+              className="mb-3"
+              value={machineSearch}
+              onChange={(e) => setMachineSearch(e.target.value)}
+            />
+            <Table striped bordered hover size="sm">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Location</th>
+                  <th>Select</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={3}>
+                    <div className="d-flex align-items-center">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleClearMachineSelection}
+                      >
+                        Clear Selection
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="ms-2"
+                        onClick={handleShowCreateMachineModal}
+                      >
+                        Add New Machine
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+                {machineOptions
+                  .filter((machine) =>
+                    (machine.name || "")
+                      .toLowerCase()
+                      .includes(machineSearch.toLowerCase())
+                  )
+                  .map((machine) => (
+                    <tr key={machine.id}>
+                      <td>{machine.name}</td>
+                      <td>{machine.local}</td>
+                      <td>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSetSelectedMachine(machine)}
+                        >
+                          Select
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                {machineOptions.filter((machine) =>
+                  (machine.name || "")
+                    .toLowerCase()
+                    .includes(machineSearch.toLowerCase())
+                ).length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted">
+                      No machines found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseMachineModal}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
         <Modal show={showClientModal} onHide={handleCloseClientModal}>
           <Modal.Header closeButton>
@@ -2012,25 +2968,91 @@ const handleAddToSlack = async (which = "shipping") => {
               type="text"
               placeholder="Search by name"
               className="mb-3"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
             />
             <ClientTable
               clients={clients.filter((client) =>
-                (client.name || "").toLowerCase().includes(search.toLowerCase())
+                (client.name || "")
+                  .toLowerCase()
+                  .includes(clientSearch.toLowerCase())
               )}
               onSelectClient={handleClientInfo}
               onInfoClick={handleClientInfo}
-              clearSelection={() => handleClientInfo(null)}
-              onAddClient={handleAddNewClient}
+              clearSelection={handleClearClientSelection}
+              onAddClient={!machinePick ? handleAddNewClient : undefined}
             />
           </Modal.Body>
         </Modal>
 
+        <Modal show={showAddClientModal} onHide={handleCloseAddClientModal} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Add New Client</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group controlId="newClientName" className="mb-3">
+              <Form.Label>Client Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter client name"
+                value={newClient.name}
+                onChange={(e) =>
+                  setNewClient((prev) => ({ ...prev, name: e.target.value }))
+                }
+              />
+            </Form.Group>
+            <Form.Group controlId="newClientLocation">
+              <Form.Label>Location</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter location"
+                value={newClient.location}
+                onChange={(e) =>
+                  setNewClient((prev) => ({ ...prev, location: e.target.value }))
+                }
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseAddClientModal}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateClientFromModal}
+              disabled={savingClient}
+            >
+              {savingClient ? "Creating..." : "Create Client"}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        <MachineCreationModal
+          show={showCreateMachineModal}
+          handleClose={handleCloseCreateMachineModal}
+          onCreateMachine={handleCreateMachineForClient}
+        />
+
         <ParentModal
           show={showParentModal}
           handleClose={handleCloseParentModal}
-          setSelectedParent={setSelectedParent}
+          selectionMode="single"
+          title="Select Parent"
+          subtitle="Search and choose a parent item for this part."
+          selectedItems={selectedParent ? [selectedParent] : []}
+          excludeIds={[id]}
+          onConfirm={handleConfirmParentSelection}
+        />
+
+        <ParentModal
+          show={showChildModal}
+          handleClose={handleCloseChildModal}
+          selectionMode="multiple"
+          title="Select Children"
+          subtitle="Search and choose child items for this part."
+          selectedItems={selectedChildren}
+          excludeIds={[id]}
+          onConfirm={handleConfirmChildrenSelection}
         />
 
         <MachineSelectionModal
@@ -2044,13 +3066,16 @@ const handleAddToSlack = async (which = "shipping") => {
             <Modal.Title>Take a Photo</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <div className="camera">
+            <div className="camera" ref={cameraContainerRef}>
               {!capturedPhoto && (
                 <BarcodeScannerComponent
                   width="100%"
                   height={300}
                   onUpdate={handleCapture}
+                  onError={handleCameraError}
                   facingMode={cameraFacing}
+                  videoConstraints={cameraVideoConstraints}
+                  stopStream={!showCameraModal}
                 />
               )}
               {capturedPhoto && (
@@ -2079,7 +3104,7 @@ const handleAddToSlack = async (which = "shipping") => {
                     bottom: "10px",
                   }}
                 >
-                  📷
+                  Snap
                 </Button>
                 <Button
                   onClick={() =>
@@ -2107,6 +3132,49 @@ const handleAddToSlack = async (which = "shipping") => {
                 </Button>
               </>
             )}
+          </Modal.Footer>
+        </Modal>
+
+        <Modal show={showPhotoViewer} onHide={closePhotoViewer} centered size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>
+              Photo {Math.min(activePhotoIndex + 1, photos.length)} of {photos.length}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ textAlign: "center" }}>
+            {photos[activePhotoIndex]?.url ? (
+              <img
+                src={photos[activePhotoIndex].url}
+                alt={`Photo ${activePhotoIndex + 1}`}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "70vh",
+                  objectFit: "contain",
+                  borderRadius: "8px",
+                }}
+              />
+            ) : (
+              <div>No image selected.</div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="outline-secondary"
+              onClick={showPreviousPhoto}
+              disabled={photos.length <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline-secondary"
+              onClick={showNextPhoto}
+              disabled={photos.length <= 1}
+            >
+              Next
+            </Button>
+            <Button variant="secondary" onClick={closePhotoViewer}>
+              Close
+            </Button>
           </Modal.Footer>
         </Modal>
 
@@ -2355,7 +3423,7 @@ const handleAddToSlack = async (which = "shipping") => {
                         placeholder={trackerLoading ? "Loading..." : "Select OEM"}
                         options={oemOptionsForUI}
                         selected={selectedOems}
-                        onChange={setSelectedOems}
+                        onChange={handleOemSelectionChange}
                         enableDelete
                         onDeleteOption={handleDeleteOemOption}
                         disabled={trackerLoading}
@@ -2367,7 +3435,7 @@ const handleAddToSlack = async (which = "shipping") => {
                         placeholder={trackerLoading ? "Loading..." : "Select Modality"}
                         options={modalityOptionsForUI}
                         selected={selectedModalities}
-                        onChange={setSelectedModalities}
+                        onChange={handleModalitySelectionChange}
                         disabled={trackerLoading}
                       />
                     </Col>
@@ -2384,6 +3452,14 @@ const handleAddToSlack = async (which = "shipping") => {
                         onChange={setSelectedModels}
                         enableDelete
                         onDeleteOption={handleDeleteModelOption}
+                        enableAdd
+                        addPlaceholder={
+                          canManageModels
+                            ? "Add new model for selected branch"
+                            : "Select Modality + OEM first"
+                        }
+                        onAddOption={handleAddModelOption}
+                        addDisabled={!canManageModels}
                         disabled={
                           trackerLoading ||
                           !selectedModalities.length ||
@@ -2506,7 +3582,7 @@ const handleAddToSlack = async (which = "shipping") => {
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
-                                onClick={() => setShowMachineModal(true)}
+                                onClick={() => openMachineModalForBranch(true)}
                               >
                                 Select Machine for {selectedClientFrom.name}
                               </Button>
@@ -2582,11 +3658,45 @@ const handleAddToSlack = async (which = "shipping") => {
                               )}
                             </div>
                           </div>
-                        )}
-                      </Col>
-                      <Col>
-                        <Button
-                          variant="outline-secondary"
+                      )}
+                    </Col>
+                    <Col
+                      xs={12}
+                      md="auto"
+                      className="d-flex align-items-start justify-content-center"
+                    >
+                      <Button
+                        variant="outline-primary"
+                        onClick={handleSwapFromCurrent}
+                        disabled={!selectedClientFrom && !selectedClientCurrent}
+                        title="Swap from and current client/machine"
+                        aria-label="Swap from and current client/machine"
+                        className="mb-3 p-1"
+                        style={{
+                          width: "2.25rem",
+                          height: "2.25rem",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.9rem",
+                            lineHeight: 0.9,
+                          }}
+                        >
+                          <span>&rarr;</span>
+                          <span>&larr;</span>
+                        </span>
+                      </Button>
+                    </Col>
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
                           onClick={() => {
                             setMachinePick(false);
                             handleShowClientModal();
@@ -2611,7 +3721,7 @@ const handleAddToSlack = async (which = "shipping") => {
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
-                                onClick={() => setShowMachineModal(true)}
+                                onClick={() => openMachineModalForBranch(false)}
                               >
                                 Select Machine for {selectedClientCurrent.name}
                               </Button>
@@ -2696,9 +3806,16 @@ const handleAddToSlack = async (which = "shipping") => {
                         <Button
                           variant="outline-secondary"
                           onClick={handleShowParentModal}
-                          className="me-2"
+                          className="me-2 mb-2"
                         >
                           Select Parent
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={handleShowChildModal}
+                          className="mb-2"
+                        >
+                          Select Children
                         </Button>
                         {selectedParent && (
                           <Form.Control
@@ -2709,6 +3826,31 @@ const handleAddToSlack = async (which = "shipping") => {
                             style={{ marginTop: "0.5rem" }}
                           />
                         )}
+                        <div
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                            padding: "0.5rem 0.75rem",
+                            marginTop: "0.5rem",
+                            maxHeight: "140px",
+                            overflowY: "auto",
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, marginBottom: "0.35rem" }}>
+                            Selected Children ({selectedChildren.length})
+                          </div>
+                          {selectedChildren.length === 0 ? (
+                            <div style={{ color: "#64748b" }}>
+                              No children selected.
+                            </div>
+                          ) : (
+                            selectedChildren.map((child) => (
+                              <div key={child.id}>
+                                {child.name || child.id}
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </Col>
                     </Row>
                   </div>
@@ -2739,13 +3881,14 @@ const handleAddToSlack = async (which = "shipping") => {
                         >
                           Send to inFlow
                         </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={handleBluefolderButton}
-                          style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
-                        >
-                          BlueFolder
-                        </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={handleBluefolderButton}
+                        disabled={bluefolderLoading}
+                        style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
+                      >
+                        {bluefolderLoading ? "BlueFolder..." : "BlueFolder"}
+                      </Button>
                         
 
                         <Button
@@ -2809,7 +3952,10 @@ const handleAddToSlack = async (which = "shipping") => {
                               width: "100%",
                               height: "100%",
                               objectFit: "cover",
+                              cursor: "zoom-in",
+                              borderRadius: "6px",
                             }}
+                            onClick={() => openPhotoViewer(index)}
                           />
                           {photo.file && (
                             <Button
@@ -2858,16 +4004,22 @@ const handleAddToSlack = async (which = "shipping") => {
                           <Button
                             variant="outline-primary"
                             onClick={() => handleAddToSlack("receiving")}
+                            disabled={Boolean(slackLoadingKey)}
                             style={{ border: "none", borderRight: "1px solid #ced4da" }}
                           >
-                            Receiving
+                            {slackLoadingKey === "receiving"
+                              ? "Receiving..."
+                              : "Receiving"}
                           </Button>
                           <Button
                             variant="outline-primary"
                             onClick={() => handleAddToSlack("shipping")}
+                            disabled={Boolean(slackLoadingKey)}
                             style={{ border: "none" }}
                           >
-                            Shipping
+                            {slackLoadingKey === "shipping"
+                              ? "Shipping..."
+                              : "Shipping"}
                           </Button>
                           {/* <Button
                             variant="outline-primary"
@@ -2945,6 +4097,22 @@ const handleAddToSlack = async (which = "shipping") => {
                             value={items.price}
                             onChange={handleChange("price")}
                           />
+                          <div className="mt-2 d-flex align-items-center">
+                            <Button
+                              variant="outline-secondary"
+                              onClick={handleShowHistoryModal}
+                            >
+                              History
+                            </Button>
+                            <Button
+                              variant="outline-secondary"
+                              className="ms-2"
+                              onClick={handleQuickbooksButton}
+                              disabled={!isAdminUser}
+                            >
+                              Quickbooks
+                            </Button>
+                          </div>
                         </Form.Group>
                         <Form.Group as={Col} controlId="DOM">
                           <Form.Label>DOM</Form.Label>
@@ -2972,76 +4140,6 @@ const handleAddToSlack = async (which = "shipping") => {
           </div>
         </Container>
       </div>
-      {/* Camera Modal */}
-      <Modal show={showCameraModal} onHide={handleCloseCameraModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Take a Photo</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="camera">
-            {!capturedPhoto ? (
-              <BarcodeScannerComponent
-                width="100%"
-                height={300}
-                onUpdate={handleCapture}
-                facingMode={cameraFacing}
-              />
-            ) : (
-              <div className="photo-preview">
-                <img
-                  src={URL.createObjectURL(capturedPhoto)}
-                  alt="captured"
-                  style={{ width: "100%" }}
-                />
-              </div>
-            )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {!capturedPhoto ? (
-            <>
-              <Button
-                onClick={capturePhoto}
-                style={{
-                  borderRadius: "50%",
-                  width: "60px",
-                  height: "60px",
-                  position: "absolute",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  bottom: "10px",
-                }}
-              >
-                📷
-              </Button>
-              <Button
-                onClick={() =>
-                  setCameraFacing((prev) =>
-                    prev === "environment" ? "user" : "environment"
-                  )
-                }
-              >
-                Flip Camera
-              </Button>
-              <Button variant="secondary" onClick={handleCloseCameraModal}>
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => setCapturedPhoto(null)}
-              >
-                Retake
-              </Button>
-              <Button variant="primary" onClick={savePhoto}>
-                OK
-              </Button>
-            </>
-          )}
-        </Modal.Footer>
-      </Modal>
     </LoggedIn>
   );
 }
@@ -3062,7 +4160,15 @@ export async function getServerSideProps(context) {
       return { props: { error: "Firebase Admin not configured for SSR." } };
     }
     const itemDoc = await adminDb.collection("Test").doc(id).get();
-    if (!itemDoc.exists) return { notFound: true };
+    if (!itemDoc.exists) {
+      const safeId = encodeURIComponent(String(id || "").trim());
+      return {
+        redirect: {
+          destination: `/NewSearch/AddItem/NewItem?localSN=${safeId}&fromScan=1`,
+          permanent: false,
+        },
+      };
+    }
 
     const itemData = itemDoc.data();
 
@@ -3089,13 +4195,14 @@ export async function getServerSideProps(context) {
       height: itemData.height || "",
       poNumber: itemData.poNumber || "",
       trackingNumber: itemData.trackingNumber || "",
-      localSN: itemData.localSN || "",
+      localSN: itemData.localSN || itemData.local_sn || id || "",
       arrival_date: itemData.arrival_date || "",
       visible: itemData.visible !== undefined ? itemData.visible : true,
 
       // add the pieces the UI reads directly
       descriptions: itemData.descriptions || [],
       workOrders: itemData.workOrders || [],
+      selectionHistory: itemData.selectionHistory || [],
       DOM: itemData.DOM || "",
     };
 
@@ -3109,8 +4216,4 @@ export async function getServerSideProps(context) {
     return { props: { error: "Failed to load item data" } };
   }
 }
-
-
-
-
 

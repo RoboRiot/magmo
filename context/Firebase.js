@@ -46,7 +46,15 @@ if (!Firebase.apps.length) {
 // Force long polling in the browser to avoid stalled writes/listens.
 if (typeof window !== "undefined") {
   try {
-    Firebase.firestore().settings({ experimentalForceLongPolling: true });
+    const db = Firebase.firestore();
+    if (!window.__magmoFirestoreSettingsApplied) {
+      db.settings({
+        experimentalForceLongPolling: true,
+        useFetchStreams: false,
+        merge: true,
+      });
+      window.__magmoFirestoreSettingsApplied = true;
+    }
   } catch (error) {
     // Ignore if Firestore has already been initialized with settings.
   }

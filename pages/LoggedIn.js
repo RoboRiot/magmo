@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../context/AuthUserContext";
 import { Container } from "react-bootstrap";
+import { hasRequiredRole } from "../utils/authAccess";
 
-const LoggedIn = ({ children }) => {
+const LoggedIn = ({ children, requiredRole = null }) => {
   const { authUser, loading } = useAuth();
   const router = useRouter();
 
@@ -23,7 +24,12 @@ const LoggedIn = ({ children }) => {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [authUser, loading, router]);
+
+    if (!loading && authUser && !hasRequiredRole(authUser, requiredRole)) {
+      console.log("User does not have required role for this page");
+      router.push("/dashboard");
+    }
+  }, [authUser, loading, requiredRole, router]);
 
   if (loading) {
     return (
@@ -36,7 +42,10 @@ const LoggedIn = ({ children }) => {
     );
   }
 
-  return <>{authUser && children}</>;
+  if (!authUser) return null;
+  if (!hasRequiredRole(authUser, requiredRole)) return null;
+
+  return <>{children}</>;
 };
 
 export default LoggedIn;

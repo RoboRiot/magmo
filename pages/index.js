@@ -5,6 +5,10 @@ import { Button, Alert } from "react-bootstrap";
 import styles from "../styles/Login.module.css";
 import { useRouter } from "next/router";
 import firebase from "../context/Firebase"; // compat default export ONLY
+import {
+  ALLOWED_EMAIL_DOMAIN,
+  isAllowedEmailDomain,
+} from "../utils/authAccess";
 
 export default function Home() {
   const router = useRouter();
@@ -13,6 +17,7 @@ export default function Home() {
   const [authReady, setAuthReady] = useState(false);
   const unsubRef = useRef(null);
   const persistenceModeRef = useRef("unknown");
+  const domainErrorMessage = `Only @${ALLOWED_EMAIL_DOMAIN} accounts can sign in.`;
 
   const getDestination = () => {
     const q = router?.query?.redirect;
@@ -66,6 +71,12 @@ export default function Home() {
         try {
           const redirectResult = await firebase.auth().getRedirectResult();
           if (redirectResult && redirectResult.user) {
+            const redirectEmail = redirectResult.user.email;
+            if (!isAllowedEmailDomain(redirectEmail)) {
+              await firebase.auth().signOut();
+              setError(domainErrorMessage);
+              return;
+            }
             const dest = getDestination();
             router.replace(dest);
             return;
@@ -96,6 +107,16 @@ export default function Home() {
           console.log("[auth] onAuthStateChanged:", user);
           setAuthReady(true);
           if (user) {
+            if (!isAllowedEmailDomain(user.email)) {
+              firebase
+                .auth()
+                .signOut()
+                .catch((error) => {
+                  console.error("[auth] sign-out failed for unauthorized domain:", error);
+                });
+              setError(domainErrorMessage);
+              return;
+            }
             const dest = getDestination();
             router.replace(dest);
           }
@@ -122,7 +143,10 @@ export default function Home() {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope("email");
       provider.addScope("profile");
-      provider.setCustomParameters({ prompt: "select_account" });
+      provider.setCustomParameters({
+        prompt: "select_account",
+        hd: ALLOWED_EMAIL_DOMAIN,
+      });
 
       console.log("[auth] Using popup");
       try {
@@ -130,6 +154,11 @@ export default function Home() {
         console.log("[auth] popup result:", result && result.user);
         // onAuthStateChanged will route; but we can route immediately too:
         if (result && result.user) {
+          if (!isAllowedEmailDomain(result.user.email)) {
+            await firebase.auth().signOut();
+            setError(domainErrorMessage);
+            return;
+          }
           const dest = getDestination();
           router.replace(dest);
         }
@@ -148,7 +177,9 @@ export default function Home() {
     } catch (err) {
       console.error("[auth] sign-in error:", err);
       if (err?.code === "auth/unauthorized-domain") {
-        setError("This domain is not authorized for Google sign-in. Add magmo.cloud in Firebase Auth > Settings > Authorized domains.");
+        setError(
+          "This host is not authorized in Firebase Auth settings. Add your app host in Firebase Auth > Settings > Authorized domains."
+        );
       } else {
         setError("Failed to log in with Google: " + (err && err.message ? err.message : String(err)));
       }
@@ -157,10 +188,15 @@ export default function Home() {
 
   const handleTestLogin = async () => {
     setError("");
+    const testEmail = "test@test.com";
+    if (!isAllowedEmailDomain(testEmail)) {
+      setError(domainErrorMessage);
+      return;
+    }
     const password = prompt("Enter password:");
     if (!password) return;
     try {
-      await firebase.auth().signInWithEmailAndPassword("test@test.com", password);
+      await firebase.auth().signInWithEmailAndPassword(testEmail, password);
       router.replace("/NewSearch/searchTest");
     } catch (err) {
       setError("Test login failed: " + (err && err.message ? err.message : String(err)));

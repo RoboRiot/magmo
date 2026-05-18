@@ -33,6 +33,7 @@ import {
   formatLoc,
   updateMachineFields,
   buildNameTokens,
+  buildWorkOrderTokens,
 } from "../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../components/MultiSelectDropdown";
 import {
@@ -43,6 +44,11 @@ import {
   deleteTrackerOem,
   deleteTrackerModel,
 } from "../../../utils/trackerCatalog";
+import {
+  addAssociatedPartToMachine,
+  buildMachineSummary,
+  stripAssociatedPartsFromMachineSnapshot,
+} from "../../../utils/warehouseAssociations";
 import styles from "./NewItem.module.css";
 
 // Load BarcodeScannerComponent only on the client-side.
@@ -176,6 +182,8 @@ export default function NewItem() {
   const [machineFrequency, setMachineFrequency] = useState(0);
   // For extra (dimensions/price/DOM) section collapse.
   const [showExtra, setShowExtra] = useState(false);
+  const [bluefolderLoading, setBluefolderLoading] = useState(false);
+  const [slackLoadingKey, setSlackLoadingKey] = useState("");
 
   const [trackerCatalog, setTrackerCatalog] = useState({
     modalities: [],
@@ -194,6 +202,7 @@ export default function NewItem() {
   // For browsing photos.
   const browseInputRef = useRef(null);
   const cloneSeedRef = useRef(null);
+  const localSnSeedRef = useRef(null);
 
   // Inside your NewItem component:
   const [loading, setLoading] = useState(false);
@@ -278,6 +287,24 @@ export default function NewItem() {
     });
     return Array.from(map.values());
   };
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const rawLocalSn = router.query.localSN ?? router.query.prefillId;
+    const seededLocalSn = Array.isArray(rawLocalSn) ? rawLocalSn[0] : rawLocalSn;
+    const normalizedLocalSn = String(seededLocalSn || "").trim();
+
+    if (!normalizedLocalSn) return;
+    if (localSnSeedRef.current === normalizedLocalSn) return;
+    localSnSeedRef.current = normalizedLocalSn;
+
+    setItems((prev) => {
+      const existingLocalSn = String(prev.localSN || "").trim();
+      if (existingLocalSn) return prev;
+      return { ...prev, localSN: normalizedLocalSn };
+    });
+  }, [router.isReady, router.query.localSN, router.query.prefillId]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -896,7 +923,7 @@ export default function NewItem() {
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
         id: machineDoc.id,
-        ...machineDoc.data(),
+        ...stripAssociatedPartsFromMachineSnapshot(machineDoc.data() || {}),
       }));
       setMachineOptions(machines);
       handleCloseClientModal();
@@ -907,7 +934,7 @@ export default function NewItem() {
     const db = firebase.firestore();
     const doc = await db.collection("Machine").doc(machineId).get();
     if (doc.exists) {
-      const machineData = doc.data();
+      const machineData = stripAssociatedPartsFromMachineSnapshot(doc.data() || {});
       setTheMachine(machineData);
 
       // Ensure OEM, Modality, and Model update properly only if necessary
@@ -1036,6 +1063,7 @@ export default function NewItem() {
     formattedItems.status = items.status || "";
     formattedItems.nameLower = (items.name || "").toLowerCase();
     formattedItems.nameTokens = buildNameTokens(items.name);
+    formattedItems.workOrderTokens = buildWorkOrderTokens(workOrders);
     formattedItems.DOM = DOM; // Date of Manufacture
     const fromDetails = buildLocalLocObject(newLocalFrom);
     const currentDetails = buildLocalLocObject(newLocalCurrent);
@@ -1059,7 +1087,7 @@ export default function NewItem() {
     formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
-    formattedItems.TheMachine = machineData || {};
+    formattedItems.TheMachine = buildMachineSummary(machineData);
     formattedItems.addedToWebsite = addToWebsite;
     formattedItems.visible = items.visible;
 
@@ -1115,26 +1143,24 @@ export default function NewItem() {
       const updates = [];
       if (selectedMachine && selectedMachine.id) {
         updates.push(
-          db
-            .collection("Machine")
-            .doc(selectedMachine.id)
-            .update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(targetDocId)
-              ),
-            })
+          addAssociatedPartToMachine({
+            db,
+            firebase,
+            machineId: selectedMachine.id,
+            partId: targetDocId,
+            machineData: selectedMachine,
+          })
         );
       }
       if (selectedCurrentMachine && selectedCurrentMachine.id) {
         updates.push(
-          db
-            .collection("Machine")
-            .doc(selectedCurrentMachine.id)
-            .update({
-              associatedParts: firebase.firestore.FieldValue.arrayUnion(
-                db.collection("Test").doc(targetDocId)
-              ),
-            })
+          addAssociatedPartToMachine({
+            db,
+            firebase,
+            machineId: selectedCurrentMachine.id,
+            partId: targetDocId,
+            machineData: selectedCurrentMachine,
+          })
         );
       }
       if (updates.length) {
@@ -1156,6 +1182,15 @@ export default function NewItem() {
       });
     };
 
+    const withLocalSn = (payload, value) => {
+      const localSn = String(value || "").trim();
+      return {
+        ...payload,
+        localSN: localSn,
+        local_sn: localSn,
+      };
+    };
+
     try {
       if (docId) {
         // Check if a localSN is provided and if it differs from the current docId.
@@ -1163,10 +1198,11 @@ export default function NewItem() {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : docId;
+        const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
           // Migrate: Create a new document with the newDocId.
           await withTimeout(
-            db.collection("Test").doc(newDocId).set(formattedItems),
+            db.collection("Test").doc(newDocId).set(payloadWithLocalSn),
             45000,
             "Firestore save"
           );
@@ -1189,7 +1225,7 @@ export default function NewItem() {
           docId = newDocId;
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
-          const cleanFormattedItems = shallowClean(formattedItems);
+          const cleanFormattedItems = shallowClean(payloadWithLocalSn);
           await withTimeout(
             db.collection("Test").doc(docId).update(cleanFormattedItems),
             45000,
@@ -1205,8 +1241,9 @@ export default function NewItem() {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : generateCustomID();
+        const payloadWithLocalSn = withLocalSn(formattedItems, docId);
         await withTimeout(
-          db.collection("Test").doc(docId).set(formattedItems),
+          db.collection("Test").doc(docId).set(payloadWithLocalSn),
           45000,
           "Firestore save"
         );
@@ -1236,6 +1273,7 @@ export default function NewItem() {
       if (!forceNew) {
         setSavedDocId(docId);
       }
+      setItems((prev) => ({ ...prev, localSN: docId }));
 
       // Redirect to the new URL using the new document id.
       if (redirect) {
@@ -1347,15 +1385,30 @@ export default function NewItem() {
 
     console.log("Payload for printing:", payload);
     try {
-      const response = await fetch(
-        "https://9d70-174-76-22-138.ngrok-free.app/print-label",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/print/label", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await response.json();
+      if (!response.ok || result?.ok === false) {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map((entry) => `${entry.url} => ${entry.status ?? entry.error}`)
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || `Print proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
       console.log("Print result:", result);
     } catch (error) {
       console.error("Error printing label:", error);
@@ -1428,45 +1481,69 @@ export default function NewItem() {
   };
 
   const handleBluefolderButton = async () => {
-    const docId = await ensureSaved();
-    if (!docId) return;
-
-    const currentWorkOrder =
-      workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "";
-    if (!currentWorkOrder) {
-      alert("Please fill out the work order field before adding to BlueFolder.");
-      return;
-    }
-
-    const payload = {
-      name: items.name,
-      pn: items.pn[0] || "",
-      sn: items.sn[0] || "",
-      status: items.status,
-      description: descriptions[selectedDesc]?.description || "",
-      workOrder: currentWorkOrder,
-      localsn: docId,
-    };
-
+    if (bluefolderLoading) return;
+    setBluefolderLoading(true);
     try {
-      const response = await fetch(
-        "https://9d70-174-76-22-138.ngrok-free.app/bluefolder",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const docId = await ensureSaved();
+      if (!docId) return;
+
+      const currentWorkOrder =
+        workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "";
+      if (!currentWorkOrder) {
+        alert("Please fill out the work order field before adding to BlueFolder.");
+        return;
+      }
+
+      const payload = {
+        name: items.name,
+        pn: items.pn[0] || "",
+        sn: items.sn[0] || "",
+        status: items.status,
+        description: descriptions[selectedDesc]?.description || "",
+        workOrder: currentWorkOrder,
+        localsn: docId,
+        taxable: false,
+        taxableDefault: false,
+        tax: false,
+      };
+
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/bluefolder/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await response.json();
+      if (!response.ok || result?.ok === false) {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map((entry) => `${entry.url} => ${entry.status ?? entry.error}`)
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || `BlueFolder proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
       alert("BlueFolder service item added successfully!");
       console.log("BlueFolder result:", result);
     } catch (error) {
       console.error("BlueFolder error:", error);
-      alert("Error adding data to BlueFolder.");
+      alert(`Error adding data to BlueFolder: ${error?.message || "Unknown error"}`);
+    } finally {
+      setBluefolderLoading(false);
     }
   };
 
   const handleAddToSlack = async (which = "shipping") => {
+    if (slackLoadingKey) return;
+    setSlackLoadingKey(which);
     try {
       const docId = await ensureSaved();
       if (!docId) return;
@@ -1542,6 +1619,8 @@ export default function NewItem() {
       console.error(e);
       setErr("Error adding to Slack");
       setShowErr(true);
+    } finally {
+      setSlackLoadingKey("");
     }
   };
 
@@ -1663,17 +1742,58 @@ export default function NewItem() {
   const [selectedClientFrom, setSelectedClientFrom] = useState(null);
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
 
+  const isSocalWarehouseClient = (client) =>
+    client?.name?.toLowerCase() === "socalwarehouse";
+
+  const isInteriorSocalMachine = (machine) =>
+    machine?.name?.toLowerCase() === "interior socal";
+
+  const shouldShowLocalLocation = (client, machine) =>
+    isSocalWarehouseClient(client) || isInteriorSocalMachine(machine);
+
+  const cloneLocalLocation = (value) => ({
+    region: value?.region || "",
+    section: {
+      letter: value?.section?.letter || "",
+      number: value?.section?.number || "",
+    },
+    bin: value?.bin || "",
+    pallet: value?.pallet || "",
+  });
+
+  const handleSwapFromCurrent = () => {
+    const nextFromClient = selectedClientCurrent;
+    const nextCurrentClient = selectedClientFrom;
+    const nextFromMachine = selectedCurrentMachine;
+    const nextCurrentMachine = selectedMachine;
+    const nextNewLocalFrom = cloneLocalLocation(newLocalCurrent);
+    const nextNewLocalCurrent = cloneLocalLocation(newLocalFrom);
+
+    setSelectedClientFrom(nextFromClient);
+    setSelectedClientCurrent(nextCurrentClient);
+    setSelectedMachine(nextFromMachine);
+    setSelectedCurrentMachine(nextCurrentMachine);
+    setNewLocalFrom(nextNewLocalFrom);
+    setNewLocalCurrent(nextNewLocalCurrent);
+    setShowLocalLocFrom(
+      shouldShowLocalLocation(nextFromClient, nextFromMachine)
+    );
+    setShowLocalLocCurrent(
+      shouldShowLocalLocation(nextCurrentClient, nextCurrentMachine)
+    );
+  };
+
   useEffect(() => {
     setShowLocalLocFrom(
-      selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+      shouldShowLocalLocation(selectedClientFrom, selectedMachine)
     );
-  }, [selectedClientFrom]);
+  }, [selectedClientFrom, selectedMachine]);
 
   useEffect(() => {
     setShowLocalLocCurrent(
-      selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+      shouldShowLocalLocation(selectedClientCurrent, selectedCurrentMachine)
     );
-  }, [selectedClientCurrent]);
+  }, [selectedClientCurrent, selectedCurrentMachine]);
 
   return (
     <LoggedIn>
@@ -1836,7 +1956,9 @@ export default function NewItem() {
       <ParentModal
         show={showParentModal}
         handleClose={handleCloseParentModal}
-        setSelectedParent={setSelectedParent}
+        selectionMode="single"
+        selectedItems={selectedParent ? [selectedParent] : []}
+        onConfirm={(items = []) => setSelectedParent(items[0] || null)}
       />
       <MachineSelectionModal
         show={machineSelectionModal}
@@ -2445,6 +2567,40 @@ export default function NewItem() {
                         </div>
                       )}
                     </Col>
+                    <Col
+                      xs={12}
+                      md="auto"
+                      className="d-flex align-items-start justify-content-center"
+                    >
+                      <Button
+                        variant="outline-primary"
+                        onClick={handleSwapFromCurrent}
+                        disabled={!selectedClientFrom && !selectedClientCurrent}
+                        title="Swap from and current client/machine"
+                        aria-label="Swap from and current client/machine"
+                        className="mb-3 p-1"
+                        style={{
+                          width: "2.25rem",
+                          height: "2.25rem",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.9rem",
+                            lineHeight: 0.9,
+                          }}
+                        >
+                          <span>&rarr;</span>
+                          <span>&larr;</span>
+                        </span>
+                      </Button>
+                    </Col>
                     <Col>
                       <Button
                         variant="outline-secondary"
@@ -2592,10 +2748,10 @@ export default function NewItem() {
                       <Button
                         variant="secondary"
                         onClick={handleBluefolderButton}
-                        disabled={!isReadyForActions}
+                        disabled={!isReadyForActions || bluefolderLoading}
                         style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
                       >
-                        BlueFolder
+                        {bluefolderLoading ? "BlueFolder..." : "BlueFolder"}
                       </Button>
                       <Button
                         variant={addToWebsite ? "primary" : "outline-primary"}
@@ -2719,21 +2875,25 @@ export default function NewItem() {
                         <Button
                           variant="outline-primary"
                           onClick={() => handleAddToSlack("receiving")}
-                          disabled={!isReadyForActions}
+                          disabled={!isReadyForActions || Boolean(slackLoadingKey)}
                           style={{
                             border: "none",
                             borderRight: "1px solid #ced4da",
                           }}
                         >
-                          Receiving
+                          {slackLoadingKey === "receiving"
+                            ? "Receiving..."
+                            : "Receiving"}
                         </Button>
                         <Button
                           variant="outline-primary"
                           onClick={() => handleAddToSlack("shipping")}
-                          disabled={!isReadyForActions}
+                          disabled={!isReadyForActions || Boolean(slackLoadingKey)}
                           style={{ border: "none" }}
                         >
-                          Shipping
+                          {slackLoadingKey === "shipping"
+                            ? "Shipping..."
+                            : "Shipping"}
                         </Button>
                       </div>
                     </div>

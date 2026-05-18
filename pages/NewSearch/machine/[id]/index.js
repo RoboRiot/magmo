@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import {
   Table,
   Button,
@@ -8,6 +9,7 @@ import {
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
 import styles from "../Machine.module.css";
+import { isInteriorSocalMachineData } from "../../../../utils/warehouseAssociations";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -276,8 +278,10 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
         console.log("Machine data:", machineData);
 
         // Fetch associated parts
-        if (machineData.associatedParts) {
+        if (!isInteriorSocalMachineData(machineData) && machineData.associatedParts) {
           fetchAssociatedParts(machineData.associatedParts);
+        } else {
+          setAssociatedParts([]);
         }
       } else {
         console.error("Machine not found");
@@ -350,15 +354,30 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       if (!payload.items.length) {
         throw new Error("No items available to print.");
       }
-      const response = await fetch(
-        "https://9d70-174-76-22-138.ngrok-free.app/print_multi",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/print/multi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
       const result = await response.json();
+      if (!response.ok || result?.ok === false) {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map((entry) => `${entry.url} => ${entry.status ?? entry.error}`)
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || `Print proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
       console.log("Print multi result:", result.status);
       if (!response.ok || result?.status === "error") {
         throw new Error(result?.message || "Print failed.");
@@ -452,13 +471,15 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       )}
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div className={styles.brand}>
-            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
-            <div>
-              <div className={styles.brandName}>Magmo</div>
-              <div className={styles.brandSub}>Machine Detail</div>
-            </div>
-          </div>
+          <Link href="/NewSearch/mainSearch">
+            <a className={styles.brand} aria-label="Go to Main Search">
+              <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+              <div>
+                <div className={styles.brandName}>Magmo</div>
+                <div className={styles.brandSub}>Machine Detail</div>
+              </div>
+            </a>
+          </Link>
           <Button
             variant="outline-secondary"
             className={styles.backButton}
@@ -648,6 +669,7 @@ export async function getServerSideProps(context) {
     // Fetch associated parts if they exist
     let associatedParts = [];
     if (
+      !isInteriorSocalMachineData(machineData) &&
       machineData.associatedParts &&
       Array.isArray(machineData.associatedParts)
     ) {

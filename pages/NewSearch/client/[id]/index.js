@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import {
   Table,
   Button,
@@ -24,6 +25,7 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const [isLoading, setIsLoading] = useState(
     !initialClient && !initialError
   );
+  const [machinesLoading, setMachinesLoading] = useState(false);
 
   // State for machine addition modals
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
@@ -34,9 +36,35 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
     if (!router.isReady) return;
     const activeId = router.query.id || router.asPath.split("/").pop();
     if (!activeId) return;
-    const hasInitial = initialClient && initialClient.id === activeId;
-    fetchClientData(activeId, { silent: hasInitial });
+    fetchClientData(activeId, { silent: Boolean(initialClient) });
   }, [router.isReady, router.query.id, initialClient]);
+
+  const fetchMachineRefs = async (machineRefs = []) => {
+    const validRefs = machineRefs.filter(
+      (machineRef) => machineRef && typeof machineRef.get === "function"
+    );
+    const machines = [];
+    const chunkSize = 20;
+
+    for (let index = 0; index < validRefs.length; index += chunkSize) {
+      const chunk = validRefs.slice(index, index + chunkSize);
+      const machineDocs = await Promise.all(chunk.map((machineRef) => machineRef.get()));
+      machineDocs.forEach((machineDoc) => {
+        if (!machineDoc.exists) return;
+        const machineData = machineDoc.data() || {};
+        machines.push({
+          id: machineDoc.id,
+          name: machineData.name || "",
+          local: machineData.local || "",
+          OEM: machineData.OEM || "",
+          Modality: machineData.Modality || "",
+          Model: machineData.Model || "",
+        });
+      });
+    }
+
+    return machines;
+  };
 
   const fetchClientData = async (clientId, { silent = false } = {}) => {
     if (!silent) {
@@ -53,14 +81,8 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
         const machineRefs = Array.isArray(clientData.machines)
           ? clientData.machines
           : [];
-        const machinePromises = machineRefs.map((machineRef) =>
-          machineRef.get()
-        );
-        const machineDocs = await Promise.all(machinePromises);
-        const machines = machineDocs.map((machineDoc) => ({
-          id: machineDoc.id,
-          ...machineDoc.data(),
-        }));
+        setMachinesLoading(true);
+        const machines = await fetchMachineRefs(machineRefs);
         setMachineOptions(machines);
       } else {
         setError("Client not found");
@@ -72,6 +94,7 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
       if (!silent) {
         setIsLoading(false);
       }
+      setMachinesLoading(false);
     }
   };
 
@@ -165,13 +188,15 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
     <div className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div className={styles.brand}>
-            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
-            <div>
-              <div className={styles.brandName}>Magmo</div>
-              <div className={styles.brandSub}>Client Detail</div>
-            </div>
-          </div>
+          <Link href="/NewSearch/mainSearch">
+            <a className={styles.brand} aria-label="Go to Main Search">
+              <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+              <div>
+                <div className={styles.brandName}>Magmo</div>
+                <div className={styles.brandSub}>Client Detail</div>
+              </div>
+            </a>
+          </Link>
           <Button
             variant="outline-secondary"
             className={styles.backButton}
@@ -232,10 +257,19 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                   <div className={styles.tableHeader}>
                     <span>Machines</span>
                     <span className={styles.tableHint}>
-                      Select a machine to view details.
+                      {machinesLoading
+                        ? "Loading machines..."
+                        : "Select a machine to view details."}
                     </span>
                   </div>
                   <div className={styles.tableWrap}>
+                    {machinesLoading ? (
+                      <div className={styles.loadingWrap}>
+                        <Spinner animation="border" role="status">
+                          <span className="sr-only">Loading machines...</span>
+                        </Spinner>
+                      </div>
+                    ) : (
                     <Table striped bordered hover size="sm" className={styles.table}>
                       <thead>
                         <tr>
@@ -276,6 +310,7 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                         )}
                       </tbody>
                     </Table>
+                    )}
                   </div>
                 </div>
               </>
@@ -327,52 +362,6 @@ export async function getServerSideProps(context) {
 
     const clientData = clientDoc.data();
 
-    // Fetch machine documents referenced in the client's machines array
-    let machines = [];
-    if (clientData.machines && Array.isArray(clientData.machines)) {
-      try {
-        const machinePromises = clientData.machines
-          .map((machineRef) => {
-            if (machineRef.path) {
-              return adminDb.doc(machineRef.path).get();
-            }
-            return null;
-          })
-          .filter(Boolean);
-
-        const machineDocs = await Promise.all(machinePromises);
-        machines = machineDocs.map((machineDoc) => {
-          const machineData = machineDoc.data();
-          // Extract only serializable data, remove any Firestore references
-          const serializedMachine = {
-            id: machineDoc.id,
-            name: machineData.name || "",
-            local: machineData.local || "",
-            OEM: machineData.OEM || "",
-            Modality: machineData.Modality || "",
-            Model: machineData.Model || "",
-            // Add other fields as needed, but ensure they're serializable
-          };
-
-          // If there's a client reference, extract just the client name
-          if (machineData.client && machineData.client.path) {
-            try {
-              const clientDoc = adminDb.doc(machineData.client.path).get();
-              if (clientDoc.exists) {
-                serializedMachine.clientName = clientDoc.data().name || "";
-              }
-            } catch (error) {
-              console.error("Error fetching client name:", error);
-            }
-          }
-
-          return serializedMachine;
-        });
-      } catch (error) {
-        console.error("Error fetching machine data:", error);
-      }
-    }
-
     // Serialize the client data, removing any non-serializable fields
     const serializedClient = {
       id,
@@ -384,7 +373,7 @@ export async function getServerSideProps(context) {
     return {
       props: {
         initialClient: serializedClient,
-        initialMachines: machines,
+        initialMachines: [],
       },
     };
   } catch (error) {

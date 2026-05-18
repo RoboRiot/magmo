@@ -60,6 +60,34 @@
   font-size: 0.9rem;
 }
 
+.addRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.addInput {
+  flex: 1 1 auto;
+  border-radius: 10px;
+  border: 1px solid #d8e1f0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.addButton {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-weight: 600;
+}
+
+.addButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .list {
   max-height: 220px;
   overflow-y: auto;
@@ -71,7 +99,8 @@
 .option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px;
   padding: 6px 8px;
   border-radius: 10px;
   cursor: pointer;
@@ -86,9 +115,38 @@
   height: 16px;
 }
 
+.optionMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .optionLabel {
   font-weight: 500;
   color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteButton {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  line-height: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  background: #ffe4e6;
 }
 
 .emptyState {

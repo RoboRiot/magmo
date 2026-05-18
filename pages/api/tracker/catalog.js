@@ -1,4 +1,5 @@
 import { adminDb } from "../../../context/FirebaseAdmin";
+import { requireFirebaseAuth } from "../../../utils/apiAuth";
 
 const normalizeList = (values) => {
   const out = [];
@@ -153,6 +154,9 @@ const readModalityFromCollectionRef = async (collectionRef) => {
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  await requireFirebaseAuth(req, res);
+  if (res.writableEnded) return;
+
   if (!adminDb) {
     res.status(503).json({ error: "Firebase Admin not available." });
     return;

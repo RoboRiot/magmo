@@ -95,6 +95,9 @@ export default function dashboard() {
           <Card className="align-items-center justify-content-center">
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
+              <div className="text-center mb-3 text-muted">
+                Signed in as {authUser.email} ({authUser.role})
+              </div>
               <div class="d-grid gap-3">
                 <LoadingButton
                   type="primary"

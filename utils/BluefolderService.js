@@ -1,11 +1,13 @@
 // BluefolderService.js
 
-export const API_TOKEN = "REMOVED_BLUEFOLDER_API_TOKEN"; // your token
+export const API_TOKEN = "";
 export const ITEMS_URL = "https://app.bluefolder.com/api/2.0/items/add.aspx";
 export const MATERIALS_URL = "https://app.bluefolder.com/api/2.0/serviceRequests/addMaterial.aspx";
 export const HEADERS = { "Content-Type": "text/xml" };
 
 export async function addServiceItem(serviceRequestId, item) {
+  throw new Error("Deprecated: use /api/bluefolder/proxy instead.");
+
   // Use "Service Item" for name and description
   const uniqueName = "Service Item";
 
@@ -22,7 +24,7 @@ export async function addServiceItem(serviceRequestId, item) {
         <mfrItemNo></mfrItemNo>
         <mfrName>BlueFolderTestManufacturer</mfrName>
         <notes>Service Item</notes>
-        <taxableDefault>true</taxableDefault>
+        <taxableDefault>false</taxableDefault>
         <unitCost>0.00</unitCost>
         <unitPrice>0.00</unitPrice>
         <unitListPrice>0.00</unitListPrice>
@@ -63,7 +65,7 @@ export async function addServiceItem(serviceRequestId, item) {
         <itemUnitPrice>0.00</itemUnitPrice>
         <comment>${comment}</comment>
         <commentIsPublic>false</commentIsPublic>
-        <taxable>true</taxable>
+        <taxable>false</taxable>
       </serviceRequestAddMaterial>
     </request>
   `;

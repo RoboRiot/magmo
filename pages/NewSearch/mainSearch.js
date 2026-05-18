@@ -24,8 +24,13 @@ import ModelTable from "../../utils/ModelTable";
 import PartTable from "../../utils/PartTable";
 import styles from "../../styles/MainSearch.module.css";
 import firebase from "../../context/Firebase";
-import { buildNameTokens } from "../../utils/itemFormShared";
+import {
+  buildNameTokens,
+  buildWorkOrderTokens,
+  normalizeWorkOrderValue,
+} from "../../utils/itemFormShared";
 import WarehouseMapModal from "../../components/WarehouseMapModal";
+import TrailerMapModal from "../../components/TrailerMapModal";
 
 // Predefined warehouse client IDs and display names
 const SOCAL_CLIENT_ID = "AIS17182";
@@ -145,6 +150,44 @@ function getMachineField(item, key) {
   );
 }
 
+const SEARCH_TYPE_MAP = {
+  name: "Name",
+  date: "Date",
+  "work order": "Work Order",
+  workorder: "Work Order",
+  "product number": "Product Number",
+  productnumber: "Product Number",
+  "serial number": "Serial Number",
+  serialnumber: "Serial Number",
+  description: "Description",
+  sku: "SKU",
+};
+
+function normalizeSearchType(value) {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  if (!raw) return "Name";
+  return SEARCH_TYPE_MAP[raw] || "Name";
+}
+
+function buildSearchTerms(value) {
+  if (!value) return [];
+  return String(value)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+}
+
+function nameMatchesSearch(nameValue, searchValue) {
+  const nameLower = String(nameValue || "").toLowerCase();
+  const terms = buildSearchTerms(searchValue);
+  if (!terms.length) return false;
+  return terms.every((term) => nameLower.includes(term));
+}
+
 
 export default function MainSearch() {
   const { signOut } = useAuth();
@@ -162,6 +205,7 @@ export default function MainSearch() {
   const [showList, setShowList] = useState(false);
   const [showListSearch, setShowListSearch] = useState("text");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedOEM, setSelectedOEM] = useState(null);
   const [selectedModality, setSelectedModality] = useState(null);
   // Replace the old single client state with two sets:
@@ -175,6 +219,7 @@ export default function MainSearch() {
   // This state tells the modal which client box is being updated: "from" or "current"
   const [clientSelectionType, setClientSelectionType] = useState(null);
   const [showMap, setShowMap] = useState(false);
+  const [showTrailerMap, setShowTrailerMap] = useState(false);
 
   const router = useRouter();
   const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
@@ -201,7 +246,9 @@ export default function MainSearch() {
   const [pageCursors, setPageCursors] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const fetchSeq = useRef(0);
-  const backfillInFlight = useRef(false);
+  const slowQueryWarnRef = useRef({ key: "", at: 0 });
+  const nameBackfillInFlight = useRef(false);
+  const workOrderBackfillInFlight = useRef(false);
   const [queryEpoch, setQueryEpoch] = useState(0);
   const [loadError, setLoadError] = useState(null);
   const tableBodyRef = useRef(null);
@@ -210,6 +257,21 @@ export default function MainSearch() {
 
   const LOAD_TIMEOUT_MS = 30000;
   const openMap = () => setShowMap(true);
+  const openTrailerMap = () => setShowTrailerMap(true);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.showTrailerMap === "1") {
+      setShowTrailerMap(true);
+    }
+  }, [router.isReady, router.query.showTrailerMap]);
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timerId);
+  }, [search]);
 
   const handleMapView = useCallback(
     (selection = {}) => {
@@ -238,7 +300,13 @@ export default function MainSearch() {
   );
 
   const startNameTokenBackfill = useCallback(async (reason = "") => {
-    if (backfillInFlight.current) return;
+    if (nameBackfillInFlight.current) return;
+    if (
+      typeof window === "undefined" ||
+      window.localStorage.getItem("enableMainSearchBackfill") !== "1"
+    ) {
+      return;
+    }
     if (typeof window !== "undefined") {
       const lastRun = window.localStorage.getItem("nameTokensBackfillAt");
       if (lastRun && Date.now() - Number(lastRun) < 24 * 60 * 60 * 1000) {
@@ -246,7 +314,7 @@ export default function MainSearch() {
       }
     }
 
-    backfillInFlight.current = true;
+    nameBackfillInFlight.current = true;
     const db = firebase.firestore();
     let lastDoc = null;
 
@@ -309,11 +377,87 @@ export default function MainSearch() {
     } catch (error) {
       console.error("Name token backfill failed:", reason, error);
     } finally {
-      backfillInFlight.current = false;
+      nameBackfillInFlight.current = false;
     }
   }, []);
 
-  const searchLower = (search || "").toLowerCase().trim();
+  const startWorkOrderTokenBackfill = useCallback(async (reason = "") => {
+    if (workOrderBackfillInFlight.current) return;
+    if (
+      typeof window === "undefined" ||
+      window.localStorage.getItem("enableMainSearchBackfill") !== "1"
+    ) {
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const lastRun = window.localStorage.getItem("workOrderTokensBackfillAt");
+      if (lastRun && Date.now() - Number(lastRun) < 24 * 60 * 60 * 1000) {
+        return;
+      }
+    }
+
+    workOrderBackfillInFlight.current = true;
+    const db = firebase.firestore();
+    let lastDoc = null;
+
+    const tokensEqual = (a, b) => {
+      if (a.length !== b.length) return false;
+      const setA = new Set(a);
+      const setB = new Set(b);
+      if (setA.size !== setB.size) return false;
+      for (const v of setA) if (!setB.has(v)) return false;
+      return true;
+    };
+
+    try {
+      while (true) {
+        let query = db
+          .collection("Test")
+          .orderBy(firebase.firestore.FieldPath.documentId())
+          .limit(200);
+        if (lastDoc) query = query.startAfter(lastDoc);
+
+        const snap = await query.get();
+        if (snap.empty) break;
+
+        const batch = db.batch();
+        let writes = 0;
+
+        snap.docs.forEach((doc) => {
+          const data = doc.data() || {};
+          const workOrderTokens = buildWorkOrderTokens(data.workOrders || []);
+          const existingTokens = Array.isArray(data.workOrderTokens)
+            ? Array.from(new Set(data.workOrderTokens.map((v) => String(v))))
+            : [];
+
+          if (!tokensEqual(existingTokens, workOrderTokens)) {
+            batch.update(doc.ref, { workOrderTokens });
+            writes += 1;
+          }
+        });
+
+        if (writes > 0) {
+          await batch.commit();
+        }
+
+        lastDoc = snap.docs[snap.docs.length - 1];
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "workOrderTokensBackfillAt",
+          String(Date.now())
+        );
+      }
+    } catch (error) {
+      console.error("Work-order token backfill failed:", reason, error);
+    } finally {
+      workOrderBackfillInFlight.current = false;
+    }
+  }, []);
+
+  const searchLower = (debouncedSearch || "").toLowerCase().trim();
   const hasActiveFilters =
     Boolean(selectedOEM) ||
     Boolean(selectedModality) ||
@@ -330,8 +474,25 @@ export default function MainSearch() {
     return String(value).toLowerCase().includes(s);
   };
 
-  const matchesFilters = useCallback(
-    (item) => {
+  const workOrderMatches = useCallback((value, searchValue) => {
+    const normalizedSearch = normalizeWorkOrderValue(searchValue);
+    if (!normalizedSearch) return false;
+    const compactSearch = normalizedSearch.replace(/[^a-z0-9]+/g, "");
+
+    const normalizedValue = normalizeWorkOrderValue(value);
+    const compactValue = normalizedValue.replace(/[^a-z0-9]+/g, "");
+    return (
+      normalizedValue.includes(normalizedSearch) ||
+      (Boolean(compactSearch) && compactValue.includes(compactSearch))
+    );
+  }, []);
+
+  const itemMatchesFilters = useCallback(
+    (item, overrides = {}) => {
+      const activeSearchLower =
+        overrides.searchLower != null ? overrides.searchLower : searchLower;
+      const activeSelect = normalizeSearchType(overrides.select ?? select);
+
       // hide explicitly hidden items
       if (item?.visible === false) return false;
 
@@ -364,12 +525,12 @@ export default function MainSearch() {
       }
 
       // Search
-      if (searchLower) {
-        if (select === "Name") {
-          return valueMatches(item?.name, searchLower);
+      if (activeSearchLower) {
+        if (activeSelect === "Name") {
+          return nameMatchesSearch(item?.name, activeSearchLower);
         }
-        if (select === "Date") {
-          const wantedDay = searchLower; // yyyy-mm-dd from input
+        if (activeSelect === "Date") {
+          const wantedDay = activeSearchLower; // yyyy-mm-dd from input
           const itemYMD = toYMD(item?.date);
           if (itemYMD && itemYMD === wantedDay) return true;
           if (Array.isArray(item?.descriptions)) {
@@ -384,35 +545,35 @@ export default function MainSearch() {
           }
           return false;
         }
-        if (select === "Work Order") {
+        if (activeSelect === "Work Order") {
           return (
             Array.isArray(item?.workOrders) &&
             item.workOrders.some((wo) =>
-              valueMatches(wo?.workOrder, searchLower)
+              workOrderMatches(wo?.workOrder, activeSearchLower)
             )
           );
         }
-        if (select === "Product Number") {
-          return valueMatches(item?.pn, searchLower);
+        if (activeSelect === "Product Number") {
+          return valueMatches(item?.pn, activeSearchLower);
         }
-        if (select === "Serial Number") {
-          return valueMatches(item?.sn, searchLower);
+        if (activeSelect === "Serial Number") {
+          return valueMatches(item?.sn, activeSearchLower);
         }
-        if (select === "Description") {
-          if (valueMatches(item?.desc, searchLower)) return true;
-          if (valueMatches(item?.description, searchLower)) return true;
+        if (activeSelect === "Description") {
+          if (valueMatches(item?.desc, activeSearchLower)) return true;
+          if (valueMatches(item?.description, activeSearchLower)) return true;
           if (Array.isArray(item?.descriptions)) {
             return item.descriptions.some((d) =>
-              valueMatches(d?.description, searchLower)
+              valueMatches(d?.description, activeSearchLower)
             );
           }
           return false;
         }
-        if (select === "SKU") {
+        if (activeSelect === "SKU") {
           return (
-            valueMatches(item?.id, searchLower) ||
-            valueMatches(item?.localSN, searchLower) ||
-            valueMatches(item?.local_sn, searchLower)
+            valueMatches(item?.id, activeSearchLower) ||
+            valueMatches(item?.localSN, activeSearchLower) ||
+            valueMatches(item?.local_sn, activeSearchLower)
           );
         }
       }
@@ -427,7 +588,13 @@ export default function MainSearch() {
       selectedClientCurrent,
       searchLower,
       select,
+      workOrderMatches,
     ]
+  );
+
+  const matchesFilters = useCallback(
+    (item) => itemMatchesFilters(item),
+    [itemMatchesFilters]
   );
 
   const resetPagination = () => {
@@ -452,9 +619,16 @@ export default function MainSearch() {
     selectedModel,
     selectedClientFrom,
     selectedClientCurrent,
-    search,
+    debouncedSearch,
     select,
   ]);
+
+  useEffect(() => {
+    const selectedType = normalizeSearchType(router.query.selectedType || select);
+    if (selectedType === "Work Order") {
+      startWorkOrderTokenBackfill("work-order-mode");
+    }
+  }, [router.query.selectedType, select, startWorkOrderTokenBackfill]);
 
 
   // Fetch data on component mount and route change
@@ -492,7 +666,7 @@ export default function MainSearch() {
     }, LOAD_TIMEOUT_MS);
     try {
       if (router.query.inputText && router.query.selectedType) {
-        setSelect(router.query.selectedType);
+        setSelect(normalizeSearchType(router.query.selectedType));
         setSearch(router.query.inputText);
       }
       const startAfterDoc =
@@ -505,11 +679,25 @@ export default function MainSearch() {
         }
         return;
       }
-      const effectiveSelect = router.query.selectedType || select;
-      const effectiveSearch = router.query.inputText || search;
+      const effectiveSelect = normalizeSearchType(
+        router.query.selectedType || select
+      );
+      const effectiveSearch = router.query.inputText || debouncedSearch;
       const effectiveSearchLower = (effectiveSearch || "")
         .toLowerCase()
         .trim();
+      const hasWorkOrderSearch =
+        Boolean(effectiveSearchLower) && effectiveSelect === "Work Order";
+      if (hasWorkOrderSearch) {
+        startWorkOrderTokenBackfill("work-order-request");
+      }
+      const hasActiveFiltersForRequest =
+        Boolean(selectedOEM) ||
+        Boolean(selectedModality) ||
+        Boolean(selectedModel) ||
+        Boolean(selectedClientFrom) ||
+        Boolean(selectedClientCurrent) ||
+        Boolean(effectiveSearchLower);
 
       // light retry for transient Firestore hiccups
       const load = async (attempt = 1) => {
@@ -518,7 +706,13 @@ export default function MainSearch() {
             pageSize,
             startAfterDoc,
             visibleOnly: true,
-            filterFn: hasActiveFilters ? matchesFilters : null,
+            filterFn: hasActiveFiltersForRequest
+              ? (item) =>
+                  itemMatchesFilters(item, {
+                    searchLower: effectiveSearchLower,
+                    select: effectiveSelect,
+                  })
+              : null,
             search: effectiveSearchLower
               ? {
                   type: effectiveSelect,
@@ -539,8 +733,44 @@ export default function MainSearch() {
           return load(attempt + 1);
         }
       };
-      const { parts: data, lastDoc, hasNextPage: nextPage } = await load();
+      const {
+        parts: data,
+        lastDoc,
+        hasNextPage: nextPage,
+        debug: queryDebug = null,
+      } = await load();
       if (timedOut || seq !== fetchSeq.current) return;
+      const slowQueryDetected =
+        queryDebug &&
+        (queryDebug.elapsedMs > 2000 ||
+          queryDebug.scannedDocs > pageSize * 8 ||
+          queryDebug.scannedBatches > 8);
+      if (slowQueryDetected && hasWorkOrderSearch) {
+        startWorkOrderTokenBackfill("work-order-slow-query");
+      }
+      if (slowQueryDetected) {
+        const warnKey = [
+          queryDebug.searchMode || "unknown",
+          effectiveSelect,
+          effectiveSearchLower || "",
+          String(pageSize),
+          String(requestedPage),
+        ].join("|");
+        const now = Date.now();
+        const lastWarn = slowQueryWarnRef.current;
+        const shouldWarn =
+          lastWarn.key !== warnKey || now - Number(lastWarn.at || 0) > 10000;
+        if (shouldWarn) {
+          console.warn("[mainSearch][slow-query]", {
+            ...queryDebug,
+            pageSize,
+            requestedPage,
+            effectiveSelect,
+            hasActiveFilters: hasActiveFiltersForRequest,
+          });
+          slowQueryWarnRef.current = { key: warnKey, at: now };
+        }
+      }
       const hasNameSearch =
         Boolean(effectiveSearchLower) && effectiveSelect === "Name";
       if (
@@ -552,6 +782,17 @@ export default function MainSearch() {
           ))
       ) {
         startNameTokenBackfill("name-search");
+      }
+      if (
+        hasWorkOrderSearch &&
+        (data.length === 0 ||
+          data.some(
+            (item) =>
+              !Array.isArray(item?.workOrderTokens) ||
+              item.workOrderTokens.length === 0
+          ))
+      ) {
+        startWorkOrderTokenBackfill("work-order-search");
       }
       if (requestedPage === 1 && data.length === 0) {
         setPageCursors([]);
@@ -592,7 +833,14 @@ export default function MainSearch() {
 
       setAugmentedInfo(augmented);
       // default view = filtered (keeps pagination and filters consistent)
-      setInfo(augmented.filter(matchesFilters));
+      setInfo(
+        augmented.filter((item) =>
+          itemMatchesFilters(item, {
+            searchLower: effectiveSearchLower,
+            select: effectiveSelect,
+          })
+        )
+      );
     } catch (err) {
       if (seq !== fetchSeq.current) return;
       console.error("Error fetching data:", err);
@@ -848,10 +1096,12 @@ export default function MainSearch() {
   // CLIENT SELECTION HANDLING
   // --------------------
   // This function fetches clients and opens the client modal.
-  const handleClientClick = async () => {
+  const handleClientClick = async (type = "from") => {
+    const nextSelectionType = type === "current" ? "current" : "from";
+    setClientSelectionType(nextSelectionType);
     let safeClients = [];
     try {
-      const clientsData = await fetchClients(selectedOEM, selectedModality);
+      const clientsData = await fetchClients();
       safeClients = Array.isArray(clientsData) ? clientsData : [];
     } catch (e) {
       console.error("fetchClients failed:", e);
@@ -860,11 +1110,7 @@ export default function MainSearch() {
     // Fallback to building from loaded items if API gave us nothing
     if (safeClients.length === 0) {
       try {
-        if (!clientSelectionType) {
-          // if somehow not set yet, default to "from"
-          setClientSelectionType("from");
-        }
-        const derived = await buildClientsFromItems(clientSelectionType || "from");
+        const derived = await buildClientsFromItems(nextSelectionType);
         safeClients = derived;
       } catch (e) {
         console.error("Fallback buildClientsFromItems failed:", e);
@@ -1374,17 +1620,19 @@ export default function MainSearch() {
                 <span></span>
                 <span></span>
               </button>
-              <div className={styles.brand}>
-                <img
-                  src="/magmo-logo.png"
-                  alt="Magmo"
-                  className={styles.brandLogo}
-                />
-                <div>
-                  <div className={styles.brandName}>Magmo</div>
-                  <div className={styles.brandSub}>Inventory Search</div>
-                </div>
-              </div>
+              <Link href="/NewSearch/mainSearch">
+                <a className={styles.brand} aria-label="Go to Main Search">
+                  <img
+                    src="/magmo-logo.png"
+                    alt="Magmo"
+                    className={styles.brandLogo}
+                  />
+                  <div>
+                    <div className={styles.brandName}>Magmo</div>
+                    <div className={styles.brandSub}>Inventory Search</div>
+                  </div>
+                </a>
+              </Link>
             </div>
             <div className={styles.headerRight}>
               <div className={styles.headerStatus}>
@@ -1562,6 +1810,13 @@ export default function MainSearch() {
                     >
                       Map
                     </Button>
+                    <Button
+                      variant="info"
+                      className={`${styles.actionButton} ${styles.trailerActionButton}`}
+                      onClick={openTrailerMap}
+                    >
+                      Trailers
+                    </Button>
                     <LoadingButton
                       type="primary"
                       name="Back"
@@ -1593,6 +1848,10 @@ export default function MainSearch() {
           show={showMap}
           onHide={() => setShowMap(false)}
           onView={handleMapView}
+        />
+        <TrailerMapModal
+          show={showTrailerMap}
+          onHide={() => setShowTrailerMap(false)}
         />
       </div>
     </LoggedIn>

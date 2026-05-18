@@ -65,3 +65,47 @@ export function buildNameTokens(name) {
   tokens.push(lower);
   return Array.from(new Set(tokens));
 }
+
+export function normalizeWorkOrderValue(value) {
+  if (value == null) return "";
+  return String(value).toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+export function buildWorkOrderTokens(workOrders) {
+  const tokens = new Set();
+
+  const addTokensForValue = (value) => {
+    const normalized = normalizeWorkOrderValue(value);
+    if (!normalized) return;
+
+    tokens.add(normalized);
+
+    const compact = normalized.replace(/[^a-z0-9]+/g, "");
+    if (compact) {
+      tokens.add(compact);
+      const digitRuns = compact.match(/\d+/g) || [];
+      digitRuns.forEach((entry) => tokens.add(entry));
+    }
+
+    normalized
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+      .forEach((entry) => tokens.add(entry));
+  };
+
+  if (Array.isArray(workOrders)) {
+    workOrders.forEach((entry) => addTokensForValue(entry?.workOrder));
+  } else {
+    addTokensForValue(workOrders);
+  }
+
+  const out = Array.from(tokens);
+  if (out.length <= 200) return out;
+
+  // Keep larger, more specific tokens when capped.
+  out.sort((a, b) => {
+    if (b.length !== a.length) return b.length - a.length;
+    return a.localeCompare(b);
+  });
+  return out.slice(0, 200);
+}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FormControl, Button, Spinner, Alert } from "react-bootstrap";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { fetchClients } from "../../utils/fetchAssociations";
 import ClientTable from "../../utils/ClientTable";
 import styles from "../../styles/ClientSearch.module.css";
@@ -12,6 +13,7 @@ const ClientPage = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [selectingClientId, setSelectingClientId] = useState("");
   const router = useRouter();
 
   // Fetch clients when the component mounts
@@ -38,10 +40,16 @@ const ClientPage = () => {
   };
 
   // Handle client selection
-  const handleSelectClient = (clientId) => {
+  const handleSelectClient = async (clientId) => {
     console.log("Selected client ID:", clientId);
+    setSelectingClientId(clientId);
     // Redirect to client-specific page
-    router.push(`client/${clientId}`);
+    try {
+      await router.push(`client/${clientId}`);
+    } catch (error) {
+      console.error("Error opening client:", error);
+      setSelectingClientId("");
+    }
   };
 
   // Handle client info button click
@@ -70,19 +78,30 @@ const ClientPage = () => {
 
   return (
     <div className={styles.page}>
+      {selectingClientId && (
+        <div className={styles.loadingOverlay}>
+          <img
+            src="/magmo-logo.png"
+            alt="Loading Magmo"
+            className={styles.loadingLogo}
+          />
+        </div>
+      )}
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div className={styles.brand}>
-            <img
-              src="/magmo-logo.png"
-              alt="Magmo"
-              className={styles.brandLogo}
-            />
-            <div>
-              <div className={styles.brandName}>Magmo</div>
-              <div className={styles.brandSub}>Client Search</div>
-            </div>
-          </div>
+          <Link href="/NewSearch/mainSearch">
+            <a className={styles.brand} aria-label="Go to Main Search">
+              <img
+                src="/magmo-logo.png"
+                alt="Magmo"
+                className={styles.brandLogo}
+              />
+              <div>
+                <div className={styles.brandName}>Magmo</div>
+                <div className={styles.brandSub}>Client Search</div>
+              </div>
+            </a>
+          </Link>
           <div className={styles.headerActions}>
             <Button
               variant="outline-secondary"
@@ -151,6 +170,7 @@ const ClientPage = () => {
                     onSelectClient={handleSelectClient}
                     onInfoClick={handleClientInfo}
                     isClientSearch={true}
+                    selectingClientId={selectingClientId}
                   />
                 </div>
               </>

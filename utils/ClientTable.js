@@ -1,5 +1,5 @@
 import React from "react";
-import { Table, Button } from "react-bootstrap";
+import { Table, Button, Spinner } from "react-bootstrap";
 import styles from "../styles/ClientTable.module.css";
 
 const ClientTable = ({
@@ -11,6 +11,7 @@ const ClientTable = ({
   disableSelect,
   disableInfo,
   isClientSearch,
+  selectingClientId,
 }) => {
   const columnCount =
     1 + (disableInfo ? 0 : 1) + (disableSelect ? 0 : 1);
@@ -65,9 +66,24 @@ const ClientTable = ({
               <td>
                 <Button
                   variant="primary"
+                  disabled={Boolean(selectingClientId)}
                   onClick={() => onSelectClient(client.id)}
                 >
-                  Select
+                  {selectingClientId === client.id ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Loading...
+                    </>
+                  ) : (
+                    "Select"
+                  )}
                 </Button>
               </td>
             )}
