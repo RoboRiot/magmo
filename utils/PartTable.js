@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Table, Button, Form } from "react-bootstrap";
+import { Table, Button } from "react-bootstrap";
 import { formatDate } from "./fetchAssociations";
 import styles from "../styles/PartTable.module.css";
 
@@ -18,6 +18,7 @@ export default function PartTable({
   selectedItems,
   setSelectedItems,
   minRows = 10,
+  canDelete = false,
 }) {
   // const [selectedItems, setSelectedItems] = useState([]);
   const [longPressName, setLongPressName] = useState(null);
@@ -45,13 +46,6 @@ export default function PartTable({
         ? prevSelectedItems.filter((itemId) => itemId !== id)
         : [...prevSelectedItems, id]
     );
-  };
-
-  // Handle delete button click for selected items
-  const handleDeleteSelected = () => {
-    if (selectedItems.length > 0) {
-      checkDelete(null, null, selectedItems, "selected items");
-    }
   };
 
   const startLongPress = (name) => () => {
@@ -102,20 +96,11 @@ export default function PartTable({
                   {item}
                 </th>
               ))}
-              <th className={styles.actionCol} style={{ textAlign: "center" }}>
-                {selectedItems.length > 0 ? (
-                  <Button
-                    variant="danger"
-                    onClick={handleDeleteSelected}
-                    disabled={isDeleting}
-                    size="sm"
-                  >
-                    Delete Selected ({selectedItems.length})
-                  </Button>
-                ) : (
-                  "select"
-                )}
-              </th>
+              {canDelete && (
+                <th className={styles.actionCol} style={{ textAlign: "center" }}>
+                  delete
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -172,28 +157,26 @@ export default function PartTable({
                     {item.sn}
                   </div>
                 </td>
-                <td className={styles.actionCol} style={{ textAlign: "center" }}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedItems.includes(item.id)}
-                    onChange={(e) => {
-                      e.stopPropagation(); // Prevent row click when checkbox is clicked
-                      // Toggle selection using item.id directly
-                      setSelectedItems((prevSelectedItems) =>
-                        prevSelectedItems.includes(item.id)
-                          ? prevSelectedItems.filter((id) => id !== item.id)
-                          : [...prevSelectedItems, item.id]
-                      );
-                    }}
-                    aria-label={`Select ${item.name}`}
-                  />
-                </td>
+                {canDelete && (
+                  <td className={styles.actionCol} style={{ textAlign: "center" }}>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      disabled={isDeleting}
+                      onClick={(e) => {
+                        checkDelete(e, index, [item.id], item.name);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
             {paddingCount > 0 &&
               Array.from({ length: paddingCount }).map((_, index) => (
                 <tr key={`empty-${index}`}>
-                  <td colSpan={labels.length + 1} style={{ textAlign: "center" }}>
+                  <td colSpan={labels.length + (canDelete ? 1 : 0)} style={{ textAlign: "center" }}>
                     &nbsp;
                   </td>
                 </tr>

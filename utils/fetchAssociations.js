@@ -108,6 +108,10 @@ export async function fetchPartsWithMachineDataPage({
   filterFn = null,
   needsMachineData = true,
   search = null,
+  selectedClientFrom = null,
+  selectedClientCurrent = null,
+  debugLabel = "",
+  onDebug = null,
 } = {}) {
   const db = firebase.firestore();
   const limit = pageSize + 1;
@@ -115,6 +119,12 @@ export async function fetchPartsWithMachineDataPage({
   let scannedDocs = 0;
   let scannedBatches = 0;
   let machineQueryCount = 0;
+  let clientPrefilterRejected = 0;
+  let visibleRejected = 0;
+  let filterRejected = 0;
+  const acceptedDocIds = [];
+  const corruptDocs = [];
+  const batchDebug = [];
   const scanBatchLimit = Math.max(limit, Math.min(250, pageSize * 8));
 
   const getRefId = (ref) => {
@@ -131,6 +141,72 @@ export async function fetchPartsWithMachineDataPage({
       ? query.select(...MACHINE_SELECT_FIELDS)
       : query;
   const machineCache = new Map();
+
+  const emitDebug = (event, payload = {}) => {
+    if (typeof onDebug !== "function") return;
+    try {
+      onDebug({
+        event,
+        label: debugLabel,
+        elapsedMs: Date.now() - startedAt,
+        scannedDocs,
+        scannedBatches,
+        acceptedCount: acceptedDocIds.length,
+        ...payload,
+      });
+    } catch {
+      // Debug hooks should never affect the search path.
+    }
+  };
+
+  const fetchMachineIdsForClient = async (clientId) => {
+    if (!clientId) return null;
+
+    const ids = new Set();
+    const clientRef = db.collection("Client").doc(clientId);
+    const queries = [
+      db.collection("Machine").where("client", "==", clientRef),
+      db.collection("Machine").where("client", "==", clientId),
+    ];
+
+    for (const query of queries) {
+      const snap = await query.get();
+      snap.forEach((docSnap) => ids.add(docSnap.id));
+    }
+
+    return ids;
+  };
+
+  const [clientFromMachineIds, clientCurrentMachineIds] = await Promise.all([
+    fetchMachineIdsForClient(selectedClientFrom),
+    fetchMachineIdsForClient(selectedClientCurrent),
+  ]);
+
+  const rawMatchesClientSelection = (raw, type) => {
+    const selectedClient =
+      type === "from" ? selectedClientFrom : selectedClientCurrent;
+    if (!selectedClient) return true;
+
+    const directClientRef =
+      type === "from"
+        ? raw?.ClientFrom ?? raw?.clientFromId
+        : raw?.ClientCurrent ?? raw?.clientCurrentId;
+    const directClientId = getRefId(directClientRef);
+    if (directClientId === selectedClient) return true;
+
+    const machineRef =
+      type === "from"
+        ? raw?.Machine || raw?.MachineFrom
+        : raw?.CurrentMachine || raw?.MachineCurrent;
+    const machineId = getRefId(machineRef);
+    const machineIds =
+      type === "from" ? clientFromMachineIds : clientCurrentMachineIds;
+    return Boolean(machineId && machineIds?.has(machineId));
+  };
+
+  const rawMatchesClientSelections = (raw) =>
+    rawMatchesClientSelection(raw, "from") &&
+    rawMatchesClientSelection(raw, "current");
 
   const fetchMachineMap = async (ids) => {
     if (!ids.length) return {};
@@ -188,10 +264,17 @@ export async function fetchPartsWithMachineDataPage({
 
   let activeSearchMode = "scan";
   const buildDebug = () => ({
+    label: debugLabel,
     searchMode: activeSearchMode,
     scannedDocs,
     scannedBatches,
     machineQueryCount,
+    clientPrefilterRejected,
+    visibleRejected,
+    filterRejected,
+    acceptedDocIds,
+    corruptDocs,
+    batchDebug,
     scanBatchLimit:
       activeSearchMode === "scan" || activeSearchMode === "scan-fallback"
         ? scanBatchLimit
@@ -200,7 +283,8 @@ export async function fetchPartsWithMachineDataPage({
   });
 
   const buildPart = (partDoc, machineMap, currentMachineMap) => {
-    const partData = stripEmbeddedMachineAssociations(partDoc.data() || {});
+    const rawPartData = partDoc.data() || {};
+    const partData = stripEmbeddedMachineAssociations(rawPartData);
     partData.id = partDoc.id; // Add document ID here
     partData.clientFromId =
       getRefId(partData?.ClientFrom) ?? partData?.clientFromId ?? null;
@@ -231,6 +315,177 @@ export async function fetchPartsWithMachineDataPage({
 
     return partData;
   };
+
+  const getClientQueryMatches = async ({ type, clientId, machineIds }) => {
+    if (!clientId) return null;
+
+    const directFields =
+      type === "from"
+        ? ["ClientFrom", "clientFromId"]
+        : ["ClientCurrent", "clientCurrentId"];
+    const machineFields =
+      type === "from"
+        ? ["Machine", "MachineFrom"]
+        : ["CurrentMachine", "MachineCurrent"];
+    const clientRef = db.collection("Client").doc(clientId);
+    const docMap = new Map();
+    const queries = [];
+
+    directFields.forEach((field) => {
+      queries.push(db.collection("Test").where(field, "==", clientRef));
+      queries.push(db.collection("Test").where(field, "==", clientId));
+    });
+
+    const machineIdList = Array.from(machineIds || []);
+    const machineRefs = machineIdList.map((id) => db.collection("Machine").doc(id));
+    for (const field of machineFields) {
+      for (let i = 0; i < machineRefs.length; i += 10) {
+        queries.push(
+          db.collection("Test").where(field, "in", machineRefs.slice(i, i + 10))
+        );
+      }
+      for (let i = 0; i < machineIdList.length; i += 10) {
+        queries.push(
+          db.collection("Test").where(field, "in", machineIdList.slice(i, i + 10))
+        );
+      }
+    }
+
+    for (const query of queries) {
+      scannedBatches += 1;
+      const snap = await query.get();
+      scannedDocs += snap.size;
+      snap.forEach((docSnap) => {
+        docMap.set(docSnap.id, docSnap);
+      });
+    }
+
+    return docMap;
+  };
+
+  const fetchClientPrefilterDocs = async () => {
+    if (!selectedClientFrom && !selectedClientCurrent) return null;
+
+    const [fromMatches, currentMatches] = await Promise.all([
+      getClientQueryMatches({
+        type: "from",
+        clientId: selectedClientFrom,
+        machineIds: clientFromMachineIds,
+      }),
+      getClientQueryMatches({
+        type: "current",
+        clientId: selectedClientCurrent,
+        machineIds: clientCurrentMachineIds,
+      }),
+    ]);
+
+    let docMap = fromMatches || currentMatches || new Map();
+    if (fromMatches && currentMatches) {
+      docMap = new Map(
+        [...fromMatches].filter(([id]) => currentMatches.has(id))
+      );
+    }
+
+    return [...docMap.values()].sort((a, b) => a.id.localeCompare(b.id));
+  };
+
+  const clientPrefilterDocs = await fetchClientPrefilterDocs();
+
+  if (clientPrefilterDocs) {
+    activeSearchMode = "client-query";
+    const startAfterId = startAfterDoc?.id || null;
+    const startIndex = startAfterId
+      ? clientPrefilterDocs.findIndex((docSnap) => docSnap.id === startAfterId) + 1
+      : 0;
+    const visibleDocs = clientPrefilterDocs.slice(Math.max(0, startIndex));
+    const matchedDocs = [];
+    const candidateWindowSize = Math.max(limit, Math.min(100, pageSize * 4));
+
+    for (
+      let offset = 0;
+      offset < visibleDocs.length && matchedDocs.length <= pageSize;
+      offset += candidateWindowSize
+    ) {
+      const windowDocs = visibleDocs.slice(offset, offset + candidateWindowSize);
+      const machineIds = new Set();
+      const currentMachineIds = new Set();
+
+      windowDocs.forEach((docSnap) => {
+        try {
+          const raw = docSnap.data() || {};
+          if (visibleOnly && raw.visible === false) return;
+          const machineId = getRefId(raw.Machine || raw.MachineFrom);
+          const currentMachineId = getRefId(
+            raw.CurrentMachine || raw.MachineCurrent
+          );
+          if (machineId) machineIds.add(machineId);
+          if (currentMachineId) currentMachineIds.add(currentMachineId);
+        } catch (error) {
+          corruptDocs.push({
+            id: docSnap.id,
+            stage: "client-query-read-before-machine-fetch",
+            message: error?.message || String(error),
+          });
+        }
+      });
+
+      let machineMap = {};
+      let currentMachineMap = {};
+      if (needsMachineData) {
+        [machineMap, currentMachineMap] = await Promise.all([
+          fetchMachineMap([...machineIds]),
+          fetchMachineMap([...currentMachineIds]),
+        ]);
+      }
+
+      for (const docSnap of windowDocs) {
+        let raw;
+        try {
+          raw = docSnap.data() || {};
+          if (visibleOnly && raw.visible === false) {
+            visibleRejected += 1;
+            continue;
+          }
+          if (!rawMatchesClientSelections(raw)) {
+            clientPrefilterRejected += 1;
+            continue;
+          }
+          const built = buildPart(docSnap, machineMap, currentMachineMap);
+          if (filterFn && !filterFn(built)) {
+            filterRejected += 1;
+            continue;
+          }
+          matchedDocs.push({ docSnap, built });
+          if (matchedDocs.length > pageSize) break;
+        } catch (error) {
+          corruptDocs.push({
+            id: docSnap.id,
+            stage: "client-query-build-or-filter",
+            message: error?.message || String(error),
+            machineId: getRefId(raw?.Machine || raw?.MachineFrom) || null,
+            currentMachineId:
+              getRefId(raw?.CurrentMachine || raw?.MachineCurrent) || null,
+          });
+        }
+      }
+    }
+
+    const pageMatches = matchedDocs.slice(0, pageSize);
+    pageMatches.forEach(({ docSnap }) => acceptedDocIds.push(docSnap.id));
+
+    return {
+      parts: pageMatches.map(({ built }) => built),
+      lastDoc: pageMatches.length
+        ? pageMatches[pageMatches.length - 1].docSnap
+        : null,
+      hasNextPage: matchedDocs.length > pageSize,
+      debug: {
+        ...buildDebug(),
+        clientCandidateDocs: clientPrefilterDocs.length,
+        clientRemainingDocs: visibleDocs.length,
+      },
+    };
+  }
 
   const searchRaw = (search?.raw || "").toString().trim();
   const searchLower = (search?.lower || "").toString().trim();
@@ -495,6 +750,13 @@ export async function fetchPartsWithMachineDataPage({
     const batchLimit = usingScanFallback ? scanBatchLimit : limit;
     query = query.limit(batchLimit);
 
+    emitDebug("batch:start", {
+      batchLimit,
+      cursorId: cursor?.id || null,
+      usingScanFallback,
+      usedFallback,
+    });
+
     const snap = await query.get();
     if (snap.empty) {
       if (
@@ -525,6 +787,20 @@ export async function fetchPartsWithMachineDataPage({
 
     const batchDocs = snap.docs;
     scannedDocs += batchDocs.length;
+    const batchInfo = {
+      index: scannedBatches,
+      size: snap.size,
+      firstDocId: batchDocs[0]?.id || null,
+      lastDocId: batchDocs[batchDocs.length - 1]?.id || null,
+      acceptedBefore: parts.length,
+      acceptedAfter: parts.length,
+      clientPrefilterRejectedBefore: clientPrefilterRejected,
+      clientPrefilterRejectedAfter: clientPrefilterRejected,
+      visibleRejectedBefore: visibleRejected,
+      visibleRejectedAfter: visibleRejected,
+      filterRejectedBefore: filterRejected,
+      filterRejectedAfter: filterRejected,
+    };
     let machineMap = {};
     let currentMachineMap = {};
 
@@ -532,8 +808,23 @@ export async function fetchPartsWithMachineDataPage({
       const machineIds = new Set();
       const currentMachineIds = new Set();
       for (const doc of batchDocs) {
-        const raw = doc.data();
+        let raw;
+        try {
+          raw = doc.data() || {};
+        } catch (error) {
+          corruptDocs.push({
+            id: doc.id,
+            stage: "read-before-machine-fetch",
+            message: error?.message || String(error),
+          });
+          continue;
+        }
         if (visibleOnly && raw.visible === false) {
+          visibleRejected += 1;
+          continue;
+        }
+        if (!rawMatchesClientSelections(raw)) {
+          clientPrefilterRejected += 1;
           continue;
         }
         const machineId = getRefId(raw.Machine || raw.MachineFrom);
@@ -554,18 +845,39 @@ export async function fetchPartsWithMachineDataPage({
       const doc = batchDocs[i];
       cursor = doc;
 
-      const raw = doc.data();
-      if (visibleOnly && raw.visible === false) {
-        continue; // skip hidden items but keep advancing the cursor
-      }
+      let raw;
+      let built;
+      try {
+        raw = doc.data() || {};
+        if (visibleOnly && raw.visible === false) {
+          visibleRejected += 1;
+          continue; // skip hidden items but keep advancing the cursor
+        }
+        if (!rawMatchesClientSelections(raw)) {
+          clientPrefilterRejected += 1;
+          continue;
+        }
 
-      const built = buildPart(doc, machineMap, currentMachineMap);
-      if (filterFn && !filterFn(built)) {
+        built = buildPart(doc, machineMap, currentMachineMap);
+        if (filterFn && !filterFn(built)) {
+          filterRejected += 1;
+          continue;
+        }
+      } catch (error) {
+        corruptDocs.push({
+          id: doc.id,
+          stage: "build-or-filter",
+          message: error?.message || String(error),
+          machineId: getRefId(raw?.Machine || raw?.MachineFrom) || null,
+          currentMachineId:
+            getRefId(raw?.CurrentMachine || raw?.MachineCurrent) || null,
+        });
         continue;
       }
 
       if (!filled) {
         parts.push(built);
+        acceptedDocIds.push(doc.id);
         if (parts.length === pageSize) {
           filled = true;
           pageLastDoc = doc;
@@ -576,6 +888,26 @@ export async function fetchPartsWithMachineDataPage({
       // We already filled the page and found an extra matching item.
       hasNextPage = true;
       return { parts, lastDoc: pageLastDoc, hasNextPage, debug: buildDebug() };
+    }
+
+    batchInfo.acceptedAfter = parts.length;
+    batchInfo.clientPrefilterRejectedAfter = clientPrefilterRejected;
+    batchInfo.visibleRejectedAfter = visibleRejected;
+    batchInfo.filterRejectedAfter = filterRejected;
+    batchDebug.push(batchInfo);
+    emitDebug("batch:done", batchInfo);
+
+    if (filled) {
+      return {
+        parts,
+        lastDoc: pageLastDoc,
+        hasNextPage: snap.size === batchLimit,
+        debug: {
+          ...buildDebug(),
+          hasNextPageIsOptimistic: snap.size === batchLimit,
+          stoppedAfterPageFilled: true,
+        },
+      };
     }
 
     // We exhausted this batch without filling the page.

@@ -102,6 +102,16 @@ export default function InventoryManage() {
   const bins     = useMemo(() => distinct(items.map((i) => i.bin)),     [items]);
   const pallets  = useMemo(() => distinct(items.map((i) => i.pallet)),  [items]);
 
+  const parseSectionValue = (value) => {
+    const trimmed = String(value || "").trim().toUpperCase();
+    const match = trimmed.match(/^([A-Z]+)\s*([0-9].*)$/);
+    if (!match) return null;
+    return {
+      letter: match[1],
+      number: match[2].trim(),
+    };
+  };
+
   // ---- toggles ----
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
@@ -132,18 +142,34 @@ export default function InventoryManage() {
 
   // ---- bulk update handler ----
   const applyBulkUpdate = () => {
-    if (!bulkField || !bulkValue) return;
+    const trimmedBulkValue = String(bulkValue || "").trim();
+    if (!bulkField || !trimmedBulkValue) return;
     const db = firebase.firestore();
+    const parsedSection = parseSectionValue(trimmedBulkValue);
+
+    if (bulkField === "section" && !parsedSection) return;
 
     const updates = Array.from(selectedIds).map((id) => {
       const orig = items.find((i) => i.id === id) || {};
-      const newRegion  = bulkField === "region"  ? bulkValue : orig.region;
+      const newRegion  = bulkField === "region"  ? trimmedBulkValue : orig.region;
       const newSectionLetter =
-        bulkField === "sectionLetter" ? bulkValue : orig.sectionLetter;
+        bulkField === "section"
+          ? parsedSection.letter
+          : bulkField === "sectionLetter"
+          ? parsedSection?.letter || trimmedBulkValue.toUpperCase()
+          : bulkField === "sectionNumber" && parsedSection
+          ? parsedSection.letter
+          : orig.sectionLetter;
       const newSectionNumber =
-        bulkField === "sectionNumber" ? bulkValue : orig.sectionNumber;
-      const newBin     = bulkField === "bin"     ? bulkValue : orig.bin;
-      const newPallet  = bulkField === "pallet"  ? bulkValue : orig.pallet;
+        bulkField === "section"
+          ? parsedSection.number
+          : bulkField === "sectionNumber"
+          ? parsedSection?.number || trimmedBulkValue
+          : bulkField === "sectionLetter" && parsedSection
+          ? parsedSection.number
+          : orig.sectionNumber;
+      const newBin     = bulkField === "bin"     ? trimmedBulkValue : orig.bin;
+      const newPallet  = bulkField === "pallet"  ? trimmedBulkValue : orig.pallet;
 
       const newLocString = formatLoc({
         region: newRegion,
@@ -360,6 +386,7 @@ export default function InventoryManage() {
               >
                 <option value="">Change…</option>
                 <option value="region">Region</option>
+                <option value="section">Section</option>
                 <option value="sectionLetter">Section Letter</option>
                 <option value="sectionNumber">Section Number</option>
                 <option value="bin">Bin</option>

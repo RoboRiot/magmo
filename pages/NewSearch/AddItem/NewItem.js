@@ -1019,10 +1019,7 @@ export default function NewItem() {
       safeSetLoading(true); // start loading before async work
       try {
         const docId = await toSend();
-        if (!docId) {
-          setErr("Save failed. Please try again.");
-          setShowErr(true);
-        }
+        if (!docId) return;
       } catch (error) {
         console.error(error);
         setErr(error?.message || "Save failed.");
@@ -1191,6 +1188,35 @@ export default function NewItem() {
       };
     };
 
+    const duplicateLocalSnMessage = (localSn) =>
+      `There is already an item with local SN "${localSn}". Please use a different local SN.`;
+
+    const itemDocumentExists = async (localSn) => {
+      const existingDoc = await db.collection("Test").doc(localSn).get();
+      return existingDoc.exists;
+    };
+
+    const createItemDocumentIfAvailable = async (localSn, payload) => {
+      const targetRef = db.collection("Test").doc(localSn);
+      await db.runTransaction(async (transaction) => {
+        const existingDoc = await transaction.get(targetRef);
+        if (existingDoc.exists) {
+          throw new Error(duplicateLocalSnMessage(localSn));
+        }
+        transaction.set(targetRef, payload);
+      });
+    };
+
+    const generateAvailableDocId = async () => {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const generatedId = generateCustomID();
+        if (!(await itemDocumentExists(generatedId))) {
+          return generatedId;
+        }
+      }
+      throw new Error("Could not generate a unique item ID. Please try again.");
+    };
+
     try {
       if (docId) {
         // Check if a localSN is provided and if it differs from the current docId.
@@ -1202,7 +1228,7 @@ export default function NewItem() {
         if (docId !== newDocId) {
           // Migrate: Create a new document with the newDocId.
           await withTimeout(
-            db.collection("Test").doc(newDocId).set(payloadWithLocalSn),
+            createItemDocumentIfAvailable(newDocId, payloadWithLocalSn),
             45000,
             "Firestore save"
           );
@@ -1237,13 +1263,15 @@ export default function NewItem() {
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
-        docId =
-          items.localSN && items.localSN.trim() !== ""
-            ? items.localSN.trim()
-            : generateCustomID();
+        const requestedDocId =
+          items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
+        docId = requestedDocId || (await generateAvailableDocId());
+        if (requestedDocId && (await itemDocumentExists(docId))) {
+          throw new Error(duplicateLocalSnMessage(docId));
+        }
         const payloadWithLocalSn = withLocalSn(formattedItems, docId);
         await withTimeout(
-          db.collection("Test").doc(docId).set(payloadWithLocalSn),
+          createItemDocumentIfAvailable(docId, payloadWithLocalSn),
           45000,
           "Firestore save"
         );
@@ -1285,6 +1313,8 @@ export default function NewItem() {
       return docId;
     } catch (error) {
       console.error("Error saving data:", error);
+      setErr(error?.message || "Save failed.");
+      setShowErr(true);
       return null;
     }
   }
@@ -1300,10 +1330,6 @@ export default function NewItem() {
     }
     if (savedDocId) return savedDocId;
     const docId = await toSend(false);
-    if (!docId) {
-      setErr("Failed to save item before action.");
-      setShowErr(true);
-    }
     return docId;
   };
 
@@ -1679,10 +1705,7 @@ export default function NewItem() {
     try {
       // save but don’t redirect
       const docId = await toSend(false, { forceNew: true });
-      if (!docId) {
-        setErr("Save failed. Please try again.");
-        setShowErr(true);
-      } else {
+      if (docId) {
         // Prepare for the next clone without overwriting the last one.
         setSavedDocId(null);
         setItems((prev) => ({ ...prev, localSN: "" }));

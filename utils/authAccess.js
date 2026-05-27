@@ -5,10 +5,18 @@ export const USER_ROLES = {
   REGULAR: "regular",
 };
 
+export const ADMIN_EMAILS = ["isavchenko@advancedimagingparts.com"];
+
 export function isAllowedEmailDomain(email) {
   if (!email || typeof email !== "string") return false;
   const normalizedEmail = email.trim().toLowerCase();
   return normalizedEmail.endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
+}
+
+export function isAdminEmail(email) {
+  if (!email || typeof email !== "string") return false;
+  const normalizedEmail = email.trim().toLowerCase();
+  return ADMIN_EMAILS.includes(normalizedEmail);
 }
 
 export function normalizeRole(roleValue) {

@@ -1881,6 +1881,39 @@ const handleSendToInflow = async () => {
       };
     };
 
+    const showDuplicateLocalSnError = (localSn) => {
+      setErr(
+        `There is already an item with local SN "${localSn}". Please use a different local SN.`
+      );
+      setShowErr(true);
+    };
+
+    const itemDocumentExists = async (localSn) => {
+      const existingDoc = await db.collection("Test").doc(localSn).get();
+      return existingDoc.exists;
+    };
+
+    const createItemDocumentIfAvailable = async (localSn, payload) => {
+      const targetRef = db.collection("Test").doc(localSn);
+      await db.runTransaction(async (transaction) => {
+        const existingDoc = await transaction.get(targetRef);
+        if (existingDoc.exists) {
+          throw new Error("duplicate-local-sn");
+        }
+        transaction.set(targetRef, payload);
+      });
+    };
+
+    const generateAvailableDocId = async () => {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const generatedId = generateCustomID();
+        if (!(await itemDocumentExists(generatedId))) {
+          return generatedId;
+        }
+      }
+      throw new Error("Could not generate a unique item ID. Please try again.");
+    };
+
     let docId = id;
     try {
       if (docId) {
@@ -1891,8 +1924,15 @@ const handleSendToInflow = async () => {
             : docId;
         const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
-          // Migrate: Create a new document with the newDocId.
-          await db.collection("Test").doc(newDocId).set(payloadWithLocalSn);
+          try {
+            await createItemDocumentIfAvailable(newDocId, payloadWithLocalSn);
+          } catch (error) {
+            if (error?.message !== "duplicate-local-sn") {
+              throw error;
+            }
+            showDuplicateLocalSnError(newDocId);
+            return;
+          }
 
           if (selectedMachine && selectedMachine.id) {
             await addAssociatedPartToMachine({
@@ -1947,12 +1987,23 @@ const handleSendToInflow = async () => {
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
-        docId =
-          items.localSN && items.localSN.trim() !== ""
-            ? items.localSN.trim()
-            : generateCustomID();
+        const requestedDocId =
+          items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
+        docId = requestedDocId || (await generateAvailableDocId());
+        if (requestedDocId && (await itemDocumentExists(docId))) {
+          showDuplicateLocalSnError(docId);
+          return;
+        }
         const payloadWithLocalSn = withLocalSn(formattedItems, docId);
-        await db.collection("Test").doc(docId).set(payloadWithLocalSn);
+        try {
+          await createItemDocumentIfAvailable(docId, payloadWithLocalSn);
+        } catch (error) {
+          if (error?.message !== "duplicate-local-sn") {
+            throw error;
+          }
+          showDuplicateLocalSnError(docId);
+          return;
+        }
 
         if (selectedMachine && selectedMachine.id) {
           await addAssociatedPartToMachine({
@@ -2008,6 +2059,8 @@ const handleSendToInflow = async () => {
       handleShowSaveModal();
     } catch (error) {
       console.error("Error saving data:", error);
+      setErr(error?.message || "Save failed.");
+      setShowErr(true);
     }
   }
 

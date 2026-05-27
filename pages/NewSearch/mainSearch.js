@@ -190,7 +190,8 @@ function nameMatchesSearch(nameValue, searchValue) {
 
 
 export default function MainSearch() {
-  const { signOut } = useAuth();
+  const { signOut, authUser } = useAuth();
+  const canDeleteItems = authUser?.isAdmin === true;
   const [info, setInfo] = useState([]);
   const [backupInfo, setBackupInfo] = useState([]);
   const [augmentedInfo, setAugmentedInfo] = useState([]); // items with clientFromId/currentId added
@@ -698,6 +699,36 @@ export default function MainSearch() {
         Boolean(selectedClientFrom) ||
         Boolean(selectedClientCurrent) ||
         Boolean(effectiveSearchLower);
+      const debugSearchFetch =
+        requestedPage >= 3 ||
+        Boolean(selectedClientFrom) ||
+        Boolean(selectedClientCurrent);
+      let lastFetchDebugAt = 0;
+      let lastFetchDebugAccepted = -1;
+      const logFetchDebug = (event) => {
+        if (!debugSearchFetch) return;
+        const now = Date.now();
+        const acceptedChanged =
+          Number(event?.acceptedCount || 0) !== lastFetchDebugAccepted;
+        const shouldLog =
+          event?.event === "batch:start"
+            ? false
+            : acceptedChanged ||
+              now - lastFetchDebugAt > 5000 ||
+              Number(event?.scannedBatches || 0) % 10 === 0;
+        if (!shouldLog) return;
+        lastFetchDebugAt = now;
+        lastFetchDebugAccepted = Number(event?.acceptedCount || 0);
+        console.warn("[mainSearch][fetch-debug]", {
+          ...event,
+          requestedPage,
+          pageSize,
+          selectedClientFrom,
+          selectedClientCurrent,
+          effectiveSelect,
+          effectiveSearchLower,
+        });
+      };
 
       // light retry for transient Firestore hiccups
       const load = async (attempt = 1) => {
@@ -726,6 +757,10 @@ export default function MainSearch() {
               Boolean(selectedModel) ||
               Boolean(selectedClientFrom) ||
               Boolean(selectedClientCurrent),
+            selectedClientFrom,
+            selectedClientCurrent,
+            debugLabel: `mainSearch:p${requestedPage}:attempt${attempt}`,
+            onDebug: logFetchDebug,
           });
         } catch (e) {
           if (attempt >= 3) throw e;
@@ -768,6 +803,9 @@ export default function MainSearch() {
             effectiveSelect,
             hasActiveFilters: hasActiveFiltersForRequest,
           });
+          if (Array.isArray(queryDebug.corruptDocs) && queryDebug.corruptDocs.length) {
+            console.warn("[mainSearch][corrupt-docs]", queryDebug.corruptDocs);
+          }
           slowQueryWarnRef.current = { key: warnKey, at: now };
         }
       }
@@ -946,6 +984,8 @@ export default function MainSearch() {
   const handleCloseDeleteModal = () => setShowDeleteModal(false);
 
   const handleDeleteSelected = async () => {
+    if (!canDeleteItems) return;
+
     setIsDeleting(true);
     const db = firebase.firestore();
     try {
@@ -993,6 +1033,8 @@ export default function MainSearch() {
       event.preventDefault();
       event.stopPropagation();
     }
+    if (!canDeleteItems) return;
+
     console.log("Selected IDs to delete:", idsToDelete);
     setSelectedItems(idsToDelete);
     setDItem(name);
@@ -1699,6 +1741,7 @@ export default function MainSearch() {
                       selectedItems={selectedItems}
                       setSelectedItems={setSelectedItems}
                       minRows={pageSize}
+                      canDelete={canDeleteItems}
                     />
                   )}
                 </div>

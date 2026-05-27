@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Firebase, { auth } from "./Firebase";
 import {
   ALLOWED_EMAIL_DOMAIN,
-  getRoleFromClaims,
+  isAdminEmail,
   isAllowedEmailDomain,
   USER_ROLES,
 } from "../utils/authAccess";
@@ -12,7 +12,9 @@ const DOMAIN_ERROR_MESSAGE = `Only @${ALLOWED_EMAIL_DOMAIN} accounts are allowed
 const formatAuthUser = async (user, forceRefresh = false) => {
   const tokenResult = await user.getIdTokenResult(forceRefresh);
   const claims = tokenResult && tokenResult.claims ? tokenResult.claims : {};
-  const role = getRoleFromClaims(claims);
+  const role = isAdminEmail(user.email)
+    ? USER_ROLES.ADMIN
+    : USER_ROLES.REGULAR;
   const isAdmin = role === USER_ROLES.ADMIN;
 
   return {

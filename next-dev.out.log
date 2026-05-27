@@ -1,0 +1,23 @@
+
+> dev
+> cross-env NODE_OPTIONS=--openssl-legacy-provider next dev -p 3000
+
+ready - started server on 0.0.0.0:3000, url: http://localhost:3000
+info  - Loaded env from C:\Users\mack2\Desktop\code\.env.local
+info  - Using webpack 4. Reason: custom webpack configuration in next.config.js https://nextjs.org/docs/messages/webpack5
+event - compiled successfully
+event - build page: /next/dist/pages/_error
+wait  - compiling...
+event - compiled successfully
+event - build page: /NewSearch/client/[id]
+wait  - compiling...
+event - compiled successfully
+event - build page: /NewSearch/clientSearch
+wait  - compiling...
+event - compiled successfully
+event - build page: /Warehousedb/WarehouseSelect
+wait  - compiling...
+event - compiled successfully
+event - build page: /Warehousedb/TrailerSetup
+wait  - compiling...
+event - compiled successfully

@@ -111,8 +111,8 @@ export default function WarehouseSelect() {
                 />
                 <LoadingButton
                   type="primary"
-                  name="Add New Item"
-                  route="../NewSearch/AddItem/NewItem"
+                  name="Trailer Setup"
+                  route="Warehousedb/TrailerSetup"
                 />
                 <LoadingButton
                   type="secondary"
