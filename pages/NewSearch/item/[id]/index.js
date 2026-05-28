@@ -40,6 +40,7 @@ import {
   buildWorkOrderTokens,
 } from "../../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../../components/MultiSelectDropdown";
+import ItemMovementDateField from "../../../../components/ItemMovementDateField";
 import {
   fetchTrackerCatalog,
   buildAllOems,
@@ -195,6 +196,9 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     trackingNumber: initialItem?.trackingNumber ?? "",
     localSN: initialItem?.localSN || initialId || "",
     arrival_date: initialItem?.arrival_date || "",
+    departure_date: initialItem?.departure_date || "",
+    movementDateType:
+      initialItem?.movementDateType === "departure" ? "departure" : "arrival",
     visible: initialItem?.visible ?? true,
   });
   const [savedName, setSavedName] = useState(initialItem?.name || "");
@@ -222,6 +226,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       poNumber: initialItem.poNumber ?? prev.poNumber ?? "",
       trackingNumber: initialItem.trackingNumber ?? prev.trackingNumber ?? "",
       localSN: initialItem.localSN ?? prev.localSN ?? initialItem.id ?? "",
+      arrival_date: initialItem.arrival_date ?? prev.arrival_date ?? "",
+      departure_date: initialItem.departure_date ?? prev.departure_date ?? "",
+      movementDateType:
+        initialItem.movementDateType === "departure"
+          ? "departure"
+          : prev.movementDateType || "arrival",
     }));
 
     if (initialItem.name) {
@@ -458,6 +468,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
 
   const buildSelectionHistorySnapshot = () => {
     const latestWorkOrder = getMostRecentWorkOrderEntry(workOrders);
+    const movementDateType =
+      items?.movementDateType === "departure" ? "departure" : "arrival";
+    const movementDate =
+      movementDateType === "departure"
+        ? items?.departure_date || ""
+        : items?.arrival_date || "";
     return {
       fromClientId: selectedClientFrom?.id || "",
       fromClientName: (selectedClientFrom?.name || "").trim(),
@@ -468,7 +484,25 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       currentMachineId: selectedCurrentMachine?.id || "",
       currentMachineName: (selectedCurrentMachine?.name || "").trim(),
       workOrder: (latestWorkOrder?.workOrder || "").trim(),
+      movementDateType,
+      movementDate,
+      arrivalDate: items?.arrival_date || "",
+      departureDate: items?.departure_date || "",
     };
+  };
+
+  const getHistoryMovementDate = (entry) => {
+    if (entry?.movementDate) return entry.movementDate;
+    if (entry?.movementDateType === "departure") {
+      return entry?.departureDate || "";
+    }
+    return entry?.arrivalDate || entry?.departureDate || "";
+  };
+
+  const getHistoryMovementDateLabel = (entry) => {
+    const date = getHistoryMovementDate(entry);
+    if (!date) return "-";
+    return entry?.movementDateType === "departure" ? "Departure" : "Arrival";
   };
 
   const hasSelectionSnapshotValues = (snapshot) =>
@@ -482,18 +516,30 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       snapshot?.currentMachineId,
       snapshot?.currentMachineName,
       snapshot?.workOrder,
+      snapshot?.movementDate,
     ].some((value) => String(value || "").trim() !== "");
 
-  const areSelectionSnapshotsEqual = (a, b) =>
-    a?.fromClientId === b?.fromClientId &&
-    a?.fromClientName === b?.fromClientName &&
-    a?.fromMachineId === b?.fromMachineId &&
-    a?.fromMachineName === b?.fromMachineName &&
-    a?.currentClientId === b?.currentClientId &&
-    a?.currentClientName === b?.currentClientName &&
-    a?.currentMachineId === b?.currentMachineId &&
-    a?.currentMachineName === b?.currentMachineName &&
-    a?.workOrder === b?.workOrder;
+  const areSelectionSnapshotsEqual = (a, b) => {
+    const aDate = String(a?.movementDate || "").trim();
+    const bDate = String(b?.movementDate || "").trim();
+    const datesMatch =
+      !aDate && !bDate
+        ? true
+        : a?.movementDateType === b?.movementDateType && aDate === bDate;
+
+    return (
+      a?.fromClientId === b?.fromClientId &&
+      a?.fromClientName === b?.fromClientName &&
+      a?.fromMachineId === b?.fromMachineId &&
+      a?.fromMachineName === b?.fromMachineName &&
+      a?.currentClientId === b?.currentClientId &&
+      a?.currentClientName === b?.currentClientName &&
+      a?.currentMachineId === b?.currentMachineId &&
+      a?.currentMachineName === b?.currentMachineName &&
+      a?.workOrder === b?.workOrder &&
+      datesMatch
+    );
+  };
 
   const applyMergedMachineFields = (merged, { force = false } = {}) => {
     if (!merged) return;
@@ -972,6 +1018,10 @@ const handleSendToInflow = async () => {
           pn: normalizedPN,
           sn: normalizedSN,
           localSN: resolvedLocalSn,
+          arrival_date: data.arrival_date || "",
+          departure_date: data.departure_date || "",
+          movementDateType:
+            data.movementDateType === "departure" ? "departure" : "arrival",
         });
         if (!String(data.localSN || "").trim() && resolvedLocalSn) {
           db
@@ -1698,7 +1748,8 @@ const handleSendToInflow = async () => {
     return newObj;
   }
 
-  async function toSend() {
+  async function toSend(options = {}) {
+    const { redirect = true, showSaved = true } = options;
     const db = firebase.firestore();
     const currentUser = firebase.auth().currentUser;
     const userEmail = currentUser ? currentUser.email : "unknown";
@@ -1744,7 +1795,14 @@ const handleSendToInflow = async () => {
     formattedItems.localLocFrom = localLocFrom || "";
     formattedItems.localLocCurrent = localLocCurrent || "";
     formattedItems.date = items.date || "";
-    formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
+    formattedItems.arrival_date = items.arrival_date || "";
+    formattedItems.departure_date = items.departure_date || "";
+    formattedItems.movementDateType =
+      items.movementDateType === "departure" ? "departure" : "arrival";
+    formattedItems.movementDate =
+      formattedItems.movementDateType === "departure"
+        ? formattedItems.departure_date
+        : formattedItems.arrival_date;
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = buildMachineSummary(machineData);
@@ -2051,21 +2109,27 @@ const handleSendToInflow = async () => {
       }
 
       // Upload any new photos to Firebase Storage.
-      await uploadPhotos(docId);
+      const photoUrls = await uploadPhotos(docId);
       console.log("Item saved and associatedParts updated!");
 
       setSavedName(items.name || "");
       setSelectionHistory(nextSelectionHistory);
 
       // Redirect to the new URL using the new document id.
-      router.push(`/NewSearch/item/${docId}`);
+      if (redirect) {
+        router.push(`/NewSearch/item/${docId}`);
+      }
 
       // Optionally, you can also show a save confirmation modal:
-      handleShowSaveModal();
+      if (showSaved) {
+        handleShowSaveModal();
+      }
+      return { docId, photoUrls, selectionHistory: nextSelectionHistory };
     } catch (error) {
       console.error("Error saving data:", error);
       setErr(error?.message || "Save failed.");
       setShowErr(true);
+      return null;
     }
   }
 
@@ -2141,19 +2205,22 @@ const handleSendToInflow = async () => {
 
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
-    for (let i = 0; i < photos.length; i++) {
-      if (photos[i].file) {
+    const nextPhotos = [...photos];
+    for (let i = 0; i < nextPhotos.length; i++) {
+      if (nextPhotos[i].file) {
         const photoRef = storageRef.child(
           `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
         );
         const metadata = {
-          contentType: photos[i]?.file?.type || "image/jpeg",
+          contentType: nextPhotos[i]?.file?.type || "image/jpeg",
         };
-        await photoRef.put(photos[i].file, metadata);
+        await photoRef.put(nextPhotos[i].file, metadata);
         const url = await photoRef.getDownloadURL();
-        photos[i].url = url;
+        nextPhotos[i] = { ...nextPhotos[i], url, file: null };
       }
     }
+    setPhotos(nextPhotos);
+    return nextPhotos.map((photo) => photo?.url).filter(Boolean);
   };
 
   // Function to handle printing the label.
@@ -2238,6 +2305,16 @@ const handleSendToInflow = async () => {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
+      if (result?.bluefolderStatusCheck || result?.debug?.statusCheck) {
+        console.log(
+          "[BlueFolder][status-check]",
+          result.bluefolderStatusCheck || result.debug.statusCheck
+        );
+      }
+      if (response.status === 409 && result?.code === "work_order_closed") {
+        alert(result?.error || `Work order ${currentWorkOrder} is closed.`);
+        return;
+      }
       if (!response.ok || result?.ok === false) {
         const detail =
           result?.details ||
@@ -2660,8 +2737,11 @@ const handleAddToSlack = async (which = "shipping") => {
   if (slackLoadingKey) return;
   setSlackLoadingKey(which);
   try {
-    const safeName = (items?.name || id || "Untitled").trim();
-    const title = `${safeName}${id ? ` (${id})` : ""}`;
+    const saved = await toSend({ redirect: false, showSaved: false });
+    if (!saved?.docId) return;
+    const docId = saved.docId;
+    const safeName = (items?.name || docId || "Untitled").trim();
+    const title = `${safeName}${docId ? ` (${docId})` : ""}`;
 
     const pn0 = Array.isArray(items?.pn) ? items.pn[0] : items?.pn;
     const sn0 = Array.isArray(items?.sn) ? items.sn[0] : items?.sn;
@@ -2680,11 +2760,13 @@ const handleAddToSlack = async (which = "shipping") => {
         : (items?.description || "");
 
     const tracking = items?.trackingNumber ?? items?.tracking ?? "";
-    const local_sn = id || items?.localSN || "";
+    const local_sn = docId || items?.localSN || "";
 
-    const photoUrls = Array.isArray(photos)
-      ? photos.map(p => p?.url).filter(Boolean)
-      : [];
+    const photoUrls = Array.isArray(saved?.photoUrls)
+      ? saved.photoUrls
+      : photos.map((photo) => photo?.url).filter(Boolean);
+    const shippingDate = items?.departure_date || "";
+    const receivedDate = items?.arrival_date || "";
 
     const idToken = await firebase.auth().currentUser?.getIdToken();
     const resp = await fetch("/api/slack/add-to-list", {
@@ -2702,6 +2784,10 @@ const handleAddToSlack = async (which = "shipping") => {
         tracking,
         description: (description || "").trim(),
         photoUrls,             // array of https URLs
+        shipping_date: shippingDate,
+        received_date: receivedDate,
+        departure_date: items?.departure_date || "",
+        arrival_date: items?.arrival_date || "",
       }),
     });
 
@@ -2885,14 +2971,16 @@ const handleAddToSlack = async (which = "shipping") => {
                   <th>Current Client</th>
                   <th>Current Machine</th>
                   <th>Work Order</th>
+                  <th>Date Type</th>
+                  <th>Arrival/Departure Date</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {(selectionHistory || []).length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center text-muted">
-                      No history yet. A row will be added on Save when From/Current/Machine/WO changes.
+                    <td colSpan={9} className="text-center text-muted">
+                      No history yet. A row will be added on Save when From/Current/Machine/WO/date changes.
                     </td>
                   </tr>
                 ) : (
@@ -2908,6 +2996,8 @@ const handleAddToSlack = async (which = "shipping") => {
                       <td>{entry?.currentClientName || "-"}</td>
                       <td>{entry?.currentMachineName || "-"}</td>
                       <td>{entry?.workOrder || "-"}</td>
+                      <td>{getHistoryMovementDateLabel(entry)}</td>
+                      <td>{getHistoryMovementDate(entry) || "-"}</td>
                       <td>
                         <Button
                           variant="danger"
@@ -3447,21 +3537,7 @@ const handleAddToSlack = async (which = "shipping") => {
                       </Form.Group>
                     </Col>
                     <Col>
-                      <Form.Group controlId="arrivalDate">
-                        <Form.Label>Arrival Date</Form.Label>
-                        <Form.Control
-                          placeholder="Enter Arrival Date"
-                          type="date"
-                          value={items.arrival_date}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setItems((prev) => ({
-                              ...prev,
-                              arrival_date: value,
-                            }));
-                          }}
-                        />
-                      </Form.Group>
+                      <ItemMovementDateField items={items} setItems={setItems} />
                     </Col>
                     <Col>
                       <Form.Group controlId="trackingNumber">
@@ -4257,6 +4333,9 @@ export async function getServerSideProps(context) {
       trackingNumber: itemData.trackingNumber || "",
       localSN: itemData.localSN || itemData.local_sn || id || "",
       arrival_date: itemData.arrival_date || "",
+      departure_date: itemData.departure_date || "",
+      movementDateType:
+        itemData.movementDateType === "departure" ? "departure" : "arrival",
       visible: itemData.visible !== undefined ? itemData.visible : true,
 
       // add the pieces the UI reads directly

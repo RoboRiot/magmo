@@ -36,6 +36,7 @@ import {
   buildWorkOrderTokens,
 } from "../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../components/MultiSelectDropdown";
+import ItemMovementDateField from "../../../components/ItemMovementDateField";
 import {
   fetchTrackerCatalog,
   buildAllOems,
@@ -111,6 +112,8 @@ export default function NewItem() {
     width: "",
     height: "",
     arrival_date: "", // NEW FIELD: Arrival Date
+    departure_date: "",
+    movementDateType: "arrival",
     visible: true,
   });
 
@@ -379,6 +382,9 @@ export default function NewItem() {
         const arrivalValue =
           toDateString(data.arrival_date) ||
           (typeof data.arrival_date === "string" ? data.arrival_date : "");
+        const departureValue =
+          toDateString(data.departure_date) ||
+          (typeof data.departure_date === "string" ? data.departure_date : "");
 
         if (!cancelled) {
           setItems((prev) => ({
@@ -396,6 +402,9 @@ export default function NewItem() {
             width: data.width ?? "",
             height: data.height ?? "",
             arrival_date: arrivalValue || "",
+            departure_date: departureValue || "",
+            movementDateType:
+              data.movementDateType === "departure" ? "departure" : "arrival",
             visible: data.visible !== undefined ? data.visible : true,
           }));
           setDescriptions(
@@ -1002,17 +1011,22 @@ export default function NewItem() {
   // -------------------- Photo Upload (unchanged)
   const uploadPhotos = async (docID) => {
     const storageRef = firebase.storage().ref();
-    for (let i = 0; i < photos.length; i++) {
-      if (photos[i].file) {
+    const nextPhotos = [...photos];
+    for (let i = 0; i < nextPhotos.length; i++) {
+      if (nextPhotos[i].file) {
         const photoRef = storageRef.child(
           `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
         );
-        const metadata = { contentType: "image/png" };
-        await photoRef.put(photos[i].file, metadata);
+        const metadata = {
+          contentType: nextPhotos[i]?.file?.type || "image/jpeg",
+        };
+        await photoRef.put(nextPhotos[i].file, metadata);
         const url = await photoRef.getDownloadURL();
-        photos[i].url = url;
+        nextPhotos[i] = { ...nextPhotos[i], url, file: null };
       }
     }
+    setPhotos(nextPhotos);
+    return nextPhotos.map((photo) => photo?.url).filter(Boolean);
   };
 
   // -------------------- Submission Handler
@@ -1039,7 +1053,7 @@ export default function NewItem() {
   async function toSend(redirect = true, options = {}) {
     const { id } = router.query;
     const db = firebase.firestore();
-    const { forceNew = false } = options;
+    const { forceNew = false, waitForPhotos = false } = options;
     const existingId = forceNew ? null : (savedDocId || id || null);
 
     // Get the current authenticated user
@@ -1062,6 +1076,39 @@ export default function NewItem() {
     };
 
     const formattedItems = { ...items, descriptions, workOrders };
+    const movementDateType =
+      items.movementDateType === "departure" ? "departure" : "arrival";
+    const movementDate =
+      movementDateType === "departure"
+        ? items.departure_date || ""
+        : items.arrival_date || "";
+    const initialHistorySnapshot = {
+      fromClientId: selectedClientFrom?.id || "",
+      fromClientName: (selectedClientFrom?.name || "").trim(),
+      fromMachineId: selectedMachine?.id || "",
+      fromMachineName: (selectedMachine?.name || "").trim(),
+      currentClientId: selectedClientCurrent?.id || "",
+      currentClientName: (selectedClientCurrent?.name || "").trim(),
+      currentMachineId: selectedCurrentMachine?.id || "",
+      currentMachineName: (selectedCurrentMachine?.name || "").trim(),
+      workOrder: (mostRecentWorkOrder?.workOrder || "").trim(),
+      movementDateType,
+      movementDate,
+      arrivalDate: items.arrival_date || "",
+      departureDate: items.departure_date || "",
+      savedAt: new Date().toISOString(),
+    };
+    const hasInitialHistory = [
+      initialHistorySnapshot.fromClientId,
+      initialHistorySnapshot.fromMachineId,
+      initialHistorySnapshot.currentClientId,
+      initialHistorySnapshot.currentMachineId,
+      initialHistorySnapshot.workOrder,
+      initialHistorySnapshot.movementDate,
+    ].some((value) => String(value || "").trim() !== "");
+    formattedItems.selectionHistory = hasInitialHistory
+      ? [initialHistorySnapshot]
+      : [];
     // Remove any unused fields.
     formattedItems.status = items.status || "";
     formattedItems.nameLower = (items.name || "").toLowerCase();
@@ -1087,7 +1134,10 @@ export default function NewItem() {
       formattedItems.newLocalCurrent = {};
     }
     formattedItems.date = items.date || "";
-    formattedItems.arrival_date = items.arrival_date || ""; // NEW: Arrival Date
+    formattedItems.arrival_date = items.arrival_date || "";
+    formattedItems.departure_date = items.departure_date || "";
+    formattedItems.movementDateType = movementDateType;
+    formattedItems.movementDate = movementDate;
     formattedItems.poNumber = items.poNumber || "";
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = buildMachineSummary(machineData);
@@ -1180,12 +1230,18 @@ export default function NewItem() {
       }
     };
 
-    const queuePhotoUpload = (targetDocId) => {
+    const queuePhotoUpload = async (targetDocId) => {
       const hasNewPhotos = photos.some((photo) => photo && photo.file);
-      if (!hasNewPhotos) return;
+      if (!hasNewPhotos) {
+        return photos.map((photo) => photo?.url).filter(Boolean);
+      }
+      if (waitForPhotos) {
+        return uploadPhotos(targetDocId);
+      }
       uploadPhotos(targetDocId).catch((error) => {
         console.error("Error uploading photos:", error);
       });
+      return photos.map((photo) => photo?.url).filter(Boolean);
     };
 
     const withLocalSn = (payload, value) => {
@@ -1243,7 +1299,7 @@ export default function NewItem() {
           );
 
           await queueAssociationUpdates(newDocId, docId);
-          queuePhotoUpload(newDocId);
+          await queuePhotoUpload(newDocId);
 
           // Delete the old document.
           try {
@@ -1286,7 +1342,7 @@ export default function NewItem() {
           );
 
           await queueAssociationUpdates(docId);
-          queuePhotoUpload(docId);
+          await queuePhotoUpload(docId);
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
@@ -1304,7 +1360,7 @@ export default function NewItem() {
         );
 
         await queueAssociationUpdates(docId);
-        queuePhotoUpload(docId);
+        await queuePhotoUpload(docId);
       }
 
       console.log("Item saved!");
@@ -1350,13 +1406,13 @@ export default function NewItem() {
     (items.name || "").trim() !== "" &&
     (descriptions[selectedDesc]?.description || "").trim() !== "";
 
-  const ensureSaved = async () => {
+  const ensureSaved = async (options = {}) => {
     if (!isReadyForActions) {
       handleShow();
       return null;
     }
     if (savedDocId) return savedDocId;
-    const docId = await toSend(false);
+    const docId = await toSend(false, options);
     return docId;
   };
 
@@ -1470,7 +1526,7 @@ export default function NewItem() {
 
   const handleSendToInflow = async () => {
     try {
-      const docId = await ensureSaved();
+      const docId = await ensureSaved({ waitForPhotos: true });
       if (!docId) return;
 
       const name = (items.name || "").trim();
@@ -1537,11 +1593,10 @@ export default function NewItem() {
     if (bluefolderLoading) return;
     setBluefolderLoading(true);
     try {
-      const docId = await ensureSaved();
+      const docId = await ensureSaved({ waitForPhotos: true });
       if (!docId) return;
 
-      const currentWorkOrder =
-        workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "";
+      const currentWorkOrder = (mostRecentWorkOrder?.workOrder || "").trim();
       if (!currentWorkOrder) {
         alert("Please fill out the work order field before adding to BlueFolder.");
         return;
@@ -1570,6 +1625,16 @@ export default function NewItem() {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
+      if (result?.bluefolderStatusCheck || result?.debug?.statusCheck) {
+        console.log(
+          "[BlueFolder][status-check]",
+          result.bluefolderStatusCheck || result.debug.statusCheck
+        );
+      }
+      if (response.status === 409 && result?.code === "work_order_closed") {
+        alert(result?.error || `Work order ${currentWorkOrder} is closed.`);
+        return;
+      }
       if (!response.ok || result?.ok === false) {
         const detail =
           result?.details ||
@@ -1598,7 +1663,7 @@ export default function NewItem() {
     if (slackLoadingKey) return;
     setSlackLoadingKey(which);
     try {
-      const docId = await ensureSaved();
+      const docId = await ensureSaved({ waitForPhotos: true });
       if (!docId) return;
 
       const safeName = (items?.name || docId || "Untitled").trim();
@@ -1625,9 +1690,9 @@ export default function NewItem() {
       const tracking = items?.trackingNumber ?? items?.tracking ?? "";
       const local_sn = docId || items?.localSN || "";
 
-      const photoUrls = Array.isArray(photos)
-        ? photos.map((p) => p?.url).filter(Boolean)
-        : [];
+      const photoUrls = await uploadPhotos(docId);
+      const shippingDate = items?.departure_date || "";
+      const receivedDate = items?.arrival_date || "";
 
       const idToken = await firebase.auth().currentUser?.getIdToken();
       const resp = await fetch("/api/slack/add-to-list", {
@@ -1645,6 +1710,10 @@ export default function NewItem() {
           tracking,
           description: (description || "").trim(),
           photoUrls,
+          shipping_date: shippingDate,
+          received_date: receivedDate,
+          departure_date: items?.departure_date || "",
+          arrival_date: items?.arrival_date || "",
         }),
       });
 
@@ -2372,21 +2441,7 @@ export default function NewItem() {
                     </Form.Group>
                   </Col>
                   <Col>
-                    <Form.Group controlId="arrivalDate">
-                      <Form.Label>Arrival Date</Form.Label>
-                      <Form.Control
-                        placeholder="Enter Arrival Date"
-                        type="date"
-                        value={items.arrival_date}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setItems((prev) => ({
-                            ...prev,
-                            arrival_date: value,
-                          }));
-                        }}
-                      />
-                    </Form.Group>
+                    <ItemMovementDateField items={items} setItems={setItems} />
                   </Col>
                   <Col>
                     <Form.Group controlId="trackingNumber">

@@ -209,6 +209,11 @@ export default async function handler(req, res) {
       local_sn,         // preferred input
       description,
       photoUrls,        // preferred input: array
+      shipping_date,
+      received_date,
+      arrival_date,
+      departure_date,
+      movement_date,
       // legacy keys we still accept for safety:
       pn, sn, workOrder, localSN, trackingNumber, photo_urls, photos,
     } = req.body || {};
@@ -231,6 +236,14 @@ export default async function handler(req, res) {
     const tracking_norm   = plain(tracking   || trackingNumber || "");
     const description_norm = plain(description || "");
     const envValue = (value) => plain(value).replace(/\s+#.*$/, "").trim();
+    const dateOnly = (value) => {
+      const text = plain(value);
+      if (!text) return "";
+      const match = text.match(/^\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+      const parsed = new Date(text);
+      return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+    };
 
     let photoUrls_norm = Array.isArray(photoUrls)
       ? photoUrls
@@ -261,6 +274,7 @@ export default async function handler(req, res) {
         localsn:   envValue(process.env.SLACK_LIST_SHIPPING_LOCALSN_COL),
         tracking:  envValue(process.env.SLACK_LIST_SHIPPING_TRACKING_COL),
         photos:    envValue(process.env.SLACK_LIST_SHIPPING_PHOTOS_COL),
+        date:      envValue(process.env.SLACK_LIST_SHIPPING_DATE_COL),
       },
       receiving: {
         title:     envValue(process.env.SLACK_LIST_RECEIVING_TITLE_COL),
@@ -270,6 +284,7 @@ export default async function handler(req, res) {
         localsn:   envValue(process.env.SLACK_LIST_RECEIVING_LOCALSN_COL),
         tracking:  envValue(process.env.SLACK_LIST_RECEIVING_TRACKING_COL),
         photos:    envValue(process.env.SLACK_LIST_RECEIVING_PHOTOS_COL),
+        date:      envValue(process.env.SLACK_LIST_RECEIVING_DATE_COL),
       },
       tools: {
         title:  envValue(process.env.SLACK_LIST_TOOLS_TITLE_COL),
@@ -369,6 +384,9 @@ export default async function handler(req, res) {
           ) {
             inferred.wo = f.column_id;
           }
+          if (!inferred.date && f.column_id && Array.isArray(f.date)) {
+            inferred.date = f.column_id;
+          }
         }
       }
       return inferred;
@@ -415,10 +433,18 @@ export default async function handler(req, res) {
             normalizedName(column).includes("workorder") ||
             normalizedName(column).includes("wo"))
       );
+      const dateColumn = schema.find((column) => {
+        if (column?.type !== "date") return false;
+        const name = normalizedName(column);
+        if (listKey === "shipping") return name.includes("shipping date");
+        if (listKey === "receiving") return name.includes("received date");
+        return name.includes("date");
+      });
 
       if (titleColumn?.id) inferred.title = titleColumn.id;
       if (photosColumn?.id) inferred.photos = photosColumn.id;
       if (workOrderColumn?.id) inferred.wo = workOrderColumn.id;
+      if (dateColumn?.id) inferred.date = dateColumn.id;
       return inferred;
     }
 
@@ -437,16 +463,18 @@ export default async function handler(req, res) {
       }
     };
 
-    if (!CFG.title || !CFG.photos || !CFG.wo) {
+    if (!CFG.title || !CFG.photos || !CFG.wo || !CFG.date) {
       const metadataInferred = await inferColumnsFromListMetadata(list_id);
       const rowInferred = await inferColumnsFromRows(list_id);
       CFG.title = CFG.title || metadataInferred.title || rowInferred.title;
       CFG.photos = CFG.photos || metadataInferred.photos || rowInferred.photos;
       CFG.wo = CFG.wo || metadataInferred.wo || rowInferred.wo;
+      CFG.date = CFG.date || metadataInferred.date || rowInferred.date;
       logStep("[LISTS][INFER-COLS]", {
         title: CFG.title || null,
         photos: CFG.photos || null,
         wo: CFG.wo || null,
+        date: CFG.date || null,
       });
     }
 
@@ -487,12 +515,19 @@ export default async function handler(req, res) {
     logStep("[LISTS][CREATED]", { rowId });
 
     // ---------- 2) update rich_text fields ----------
+    const listDateNorm =
+      listKey === "shipping"
+        ? dateOnly(shipping_date || departure_date || movement_date)
+        : listKey === "receiving"
+        ? dateOnly(received_date || arrival_date || movement_date)
+        : "";
     const cells = [];
     if (CFG.pnsn && pn_sn_norm)      cells.push({ row_id: rowId, column_id: CFG.pnsn,     rich_text: richText(pn_sn_norm) });
     if (CFG.localsn && local_sn_norm) cells.push({ row_id: rowId, column_id: CFG.localsn,  rich_text: richText(local_sn_norm) });
     if (CFG.wo && work_order_norm)   cells.push({ row_id: rowId, column_id: CFG.wo,       rich_text: richText(work_order_norm) });
     if (CFG.tracking && tracking_norm) cells.push({ row_id: rowId, column_id: CFG.tracking, rich_text: richText(tracking_norm) });
     if (CFG.desc && description_norm) cells.push({ row_id: rowId, column_id: CFG.desc,     rich_text: richText(description_norm) });
+    if (CFG.date && listDateNorm)    cells.push({ row_id: rowId, column_id: CFG.date,      date: [listDateNorm] });
 
     if (cells.length) {
       const updated = await slackJson("slackLists.items.update", {
@@ -505,6 +540,7 @@ export default async function handler(req, res) {
       if (CFG.desc && description_norm)  logStep("[LISTS][SET-RICH][DESCRIPTION]", { ok: updated?.ok === true, status: 200, error: updated?.error });
       if (CFG.wo && work_order_norm)     logStep("[LISTS][SET-RICH][WO]",          { ok: updated?.ok === true, status: 200, error: updated?.error });
       if (CFG.tracking && tracking_norm) logStep("[LISTS][SET-RICH][TRACKING]",    { ok: updated?.ok === true, status: 200, error: updated?.error });
+      if (CFG.date && listDateNorm)      logStep("[LISTS][SET-DATE]",              { ok: updated?.ok === true, status: 200, error: updated?.error, date: listDateNorm });
 
       if (!updated?.ok) {
         return res
@@ -635,25 +671,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Fallback: drop photo URLs into Description so nothing is lost
-    if (!attachedOk && CFG.desc && photoUrls_norm?.length) {
-      const updated = await slackJson("slackLists.items.update", {
-        list_id,
-        cells: [{
-          row_id: rowId,
-          column_id: CFG.desc,
-          rich_text: richText(
-            `${description_norm}\n\nPhotos:\n${photoUrls_norm.join("\n")}`
-          ),
-        }],
-      });
-      logStep("[LISTS][SET-RICH][PHOTOS->DESC-FALLBACK]", {
-        ok: updated?.ok === true,
-        status: 200,
-        error: updated?.error,
-      });
-    }
-
     return res.status(200).json({
       ok: true,
       list_id,
@@ -666,8 +683,9 @@ export default async function handler(req, res) {
         localsn_col: CFG.localsn || null,
         tracking_col: CFG.tracking || null,
         photos_col: CFG.photos || null,
+        date_col: CFG.date || null,
       },
-      debug: { steps, photos: uploadedFileIds },
+      debug: { steps, photos: uploadedFileIds, photosAttached: attachedOk },
       ms: Date.now() - t0,
     });
   } catch (err) {
