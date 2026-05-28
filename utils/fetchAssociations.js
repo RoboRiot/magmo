@@ -1,9 +1,6 @@
 import React from 'react'
 import firebase from "../context/Firebase";
-import {
-  isInteriorSocalMachineData,
-  stripEmbeddedMachineAssociations,
-} from "./warehouseAssociations";
+import { stripEmbeddedMachineAssociations } from "./warehouseAssociations";
 
 const MACHINE_LIST_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
 
@@ -126,6 +123,8 @@ export async function fetchPartsWithMachineDataPage({
   const corruptDocs = [];
   const batchDebug = [];
   const scanBatchLimit = Math.max(limit, Math.min(250, pageSize * 8));
+  const clientPrefilterTarget = Math.max(limit * 4, 100);
+  const clientMachineQueryBudget = 12;
 
   const getRefId = (ref) => {
     if (!ref) return null;
@@ -159,9 +158,22 @@ export async function fetchPartsWithMachineDataPage({
     }
   };
 
-  const fetchMachineIdsForClient = async (clientId) => {
+  emitDebug("request:start", {
+    pageSize,
+    startAfterId: startAfterDoc?.id || null,
+    visibleOnly,
+    needsMachineData,
+    selectedClientFrom,
+    selectedClientCurrent,
+    searchType: search?.type || null,
+    searchRaw: search?.raw || "",
+  });
+
+  const fetchMachineIdsForClient = async (clientId, type) => {
     if (!clientId) return null;
 
+    const machineLookupStartedAt = Date.now();
+    emitDebug("client-machine-ids:start", { type, clientId });
     const ids = new Set();
     const clientRef = db.collection("Client").doc(clientId);
     const queries = [
@@ -169,18 +181,51 @@ export async function fetchPartsWithMachineDataPage({
       db.collection("Machine").where("client", "==", clientId),
     ];
 
-    for (const query of queries) {
+    for (let queryIndex = 0; queryIndex < queries.length; queryIndex += 1) {
+      const queryStartedAt = Date.now();
+      const query = queries[queryIndex];
       const snap = await query.get();
       snap.forEach((docSnap) => ids.add(docSnap.id));
+      emitDebug("client-machine-ids:query-done", {
+        type,
+        clientId,
+        queryIndex,
+        size: snap.size,
+        idsSoFar: ids.size,
+        queryElapsedMs: Date.now() - queryStartedAt,
+      });
     }
 
+    emitDebug("client-machine-ids:done", {
+      type,
+      clientId,
+      machineIdCount: ids.size,
+      phaseElapsedMs: Date.now() - machineLookupStartedAt,
+    });
     return ids;
   };
 
-  const [clientFromMachineIds, clientCurrentMachineIds] = await Promise.all([
-    fetchMachineIdsForClient(selectedClientFrom),
-    fetchMachineIdsForClient(selectedClientCurrent),
-  ]);
+  let clientFromMachineIds = null;
+  let clientCurrentMachineIds = null;
+
+  const getMachineIdsForClient = async (type) => {
+    if (type === "from") {
+      if (clientFromMachineIds == null) {
+        clientFromMachineIds = await fetchMachineIdsForClient(
+          selectedClientFrom,
+          type
+        );
+      }
+      return clientFromMachineIds;
+    }
+    if (clientCurrentMachineIds == null) {
+      clientCurrentMachineIds = await fetchMachineIdsForClient(
+        selectedClientCurrent,
+        type
+      );
+    }
+    return clientCurrentMachineIds;
+  };
 
   const rawMatchesClientSelection = (raw, type) => {
     const selectedClient =
@@ -211,11 +256,18 @@ export async function fetchPartsWithMachineDataPage({
   const fetchMachineMap = async (ids) => {
     if (!ids.length) return {};
 
+    const phaseStartedAt = Date.now();
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
     if (!uniqueIds.length) return {};
+    emitDebug("machine-map:start", {
+      requestedIds: ids.length,
+      uniqueIds: uniqueIds.length,
+      cachedIds: uniqueIds.length - uniqueIds.filter((id) => !machineCache.has(id)).length,
+    });
 
     const missingIds = uniqueIds.filter((id) => !machineCache.has(id));
     for (let i = 0; i < missingIds.length; i += 10) {
+      const chunkStartedAt = Date.now();
       const chunk = missingIds.slice(i, i + 10);
       machineQueryCount += 1;
       const snap = await withMachineSelect(
@@ -228,23 +280,6 @@ export async function fetchPartsWithMachineDataPage({
       snap.forEach((docSnap) => {
         found.add(docSnap.id);
         const machineData = docSnap.data() || {};
-        if (isInteriorSocalMachineData(machineData)) {
-          docSnap.ref
-            .set(
-              {
-                associatedParts: firebase.firestore.FieldValue.delete(),
-                skipAssociatedParts: true,
-                associatedPartsSkippedReason: "interior-socal-warehouse",
-              },
-              { merge: true }
-            )
-            .catch((error) => {
-              console.error(
-                "Failed to clear Interior SoCal associatedParts:",
-                error
-              );
-            });
-        }
         machineCache.set(docSnap.id, sanitizeMachineDataForList(machineData));
       });
 
@@ -252,12 +287,25 @@ export async function fetchPartsWithMachineDataPage({
       chunk.forEach((id) => {
         if (!found.has(id)) machineCache.set(id, null);
       });
+      emitDebug("machine-map:chunk-done", {
+        chunkIndex: Math.floor(i / 10),
+        chunkSize: chunk.length,
+        foundCount: found.size,
+        queryElapsedMs: Date.now() - chunkStartedAt,
+      });
     }
 
     const out = {};
     uniqueIds.forEach((id) => {
       const data = machineCache.get(id);
       if (data) out[id] = data;
+    });
+    emitDebug("machine-map:done", {
+      requestedIds: ids.length,
+      uniqueIds: uniqueIds.length,
+      missingIds: missingIds.length,
+      resolvedIds: Object.keys(out).length,
+      phaseElapsedMs: Date.now() - phaseStartedAt,
     });
     return out;
   };
@@ -316,66 +364,166 @@ export async function fetchPartsWithMachineDataPage({
     return partData;
   };
 
-  const getClientQueryMatches = async ({ type, clientId, machineIds }) => {
+  const getClientQueryMatches = async ({ type, clientId }) => {
     if (!clientId) return null;
 
+    const phaseStartedAt = Date.now();
+    emitDebug("client-query-matches:start", {
+      type,
+      clientId,
+      startAfterId: startAfterDoc?.id || null,
+      clientPrefilterTarget,
+    });
     const directFields =
       type === "from"
         ? ["ClientFrom", "clientFromId"]
         : ["ClientCurrent", "clientCurrentId"];
-    const machineFields =
-      type === "from"
-        ? ["Machine", "MachineFrom"]
-        : ["CurrentMachine", "MachineCurrent"];
     const clientRef = db.collection("Client").doc(clientId);
     const docMap = new Map();
-    const queries = [];
+    const directQueries = [];
+    const startAfterId = startAfterDoc?.id || null;
+    const pageQueryLimit = clientPrefilterTarget;
+    const applyPageWindow = (query, queryLimit = pageQueryLimit) => {
+      let nextQuery = query.orderBy(firebase.firestore.FieldPath.documentId());
+      if (startAfterId) nextQuery = nextQuery.startAfter(startAfterId);
+      return nextQuery.limit(queryLimit);
+    };
 
     directFields.forEach((field) => {
-      queries.push(db.collection("Test").where(field, "==", clientRef));
-      queries.push(db.collection("Test").where(field, "==", clientId));
+      directQueries.push(
+        applyPageWindow(db.collection("Test").where(field, "==", clientRef))
+      );
+      directQueries.push(
+        applyPageWindow(db.collection("Test").where(field, "==", clientId))
+      );
     });
 
-    const machineIdList = Array.from(machineIds || []);
-    const machineRefs = machineIdList.map((id) => db.collection("Machine").doc(id));
-    for (const field of machineFields) {
-      for (let i = 0; i < machineRefs.length; i += 10) {
-        queries.push(
-          db.collection("Test").where(field, "in", machineRefs.slice(i, i + 10))
-        );
-      }
-      for (let i = 0; i < machineIdList.length; i += 10) {
-        queries.push(
-          db.collection("Test").where(field, "in", machineIdList.slice(i, i + 10))
-        );
-      }
-    }
-
-    for (const query of queries) {
+    for (let queryIndex = 0; queryIndex < directQueries.length; queryIndex += 1) {
+      const queryStartedAt = Date.now();
+      const query = directQueries[queryIndex];
       scannedBatches += 1;
       const snap = await query.get();
       scannedDocs += snap.size;
       snap.forEach((docSnap) => {
         docMap.set(docSnap.id, docSnap);
       });
+      emitDebug("client-direct-query:done", {
+        type,
+        clientId,
+        queryIndex,
+        size: snap.size,
+        docMapSize: docMap.size,
+        firstDocId: snap.docs[0]?.id || null,
+        lastDocId: snap.docs[snap.docs.length - 1]?.id || null,
+        queryElapsedMs: Date.now() - queryStartedAt,
+      });
     }
 
+    if (docMap.size >= clientPrefilterTarget) {
+      emitDebug("client-query-matches:done", {
+        type,
+        clientId,
+        mode: "direct",
+        docMapSize: docMap.size,
+        phaseElapsedMs: Date.now() - phaseStartedAt,
+      });
+      return docMap;
+    }
+
+    const machineFields =
+      type === "from"
+        ? ["Machine", "MachineFrom"]
+        : ["CurrentMachine", "MachineCurrent"];
+    const machineQueries = [];
+    const machineIds = await getMachineIdsForClient(type);
+    const machineIdList = Array.from(machineIds || []);
+    const machineRefs = machineIdList.map((id) => db.collection("Machine").doc(id));
+    for (const field of machineFields) {
+      for (let i = 0; i < machineRefs.length; i += 10) {
+        machineQueries.push(
+          applyPageWindow(
+            db.collection("Test").where(field, "in", machineRefs.slice(i, i + 10))
+          )
+        );
+      }
+      for (let i = 0; i < machineIdList.length; i += 10) {
+        machineQueries.push(
+          applyPageWindow(
+            db.collection("Test").where(field, "in", machineIdList.slice(i, i + 10))
+          )
+        );
+      }
+    }
+    emitDebug("client-machine-queries:built", {
+      type,
+      clientId,
+      machineIdCount: machineIdList.length,
+      machineQueriesAvailable: machineQueries.length,
+      docMapSize: docMap.size,
+    });
+
+    let machineQueriesUsed = 0;
+    for (const query of machineQueries) {
+      if (docMap.size >= clientPrefilterTarget) break;
+      if (machineQueriesUsed >= clientMachineQueryBudget) {
+        batchDebug.push({
+          event: "client-prefilter-budget-exhausted",
+          type,
+          clientId,
+          directMatches: docMap.size,
+          machineQueriesUsed,
+          machineQueriesAvailable: machineQueries.length,
+        });
+        break;
+      }
+      machineQueriesUsed += 1;
+      const queryStartedAt = Date.now();
+      scannedBatches += 1;
+      const snap = await query.get();
+      scannedDocs += snap.size;
+      snap.forEach((docSnap) => {
+        docMap.set(docSnap.id, docSnap);
+      });
+      emitDebug("client-machine-query:done", {
+        type,
+        clientId,
+        queryIndex: machineQueriesUsed - 1,
+        size: snap.size,
+        docMapSize: docMap.size,
+        firstDocId: snap.docs[0]?.id || null,
+        lastDocId: snap.docs[snap.docs.length - 1]?.id || null,
+        queryElapsedMs: Date.now() - queryStartedAt,
+      });
+    }
+
+    emitDebug("client-query-matches:done", {
+      type,
+      clientId,
+      mode: "direct-plus-machine",
+      docMapSize: docMap.size,
+      machineQueriesUsed,
+      phaseElapsedMs: Date.now() - phaseStartedAt,
+    });
     return docMap;
   };
 
   const fetchClientPrefilterDocs = async () => {
     if (!selectedClientFrom && !selectedClientCurrent) return null;
 
+    const phaseStartedAt = Date.now();
+    emitDebug("client-prefilter:start", {
+      selectedClientFrom,
+      selectedClientCurrent,
+      startAfterId: startAfterDoc?.id || null,
+    });
     const [fromMatches, currentMatches] = await Promise.all([
       getClientQueryMatches({
         type: "from",
         clientId: selectedClientFrom,
-        machineIds: clientFromMachineIds,
       }),
       getClientQueryMatches({
         type: "current",
         clientId: selectedClientCurrent,
-        machineIds: clientCurrentMachineIds,
       }),
     ]);
 
@@ -386,13 +534,26 @@ export async function fetchPartsWithMachineDataPage({
       );
     }
 
-    return [...docMap.values()].sort((a, b) => a.id.localeCompare(b.id));
+    const docs = [...docMap.values()].sort((a, b) => a.id.localeCompare(b.id));
+    emitDebug("client-prefilter:done", {
+      fromMatchCount: fromMatches?.size || 0,
+      currentMatchCount: currentMatches?.size || 0,
+      mergedCount: docs.length,
+      firstDocId: docs[0]?.id || null,
+      lastDocId: docs[docs.length - 1]?.id || null,
+      phaseElapsedMs: Date.now() - phaseStartedAt,
+    });
+    return docs;
   };
 
   const clientPrefilterDocs = await fetchClientPrefilterDocs();
 
   if (clientPrefilterDocs) {
     activeSearchMode = "client-query";
+    emitDebug("client-page:start", {
+      candidateDocs: clientPrefilterDocs.length,
+      startAfterId: startAfterDoc?.id || null,
+    });
     const startAfterId = startAfterDoc?.id || null;
     const startIndex = startAfterId
       ? clientPrefilterDocs.findIndex((docSnap) => docSnap.id === startAfterId) + 1
@@ -406,6 +567,7 @@ export async function fetchPartsWithMachineDataPage({
       offset < visibleDocs.length && matchedDocs.length <= pageSize;
       offset += candidateWindowSize
     ) {
+      const windowStartedAt = Date.now();
       const windowDocs = visibleDocs.slice(offset, offset + candidateWindowSize);
       const machineIds = new Set();
       const currentMachineIds = new Set();
@@ -437,6 +599,14 @@ export async function fetchPartsWithMachineDataPage({
           fetchMachineMap([...currentMachineIds]),
         ]);
       }
+      emitDebug("client-page:machine-maps-done", {
+        offset,
+        windowDocs: windowDocs.length,
+        machineIds: machineIds.size,
+        currentMachineIds: currentMachineIds.size,
+        machineMapSize: Object.keys(machineMap).length,
+        currentMachineMapSize: Object.keys(currentMachineMap).length,
+      });
 
       for (const docSnap of windowDocs) {
         let raw;
@@ -468,6 +638,15 @@ export async function fetchPartsWithMachineDataPage({
           });
         }
       }
+      emitDebug("client-page:window-done", {
+        offset,
+        windowDocs: windowDocs.length,
+        matchedDocs: matchedDocs.length,
+        visibleRejected,
+        clientPrefilterRejected,
+        filterRejected,
+        phaseElapsedMs: Date.now() - windowStartedAt,
+      });
     }
 
     const pageMatches = matchedDocs.slice(0, pageSize);
@@ -966,23 +1145,6 @@ export async function fetchClients(selectedOEM, selectedModality) {
         const hasMatch = machineDocs.some((machineDoc) => {
           if (!machineDoc?.exists) return false;
           const rawMachineData = machineDoc.data() || {};
-          if (isInteriorSocalMachineData(rawMachineData)) {
-            machineDoc.ref
-              .set(
-                {
-                  associatedParts: firebase.firestore.FieldValue.delete(),
-                  skipAssociatedParts: true,
-                  associatedPartsSkippedReason: "interior-socal-warehouse",
-                },
-                { merge: true }
-              )
-              .catch((error) => {
-                console.error(
-                  "Failed to clear Interior SoCal associatedParts:",
-                  error
-                );
-              });
-          }
           const machineData = sanitizeMachineDataForList(rawMachineData) || {};
           if (
             selectedOEM &&
@@ -1058,20 +1220,6 @@ export async function fetchModels(
   await Promise.all(
     machinesSnapshot.docs.map(async (machineDoc) => {
       const rawMachineData = machineDoc.data() || {};
-      if (isInteriorSocalMachineData(rawMachineData)) {
-        machineDoc.ref
-          .set(
-            {
-              associatedParts: firebase.firestore.FieldValue.delete(),
-              skipAssociatedParts: true,
-              associatedPartsSkippedReason: "interior-socal-warehouse",
-            },
-            { merge: true }
-          )
-          .catch((error) => {
-            console.error("Failed to clear Interior SoCal associatedParts:", error);
-          });
-      }
       const machineData = sanitizeMachineDataForList(rawMachineData) || {};
       let isValid = true;
 

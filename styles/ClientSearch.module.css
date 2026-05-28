@@ -190,6 +190,11 @@
   animation: magmo-spin 1s linear infinite;
 }
 
+.blockingList {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
 @keyframes magmo-spin {
   from {
     transform: rotate(0deg);

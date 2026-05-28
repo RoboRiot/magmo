@@ -68,6 +68,8 @@ export default function TrailerDetailPage() {
   const [partsError, setPartsError] = useState("");
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [originalTrailerName, setOriginalTrailerName] = useState("");
+  const [mondayBoardId, setMondayBoardId] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -114,10 +116,12 @@ export default function TrailerDetailPage() {
           getRefId(trailerData.associatedMachine);
 
         if (!cancelled) {
+          const loadedName =
+            String(trailerData.name || "").trim() ||
+            String(trailerData.mondayBoardName || "").trim() ||
+            trailerId;
           setForm({
-            name:
-              String(trailerData.name || "").trim() ||
-              trailerId,
+            name: loadedName,
             locationFromId: String(trailerData.locationFromId || "").trim(),
             locationCurrentId:
               String(trailerData.locationCurrentId || "").trim() ||
@@ -126,6 +130,8 @@ export default function TrailerDetailPage() {
             vin: String(trailerData.vin || "").trim(),
             associatedMachineId: currentMachineId,
           });
+          setOriginalTrailerName(loadedName);
+          setMondayBoardId(String(trailerData.mondayBoardId || "").trim());
         }
 
         const machineRefs = Array.isArray(clientDoc.data()?.machines)
@@ -196,6 +202,7 @@ export default function TrailerDetailPage() {
     try {
       const db = firebase.firestore();
       const associatedMachineId = String(form.associatedMachineId || "").trim();
+      const nextName = String(form.name || "").trim();
       const locationFromId = String(form.locationFromId || "").trim();
       const locationCurrentId =
         String(form.locationCurrentId || "").trim() || SOCAL_CLIENT_ID;
@@ -206,8 +213,25 @@ export default function TrailerDetailPage() {
       const locationFromName = String(fromClient?.name || "").trim();
       const locationCurrentName =
         String(currentClient?.name || "").trim() || SOCAL_LOCATION_NAME;
+
+      if (mondayBoardId && nextName && nextName !== originalTrailerName) {
+        const idToken = await firebase.auth().currentUser?.getIdToken();
+        const response = await fetch("/api/monday/rename-trailer-board", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+          },
+          body: JSON.stringify({ boardId: mondayBoardId, name: nextName }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.error || "Failed to update Monday board name.");
+        }
+      }
+
       const payload = {
-        name: String(form.name || "").trim(),
+        name: nextName,
         locationFromId,
         locationFromName,
         locationCurrentId,
@@ -223,12 +247,17 @@ export default function TrailerDetailPage() {
           : null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
+      if (mondayBoardId) {
+        payload.mondayBoardId = mondayBoardId;
+        payload.mondayBoardName = nextName;
+      }
 
       await db.collection("Trailers").doc(trailerId).set(payload, { merge: true });
+      setOriginalTrailerName(nextName);
       setSaveSuccess("Trailer saved.");
     } catch (error) {
       console.error("Failed to save trailer", error);
-      setSaveError("Failed to save trailer.");
+      setSaveError(error?.message || "Failed to save trailer.");
     } finally {
       setIsSaving(false);
     }

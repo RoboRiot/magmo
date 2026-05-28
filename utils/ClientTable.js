@@ -8,13 +8,19 @@ const ClientTable = ({
   onInfoClick,
   clearSelection,
   onAddClient, // new prop for add-new-client action
+  onDeleteClient,
   disableSelect,
   disableInfo,
+  canDeleteClients,
+  deletingClientId,
   isClientSearch,
   selectingClientId,
 }) => {
   const columnCount =
-    1 + (disableInfo ? 0 : 1) + (disableSelect ? 0 : 1);
+    1 +
+    (disableInfo ? 0 : 1) +
+    (disableSelect ? 0 : 1) +
+    (canDeleteClients ? 1 : 0);
   const showActions = Boolean(clearSelection || onAddClient);
 
   return (
@@ -24,6 +30,7 @@ const ClientTable = ({
           <th>Client Name</th>
           {!disableInfo && <th>Info</th>}
           {!disableSelect && <th>Select</th>}
+          {canDeleteClients && <th>Delete</th>}
         </tr>
       </thead>
       <tbody>
@@ -83,6 +90,31 @@ const ClientTable = ({
                     </>
                   ) : (
                     "Select"
+                  )}
+                </Button>
+              </td>
+            )}
+            {canDeleteClients && (
+              <td>
+                <Button
+                  variant="outline-danger"
+                  disabled={Boolean(deletingClientId || selectingClientId)}
+                  onClick={() => onDeleteClient?.(client)}
+                >
+                  {deletingClientId === client.id ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete"
                   )}
                 </Button>
               </td>

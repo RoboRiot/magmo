@@ -324,6 +324,7 @@
 
 .searchSelect :global(.dropdown-menu) {
   border-radius: 12px;
+  margin-top: -1px !important;
 }
 
 .footerActions {
@@ -361,6 +362,19 @@
 
 .trailerActionButton:hover,
 .trailerActionButton:focus {
+  color: #ffffff !important;
+  filter: brightness(0.98);
+}
+
+.toolsActionButton {
+  background: linear-gradient(135deg, #14b8a6, #6366f1) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(20, 184, 166, 0.24);
+}
+
+.toolsActionButton:hover,
+.toolsActionButton:focus {
   color: #ffffff !important;
   filter: brightness(0.98);
 }

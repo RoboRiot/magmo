@@ -1,5 +1,4 @@
 import firebase from "../context/Firebase";
-import { isInteriorSocalMachineData } from "./warehouseAssociations";
 
 function getRefId(ref) {
   if (!ref) return "";
@@ -39,6 +38,15 @@ export function formatPartDate(input) {
   return date.toLocaleDateString();
 }
 
+function getPartMachineIds(data) {
+  const modernIds = [data?.MachineFrom, data?.MachineCurrent]
+    .map(getRefId)
+    .filter(Boolean);
+  if (modernIds.length) return modernIds;
+
+  return [data?.Machine, data?.CurrentMachine].map(getRefId).filter(Boolean);
+}
+
 async function resolvePartDoc(db, refOrId) {
   if (!refOrId) return null;
   if (typeof refOrId.get === "function") {
@@ -67,7 +75,6 @@ export async function fetchAssociatedPartsForMachine(machineId) {
   if (!machineDoc.exists) return [];
 
   const machineData = machineDoc.data() || {};
-  if (isInteriorSocalMachineData(machineData)) return [];
 
   const associatedRefs = Array.isArray(machineData.associatedParts)
     ? machineData.associatedParts
@@ -80,6 +87,11 @@ export async function fetchAssociatedPartsForMachine(machineId) {
 
   return partDocs
     .filter((doc) => doc?.exists)
+    .filter((doc) => {
+      const data = doc.data() || {};
+      const machineIds = getPartMachineIds(data);
+      return machineIds.length === 0 || machineIds.includes(resolvedMachineId);
+    })
     .map((doc) => {
       const data = doc.data() || {};
       return {

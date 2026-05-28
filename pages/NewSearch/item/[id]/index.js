@@ -49,8 +49,8 @@ import {
   deleteTrackerModel,
 } from "../../../../utils/trackerCatalog";
 import {
-  addAssociatedPartToMachine,
   buildMachineSummary,
+  syncAssociatedPartsForItem,
   stripAssociatedPartsFromMachineSnapshot,
   stripEmbeddedMachineAssociations,
 } from "../../../../utils/warehouseAssociations";
@@ -662,12 +662,14 @@ const handleSendToInflow = async () => {
   const isSocalWarehouseClient = (client) =>
     client?.name?.toLowerCase() === "socalwarehouse";
 
-  const isInteriorSocalMachine = (machine) =>
-    machine?.name?.toLowerCase() === "interior socal";
+  const isInteriorWarehouseMachine = (machine) =>
+    ["interior socal", "interior norcal"].includes(
+      machine?.name?.toLowerCase()
+    );
 
   const shouldShowLocalLocation = (client, machine, localLoc = "") =>
     isSocalWarehouseClient(client) ||
-    isInteriorSocalMachine(machine) ||
+    isInteriorWarehouseMachine(machine) ||
     Boolean(localLoc);
 
   useEffect(() => {
@@ -932,8 +934,9 @@ const handleSendToInflow = async () => {
           : null;
       const clientName =
         clientDoc && clientDoc.exists ? clientDoc.data().name : null;
-      const isSocalInterior =
-        machineData.name?.toLowerCase() === "interior socal";
+      const isSocalInterior = ["interior socal", "interior norcal"].includes(
+        machineData.name?.toLowerCase()
+      );
       const shouldShow = isSocalInterior || clientName === "SoCalWarehouse";
 
       if (isFrom) {
@@ -1097,12 +1100,12 @@ const handleSendToInflow = async () => {
       // if (data.localLocCurrent) setShowLocalLocCurrent(true);
       // new: combine machine-name OR client-name check, keep existing-data
       setShowLocalLocFrom(
-        nameFrom === "interior socal" ||
+        ["interior socal", "interior norcal"].includes(nameFrom) ||
           resolvedClientFromName?.toLowerCase() === "socalwarehouse" ||
           Boolean(data.localLocFrom)
       );
       setShowLocalLocCurrent(
-        nameCurrent === "interior socal" ||
+        ["interior socal", "interior norcal"].includes(nameCurrent) ||
           resolvedClientCurrentName?.toLowerCase() === "socalwarehouse" ||
           Boolean(data.localLocCurrent)
       );
@@ -1250,11 +1253,16 @@ const handleSendToInflow = async () => {
         selectedMachine
       );
       applyMergedMachineFields(merged, { force: true });
-      const machinesSnapshot = await db
-        .collection("Machine")
-        .where("Model", "==", machineData.Model || machineData.model)
-        .get();
-      setMachineFrequency(machinesSnapshot.size);
+      const machineModel = machineData.Model || machineData.model || "";
+      if (machineModel) {
+        const machinesSnapshot = await db
+          .collection("Machine")
+          .where("Model", "==", machineModel)
+          .get();
+        setMachineFrequency(machinesSnapshot.size);
+      } else {
+        setMachineFrequency(0);
+      }
     } else {
       console.error("Machine not found");
     }
@@ -1753,6 +1761,13 @@ const handleSendToInflow = async () => {
       value === undefined ? "" : value
     );
 
+    delete formattedItems.Machine;
+    delete formattedItems.CurrentMachine;
+    delete formattedItems.MachineFrom;
+    delete formattedItems.MachineCurrent;
+    delete formattedItems.ClientFrom;
+    delete formattedItems.ClientCurrent;
+
     const fromDetails = buildLocalLocObject(newLocalFrom);
     const currentDetails = buildLocalLocObject(newLocalCurrent);
 
@@ -1914,8 +1929,34 @@ const handleSendToInflow = async () => {
       throw new Error("Could not generate a unique item ID. Please try again.");
     };
 
+    const nextMachineIds = [
+      selectedMachine?.id,
+      selectedCurrentMachine?.id,
+    ].filter(Boolean);
+    const nextMachineDataById = {};
+    if (selectedMachine?.id) nextMachineDataById[selectedMachine.id] = selectedMachine;
+    if (selectedCurrentMachine?.id) {
+      nextMachineDataById[selectedCurrentMachine.id] = selectedCurrentMachine;
+    }
+    const syncMachineAssociations = (targetPartId, previousPartId, previousItemData) =>
+      syncAssociatedPartsForItem({
+        db,
+        firebase,
+        partId: targetPartId,
+        previousPartId,
+        previousItemData,
+        nextMachineIds,
+        nextMachineDataById,
+      });
+
     let docId = id;
     try {
+      let previousItemData = null;
+      if (docId) {
+        const previousDoc = await db.collection("Test").doc(docId).get();
+        previousItemData = previousDoc.exists ? previousDoc.data() || {} : null;
+      }
+
       if (docId) {
         // Check if a localSN is provided and if it differs from the current docId.
         const newDocId =
@@ -1934,25 +1975,7 @@ const handleSendToInflow = async () => {
             return;
           }
 
-          if (selectedMachine && selectedMachine.id) {
-            await addAssociatedPartToMachine({
-              db,
-              firebase,
-              machineId: selectedMachine.id,
-              partId: newDocId,
-              machineData: selectedMachine,
-            });
-          }
-
-          if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            await addAssociatedPartToMachine({
-              db,
-              firebase,
-              machineId: selectedCurrentMachine.id,
-              partId: newDocId,
-              machineData: selectedCurrentMachine,
-            });
-          }
+          await syncMachineAssociations(newDocId, docId, previousItemData);
           // Delete the old document.
           await db.collection("Test").doc(docId).delete();
           // Set docId to the new document ID.
@@ -1960,30 +1983,30 @@ const handleSendToInflow = async () => {
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
           const cleanFormattedItems = shallowClean(payloadWithLocalSn);
+          cleanFormattedItems.Machine = firebase.firestore.FieldValue.delete();
+          cleanFormattedItems.CurrentMachine = firebase.firestore.FieldValue.delete();
+          if (!selectedMachine?.id) {
+            cleanFormattedItems.MachineFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedCurrentMachine?.id) {
+            cleanFormattedItems.MachineCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedClientFrom?.id) {
+            cleanFormattedItems.ClientFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedClientCurrent?.id) {
+            cleanFormattedItems.ClientCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
           if (!selectedParent || !selectedParent.id) {
             cleanFormattedItems.Parent = firebase.firestore.FieldValue.delete();
           }
           await db.collection("Test").doc(docId).update(cleanFormattedItems);
 
-          if (selectedMachine && selectedMachine.id) {
-            await addAssociatedPartToMachine({
-              db,
-              firebase,
-              machineId: selectedMachine.id,
-              partId: docId,
-              machineData: selectedMachine,
-            });
-          }
-
-          if (selectedCurrentMachine && selectedCurrentMachine.id) {
-            await addAssociatedPartToMachine({
-              db,
-              firebase,
-              machineId: selectedCurrentMachine.id,
-              partId: docId,
-              machineData: selectedCurrentMachine,
-            });
-          }
+          await syncMachineAssociations(docId, docId, previousItemData);
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
@@ -2005,25 +2028,7 @@ const handleSendToInflow = async () => {
           return;
         }
 
-        if (selectedMachine && selectedMachine.id) {
-          await addAssociatedPartToMachine({
-            db,
-            firebase,
-            machineId: selectedMachine.id,
-            partId: docId,
-            machineData: selectedMachine,
-          });
-        }
-
-        if (selectedCurrentMachine && selectedCurrentMachine.id) {
-          await addAssociatedPartToMachine({
-            db,
-            firebase,
-            machineId: selectedCurrentMachine.id,
-            partId: docId,
-            machineData: selectedCurrentMachine,
-          });
-        }
+        await syncMachineAssociations(docId, null, null);
       }
       await syncChildrenForItem(docId);
       setItems((prev) => ({ ...prev, localSN: docId }));
@@ -2113,7 +2118,9 @@ const handleSendToInflow = async () => {
     if (!machine?.id) return;
     const isFromBranch = machinePick;
     // const condition = (name) => name && name.toLowerCase() === "interior socal";
-    const isSocalInterior = machine.name?.toLowerCase() === "interior socal";
+    const isSocalInterior = ["interior socal", "interior norcal"].includes(
+      machine.name?.toLowerCase()
+    );
 
     if (isFromBranch) {
       setSelectedMachine({ id: machine.id, name: machine.name });

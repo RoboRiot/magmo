@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Firebase, { auth } from "./Firebase";
 import {
   ALLOWED_EMAIL_DOMAIN,
+  getRoleFromClaims,
   isAdminEmail,
   isAllowedEmailDomain,
   USER_ROLES,
@@ -14,7 +15,7 @@ const formatAuthUser = async (user, forceRefresh = false) => {
   const claims = tokenResult && tokenResult.claims ? tokenResult.claims : {};
   const role = isAdminEmail(user.email)
     ? USER_ROLES.ADMIN
-    : USER_ROLES.REGULAR;
+    : getRoleFromClaims(claims);
   const isAdmin = role === USER_ROLES.ADMIN;
 
   return {

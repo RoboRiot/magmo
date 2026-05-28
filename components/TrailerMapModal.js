@@ -40,11 +40,12 @@ const LF_MAP_SLOTS_BASE = [
   { slot: 25, x: 2, y: 41 },
 ];
 
-// Unnumbered placeholders from the hand-drawn layout.
+// Unnumbered visual slots from the hand-drawn layout. They use stable internal
+// slot ids so trailers can be moved into them while still rendering blank.
 const LF_MAP_PLACEHOLDERS_BASE = [
-  { key: "p-a", x: 79, y: 2 },
-  { key: "p-b", x: 79, y: 24 },
-  { key: "p-c", x: 88, y: 24 },
+  { key: "p-a", slot: 10001, x: 79, y: 2 },
+  { key: "p-b", slot: 10002, x: 79, y: 24 },
+  { key: "p-c", slot: 10003, x: 88, y: 24 },
 ];
 
 function withUniformRect(entry) {
@@ -249,6 +250,14 @@ function getTrailerDisplayNumber(trailer, fallbackSlotNumber) {
   return String(fallbackSlotNumber);
 }
 
+function getTrailerDisplayName(trailer) {
+  return (
+    String(trailer?.name || "").trim() ||
+    String(trailer?.mondayBoardName || "").trim() ||
+    String(trailer?.id || "").trim()
+  );
+}
+
 function normalizeTrailerDoc(docSnap) {
   const data = docSnap.data() || {};
   const number = extractTrailerNumber(data.mondayBoardName || data.name || docSnap.id);
@@ -406,6 +415,11 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
   const [lfOnly, setLfOnly] = useState(false);
   const [activeTrailer, setActiveTrailer] = useState(null);
   const [activeSlot, setActiveSlot] = useState(null);
+  const [isEditingTrailerName, setIsEditingTrailerName] = useState(false);
+  const [trailerNameDraft, setTrailerNameDraft] = useState("");
+  const [isSavingTrailerName, setIsSavingTrailerName] = useState(false);
+  const [trailerNameError, setTrailerNameError] = useState("");
+  const [trailerNameSuccess, setTrailerNameSuccess] = useState("");
   const [activeTrailerParts, setActiveTrailerParts] = useState([]);
   const [activeTrailerPartsLoading, setActiveTrailerPartsLoading] = useState(false);
   const [activeTrailerPartsError, setActiveTrailerPartsError] = useState("");
@@ -637,6 +651,11 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
       setLfOnly(false);
       setActiveTrailer(null);
       setActiveSlot(null);
+      setIsEditingTrailerName(false);
+      setTrailerNameDraft("");
+      setIsSavingTrailerName(false);
+      setTrailerNameError("");
+      setTrailerNameSuccess("");
       setActiveTrailerParts([]);
       setActiveTrailerPartsLoading(false);
       setActiveTrailerPartsError("");
@@ -802,6 +821,10 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
 
   useEffect(() => {
     if (!activeTrailer) return;
+    setTrailerNameDraft(getTrailerDisplayName(activeTrailer));
+    setIsEditingTrailerName(false);
+    setTrailerNameError("");
+    setTrailerNameSuccess("");
     const history = sortLocationHistory(activeTrailer.locationHistory || []);
     setLocationForm({
       currentClientId: activeTrailer.locationCurrentId || SOCAL_CLIENT_ID,
@@ -900,6 +923,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
       (a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt)
     );
     ordered.forEach((trailer) => {
+      if (!trailer.existsInDb) return;
       if (!trailer.lfOnMap) return;
       const slot = normalizePersistedSlot(trailer.lfSlot);
       if (slot == null) return;
@@ -936,10 +960,13 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
       if (lfOnly && !trailer.lfOnMap) return false;
       if (!query) return true;
       const idMatch = trailer.id.toLowerCase().includes(query);
+      const nameMatch = getTrailerDisplayName(trailer)
+        .toLowerCase()
+        .includes(query);
       const numberMatch =
         numberQuery.length > 0 &&
         String(trailer.number == null ? "" : trailer.number).includes(numberQuery);
-      return idMatch || numberMatch;
+      return idMatch || nameMatch || numberMatch;
     });
   }, [lfOnly, searchTerm, trailers]);
 
@@ -981,7 +1008,25 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
       }))
       .filter((slot) => Number.isFinite(slot.slot));
 
-    return [...baseSlots, ...customSlots];
+    const placeholderSlots = LF_MAP_PLACEHOLDERS.reduce((acc, slot) => {
+      const key = `placeholder-${slot.key}`;
+      const override = activeLayoutOverrides[key] || {};
+      if (override.deleted === true) return acc;
+      acc.push({
+        ...slot,
+        key,
+        slot: Number.isFinite(override.slot) ? override.slot : slot.slot,
+        x: Number.isFinite(override.x) ? override.x : slot.x,
+        y: Number.isFinite(override.y) ? override.y : slot.y,
+        w: Number.isFinite(override.w) ? override.w : slot.w,
+        h: Number.isFinite(override.h) ? override.h : slot.h,
+        r: Number.isFinite(override.r) ? override.r : slot.r,
+        custom: true,
+      });
+      return acc;
+    }, []);
+
+    return [...baseSlots, ...placeholderSlots, ...customSlots];
   }, [activeLayoutOverrides]);
 
   useEffect(() => {
@@ -994,7 +1039,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
   }, [positionedSlots, selectedLayoutKey]);
 
   const positionedPlaceholders = useMemo(() => {
-    return LF_MAP_PLACEHOLDERS.map((slot) => {
+    return LF_MAP_PLACEHOLDERS.filter((slot) => !Number.isFinite(slot.slot)).map((slot) => {
       const key = `placeholder-${slot.key}`;
       const override = activeLayoutOverrides[key];
       if (!override) return slot;
@@ -1241,29 +1286,27 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
     }
   };
 
-  const swapLockedSlotAssignments = useCallback(
+  const moveLockedSlotAssignment = useCallback(
     async (sourceSlot, targetSlot) => {
       if (!layoutLocked) return;
       if (!sourceSlot || !targetSlot || sourceSlot === targetSlot) return;
 
-      const sourceTrailer =
-        slotAssignments[sourceSlot] || trailerByNumber[sourceSlot] || null;
-      const targetTrailer =
-        slotAssignments[targetSlot] || trailerByNumber[targetSlot] || null;
-      if (!sourceTrailer || !targetTrailer) return;
+      const sourceTrailer = slotAssignments[sourceSlot] || null;
+      const targetTrailer = slotAssignments[targetSlot] || null;
+      if (!sourceTrailer) return;
 
       setIsApplyingMove(true);
       setMoveError("");
       try {
         const db = firebase.firestore();
         const batch = db.batch();
-        const sourceRef = db.collection("Trailers").doc(sourceTrailer.id);
-        const targetRef = db.collection("Trailers").doc(targetTrailer.id);
+        const sourceRef = db
+          .collection("Trailers")
+          .doc(sourceTrailer.persistId || sourceTrailer.id);
 
         batch.set(
           sourceRef,
           {
-            name: sourceTrailer.id,
             lfOnMap: true,
             lfSlot: targetSlot,
             locationCurrentId: sourceTrailer.locationCurrentId || SOCAL_CLIENT_ID,
@@ -1277,32 +1320,36 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
           { merge: true }
         );
 
-        batch.set(
-          targetRef,
-          {
-            name: targetTrailer.id,
-            lfOnMap: true,
-            lfSlot: sourceSlot,
-            locationCurrentId: targetTrailer.locationCurrentId || SOCAL_CLIENT_ID,
-            locationCurrentName:
-              targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
-            locationCurrent:
-              targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
-            location: targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+        if (targetTrailer) {
+          const targetRef = db
+            .collection("Trailers")
+            .doc(targetTrailer.persistId || targetTrailer.id);
+          batch.set(
+            targetRef,
+            {
+              lfOnMap: true,
+              lfSlot: sourceSlot,
+              locationCurrentId: targetTrailer.locationCurrentId || SOCAL_CLIENT_ID,
+              locationCurrentName:
+                targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
+              locationCurrent:
+                targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
+              location: targetTrailer.locationCurrentName || SOCAL_LOCATION_NAME,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
 
         await batch.commit();
       } catch (error) {
-        console.error("Failed to swap trailer slots", error);
-        setMoveError("Could not swap trailers. Please try again.");
+        console.error("Failed to move trailer slot", error);
+        setMoveError("Could not move trailer. Please try again.");
       } finally {
         setIsApplyingMove(false);
       }
     },
-    [layoutLocked, slotAssignments, trailerByNumber]
+    [layoutLocked, slotAssignments]
   );
 
   const startLockedSlotSwapDrag = (event, slotNumber) => {
@@ -1312,8 +1359,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
     if (!mapSurface) return;
     if (!slotNumber) return;
     if (event.button !== 0) return;
-    const sourceTrailer =
-      slotAssignments[slotNumber] || trailerByNumber[slotNumber] || null;
+    const sourceTrailer = slotAssignments[slotNumber] || null;
     if (!sourceTrailer) return;
 
     event.preventDefault();
@@ -1416,7 +1462,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
         findSlotAtClientPoint(upEvent.clientX, upEvent.clientY) ||
         findNearestSlotAtClientPoint(upEvent.clientX, upEvent.clientY);
       if (!targetSlot || targetSlot === slotNumber) return;
-      await swapLockedSlotAssignments(slotNumber, targetSlot);
+      await moveLockedSlotAssignment(slotNumber, targetSlot);
     };
 
     slotSwapCleanupRef.current = cleanup;
@@ -1711,6 +1757,11 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
     if (actionBusy) return;
     setActiveTrailer(null);
     setActiveSlot(null);
+    setIsEditingTrailerName(false);
+    setTrailerNameDraft("");
+    setIsSavingTrailerName(false);
+    setTrailerNameError("");
+    setTrailerNameSuccess("");
     setActiveTrailerParts([]);
     setActiveTrailerPartsError("");
     setActiveTrailerPartsLoading(false);
@@ -1734,6 +1785,114 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
         return name.includes(query) || location.includes(query);
       })
       .slice(0, 60);
+  };
+
+  const applyRenamedMondayBoardToState = useCallback((boardId, nextName) => {
+    if (!boardId) return;
+    setMondayBoards((prev) =>
+      prev.map((board) =>
+        board.id === boardId ? { ...board, name: nextName } : board
+      )
+    );
+    setMondayBoardFolders((prev) =>
+      prev.map((folder) => ({
+        ...folder,
+        boards: (folder.boards || []).map((board) =>
+          board.id === boardId ? { ...board, name: nextName } : board
+        ),
+      }))
+    );
+  }, []);
+
+  const handleSaveTrailerName = async () => {
+    if (!activeTrailer?.id) return;
+    const nextName = String(trailerNameDraft || "").trim();
+    if (!nextName) {
+      setTrailerNameError("Enter a trailer name.");
+      return;
+    }
+
+    const currentName = getTrailerDisplayName(activeTrailer);
+    if (nextName === currentName) {
+      setIsEditingTrailerName(false);
+      setTrailerNameError("");
+      return;
+    }
+
+    const mondayBoardId = String(activeTrailer.mondayBoardId || "").trim();
+    if (!activeTrailer.existsInDb && !mondayBoardId) {
+      setTrailerNameError("Save the trailer before editing its name.");
+      return;
+    }
+
+    setIsSavingTrailerName(true);
+    setTrailerNameError("");
+    setTrailerNameSuccess("");
+    try {
+      if (mondayBoardId) {
+        const idToken = await firebase.auth().currentUser?.getIdToken();
+        const response = await fetch("/api/monday/rename-trailer-board", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+          },
+          body: JSON.stringify({ boardId: mondayBoardId, name: nextName }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.error || "Failed to update Monday board name.");
+        }
+      }
+
+      const nextNumber = extractTrailerNumber(nextName);
+      const db = firebase.firestore();
+      const trailerRef = db
+        .collection("Trailers")
+        .doc(activeTrailer.persistId || activeTrailer.id);
+      const updatePayload = {
+        name: nextName,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      if (mondayBoardId) {
+        updatePayload.mondayBoardId = mondayBoardId;
+        updatePayload.mondayBoardName = nextName;
+        updatePayload.source = activeTrailer.source || "monday";
+      }
+      if (Number.isFinite(nextNumber)) {
+        updatePayload.number = nextNumber;
+      }
+      await trailerRef.set(updatePayload, { merge: true });
+
+      const updatedTrailer = {
+        ...activeTrailer,
+        name: nextName,
+        mondayBoardName: mondayBoardId ? nextName : activeTrailer.mondayBoardName,
+        number: Number.isFinite(nextNumber) ? nextNumber : activeTrailer.number,
+        existsInDb: true,
+      };
+      setActiveTrailer(updatedTrailer);
+      setTrailers((prev) => {
+        let didUpdate = false;
+        const next = prev.map((trailer) => {
+          const isMatch =
+            trailer.id === activeTrailer.id ||
+            trailer.persistId === activeTrailer.persistId;
+          if (!isMatch) return trailer;
+          didUpdate = true;
+          return { ...trailer, ...updatedTrailer };
+        });
+        return didUpdate ? next : [...next, updatedTrailer];
+      });
+      applyRenamedMondayBoardToState(mondayBoardId, nextName);
+      setIsEditingTrailerName(false);
+      setTrailerNameSuccess("Trailer name saved.");
+    } catch (error) {
+      console.error("Failed to save trailer name", error);
+      setTrailerNameError(error?.message || "Could not save trailer name.");
+    } finally {
+      setIsSavingTrailerName(false);
+    }
   };
 
   const handleCurrentLocationClientSelect = (client) => {
@@ -2002,7 +2161,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
       return;
     }
 
-    const trailer = slotAssignments[slotNumber] || trailerByNumber[slotNumber] || null;
+    const trailer = slotAssignments[slotNumber] || null;
     if (!trailer) return;
     setActiveTrailer(trailer);
     setActiveSlot(slotNumber);
@@ -2224,7 +2383,10 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
         ]
       : listTrailers.map((trailer) => (
           <tr key={trailer.id}>
-            <td>{trailer.id}</td>
+            <td>
+              <div>{getTrailerDisplayName(trailer)}</div>
+              <small className={styles.infoText}>{trailer.id}</small>
+            </td>
             <td>{getTrailerLocationFrom(trailer)}</td>
             <td>{getTrailerLocationCurrent(trailer)}</td>
             <td className={styles.viewCol}>
@@ -2415,8 +2577,7 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
                 />
               ))}
               {positionedSlots.map((slot) => {
-                const trailer =
-                  slotAssignments[slot.slot] || trailerByNumber[slot.slot] || null;
+                const trailer = slotAssignments[slot.slot] || null;
                 const trailerNumber = Number.isFinite(trailer?.number)
                   ? trailer.number
                   : slot.slot;
@@ -2608,11 +2769,78 @@ export default function TrailerMapModal({ show = false, onHide = () => {} }) {
         centered
       >
         <Modal.Header closeButton={!actionBusy}>
-          <Modal.Title>Trailer {activeTrailer?.id}</Modal.Title>
+          <Modal.Title>Trailer {getTrailerDisplayName(activeTrailer)}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <div className={styles.nameEditorCard}>
+            <div className={styles.nameEditorHeader}>
+              <div>
+                <div className={styles.nameEditorLabel}>Name</div>
+                {!isEditingTrailerName && (
+                  <div className={styles.nameEditorValue}>
+                    {getTrailerDisplayName(activeTrailer) || "-"}
+                  </div>
+                )}
+              </div>
+              {!isEditingTrailerName && (
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={() => {
+                    setTrailerNameDraft(getTrailerDisplayName(activeTrailer));
+                    setTrailerNameError("");
+                    setTrailerNameSuccess("");
+                    setIsEditingTrailerName(true);
+                  }}
+                  disabled={isSavingTrailerName || actionBusy}
+                >
+                  Edit Name
+                </Button>
+              )}
+            </div>
+            {isEditingTrailerName && (
+              <div className={styles.nameEditorForm}>
+                <Form.Control
+                  value={trailerNameDraft}
+                  onChange={(event) => {
+                    setTrailerNameDraft(event.target.value);
+                    setTrailerNameError("");
+                    setTrailerNameSuccess("");
+                  }}
+                  placeholder="Trailer name"
+                  disabled={isSavingTrailerName}
+                />
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleSaveTrailerName}
+                  disabled={isSavingTrailerName}
+                >
+                  {isSavingTrailerName ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={() => {
+                    setTrailerNameDraft(getTrailerDisplayName(activeTrailer));
+                    setIsEditingTrailerName(false);
+                    setTrailerNameError("");
+                  }}
+                  disabled={isSavingTrailerName}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+            {trailerNameError && (
+              <div className={styles.inlineError}>{trailerNameError}</div>
+            )}
+            {trailerNameSuccess && (
+              <div className={styles.inlineSuccess}>{trailerNameSuccess}</div>
+            )}
+          </div>
           <div className={styles.actionInfoRow}>
-            <strong>Name:</strong> {activeTrailer?.id || "-"}
+            <strong>Trailer ID:</strong> {activeTrailer?.id || "-"}
           </div>
           <div className={styles.actionInfoRow}>
             <strong>Location From:</strong> {getTrailerLocationFrom(activeTrailer)}

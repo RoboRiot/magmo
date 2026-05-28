@@ -6,8 +6,10 @@ import {
   Button,
   Alert,
   Spinner,
+  Modal,
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
+import { useAuth } from "../../../../context/AuthUserContext";
 import ClientInfoModal from "../../ClientInfoModal";
 import MachineCreationModal from "../../MachineCreationModal";
 import styles from "../Client.module.css";
@@ -17,6 +19,7 @@ import { adminDb } from "../../../../context/FirebaseAdmin";
 
 const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const router = useRouter();
+  const { authUser } = useAuth();
   const [selectedClient, setSelectedClient] = useState(initialClient || null);
   const [machineOptions, setMachineOptions] = useState(
     Array.isArray(initialMachines) ? initialMachines : []
@@ -31,6 +34,13 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
   const [showCreateMachineModal, setShowCreateMachineModal] = useState(false);
   const [availableMachines, setAvailableMachines] = useState([]);
+  const [machineToDelete, setMachineToDelete] = useState(null);
+  const [deletingMachineId, setDeletingMachineId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [blockingParts, setBlockingParts] = useState([]);
+  const canDeleteMachines =
+    authUser?.isAdmin === true ||
+    String(authUser?.role || "").toLowerCase() === "admin";
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -122,6 +132,61 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
     router.push("../machine/" + id);
   };
 
+  const handleDeleteMachineClick = (machine) => {
+    setMachineToDelete(machine);
+    setDeleteError("");
+    setBlockingParts([]);
+  };
+
+  const handleCloseDeleteMachineModal = () => {
+    if (deletingMachineId) return;
+    setMachineToDelete(null);
+    setDeleteError("");
+    setBlockingParts([]);
+  };
+
+  const handleConfirmDeleteMachine = async () => {
+    const clientId = selectedClient?.id || router.query.id || router.asPath.split("/").pop();
+    if (!machineToDelete?.id || !clientId || !canDeleteMachines) return;
+
+    setDeletingMachineId(machineToDelete.id);
+    setDeleteError("");
+    setBlockingParts([]);
+    try {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        throw new Error("You must be signed in to delete a machine.");
+      }
+      const token = await currentUser.getIdToken(true);
+      const response = await fetch("/api/machines/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          clientId,
+          machineId: machineToDelete.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setBlockingParts(Array.isArray(result.blockingParts) ? result.blockingParts : []);
+        throw new Error(result.error || "Failed to delete machine.");
+      }
+
+      setMachineOptions((prev) =>
+        prev.filter((machine) => machine.id !== machineToDelete.id)
+      );
+      setMachineToDelete(null);
+    } catch (error) {
+      console.error("Error deleting machine:", error);
+      setDeleteError(error?.message || "Failed to delete machine.");
+    } finally {
+      setDeletingMachineId("");
+    }
+  };
+
   // When adding an existing machine
   const handleAddMachine = async (machine) => {
     try {
@@ -186,6 +251,45 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
 
   return (
     <div className={styles.page}>
+      <Modal show={Boolean(machineToDelete)} onHide={handleCloseDeleteMachineModal}>
+        <Modal.Header closeButton={!deletingMachineId}>
+          <Modal.Title>Delete Machine</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {deleteError && <Alert variant="danger">{deleteError}</Alert>}
+          {blockingParts.length > 0 && (
+            <Alert variant="warning">
+              Move these associated parts before deleting this machine:
+              <ul className={styles.blockingList}>
+                {blockingParts.map((part) => (
+                  <li key={part.id}>
+                    {part.id}
+                    {part.name ? ` - ${part.name}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+          Are you sure you want to delete{" "}
+          <strong>{machineToDelete?.name || machineToDelete?.id}</strong>?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={handleCloseDeleteMachineModal}
+            disabled={Boolean(deletingMachineId)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleConfirmDeleteMachine}
+            disabled={Boolean(deletingMachineId)}
+          >
+            {deletingMachineId ? "Deleting..." : "Yes, delete machine"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
       <div className={styles.shell}>
         <header className={styles.header}>
           <Link href="/NewSearch/mainSearch">
@@ -278,12 +382,16 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                           <th>OEM</th>
                           <th>Modality</th>
                           <th>Select</th>
+                          {canDeleteMachines && <th>Delete</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {machineOptions.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className={styles.emptyState}>
+                            <td
+                              colSpan={canDeleteMachines ? 6 : 5}
+                              className={styles.emptyState}
+                            >
                               No machines assigned yet.
                             </td>
                           </tr>
@@ -305,6 +413,20 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                                   Select
                                 </Button>
                               </td>
+                              {canDeleteMachines && (
+                                <td>
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    disabled={Boolean(deletingMachineId)}
+                                    onClick={() => handleDeleteMachineClick(machine)}
+                                  >
+                                    {deletingMachineId === machine.id
+                                      ? "Deleting..."
+                                      : "Delete"}
+                                  </Button>
+                                </td>
+                              )}
                             </tr>
                           ))
                         )}

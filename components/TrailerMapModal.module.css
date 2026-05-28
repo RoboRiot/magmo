@@ -365,6 +365,42 @@
   line-height: 1;
 }
 
+.nameEditorCard {
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #fbfdff;
+}
+
+.nameEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nameEditorLabel {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.nameEditorValue {
+  margin-top: 2px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.nameEditorForm {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
 .actionInfoRow {
   margin-bottom: 8px;
   color: #1f2937;
@@ -602,6 +638,13 @@
   font-size: 0.86rem;
 }
 
+.inlineSuccess {
+  color: #047857;
+  font-weight: 700;
+  font-size: 0.86rem;
+  margin-top: 6px;
+}
+
 .listTools {
   display: flex;
   align-items: center;
@@ -640,6 +683,7 @@
 }
 
 @media (max-width: 900px) {
+  .nameEditorForm,
   .locationGrid,
   .locationHistoryItem {
     grid-template-columns: 1fr;

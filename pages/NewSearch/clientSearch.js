@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FormControl, Button, Spinner, Alert } from "react-bootstrap";
+import { FormControl, Button, Spinner, Alert, Modal } from "react-bootstrap";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import firebase from "../../context/Firebase";
+import { useAuth } from "../../context/AuthUserContext";
 import { fetchClients } from "../../utils/fetchAssociations";
 import ClientTable from "../../utils/ClientTable";
 import styles from "../../styles/ClientSearch.module.css";
@@ -9,12 +11,20 @@ import styles from "../../styles/ClientSearch.module.css";
 // import styles from "../../styles/ClientPage.module.css";
 
 const ClientPage = () => {
+  const { authUser } = useAuth();
   const [clients, setClients] = useState([]);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [selectingClientId, setSelectingClientId] = useState("");
+  const [clientToDelete, setClientToDelete] = useState(null);
+  const [deletingClientId, setDeletingClientId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [blockingParts, setBlockingParts] = useState([]);
   const router = useRouter();
+  const canDeleteClients =
+    authUser?.isAdmin === true ||
+    String(authUser?.role || "").toLowerCase() === "admin";
 
   // Fetch clients when the component mounts
   useEffect(() => {
@@ -56,6 +66,57 @@ const ClientPage = () => {
   const handleClientInfo = (clientId) => {
     router.push(`client/${clientId}/addClient`);
   };
+
+  const handleDeleteClientClick = (client) => {
+    setClientToDelete(client);
+    setDeleteError("");
+    setBlockingParts([]);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (deletingClientId) return;
+    setClientToDelete(null);
+    setDeleteError("");
+    setBlockingParts([]);
+  };
+
+  const handleConfirmDeleteClient = async () => {
+    if (!clientToDelete?.id || !canDeleteClients) return;
+
+    setDeletingClientId(clientToDelete.id);
+    setDeleteError("");
+    setBlockingParts([]);
+    try {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        throw new Error("You must be signed in to delete a client.");
+      }
+      const token = await currentUser.getIdToken(true);
+      const response = await fetch("/api/clients/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ clientId: clientToDelete.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setBlockingParts(Array.isArray(result.blockingParts) ? result.blockingParts : []);
+        throw new Error(result.error || "Failed to delete client.");
+      }
+
+      setClients((prev) =>
+        prev.filter((client) => client.id !== clientToDelete.id)
+      );
+      setClientToDelete(null);
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      setDeleteError(error?.message || "Failed to delete client.");
+    } finally {
+      setDeletingClientId("");
+    }
+  };
   
 
   // Clear search input
@@ -70,6 +131,18 @@ const ClientPage = () => {
   router.push(`client/AIS${randomNumber}/addClient`);
   };
 
+  const openTrailersClient = () => {
+    router.push("/NewSearch/client/AIS62854");
+  };
+
+  const openLakeForestClient = () => {
+    router.push("/NewSearch/client/AIS17182");
+  };
+
+  const openLathropClient = () => {
+    router.push("/NewSearch/client/AIS25097");
+  };
+
   const normalizedSearch = clientSearchTerm.trim().toLowerCase();
   const filteredClients = (Array.isArray(clients) ? clients : []).filter(
     (client) =>
@@ -78,6 +151,45 @@ const ClientPage = () => {
 
   return (
     <div className={styles.page}>
+      <Modal show={Boolean(clientToDelete)} onHide={handleCloseDeleteModal}>
+        <Modal.Header closeButton={!deletingClientId}>
+          <Modal.Title>Delete Client</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {deleteError && <Alert variant="danger">{deleteError}</Alert>}
+          {blockingParts.length > 0 && (
+            <Alert variant="warning">
+              Move these associated parts before deleting this client:
+              <ul className={styles.blockingList}>
+                {blockingParts.map((part) => (
+                  <li key={part.id}>
+                    {part.id}
+                    {part.name ? ` - ${part.name}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+          Are you sure you want to delete{" "}
+          <strong>{clientToDelete?.name || clientToDelete?.id}</strong>?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={handleCloseDeleteModal}
+            disabled={Boolean(deletingClientId)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleConfirmDeleteClient}
+            disabled={Boolean(deletingClientId)}
+          >
+            {deletingClientId ? "Deleting..." : "Yes, delete client"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
       {selectingClientId && (
         <div className={styles.loadingOverlay}>
           <img
@@ -162,6 +274,27 @@ const ClientPage = () => {
                   >
                     Add New Client
                   </Button>
+                  <Button
+                    variant="outline-primary"
+                    className={styles.primaryButton}
+                    onClick={openTrailersClient}
+                  >
+                    Trailers
+                  </Button>
+                  <Button
+                    variant="outline-primary"
+                    className={styles.primaryButton}
+                    onClick={openLakeForestClient}
+                  >
+                    Lake Forest
+                  </Button>
+                  <Button
+                    variant="outline-primary"
+                    className={styles.primaryButton}
+                    onClick={openLathropClient}
+                  >
+                    Lathrop
+                  </Button>
                 </div>
 
                 <div className={styles.tableWrap}>
@@ -169,6 +302,9 @@ const ClientPage = () => {
                     clients={filteredClients}
                     onSelectClient={handleSelectClient}
                     onInfoClick={handleClientInfo}
+                    canDeleteClients={canDeleteClients}
+                    deletingClientId={deletingClientId}
+                    onDeleteClient={handleDeleteClientClick}
                     isClientSearch={true}
                     selectingClientId={selectingClientId}
                   />

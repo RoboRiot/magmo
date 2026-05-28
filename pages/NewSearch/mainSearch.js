@@ -248,6 +248,8 @@ export default function MainSearch() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const fetchSeq = useRef(0);
   const slowQueryWarnRef = useRef({ key: "", at: 0 });
+  const latestFetchDebugRef = useRef(null);
+  const searchDropdownCloseTimer = useRef(null);
   const nameBackfillInFlight = useRef(false);
   const workOrderBackfillInFlight = useRef(false);
   const [queryEpoch, setQueryEpoch] = useState(0);
@@ -259,6 +261,30 @@ export default function MainSearch() {
   const LOAD_TIMEOUT_MS = 30000;
   const openMap = () => setShowMap(true);
   const openTrailerMap = () => setShowTrailerMap(true);
+
+  const clearSearchDropdownCloseTimer = () => {
+    if (searchDropdownCloseTimer.current) {
+      clearTimeout(searchDropdownCloseTimer.current);
+      searchDropdownCloseTimer.current = null;
+    }
+  };
+
+  const openSearchTypeDropdown = () => {
+    clearSearchDropdownCloseTimer();
+    setShowList(true);
+  };
+
+  const closeSearchTypeDropdownSoon = () => {
+    clearSearchDropdownCloseTimer();
+    searchDropdownCloseTimer.current = setTimeout(() => {
+      setShowList(false);
+      searchDropdownCloseTimer.current = null;
+    }, 180);
+  };
+
+  useEffect(() => {
+    return () => clearSearchDropdownCloseTimer();
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -607,13 +633,17 @@ export default function MainSearch() {
   // Reset pagination on route/query change (prevents stale pages like “starting at 6”)
   useEffect(() => {
     resetPagination();
-    setQueryEpoch((v) => v + 1);
+    if (page === 1) {
+      setQueryEpoch((v) => v + 1);
+    }
   }, [router.asPath]);
 
   // Reset and refetch when filters/search change
   useEffect(() => {
     resetPagination();
-    setQueryEpoch((v) => v + 1);
+    if (page === 1) {
+      setQueryEpoch((v) => v + 1);
+    }
   }, [
     selectedOEM,
     selectedModality,
@@ -650,12 +680,27 @@ export default function MainSearch() {
 
   async function fetchData(requestedPage = 1) {
     const seq = ++fetchSeq.current;
+    const requestStartedAt = Date.now();
     let timedOut = false;
+    latestFetchDebugRef.current = null;
     setIsLoading(true);
     setLoadError(null);
     const timeoutId = setTimeout(() => {
       timedOut = true;
       if (seq === fetchSeq.current) {
+        console.warn("[mainSearch][timeout]", {
+          requestedPage,
+          pageSize,
+          selectedOEM,
+          selectedModality,
+          selectedModel,
+          selectedClientFrom,
+          selectedClientCurrent,
+          select,
+          search: debouncedSearch,
+          elapsedMs: Date.now() - requestStartedAt,
+          lastDebugEvent: latestFetchDebugRef.current,
+        });
         setLoadError({
           code: "timeout",
           message: `Loading is taking longer than ${Math.round(
@@ -708,12 +753,28 @@ export default function MainSearch() {
       const logFetchDebug = (event) => {
         if (!debugSearchFetch) return;
         const now = Date.now();
+        latestFetchDebugRef.current = {
+          ...event,
+          requestedPage,
+          pageSize,
+          selectedClientFrom,
+          selectedClientCurrent,
+          effectiveSelect,
+          effectiveSearchLower,
+          seenAtMs: now - requestStartedAt,
+        };
         const acceptedChanged =
           Number(event?.acceptedCount || 0) !== lastFetchDebugAccepted;
+        const isClientPhase =
+          typeof event?.event === "string" &&
+          (event.event.startsWith("client-") ||
+            event.event.startsWith("machine-") ||
+            event.event.startsWith("request:"));
         const shouldLog =
           event?.event === "batch:start"
             ? false
-            : acceptedChanged ||
+            : isClientPhase ||
+              acceptedChanged ||
               now - lastFetchDebugAt > 5000 ||
               Number(event?.scannedBatches || 0) % 10 === 0;
         if (!shouldLog) return;
@@ -1777,14 +1838,15 @@ export default function MainSearch() {
                       title={select}
                       id="collasible-nav-dropdown"
                       show={showList}
-                      onMouseEnter={() => setShowList(true)}
-                      onMouseLeave={() => setShowList(false)}
+                      onMouseEnter={openSearchTypeDropdown}
+                      onMouseLeave={closeSearchTypeDropdownSoon}
                       className={styles.searchSelect}
                     >
                       <NavDropdown.Item
                         onClick={() => {
                           setSelect("Name");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         Name
@@ -1793,6 +1855,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("Date");
                           setShowListSearch("date");
+                          setShowList(false);
                         }}
                       >
                         Date
@@ -1801,6 +1864,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("Work Order");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         Work Order
@@ -1809,6 +1873,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("Product Number");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         Product Number
@@ -1817,6 +1882,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("Serial Number");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         Serial Number
@@ -1825,6 +1891,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("Description");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         Description
@@ -1833,6 +1900,7 @@ export default function MainSearch() {
                         onClick={() => {
                           setSelect("SKU");
                           setShowListSearch("text");
+                          setShowList(false);
                         }}
                       >
                         SKU
@@ -1848,17 +1916,23 @@ export default function MainSearch() {
                     />
                     <Button
                       variant="info"
-                      className={`${styles.actionButton} ${styles.mapActionButton}`}
-                      onClick={openMap}
-                    >
-                      Map
-                    </Button>
-                    <Button
-                      variant="info"
                       className={`${styles.actionButton} ${styles.trailerActionButton}`}
                       onClick={openTrailerMap}
                     >
                       Trailers
+                    </Button>
+                    <LoadingButton
+                      type="info"
+                      name="Tools"
+                      route="NewSearch/Tools"
+                      className={`${styles.actionButton} ${styles.toolsActionButton}`}
+                    />
+                    <Button
+                      variant="info"
+                      className={`${styles.actionButton} ${styles.mapActionButton}`}
+                      onClick={openMap}
+                    >
+                      Map
                     </Button>
                     <LoadingButton
                       type="primary"

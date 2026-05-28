@@ -201,7 +201,7 @@ export default async function handler(req, res) {
 
     // ---------- payload from client ----------
     const {
-      listKey,          // "tasks" | "shipping" | "receiving"
+      listKey,          // "tasks" | "shipping" | "receiving" | "tools"
       title,            // item title
       pn_sn,            // preferred input: "PN: 123  SN: 456"
       work_order,       // preferred input
@@ -230,6 +230,7 @@ export default async function handler(req, res) {
     const local_sn_norm   = plain(local_sn   || localSN   || "");
     const tracking_norm   = plain(tracking   || trackingNumber || "");
     const description_norm = plain(description || "");
+    const envValue = (value) => plain(value).replace(/\s+#.*$/, "").trim();
 
     let photoUrls_norm = Array.isArray(photoUrls)
       ? photoUrls
@@ -241,47 +242,56 @@ export default async function handler(req, res) {
 
     // ---------- env: list + column ids ----------
     const LIST_IDS = {
-      tasks:     process.env.SLACK_LIST_TASKS_ID,
-      shipping:  process.env.SLACK_LIST_SHIPPING_ID,
-      receiving: process.env.SLACK_LIST_RECEIVING_ID,
+      tasks:     envValue(process.env.SLACK_LIST_TASKS_ID),
+      shipping:  envValue(process.env.SLACK_LIST_SHIPPING_ID),
+      receiving: envValue(process.env.SLACK_LIST_RECEIVING_ID),
+      tools:     envValue(process.env.SLACK_LIST_TOOLS_ID),
     };
 
     const COLS = {
       tasks: {
-        title: process.env.SLACK_LIST_TASKS_TITLE_COL,
-        desc:  process.env.SLACK_LIST_TASKS_DESCRIPTION_COL,
+        title: envValue(process.env.SLACK_LIST_TASKS_TITLE_COL),
+        desc:  envValue(process.env.SLACK_LIST_TASKS_DESCRIPTION_COL),
       },
       shipping: {
-        title:     process.env.SLACK_LIST_SHIPPING_TITLE_COL,
-        desc:      process.env.SLACK_LIST_SHIPPING_DESCRIPTION_COL,
-        pnsn:      process.env.SLACK_LIST_SHIPPING_PNSN_COL,
-        wo:        process.env.SLACK_LIST_SHIPPING_WO_COL,
-        localsn:   process.env.SLACK_LIST_SHIPPING_LOCALSN_COL,
-        tracking:  process.env.SLACK_LIST_SHIPPING_TRACKING_COL,
-        photos:    process.env.SLACK_LIST_SHIPPING_PHOTOS_COL,
+        title:     envValue(process.env.SLACK_LIST_SHIPPING_TITLE_COL),
+        desc:      envValue(process.env.SLACK_LIST_SHIPPING_DESCRIPTION_COL),
+        pnsn:      envValue(process.env.SLACK_LIST_SHIPPING_PNSN_COL),
+        wo:        envValue(process.env.SLACK_LIST_SHIPPING_WO_COL),
+        localsn:   envValue(process.env.SLACK_LIST_SHIPPING_LOCALSN_COL),
+        tracking:  envValue(process.env.SLACK_LIST_SHIPPING_TRACKING_COL),
+        photos:    envValue(process.env.SLACK_LIST_SHIPPING_PHOTOS_COL),
       },
       receiving: {
-        title:     process.env.SLACK_LIST_RECEIVING_TITLE_COL,
-        desc:      process.env.SLACK_LIST_RECEIVING_DESCRIPTION_COL,
-        pnsn:      process.env.SLACK_LIST_RECEIVING_PNSN_COL,
-        wo:        process.env.SLACK_LIST_RECEIVING_WO_COL,
-        localsn:   process.env.SLACK_LIST_RECEIVING_LOCALSN_COL,
-        tracking:  process.env.SLACK_LIST_RECEIVING_TRACKING_COL,
-        photos:    process.env.SLACK_LIST_RECEIVING_PHOTOS_COL,
+        title:     envValue(process.env.SLACK_LIST_RECEIVING_TITLE_COL),
+        desc:      envValue(process.env.SLACK_LIST_RECEIVING_DESCRIPTION_COL),
+        pnsn:      envValue(process.env.SLACK_LIST_RECEIVING_PNSN_COL),
+        wo:        envValue(process.env.SLACK_LIST_RECEIVING_WO_COL),
+        localsn:   envValue(process.env.SLACK_LIST_RECEIVING_LOCALSN_COL),
+        tracking:  envValue(process.env.SLACK_LIST_RECEIVING_TRACKING_COL),
+        photos:    envValue(process.env.SLACK_LIST_RECEIVING_PHOTOS_COL),
+      },
+      tools: {
+        title:  envValue(process.env.SLACK_LIST_TOOLS_TITLE_COL),
+        wo:     envValue(process.env.SLACK_LIST_TOOLS_WO_COL),
+        photos: envValue(process.env.SLACK_LIST_TOOLS_PHOTOS_COL),
       },
     };
 
     const list_id = LIST_IDS[listKey];
-    const CFG = COLS[listKey] || {};
+    const CFG = { ...(COLS[listKey] || {}) };
     if (!list_id) {
+      const missingEnv =
+        listKey === "tools"
+          ? "SLACK_LIST_TOOLS_ID"
+          : `SLACK_LIST_${String(listKey || "").toUpperCase()}_ID`;
       return res
         .status(400)
-        .json({ ok: false, error: `unknown_listKey_${listKey}` });
-    }
-    if (!CFG.title) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "missing_title_column_env" });
+        .json({
+          ok: false,
+          error: `missing_${missingEnv}`,
+          message: `${missingEnv} is required for listKey "${listKey}".`,
+        });
     }
 
     // ---------- helpers ----------
@@ -296,6 +306,24 @@ export default async function handler(req, res) {
       });
       const json = await r.json();
       return json;
+    }
+
+    async function slackForm(method, payload) {
+      const body = new URLSearchParams();
+      Object.entries(payload || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        body.append(key, String(value));
+      });
+
+      const r = await fetch(`https://slack.com/api/${method}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      return r.json();
     }
 
     function richText(text) {
@@ -313,6 +341,87 @@ export default async function handler(req, res) {
       ];
     }
 
+    async function inferColumnsFromRows(listId) {
+      const probe = await slackJson("slackLists.items.list", {
+        list_id: listId,
+        limit: 20,
+      });
+      if (!probe?.ok) return {};
+
+      const inferred = {};
+      for (const it of probe.items || []) {
+        for (const f of it.fields || []) {
+          const key = String(f.key || "").toLowerCase();
+          if (!inferred.title && f.column_id && key === "name") {
+            inferred.title = f.column_id;
+          }
+          if (
+            !inferred.photos &&
+            f.column_id &&
+            (Array.isArray(f.attachment) || Array.isArray(f.files))
+          ) {
+            inferred.photos = f.column_id;
+          }
+          if (
+            !inferred.wo &&
+            f.column_id &&
+            (key.includes("work") || key.includes("wo"))
+          ) {
+            inferred.wo = f.column_id;
+          }
+        }
+      }
+      return inferred;
+    }
+
+    async function inferColumnsFromListMetadata(listId) {
+      const listed = await slackJson("slackLists.items.list", {
+        list_id: listId,
+        limit: 1,
+      });
+      const firstRowId = listed?.items?.[0]?.id;
+      if (!listed?.ok || !firstRowId) return {};
+
+      const info = await slackJson("slackLists.items.info", {
+        list_id: listId,
+        id: firstRowId,
+      });
+      if (!info?.ok) return {};
+
+      const schema = Array.isArray(info?.list?.list_metadata?.schema)
+        ? info.list.list_metadata.schema
+        : [];
+      const inferred = {};
+      const normalizedName = (column) =>
+        `${column?.name || ""} ${column?.key || ""}`.toLowerCase();
+
+      const titleColumn =
+        schema.find((column) => column?.is_primary_column && column?.type === "text") ||
+        schema.find(
+          (column) =>
+            column?.type === "text" &&
+            (column?.key === "name" || normalizedName(column).includes("name"))
+        );
+      const photosColumn = schema.find(
+        (column) =>
+          column?.type === "attachment" ||
+          normalizedName(column).includes("picture") ||
+          normalizedName(column).includes("photo")
+      );
+      const workOrderColumn = schema.find(
+        (column) =>
+          column?.type === "text" &&
+          (normalizedName(column).includes("work order") ||
+            normalizedName(column).includes("workorder") ||
+            normalizedName(column).includes("wo"))
+      );
+
+      if (titleColumn?.id) inferred.title = titleColumn.id;
+      if (photosColumn?.id) inferred.photos = photosColumn.id;
+      if (workOrderColumn?.id) inferred.wo = workOrderColumn.id;
+      return inferred;
+    }
+
     const safeFilenameFromUrl = (url, i) => {
       try {
         // last path piece (may be the encoded "Parts%2F...jpg")
@@ -328,6 +437,25 @@ export default async function handler(req, res) {
       }
     };
 
+    if (!CFG.title || !CFG.photos || !CFG.wo) {
+      const metadataInferred = await inferColumnsFromListMetadata(list_id);
+      const rowInferred = await inferColumnsFromRows(list_id);
+      CFG.title = CFG.title || metadataInferred.title || rowInferred.title;
+      CFG.photos = CFG.photos || metadataInferred.photos || rowInferred.photos;
+      CFG.wo = CFG.wo || metadataInferred.wo || rowInferred.wo;
+      logStep("[LISTS][INFER-COLS]", {
+        title: CFG.title || null,
+        photos: CFG.photos || null,
+        wo: CFG.wo || null,
+      });
+    }
+
+    if (!CFG.title) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "missing_title_column_env", debug: { steps } });
+    }
+
     // ---------- 1) create the row with title ----------
     const titleText = plain(title) || "Untitled item";
     const createPayload = {
@@ -342,9 +470,18 @@ export default async function handler(req, res) {
       error: created?.error,
     });
     if (!created?.ok) {
+      const createMessage =
+        created?.error === "list_not_found" && listKey === "tools"
+          ? "Slack could not write to LAKE FOREST TOOLS. Add the Magmo Slack app/bot to that channel/list or recreate/share the list with the app, then retry."
+          : undefined;
       return res
         .status(200)
-        .json({ ok: false, error: created?.error || "create_failed", debug: { steps } });
+        .json({
+          ok: false,
+          error: created?.error || "create_failed",
+          message: createMessage,
+          debug: { steps },
+        });
     }
     const rowId = created.item?.id;
     logStep("[LISTS][CREATED]", { rowId });
@@ -385,9 +522,9 @@ export default async function handler(req, res) {
       logStep("[FILES.BYTES]", { byteLen, filename });
 
       // 3b. get upload url (filename MUST be a single segment; no '/')
-      const up = await slackJson("files.getUploadURLExternal", {
+      const up = await slackForm("files.getUploadURLExternal", {
         filename,
-        length: byteLen,
+        length: String(byteLen),
       });
       logStep("[FILES.GETUPLOAD]", {
         ok: up?.ok === true,
@@ -395,6 +532,7 @@ export default async function handler(req, res) {
         byteLen,
         filename,
         error: up?.error,
+        messages: up?.response_metadata?.messages || null,
       });
       if (!up?.ok || !up?.upload_url || !up?.file_id)
         return { ok: false, error: up?.error || "get_upload_url_failed" };
@@ -402,14 +540,17 @@ export default async function handler(req, res) {
       // 3c. post bytes to the upload_url
       const post = await fetch(up.upload_url, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
         body: Buffer.from(buf),
       });
       logStep("[FILES.UPLOAD.POST]", { ok: post?.ok === true, status: post?.status });
       if (!post.ok) return { ok: false, error: "upload_post_failed" };
 
       // 3d. complete
-      const complete = await slackJson("files.completeUploadExternal", {
-        files: [{ id: up.file_id, title: filename }],
+      const complete = await slackForm("files.completeUploadExternal", {
+        files: JSON.stringify([{ id: up.file_id, title: filename }]),
       });
       logStep("[FILES.COMPLETE]", { ok: complete?.ok === true, status: 200, error: complete?.error });
       if (!complete?.ok) return { ok: false, error: complete?.error || "complete_failed" };

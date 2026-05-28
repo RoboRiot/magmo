@@ -45,8 +45,8 @@ import {
   deleteTrackerModel,
 } from "../../../utils/trackerCatalog";
 import {
-  addAssociatedPartToMachine,
   buildMachineSummary,
+  syncAssociatedPartsForItem,
   stripAssociatedPartsFromMachineSnapshot,
 } from "../../../utils/warehouseAssociations";
 import styles from "./NewItem.module.css";
@@ -959,11 +959,16 @@ export default function NewItem() {
       }
 
       // Set machine frequency count
-      const machinesSnapshot = await db
-        .collection("Machine")
-        .where("Model", "==", machineData.Model || machineData.model)
-        .get();
-      setMachineFrequency(machinesSnapshot.size);
+      const machineModel = machineData.Model || machineData.model || "";
+      if (machineModel) {
+        const machinesSnapshot = await db
+          .collection("Machine")
+          .where("Model", "==", machineModel)
+          .get();
+        setMachineFrequency(machinesSnapshot.size);
+      } else {
+        setMachineFrequency(0);
+      }
     } else {
       console.error("Machine not found");
     }
@@ -975,9 +980,10 @@ export default function NewItem() {
     const currentDate = new Date();
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
+    const normalizedPN = pn !== undefined ? pn : "";
     const itemsSnapshot = await db
       .collection("Test")
-      .where("pn", "==", pn)
+      .where("pn", "==", normalizedPN)
       .get();
     setFreqItem(itemsSnapshot.size);
     let usagePastYear = 0;
@@ -1099,6 +1105,13 @@ export default function NewItem() {
       value === undefined ? "" : value
     );
 
+    delete formattedItems.Machine;
+    delete formattedItems.CurrentMachine;
+    delete formattedItems.MachineFrom;
+    delete formattedItems.MachineCurrent;
+    delete formattedItems.ClientFrom;
+    delete formattedItems.ClientCurrent;
+
     // Set machine references for each branch.
     if (selectedMachine && selectedMachine.id) {
       formattedItems.MachineFrom = db
@@ -1135,39 +1148,35 @@ export default function NewItem() {
 
     // --- LOCAL SN LOGIC ---
     let docId = existingId;
+    let previousItemData = null;
+    if (existingId) {
+      const previousDoc = await db.collection("Test").doc(existingId).get();
+      previousItemData = previousDoc.exists ? previousDoc.data() || {} : null;
+    }
 
-    const queueAssociationUpdates = (targetDocId) => {
-      const updates = [];
-      if (selectedMachine && selectedMachine.id) {
-        updates.push(
-          addAssociatedPartToMachine({
-            db,
-            firebase,
-            machineId: selectedMachine.id,
-            partId: targetDocId,
-            machineData: selectedMachine,
-          })
-        );
-      }
-      if (selectedCurrentMachine && selectedCurrentMachine.id) {
-        updates.push(
-          addAssociatedPartToMachine({
-            db,
-            firebase,
-            machineId: selectedCurrentMachine.id,
-            partId: targetDocId,
-            machineData: selectedCurrentMachine,
-          })
-        );
-      }
-      if (updates.length) {
-        Promise.allSettled(updates).then((results) => {
-          results.forEach((result) => {
-            if (result.status === "rejected") {
-              console.error("Error updating associatedParts:", result.reason);
-            }
-          });
+    const nextMachineIds = [
+      selectedMachine?.id,
+      selectedCurrentMachine?.id,
+    ].filter(Boolean);
+    const nextMachineDataById = {};
+    if (selectedMachine?.id) nextMachineDataById[selectedMachine.id] = selectedMachine;
+    if (selectedCurrentMachine?.id) {
+      nextMachineDataById[selectedCurrentMachine.id] = selectedCurrentMachine;
+    }
+
+    const queueAssociationUpdates = async (targetDocId, previousDocId = targetDocId) => {
+      try {
+        await syncAssociatedPartsForItem({
+          db,
+          firebase,
+          partId: targetDocId,
+          previousPartId: previousDocId,
+          previousItemData,
+          nextMachineIds,
+          nextMachineDataById,
         });
+      } catch (error) {
+        console.error("Error updating associatedParts:", error);
       }
     };
 
@@ -1233,7 +1242,7 @@ export default function NewItem() {
             "Firestore save"
           );
 
-          queueAssociationUpdates(newDocId);
+          await queueAssociationUpdates(newDocId, docId);
           queuePhotoUpload(newDocId);
 
           // Delete the old document.
@@ -1252,13 +1261,31 @@ export default function NewItem() {
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
           const cleanFormattedItems = shallowClean(payloadWithLocalSn);
+          cleanFormattedItems.Machine = firebase.firestore.FieldValue.delete();
+          cleanFormattedItems.CurrentMachine = firebase.firestore.FieldValue.delete();
+          if (!selectedMachine?.id) {
+            cleanFormattedItems.MachineFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedCurrentMachine?.id) {
+            cleanFormattedItems.MachineCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedClientFrom?.id) {
+            cleanFormattedItems.ClientFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedClientCurrent?.id) {
+            cleanFormattedItems.ClientCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
           await withTimeout(
             db.collection("Test").doc(docId).update(cleanFormattedItems),
             45000,
             "Firestore save"
           );
 
-          queueAssociationUpdates(docId);
+          await queueAssociationUpdates(docId);
           queuePhotoUpload(docId);
         }
       } else {
@@ -1276,7 +1303,7 @@ export default function NewItem() {
           "Firestore save"
         );
 
-        queueAssociationUpdates(docId);
+        await queueAssociationUpdates(docId);
         queuePhotoUpload(docId);
       }
 
@@ -1720,11 +1747,16 @@ export default function NewItem() {
   }
 
   const condition = (name) => {
-    return name && name.toLowerCase() === "interior socal";
+    return (
+      name &&
+      ["interior socal", "interior norcal"].includes(name.toLowerCase())
+    );
   };
 
   const handleSetSelectedMachine = (machine) => {
-    const isSocalInterior = machine.name?.toLowerCase() === "interior socal";
+    const isSocalInterior = ["interior socal", "interior norcal"].includes(
+      machine.name?.toLowerCase()
+    );
     if (machinePick) {
       setSelectedMachine({ id: machine.id, name: machine.name });
       setShowLocalLocFrom(
@@ -1768,11 +1800,13 @@ export default function NewItem() {
   const isSocalWarehouseClient = (client) =>
     client?.name?.toLowerCase() === "socalwarehouse";
 
-  const isInteriorSocalMachine = (machine) =>
-    machine?.name?.toLowerCase() === "interior socal";
+  const isInteriorWarehouseMachine = (machine) =>
+    ["interior socal", "interior norcal"].includes(
+      machine?.name?.toLowerCase()
+    );
 
   const shouldShowLocalLocation = (client, machine) =>
-    isSocalWarehouseClient(client) || isInteriorSocalMachine(machine);
+    isSocalWarehouseClient(client) || isInteriorWarehouseMachine(machine);
 
   const cloneLocalLocation = (value) => ({
     region: value?.region || "",

@@ -6,10 +6,11 @@ import {
   Button,
   Alert,
   Modal,
+  Form,
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
+import { useAuth } from "../../../../context/AuthUserContext";
 import styles from "../Machine.module.css";
-import { isInteriorSocalMachineData } from "../../../../utils/warehouseAssociations";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -20,6 +21,44 @@ const getRefId = (ref) => {
   if (ref.id) return ref.id;
   return null;
 };
+
+const getPartMachineIds = (data) => {
+  const modernIds = [data?.MachineFrom, data?.MachineCurrent]
+    .map(getRefId)
+    .filter(Boolean);
+  if (modernIds.length) return modernIds;
+
+  return [data?.Machine, data?.CurrentMachine].map(getRefId).filter(Boolean);
+};
+
+const partBelongsToMachine = (data, machineId) => {
+  const machineIds = getPartMachineIds(data);
+  return machineIds.length === 0 || machineIds.includes(machineId);
+};
+
+const formatDateInput = (input) => {
+  if (!input) return "";
+  let date = null;
+  if (input.seconds) {
+    date = new Date(input.seconds * 1000);
+  } else if (typeof input.toDate === "function") {
+    date = input.toDate();
+  } else {
+    date = new Date(input);
+  }
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const buildEditForm = (machine = {}) => ({
+  name: machine.name || "",
+  local: machine.local || "",
+  OEM: machine.OEM || machine.oem || "",
+  Modality: machine.Modality || machine.modality || "",
+  Model: machine.Model || machine.model || "",
+  lastPM: formatDateInput(machine.lastPM),
+  nextPM: formatDateInput(machine.nextPM),
+});
 
 const resolveDocData = async (db, collection, refOrId) => {
   if (!refOrId) return null;
@@ -236,6 +275,7 @@ const resolvePartForPrint = async (db, part) => {
 
 const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }) => {
   const router = useRouter();
+  const { authUser } = useAuth();
   const [selectedMachine, setSelectedMachine] = useState(
     initialMachine || null
   );
@@ -247,6 +287,16 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showPrintSuccess, setShowPrintSuccess] = useState(false);
+  const [isEditingMachine, setIsEditingMachine] = useState(false);
+  const [isSavingMachine, setIsSavingMachine] = useState(false);
+  const [editForm, setEditForm] = useState(buildEditForm(initialMachine || {}));
+  const [editError, setEditError] = useState("");
+  const isAdminUser =
+    authUser?.isAdmin === true ||
+    String(authUser?.role || "").toLowerCase() === "admin";
+  const activeMachineId = String(
+    router.query.id || selectedMachine?.id || router.asPath.split("/").pop() || ""
+  ).trim();
 
   useEffect(() => {
     if (router.isReady) {
@@ -266,6 +316,11 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
     }
   }, [router.isReady, selectedMachine]);
 
+  useEffect(() => {
+    if (!selectedMachine || isEditingMachine) return;
+    setEditForm(buildEditForm(selectedMachine));
+  }, [selectedMachine, isEditingMachine]);
+
   const fetchMachineData = async (machineId) => {
     try {
       console.log(`Attempting to fetch machine data for ID: ${machineId}`);
@@ -273,12 +328,12 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       const machineDoc = await db.collection("Machine").doc(machineId).get();
       if (machineDoc.exists) {
         const machineData = machineDoc.data();
-        setSelectedMachine(machineData);
+        setSelectedMachine({ id: machineDoc.id, ...machineData });
         setError(null);
         console.log("Machine data:", machineData);
 
         // Fetch associated parts
-        if (!isInteriorSocalMachineData(machineData) && machineData.associatedParts) {
+        if (machineData.associatedParts) {
           fetchAssociatedParts(machineData.associatedParts);
         } else {
           setAssociatedParts([]);
@@ -307,6 +362,7 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
             return null;
           }
           const data = doc.data() || {};
+          if (!partBelongsToMachine(data, activeMachineId)) return null;
           let clientName = "";
           if (data.clientName) {
             clientName = data.clientName;
@@ -394,6 +450,86 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
   const handleSelectPart = (id, name) => {
     console.log(`Selected part ID: ${id}, Name: ${name}`);
     router.push("../item/" + id);
+  };
+
+  const handleEditFieldChange = (field) => (event) => {
+    const value = event?.target?.value ?? "";
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+    setEditError("");
+  };
+
+  const handleStartEditMachine = () => {
+    setEditForm(buildEditForm(selectedMachine || {}));
+    setEditError("");
+    setIsEditingMachine(true);
+  };
+
+  const handleCancelEditMachine = () => {
+    setEditForm(buildEditForm(selectedMachine || {}));
+    setEditError("");
+    setIsEditingMachine(false);
+  };
+
+  const handleSaveMachine = async () => {
+    if (!activeMachineId) return;
+    const name = String(editForm.name || "").trim();
+    if (!name) {
+      setEditError("Machine name is required.");
+      return;
+    }
+
+    setIsSavingMachine(true);
+    setEditError("");
+    try {
+      const db = firebase.firestore();
+      const updatePayload = {
+        name,
+        local: String(editForm.local || "").trim(),
+        OEM: String(editForm.OEM || "").trim(),
+        oem: String(editForm.OEM || "").trim(),
+        Modality: String(editForm.Modality || "").trim(),
+        modality: String(editForm.Modality || "").trim(),
+        Model: String(editForm.Model || "").trim(),
+        model: String(editForm.Model || "").trim(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      if (editForm.lastPM) {
+        updatePayload.lastPM = editForm.lastPM;
+      } else {
+        updatePayload.lastPM = firebase.firestore.FieldValue.delete();
+      }
+      if (editForm.nextPM) {
+        updatePayload.nextPM = editForm.nextPM;
+      } else {
+        updatePayload.nextPM = firebase.firestore.FieldValue.delete();
+      }
+
+      await db.collection("Machine").doc(activeMachineId).set(updatePayload, {
+        merge: true,
+      });
+
+      setSelectedMachine((prev) => ({
+        ...(prev || {}),
+        id: activeMachineId,
+        name: updatePayload.name,
+        local: updatePayload.local,
+        OEM: updatePayload.OEM,
+        oem: updatePayload.oem,
+        Modality: updatePayload.Modality,
+        modality: updatePayload.modality,
+        Model: updatePayload.Model,
+        model: updatePayload.model,
+        lastPM: editForm.lastPM || null,
+        nextPM: editForm.nextPM || null,
+      }));
+      setIsEditingMachine(false);
+    } catch (error) {
+      console.error("Error saving machine:", error);
+      setEditError("Failed to save machine.");
+    } finally {
+      setIsSavingMachine(false);
+    }
   };
 
   const handleDragStart = (index) => (event) => {
@@ -517,8 +653,19 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                 Drag and drop parts to reorder this list.
               </div>
             </div>
-            <div className={styles.cardMeta}>
-              {associatedParts.length} parts
+            <div className={styles.cardHeaderActions}>
+              {selectedMachine && isAdminUser && !isEditingMachine && (
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={handleStartEditMachine}
+                >
+                  Edit Machine
+                </Button>
+              )}
+              <div className={styles.cardMeta}>
+                {associatedParts.length} parts
+              </div>
             </div>
           </div>
           <div className={styles.cardBody}>
@@ -528,26 +675,105 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
             {selectedMachine ? (
               <>
                 <div className={styles.machineGrid}>
-                  <div className={styles.machineInfo}>
-                    <div className={styles.machineName}>
-                      {selectedMachine.name || "Unnamed Machine"}
+                  {isEditingMachine ? (
+                    <div className={styles.editPanel}>
+                      {editError && <Alert variant="danger">{editError}</Alert>}
+                      <div className={styles.editGrid}>
+                        <Form.Group>
+                          <Form.Label>Name</Form.Label>
+                          <Form.Control
+                            value={editForm.name}
+                            onChange={handleEditFieldChange("name")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>Location</Form.Label>
+                          <Form.Control
+                            value={editForm.local}
+                            onChange={handleEditFieldChange("local")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>OEM</Form.Label>
+                          <Form.Control
+                            value={editForm.OEM}
+                            onChange={handleEditFieldChange("OEM")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>Modality</Form.Label>
+                          <Form.Control
+                            value={editForm.Modality}
+                            onChange={handleEditFieldChange("Modality")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>Model</Form.Label>
+                          <Form.Control
+                            value={editForm.Model}
+                            onChange={handleEditFieldChange("Model")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>Last PM</Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={editForm.lastPM}
+                            onChange={handleEditFieldChange("lastPM")}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label>Next PM</Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={editForm.nextPM}
+                            onChange={handleEditFieldChange("nextPM")}
+                          />
+                        </Form.Group>
+                      </div>
+                      <div className={styles.editActions}>
+                        <Button
+                          variant="secondary"
+                          onClick={handleCancelEditMachine}
+                          disabled={isSavingMachine}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="primary"
+                          onClick={handleSaveMachine}
+                          disabled={isSavingMachine}
+                        >
+                          {isSavingMachine ? "Saving..." : "Save Machine"}
+                        </Button>
+                      </div>
                     </div>
-                    <div className={styles.machineMetaRow}>
-                      <span>OEM: {selectedMachine.OEM || "N/A"}</span>
-                      <span>Modality: {selectedMachine.Modality || "N/A"}</span>
-                      <span>Model: {selectedMachine.Model || "N/A"}</span>
-                    </div>
-                  </div>
-                  <div className={styles.machineDates}>
-                    <div>
-                      <span className={styles.dateLabel}>Last PM</span>
-                      <span>{formatDate(selectedMachine.lastPM)}</span>
-                    </div>
-                    <div>
-                      <span className={styles.dateLabel}>Next PM</span>
-                      <span>{formatDate(selectedMachine.nextPM)}</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className={styles.machineInfo}>
+                        <div className={styles.machineName}>
+                          {selectedMachine.name || "Unnamed Machine"}
+                        </div>
+                        <div className={styles.machineMetaRow}>
+                          <span>OEM: {selectedMachine.OEM || "N/A"}</span>
+                          <span>
+                            Modality: {selectedMachine.Modality || "N/A"}
+                          </span>
+                          <span>Model: {selectedMachine.Model || "N/A"}</span>
+                        </div>
+                      </div>
+                      <div className={styles.machineDates}>
+                        <div>
+                          <span className={styles.dateLabel}>Last PM</span>
+                          <span>{formatDate(selectedMachine.lastPM)}</span>
+                        </div>
+                        <div>
+                          <span className={styles.dateLabel}>Next PM</span>
+                          <span>{formatDate(selectedMachine.nextPM)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className={styles.tableCard}>
@@ -669,7 +895,6 @@ export async function getServerSideProps(context) {
     // Fetch associated parts if they exist
     let associatedParts = [];
     if (
-      !isInteriorSocalMachineData(machineData) &&
       machineData.associatedParts &&
       Array.isArray(machineData.associatedParts)
     ) {
@@ -697,6 +922,7 @@ export async function getServerSideProps(context) {
               return null;
             }
             const data = doc.data() || {};
+            if (!partBelongsToMachine(data, id)) return null;
             let clientName = "";
 
             // Fetch client name if ClientFrom reference exists
