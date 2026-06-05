@@ -14,8 +14,8 @@ const prepared = app.prepare(); // start preparing once at cold start
 exports.nextServer = onRequest(
   {
     region: "us-central1",
-    memory: "1GiB",
-    timeoutSeconds: 60,
+    memory: "2GiB",
+    timeoutSeconds: 120,
   },
   async (req, res) => {
     try {

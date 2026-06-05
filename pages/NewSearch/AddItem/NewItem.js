@@ -13,6 +13,7 @@ import {
   InputGroup,
   ButtonGroup,
   Spinner,
+  Table,
 } from "react-bootstrap";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -50,6 +51,10 @@ import {
   syncAssociatedPartsForItem,
   stripAssociatedPartsFromMachineSnapshot,
 } from "../../../utils/warehouseAssociations";
+import {
+  appendSaveHistory,
+  appendSubmitterToDescription,
+} from "../../../utils/itemAudit";
 import styles from "./NewItem.module.css";
 
 // Load BarcodeScannerComponent only on the client-side.
@@ -93,7 +98,10 @@ function LoadingButton({ type, name, route }) {
 
 export default function NewItem() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, authUser } = useAuth();
+  const isAdminUser =
+    authUser?.isAdmin === true ||
+    String(authUser?.role || "").toLowerCase() === "admin";
   const SHOW_SLACK_BUTTONS =
     process.env.NEXT_PUBLIC_SHOW_SLACK_BUTTONS === "true";
   // Initialize item state – for a new item, these start empty.
@@ -162,11 +170,13 @@ export default function NewItem() {
   );
   const [showDescModal, setShowDescModal] = useState(false);
   const [showWoModal, setShowWoModal] = useState(false);
+  const [showSaveHistoryModal, setShowSaveHistoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveRedirectPath, setSaveRedirectPath] = useState("");
   const [machineSelectionModal, setMachineSelectionModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState(0);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -187,6 +197,7 @@ export default function NewItem() {
   const [showExtra, setShowExtra] = useState(false);
   const [bluefolderLoading, setBluefolderLoading] = useState(false);
   const [slackLoadingKey, setSlackLoadingKey] = useState("");
+  const [saveHistory, setSaveHistory] = useState([]);
 
   const [trackerCatalog, setTrackerCatalog] = useState({
     modalities: [],
@@ -436,6 +447,7 @@ export default function NewItem() {
           );
           setAddToWebsite(Boolean(data.addedToWebsite));
           setSavedDocId(null);
+          setSaveHistory([]);
           setSelectedDesc(0);
         }
 
@@ -809,12 +821,21 @@ export default function NewItem() {
   const handleShow = () => setShow(true);
   const handleCloseErr = () => setShowErr(false);
   const handleShowErr = () => setShowErr(true);
-  const handleCloseSaveModal = () => setShowSaveModal(false);
+  const handleCloseSaveModal = () => {
+    setShowSaveModal(false);
+    if (saveRedirectPath) {
+      const nextPath = saveRedirectPath;
+      setSaveRedirectPath("");
+      router.push(nextPath);
+    }
+  };
   const handleShowSaveModal = () => setShowSaveModal(true);
   const handleCloseDescModal = () => setShowDescModal(false);
   const handleShowDescModal = () => setShowDescModal(true);
   const handleCloseWoModal = () => setShowWoModal(false);
   const handleShowWoModal = () => setShowWoModal(true);
+  const handleCloseSaveHistoryModal = () => setShowSaveHistoryModal(false);
+  const handleShowSaveHistoryModal = () => setShowSaveHistoryModal(true);
   const handleCloseClientModal = () => setShowClientModal(false);
   const handleShowClientModal = () => setShowClientModal(true);
   const handleCloseMachineModal = () => setShowMachineModal(false);
@@ -1059,6 +1080,8 @@ export default function NewItem() {
     // Get the current authenticated user
     const currentUser = firebase.auth().currentUser;
     const userEmail = currentUser ? currentUser.email : "unknown";
+    const savedAt = new Date();
+    const nextSaveHistory = appendSaveHistory(saveHistory, userEmail, savedAt);
 
     // Always use the current state values for OEM, modality, and model.
     const storedOem = selectionToStoredValue(selectedOems);
@@ -1096,7 +1119,8 @@ export default function NewItem() {
       movementDate,
       arrivalDate: items.arrival_date || "",
       departureDate: items.departure_date || "",
-      savedAt: new Date().toISOString(),
+      savedAt: savedAt.toISOString(),
+      savedByEmail: userEmail,
     };
     const hasInitialHistory = [
       initialHistorySnapshot.fromClientId,
@@ -1109,6 +1133,7 @@ export default function NewItem() {
     formattedItems.selectionHistory = hasInitialHistory
       ? [initialHistorySnapshot]
       : [];
+    formattedItems.saveHistory = nextSaveHistory;
     // Remove any unused fields.
     formattedItems.status = items.status || "";
     formattedItems.nameLower = (items.name || "").toLowerCase();
@@ -1385,12 +1410,12 @@ export default function NewItem() {
         setSavedDocId(docId);
       }
       setItems((prev) => ({ ...prev, localSN: docId }));
+      setSaveHistory(nextSaveHistory);
 
-      // Redirect to the new URL using the new document id.
       if (redirect) {
-        router.push(`/NewSearch/item/${docId}`);
+        setSaveRedirectPath(`/NewSearch/item/${docId}`);
+        handleShowSaveModal();
       } else {
-        // Optionally, show a save confirmation modal.
         handleShowSaveModal();
       }
       return docId;
@@ -1601,6 +1626,8 @@ export default function NewItem() {
         alert("Please fill out the work order field before adding to BlueFolder.");
         return;
       }
+      const currentUser = firebase.auth().currentUser;
+      const submittedByEmail = currentUser?.email || "";
 
       const payload = {
         name: items.name,
@@ -1613,6 +1640,7 @@ export default function NewItem() {
         taxable: false,
         taxableDefault: false,
         tax: false,
+        submittedByEmail,
       };
 
       const idToken = await firebase.auth().currentUser?.getIdToken();
@@ -1682,10 +1710,16 @@ export default function NewItem() {
             )[0]?.workOrder
           : "";
 
-      const description =
+      const rawDescription =
         selectedDesc != null && descriptions?.[selectedDesc]
           ? descriptions[selectedDesc].description || ""
           : items?.description || "";
+      const currentUser = firebase.auth().currentUser;
+      const submittedByEmail = currentUser?.email || "";
+      const description = appendSubmitterToDescription(
+        rawDescription,
+        submittedByEmail
+      );
 
       const tracking = items?.trackingNumber ?? items?.tracking ?? "";
       const local_sn = docId || items?.localSN || "";
@@ -1708,7 +1742,7 @@ export default function NewItem() {
           work_order: mostRecentWO || "",
           local_sn,
           tracking,
-          description: (description || "").trim(),
+          description,
           photoUrls,
           shipping_date: shippingDate,
           received_date: receivedDate,
@@ -1953,14 +1987,54 @@ export default function NewItem() {
           </Button>
         </Modal.Footer>
       </Modal>
-      <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
+      <Modal show={showSaveModal} onHide={handleCloseSaveModal} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Save Confirmation</Modal.Title>
+          <Modal.Title>Item Saved</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Data has been saved successfully.</Modal.Body>
+        <Modal.Body>Item has been saved successfully.</Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleCloseSaveModal}>
             Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showSaveHistoryModal} onHide={handleCloseSaveHistoryModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Save History</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Table striped bordered hover size="sm" responsive>
+            <thead>
+              <tr>
+                <th>Saved At</th>
+                <th>Saved By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(saveHistory || []).length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="text-center text-muted">
+                    No save history yet.
+                  </td>
+                </tr>
+              ) : (
+                [...(saveHistory || [])].reverse().map((entry, index) => (
+                  <tr key={`${entry?.savedAt || "save"}-${index}`}>
+                    <td>
+                      {entry?.savedAt
+                        ? new Date(entry.savedAt).toLocaleString()
+                        : "-"}
+                    </td>
+                    <td>{entry?.savedByEmail || entry?.email || "-"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseSaveHistoryModal}>
+            Close
           </Button>
         </Modal.Footer>
       </Modal>
@@ -3074,6 +3148,16 @@ export default function NewItem() {
                           value={items.price}
                           onChange={handleChange("price")}
                         />
+                        {isAdminUser && (
+                          <div className="mt-2">
+                            <Button
+                              variant="outline-secondary"
+                              onClick={handleShowSaveHistoryModal}
+                            >
+                              Save History
+                            </Button>
+                          </div>
+                        )}
                       </Form.Group>
                     </Row>
                     <Row className="mt-3">

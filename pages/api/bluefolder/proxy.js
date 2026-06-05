@@ -2,6 +2,7 @@ import {
   addServiceItemToBlueFolder,
   blueFolderDebugSummary,
   envValue,
+  getBlueFolderUserByEmail,
   getBlueFolderWorkOrderStatus,
   hasBlueFolderToken,
   normalizeWorkOrder,
@@ -233,7 +234,7 @@ export default async function handler(req, res) {
   }
 
   const { requireFirebaseAuth } = await import("../../../utils/apiAuth");
-  await requireFirebaseAuth(req, res);
+  const authUser = await requireFirebaseAuth(req, res);
   if (res.writableEnded) return;
 
   const controller = new AbortController();
@@ -250,6 +251,21 @@ export default async function handler(req, res) {
       requestBody.workOrder || requestBody.serviceRequestId
     );
     requestBody.serviceRequestId = requestBody.workOrder;
+    requestBody.submittedByEmail =
+      authUser?.email || requestBody.submittedByEmail || requestBody.userEmail || "";
+
+    if (requestBody.submittedByEmail && hasBlueFolderToken()) {
+      const blueFolderUser = await getBlueFolderUserByEmail(
+        requestBody.submittedByEmail,
+        controller.signal
+      );
+      requestBody.submittedByLookupAttempted = true;
+      if (blueFolderUser?.ok && blueFolderUser.userId) {
+        requestBody.submittedByUserId = blueFolderUser.userId;
+        requestBody.submittedByName = blueFolderUser.displayName || "";
+        requestBody.submittedByApiToken = blueFolderUser.apiToken || "";
+      }
+    }
 
     const candidates = Array.from(
       new Set([BLUEFOLDER_LOCAL_URL, BLUEFOLDER_PROXY_URL].filter(Boolean))
@@ -259,6 +275,20 @@ export default async function handler(req, res) {
       candidates,
       controller.signal
     );
+    const statusDebug = blueFolderDebugSummary(statusCheck) || statusCheck;
+    console.log("[BlueFolder][status-check]", {
+      workOrder: requestBody.workOrder,
+      ok: statusDebug?.ok,
+      configured: statusDebug?.configured,
+      source: statusDebug?.source,
+      httpStatus: statusDebug?.httpStatus,
+      rootStatus: statusDebug?.rootStatus,
+      status: statusDebug?.status,
+      closed: statusDebug?.closed,
+      reason: statusDebug?.reason,
+      error: statusDebug?.error,
+      proxyAttempts: statusCheck?.proxy?.attempts,
+    });
 
     if (statusCheck.ok && statusCheck.closed) {
       return res.status(409).json({
@@ -268,7 +298,7 @@ export default async function handler(req, res) {
         workOrder: requestBody.workOrder,
         bluefolderStatus: statusCheck.status || "Closed",
         dateTimeClosed: statusCheck.dateTimeClosed || "",
-        debug: { statusCheck: blueFolderDebugSummary(statusCheck) || statusCheck },
+        debug: { statusCheck: statusDebug },
       });
     }
 
@@ -293,7 +323,7 @@ export default async function handler(req, res) {
       return res.status(status).json({
         ...addResult,
         source: "next_bluefolder_api",
-        bluefolderStatusCheck: blueFolderDebugSummary(statusCheck) || statusCheck,
+        bluefolderStatusCheck: statusDebug,
       });
     }
 

@@ -22,6 +22,17 @@ const SUPPORTED_EXTENSIONS = new Set([
   ".inf",
 ]);
 
+const IMAGE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".tif",
+  ".tiff",
+]);
+
 const DEFAULT_IGNORED_DIRS = new Set([
   ".git",
   "node_modules",
@@ -42,6 +53,7 @@ Options:
   --vendor <name>                 Metadata tag, e.g. Toshiba
   --modality <name>               Metadata tag, e.g. CT
   --machine-family <name>         Metadata tag, e.g. 32-64
+  --manual-set <name>             Metadata tag, e.g. GE Signa HDxt Service Methods
   --embedding-model <name>        OpenAI embedding model (default: text-embedding-3-large)
   --chunk-size <n>                Characters per chunk (default: 1400)
   --overlap <n>                   Overlap between chunks (default: 220)
@@ -96,6 +108,75 @@ function normalizeWhitespace(input) {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function normalizeSearchText(input) {
+  return String(input || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function uniqueLimited(values, max = 120) {
+  const seen = new Set();
+  const result = [];
+  for (const raw of values) {
+    const value = String(raw || "").trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+    if (result.length >= max) break;
+  }
+  return result;
+}
+
+function extractSearchTerms(...values) {
+  const text = values.filter(Boolean).join(" ");
+  const normalized = normalizeSearchText(text);
+  const words = normalized
+    .split(" ")
+    .filter((word) => word.length >= 2 || /\d/.test(word));
+  const terms = [];
+
+  terms.push(...words);
+  for (let i = 0; i < words.length - 1; i += 1) {
+    terms.push(`${words[i]} ${words[i + 1]}`);
+    terms.push(`${words[i]}${words[i + 1]}`);
+  }
+  for (let i = 0; i < words.length - 2; i += 1) {
+    terms.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
+  }
+
+  return uniqueLimited(terms);
+}
+
+function extractAcronyms(...values) {
+  const raw = values.filter(Boolean).join(" ");
+  const matches = raw.match(/\b[A-Z][A-Z0-9]{1,9}\b/g) || [];
+  return uniqueLimited(matches.map((value) => value.toLowerCase()), 80);
+}
+
+function extractPartNumbers(...values) {
+  const raw = values.filter(Boolean).join(" ");
+  const matches =
+    raw.match(/\b[A-Z0-9]{2,}[-_/][A-Z0-9][A-Z0-9\-_/]{1,}\b/gi) || [];
+  return uniqueLimited(matches.map((value) => value.toUpperCase()), 80);
+}
+
+function buildHeadingPath(relativePath, chunkTextValue) {
+  const pathParts = relativePath
+    .split("/")
+    .map((part) => part.replace(/\.[^.]+$/, "").trim())
+    .filter(Boolean);
+  const headingLines = String(chunkTextValue || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 3 && line.length <= 90)
+    .filter((line) => /^[A-Z0-9][A-Z0-9\s\-_/().:]+$/.test(line))
+    .slice(0, 3);
+
+  return uniqueLimited([...pathParts.slice(-4), ...headingLines], 8);
 }
 
 function isProbablyBinary(buffer) {
@@ -216,6 +297,34 @@ async function listSupportedFiles(rootDir, options) {
         if (textLike) {
           files.push(absolutePath);
         }
+      }
+    }
+  }
+
+  await walk(rootDir);
+  return files;
+}
+
+async function listImageFiles(rootDir, options) {
+  const files = [];
+  const ignoredDirs = options.ignoredDirs || DEFAULT_IGNORED_DIRS;
+
+  async function walk(currentDir) {
+    const entries = await fs.readdir(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const name = entry.name;
+      const absolutePath = path.join(currentDir, name);
+      if (entry.isDirectory()) {
+        if (ignoredDirs.has(name.toLowerCase()) || name.startsWith(".")) {
+          continue;
+        }
+        await walk(absolutePath);
+        continue;
+      }
+
+      const ext = path.extname(name).toLowerCase();
+      if (IMAGE_EXTENSIONS.has(ext)) {
+        files.push(absolutePath);
       }
     }
   }
@@ -360,6 +469,34 @@ function buildFileHash(text) {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
+function buildImageIndex(rootDir, imageFiles) {
+  const byDirectory = new Map();
+  for (const absolutePath of imageFiles) {
+    const relativePath = normalizeDocPath(rootDir, absolutePath);
+    const directory = path.posix.dirname(relativePath);
+    const entry = {
+      name: path.basename(relativePath),
+      sourcePath: relativePath,
+      storagePath: `ServiceDocs/${relativePath}`,
+      fileExtension: path.extname(relativePath).toLowerCase(),
+    };
+
+    if (!byDirectory.has(directory)) byDirectory.set(directory, []);
+    byDirectory.get(directory).push(entry);
+  }
+
+  for (const images of byDirectory.values()) {
+    images.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return byDirectory;
+}
+
+function getRelatedImagesForSource(sourcePath, imageIndex) {
+  const directory = path.posix.dirname(sourcePath);
+  return (imageIndex.get(directory) || []).slice(0, 30);
+}
+
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -408,6 +545,7 @@ async function main() {
   const machineFamily = args["machine-family"]
     ? String(args["machine-family"]).trim()
     : "";
+  const manualSet = args["manual-set"] ? String(args["manual-set"]).trim() : "";
 
   const sourceStat = await fs.stat(source).catch(() => null);
   if (!sourceStat || !sourceStat.isDirectory()) {
@@ -418,12 +556,15 @@ async function main() {
   }
 
   const files = await listSupportedFiles(source, {});
+  const imageFiles = await listImageFiles(source, {});
   if (!files.length) {
     console.log("No supported files found.");
     return;
   }
+  const imageIndex = buildImageIndex(source, imageFiles);
 
   console.log(`Found ${files.length} supported files under ${source}`);
+  console.log(`Found ${imageFiles.length} image files under ${source}`);
 
   const extensionCounts = files.reduce((acc, absolutePath) => {
     const ext = path.extname(absolutePath).toLowerCase() || "(no-ext)";
@@ -489,6 +630,7 @@ async function main() {
       const fileHash = buildFileHash(cleanedText);
       const sourcePath = relativePath;
       const nowIso = new Date().toISOString();
+      const relatedImages = getRelatedImagesForSource(sourcePath, imageIndex);
 
       if (!dryRun && db) {
         deletedChunks += await deleteExistingChunks(db, collectionName, sourcePath);
@@ -506,10 +648,22 @@ async function main() {
         const embedding = embeddingResp?.data?.[0]?.embedding || [];
         const tokenCount = embeddingResp?.usage?.total_tokens || 0;
         totalEmbeddingTokens += tokenCount;
+        const headingPath = buildHeadingPath(relativePath, chunkTextValue);
+        const searchTerms = extractSearchTerms(
+          relativePath,
+          path.basename(absolutePath),
+          headingPath.join(" "),
+          chunkTextValue
+        );
+        const acronyms = extractAcronyms(relativePath, chunkTextValue);
+        const partNumbers = extractPartNumbers(relativePath, chunkTextValue);
 
         const docData = {
           source: sourcePath,
           sourcePath,
+          sourceStoragePath: `ServiceDocs/${sourcePath}`,
+          sourceFileName: path.basename(absolutePath),
+          sourceFileType: ext.replace(/^\./, "") || null,
           fileName: path.basename(absolutePath),
           fileExtension: ext,
           text: chunkTextValue,
@@ -524,6 +678,13 @@ async function main() {
           vendor: vendor || null,
           modality: modality || null,
           machineFamily: machineFamily || null,
+          manualSet: manualSet || null,
+          headingPath,
+          searchTerms,
+          acronyms,
+          partNumbers,
+          relatedImages,
+          title: headingPath[headingPath.length - 1] || path.basename(absolutePath),
         };
 
         localStore.push({
@@ -534,6 +695,12 @@ async function main() {
           vendor: vendor || null,
           modality: modality || null,
           machineFamily: machineFamily || null,
+          manualSet: manualSet || null,
+          headingPath,
+          searchTerms,
+          acronyms,
+          partNumbers,
+          relatedImages,
           chunkIndex: index,
           chunkCount: chunks.length,
         });
@@ -570,6 +737,20 @@ async function main() {
     }
   }
 
+  let uploadedImages = 0;
+  if (bucket && imageFiles.length) {
+    for (const absolutePath of imageFiles) {
+      const imageRelativePath = normalizeDocPath(source, absolutePath);
+      await maybeUploadToStorage(
+        bucket,
+        absolutePath,
+        `ServiceDocs/${imageRelativePath}`,
+        dryRun
+      );
+      uploadedImages += 1;
+    }
+  }
+
   if (writeLocalStore) {
     const payload = JSON.stringify(localStore, null, 2);
     if (!dryRun) {
@@ -586,6 +767,8 @@ async function main() {
   console.log(`Failed files: ${failedFiles}`);
   console.log(`Deleted previous chunks: ${deletedChunks}`);
   console.log(`Total chunks written: ${totalChunks}`);
+  console.log(`Image files indexed: ${imageFiles.length}`);
+  console.log(`Image files uploaded: ${uploadedImages}`);
   console.log(`Embedding tokens used: ${totalEmbeddingTokens}`);
   console.log(
     `Target collection: ${localOnly ? "(local-only mode: none)" : collectionName}`

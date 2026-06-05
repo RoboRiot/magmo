@@ -6,6 +6,7 @@ export const BLUEFOLDER_ENDPOINTS = {
   itemAdd: `${API_BASE}/items/add.aspx`,
   serviceRequestGet: `${API_BASE}/serviceRequests/get.aspx`,
   serviceRequestAddMaterial: `${API_BASE}/serviceRequests/addMaterial.aspx`,
+  usersList: `${API_BASE}/users/list.aspx`,
 };
 
 export function envValue(value) {
@@ -88,8 +89,8 @@ function blueFolderHeaders(token) {
   };
 }
 
-export async function blueFolderRequest(endpoint, xml, signal) {
-  const token = getBlueFolderToken();
+export async function blueFolderRequest(endpoint, xml, signal, tokenOverride = "") {
+  const token = envValue(tokenOverride) || getBlueFolderToken();
   if (!token) {
     return {
       ok: false,
@@ -185,6 +186,71 @@ function firstValue(value) {
   return first == null ? "" : String(first);
 }
 
+function normalizedEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function blueFolderUserDisplayName(user) {
+  return (
+    firstValue(user?.fullName) ||
+    firstValue(user?.displayName) ||
+    [firstValue(user?.firstName), firstValue(user?.lastName)]
+      .filter(Boolean)
+      .join(" ") ||
+    [firstValue(user?.firstname), firstValue(user?.lastname)]
+      .filter(Boolean)
+      .join(" ") ||
+    firstValue(user?.userName) ||
+    firstValue(user?.username)
+  ).trim();
+}
+
+export async function getBlueFolderUserByEmail(email, signal) {
+  const emailToFind = normalizedEmail(email);
+  if (!emailToFind) return null;
+
+  const requestXml = `<request>
+  <userList>
+    <listType>full</listType>
+  </userList>
+</request>`;
+
+  const result = await blueFolderRequest(
+    BLUEFOLDER_ENDPOINTS.usersList,
+    requestXml,
+    signal
+  );
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error || result.reason || "bluefolder_user_lookup_failed",
+    };
+  }
+
+  const users = asArray(responseRoot(result.parsed)?.user);
+  const user = users.find((entry) => {
+    const userEmail =
+      normalizedEmail(entry?.email) ||
+      normalizedEmail(entry?.emailAddress) ||
+      normalizedEmail(entry?.emailaddress);
+    return userEmail === emailToFind;
+  });
+  if (!user) return null;
+
+  return {
+    ok: true,
+    userId: firstValue(user.userId),
+    email: emailToFind,
+    displayName: blueFolderUserDisplayName(user),
+    apiToken:
+      firstValue(user.tokenApi) ||
+      firstValue(user.tokenAPI) ||
+      firstValue(user.apiToken) ||
+      firstValue(user.token) ||
+      "",
+  };
+}
+
 function blueFolderComment(data) {
   return [
     `Name: ${firstValue(data.name)}`,
@@ -208,6 +274,44 @@ export async function addServiceItemToBlueFolder(data, signal) {
       ok: false,
       error: "Missing workOrder field for BlueFolder",
       code: "missing_work_order",
+    };
+  }
+
+  let submitter = data?.submittedByUserId
+    ? {
+        userId: firstValue(data.submittedByUserId),
+        displayName: firstValue(data.submittedByName),
+        email: normalizedEmail(data.submittedByEmail),
+        apiToken: firstValue(data.submittedByApiToken),
+      }
+    : null;
+  if (
+    !submitter?.userId &&
+    data?.submittedByEmail &&
+    !data?.submittedByLookupAttempted
+  ) {
+    const foundUser = await getBlueFolderUserByEmail(data.submittedByEmail, signal);
+    if (foundUser?.ok && foundUser.userId) {
+      submitter = foundUser;
+    }
+  }
+  const enrichedData = {
+    ...data,
+    submittedByUserId: submitter?.userId || data?.submittedByUserId || "",
+    submittedByName: submitter?.displayName || data?.submittedByName || "",
+    submittedByEmail: normalizedEmail(data?.submittedByEmail),
+  };
+  const materialRequestToken = submitter?.apiToken || "";
+  if (enrichedData.submittedByEmail && !materialRequestToken) {
+    return {
+      ok: false,
+      error: `BlueFolder user ${enrichedData.submittedByEmail} was not found with an API token. Add this user to BlueFolder Settings > API > Authorized API Users, then retry.`,
+      code: "missing_submitter_api_token",
+      submittedBy: {
+        email: enrichedData.submittedByEmail,
+        name: enrichedData.submittedByName || "",
+        userId: enrichedData.submittedByUserId || "",
+      },
     };
   }
 
@@ -260,7 +364,7 @@ export async function addServiceItemToBlueFolder(data, signal) {
     <itemDescription>Service Item</itemDescription>
     <itemUnitCost>0.00</itemUnitCost>
     <itemUnitPrice>0.00</itemUnitPrice>
-    <comment>${xmlEscape(blueFolderComment(data))}</comment>
+    <comment>${xmlEscape(blueFolderComment(enrichedData))}</comment>
     <commentIsPublic>false</commentIsPublic>
     <taxable>false</taxable>
   </serviceRequestAddMaterial>
@@ -269,7 +373,8 @@ export async function addServiceItemToBlueFolder(data, signal) {
   const materialResult = await blueFolderRequest(
     BLUEFOLDER_ENDPOINTS.serviceRequestAddMaterial,
     materialXml,
-    signal
+    signal,
+    materialRequestToken
   );
   if (!materialResult.ok) {
     return {
@@ -287,6 +392,12 @@ export async function addServiceItemToBlueFolder(data, signal) {
     itemId,
     serviceRequestId,
     duplicateServiceItem,
+    submittedBy: {
+      email: enrichedData.submittedByEmail || "",
+      name: enrichedData.submittedByName || "",
+      userId: enrichedData.submittedByUserId || "",
+    },
+    submittedWithUserToken: Boolean(materialRequestToken),
   };
 }
 

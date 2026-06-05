@@ -55,6 +55,10 @@ import {
   stripAssociatedPartsFromMachineSnapshot,
   stripEmbeddedMachineAssociations,
 } from "../../../../utils/warehouseAssociations";
+import {
+  appendSaveHistory,
+  appendSubmitterToDescription,
+} from "../../../../utils/itemAudit";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -213,6 +217,9 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
         ? initialItem.selectionHistory
         : []
     );
+    setSaveHistory(
+      Array.isArray(initialItem.saveHistory) ? initialItem.saveHistory : []
+    );
     setDOM(initialItem.DOM || "");
 
     setItems(prev => ({
@@ -360,6 +367,7 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [showDescModal, setShowDescModal] = useState(false);
   const [showWoModal, setShowWoModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showSaveHistoryModal, setShowSaveHistoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showMachineModal, setShowMachineModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
@@ -420,6 +428,9 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     Array.isArray(initialItem?.selectionHistory)
       ? initialItem.selectionHistory
       : []
+  );
+  const [saveHistory, setSaveHistory] = useState(
+    Array.isArray(initialItem?.saveHistory) ? initialItem.saveHistory : []
   );
   const cameraVideoConstraints = useMemo(
     () => ({
@@ -1038,6 +1049,7 @@ const handleSendToInflow = async () => {
         setSelectionHistory(
           Array.isArray(data.selectionHistory) ? data.selectionHistory : []
         );
+        setSaveHistory(Array.isArray(data.saveHistory) ? data.saveHistory : []);
         if (data.localLocFrom) setLocalLocFrom(data.localLocFrom);
         if (data.localLocCurrent) setLocalLocCurrent(data.localLocCurrent);
         if (data.DOM) {
@@ -1355,6 +1367,8 @@ const handleSendToInflow = async () => {
   const handleShowWoModal = () => setShowWoModal(true);
   const handleCloseHistoryModal = () => setShowHistoryModal(false);
   const handleShowHistoryModal = () => setShowHistoryModal(true);
+  const handleCloseSaveHistoryModal = () => setShowSaveHistoryModal(false);
+  const handleShowSaveHistoryModal = () => setShowSaveHistoryModal(true);
   const handleQuickbooksButton = () => {
     console.log("[Quickbooks Debug] Quickbooks button clicked", {
       id,
@@ -1753,6 +1767,8 @@ const handleSendToInflow = async () => {
     const db = firebase.firestore();
     const currentUser = firebase.auth().currentUser;
     const userEmail = currentUser ? currentUser.email : "unknown";
+    const savedAt = new Date();
+    const nextSaveHistory = appendSaveHistory(saveHistory, userEmail, savedAt);
 
     // Always use the current state values for OEM, modality, and model.
     const storedOem = selectionToStoredValue(selectedOems);
@@ -1779,13 +1795,15 @@ const handleSendToInflow = async () => {
           ...safeHistory,
           {
             ...currentSelectionSnapshot,
-            savedAt: new Date().toISOString(),
+            savedAt: savedAt.toISOString(),
+            savedByEmail: userEmail,
           },
         ]
       : safeHistory;
 
     const formattedItems = { ...items, descriptions, workOrders };
     formattedItems.selectionHistory = nextSelectionHistory;
+    formattedItems.saveHistory = nextSaveHistory;
     // Remove any unused fields.
     formattedItems.status = items.status || "";
     formattedItems.nameLower = (items.name || "").toLowerCase();
@@ -2114,6 +2132,7 @@ const handleSendToInflow = async () => {
 
       setSavedName(items.name || "");
       setSelectionHistory(nextSelectionHistory);
+      setSaveHistory(nextSaveHistory);
 
       // Redirect to the new URL using the new document id.
       if (redirect) {
@@ -2124,7 +2143,12 @@ const handleSendToInflow = async () => {
       if (showSaved) {
         handleShowSaveModal();
       }
-      return { docId, photoUrls, selectionHistory: nextSelectionHistory };
+      return {
+        docId,
+        photoUrls,
+        selectionHistory: nextSelectionHistory,
+        saveHistory: nextSaveHistory,
+      };
     } catch (error) {
       console.error("Error saving data:", error);
       setErr(error?.message || "Save failed.");
@@ -2651,6 +2675,8 @@ const handleSendToInflow = async () => {
     }
 
     const resolvedLocalSn = String(items.localSN || id || "").trim();
+    const currentUser = firebase.auth().currentUser;
+    const submittedByEmail = currentUser?.email || "";
 
     // Build the payload to send to your proxy endpoint.
     const payload = {
@@ -2664,6 +2690,7 @@ const handleSendToInflow = async () => {
       taxable: false,
       taxableDefault: false,
       tax: false,
+      submittedByEmail,
     };
 
     setBluefolderLoading(true);
@@ -2678,6 +2705,16 @@ const handleSendToInflow = async () => {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
+      if (result?.bluefolderStatusCheck || result?.debug?.statusCheck) {
+        console.log(
+          "[BlueFolder][status-check]",
+          result.bluefolderStatusCheck || result.debug.statusCheck
+        );
+      }
+      if (response.status === 409 && result?.code === "work_order_closed") {
+        alert(result?.error || `Work order ${currentWorkOrder} is closed.`);
+        return;
+      }
       if (!response.ok || result?.ok === false) {
         const detail =
           result?.details ||
@@ -2754,10 +2791,16 @@ const handleAddToSlack = async (which = "shipping") => {
         ? [...workOrders].sort((a,b) => new Date(b?.date||0) - new Date(a?.date||0))[0]?.workOrder
         : "";
 
-    const description =
+    const rawDescription =
       (selectedDesc != null && descriptions?.[selectedDesc])
         ? (descriptions[selectedDesc].description || "")
         : (items?.description || "");
+    const currentUser = firebase.auth().currentUser;
+    const submittedByEmail = currentUser?.email || "";
+    const description = appendSubmitterToDescription(
+      rawDescription,
+      submittedByEmail
+    );
 
     const tracking = items?.trackingNumber ?? items?.tracking ?? "";
     const local_sn = docId || items?.localSN || "";
@@ -2782,7 +2825,7 @@ const handleAddToSlack = async (which = "shipping") => {
         work_order: mostRecentWO || "",
         local_sn,
         tracking,
-        description: (description || "").trim(),
+        description,
         photoUrls,             // array of https URLs
         shipping_date: shippingDate,
         received_date: receivedDate,
@@ -2849,11 +2892,11 @@ const handleAddToSlack = async (which = "shipping") => {
             </Button>
           </Modal.Footer>
         </Modal>
-        <Modal show={showSaveModal} onHide={handleCloseSaveModal}>
+        <Modal show={showSaveModal} onHide={handleCloseSaveModal} centered>
           <Modal.Header closeButton>
-            <Modal.Title>Save Confirmation</Modal.Title>
+            <Modal.Title>Item Saved</Modal.Title>
           </Modal.Header>
-          <Modal.Body>Data has been saved successfully.</Modal.Body>
+          <Modal.Body>Item has been saved successfully.</Modal.Body>
           <Modal.Footer>
             <Button variant="primary" onClick={handleCloseSaveModal}>
               Ok
@@ -3015,6 +3058,47 @@ const handleAddToSlack = async (which = "shipping") => {
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleCloseHistoryModal}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        <Modal show={showSaveHistoryModal} onHide={handleCloseSaveHistoryModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Save History</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Table striped bordered hover size="sm" responsive>
+              <thead>
+                <tr>
+                  <th>Saved At</th>
+                  <th>Saved By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(saveHistory || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="text-center text-muted">
+                      No save history yet.
+                    </td>
+                  </tr>
+                ) : (
+                  [...(saveHistory || [])].reverse().map((entry, index) => (
+                    <tr key={`${entry?.savedAt || "save"}-${index}`}>
+                      <td>
+                        {entry?.savedAt
+                          ? new Date(entry.savedAt).toLocaleString()
+                          : "-"}
+                      </td>
+                      <td>{entry?.savedByEmail || entry?.email || "-"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseSaveHistoryModal}>
               Close
             </Button>
           </Modal.Footer>
@@ -4240,6 +4324,15 @@ const handleAddToSlack = async (which = "shipping") => {
                             >
                               History
                             </Button>
+                            {isAdminUser && (
+                              <Button
+                                variant="outline-secondary"
+                                className="ms-2"
+                                onClick={handleShowSaveHistoryModal}
+                              >
+                                Save History
+                              </Button>
+                            )}
                             <Button
                               variant="outline-secondary"
                               className="ms-2"
@@ -4342,6 +4435,7 @@ export async function getServerSideProps(context) {
       descriptions: itemData.descriptions || [],
       workOrders: itemData.workOrders || [],
       selectionHistory: itemData.selectionHistory || [],
+      saveHistory: itemData.saveHistory || [],
       DOM: itemData.DOM || "",
     };
 

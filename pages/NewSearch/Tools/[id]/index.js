@@ -1,10 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Alert, Button, Form, Modal, Spinner, Table } from "react-bootstrap";
+import {
+  Alert,
+  Button,
+  Col,
+  Form,
+  FormControl,
+  Modal,
+  Row,
+  Spinner,
+  Table,
+} from "react-bootstrap";
 import { useRouter } from "next/router";
 import firebase from "../../../../context/Firebase";
 import LoggedIn from "../../../LoggedIn";
 import { fetchClients } from "../../../../utils/fetchAssociations";
+import ClientTable from "../../../../utils/ClientTable";
 import {
   buildNameTokens,
   buildWorkOrderTokens,
@@ -170,6 +181,17 @@ export default function ToolDetailPage() {
   const [machines, setMachines] = useState([]);
   const [showComponentModal, setShowComponentModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [slackResult, setSlackResult] = useState({
+    show: false,
+    ok: false,
+    title: "",
+    message: "",
+  });
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [showMachineModal, setShowMachineModal] = useState(false);
+  const [machinePick, setMachinePick] = useState(true);
+  const [clientSearch, setClientSearch] = useState("");
+  const [machineSearch, setMachineSearch] = useState("");
   const [trackerCatalog, setTrackerCatalog] = useState({
     modalities: [],
     oemsByModality: {},
@@ -205,6 +227,14 @@ export default function ToolDetailPage() {
       machines.find((machine) => machine.id === form.currentMachineId) || null,
     [form.currentMachineId, machines]
   );
+  const selectedClientFrom = useMemo(
+    () => clients.find((client) => client.id === form.fromClientId) || null,
+    [clients, form.fromClientId]
+  );
+  const selectedClientCurrent = useMemo(
+    () => clients.find((client) => client.id === form.currentClientId) || null,
+    [clients, form.currentClientId]
+  );
 
   const applyMergedMachineFields = useCallback((merged, { force = false } = {}) => {
     if (!merged) return;
@@ -213,14 +243,17 @@ export default function ToolDetailPage() {
     const nextModels = uniqueSelection(normalizeSelection(merged.model));
 
     setSelectedOems((prev) => {
+      if (!nextOems.length) return prev;
       if (!force && prev.length) return prev;
       return nextOems;
     });
     setSelectedModalities((prev) => {
+      if (!nextModalities.length) return prev;
       if (!force && prev.length) return prev;
       return nextModalities;
     });
     setSelectedModels((prev) => {
+      if (!nextModels.length) return prev;
       if (!force && prev.length) return prev;
       return nextModels;
     });
@@ -282,10 +315,144 @@ export default function ToolDetailPage() {
   const filteredMachines = useCallback(
     (clientId) => {
       if (!clientId) return machines;
-      return machines.filter((machine) => !machine.clientId || machine.clientId === clientId);
+      return machines.filter((machine) => machine.clientId === clientId);
     },
     [machines]
   );
+
+  const handleCloseClientModal = useCallback(() => {
+    setShowClientModal(false);
+    setClientSearch("");
+  }, []);
+
+  const handleShowClientModal = useCallback(() => {
+    setClientSearch("");
+    setShowClientModal(true);
+  }, []);
+
+  const handleCloseMachineModal = useCallback(() => {
+    setShowMachineModal(false);
+    setMachineSearch("");
+  }, []);
+
+  const openMachineModalForBranch = useCallback((isFromBranch) => {
+    setMachinePick(isFromBranch);
+    setMachineSearch("");
+    setShowMachineModal(true);
+  }, []);
+
+  const handleClearClientSelection = useCallback(() => {
+    const isFromBranch = machinePick;
+    setForm((prev) => {
+      if (isFromBranch) {
+        return {
+          ...prev,
+          fromClientId: "",
+          fromMachineId: "",
+          localLocFrom: "",
+        };
+      }
+      return {
+        ...prev,
+        currentClientId: "",
+        currentMachineId: "",
+        localLocCurrent: "",
+      };
+    });
+    handleCloseClientModal();
+    setSaveError("");
+    setSaveSuccess("");
+  }, [handleCloseClientModal, machinePick]);
+
+  const handleClientInfo = useCallback((clientId) => {
+    if (!clientId) {
+      handleClearClientSelection();
+      return;
+    }
+    const isFromBranch = machinePick;
+    setForm((prev) => {
+      if (isFromBranch) {
+        return {
+          ...prev,
+          fromClientId: clientId,
+          fromMachineId: "",
+          localLocFrom: "",
+        };
+      }
+      return {
+        ...prev,
+        currentClientId: clientId,
+        currentMachineId: "",
+        localLocCurrent: "",
+      };
+    });
+    handleCloseClientModal();
+    setSaveError("");
+    setSaveSuccess("");
+  }, [handleClearClientSelection, handleCloseClientModal, machinePick]);
+
+  const handleClearMachineSelection = useCallback(() => {
+    const isFromBranch = machinePick;
+    setForm((prev) => {
+      if (isFromBranch) {
+        return {
+          ...prev,
+          fromMachineId: "",
+          localLocFrom: "",
+        };
+      }
+      return {
+        ...prev,
+        currentMachineId: "",
+        localLocCurrent: "",
+      };
+    });
+    handleCloseMachineModal();
+    setSaveError("");
+    setSaveSuccess("");
+  }, [handleCloseMachineModal, machinePick]);
+
+  const handleSetSelectedMachine = useCallback((machine) => {
+    if (!machine?.id) return;
+    const isFromBranch = machinePick;
+    setForm((prev) => {
+      if (isFromBranch) {
+        return {
+          ...prev,
+          fromMachineId: machine.id,
+          fromClientId: machine.clientId || prev.fromClientId,
+        };
+      }
+      return {
+        ...prev,
+        currentMachineId: machine.id,
+        currentClientId: machine.clientId || prev.currentClientId,
+      };
+    });
+    if (machine.clientId && !clients.some((client) => client.id === machine.clientId)) {
+      setClients((prev) => [
+        ...prev,
+        { id: machine.clientId, name: machine.clientId },
+      ]);
+    }
+    handleCloseMachineModal();
+    setSaveError("");
+    setSaveSuccess("");
+  }, [clients, handleCloseMachineModal, machinePick]);
+
+  const handleSwapFromCurrent = useCallback(() => {
+    setForm((prev) => ({
+      ...prev,
+      fromClientId: prev.currentClientId,
+      fromMachineId: prev.currentMachineId,
+      localLocFrom: prev.localLocCurrent,
+      currentClientId: prev.fromClientId,
+      currentMachineId: prev.fromMachineId,
+      localLocCurrent: prev.localLocFrom,
+    }));
+    setSaveError("");
+    setSaveSuccess("");
+  }, []);
 
   const loadTracker = useCallback(
     async (force = false) => {
@@ -465,6 +632,7 @@ export default function ToolDetailPage() {
             return {
               id: doc.id,
               name: String(data.name || doc.id || "").trim(),
+              local: String(data.local || data.location || "").trim(),
               clientId: getRefId(data.client),
               OEM: data.OEM ?? data.oem ?? "",
               oem: data.oem ?? data.OEM ?? "",
@@ -776,10 +944,24 @@ export default function ToolDetailPage() {
       if (!resp.ok || !json?.ok) {
         throw new Error(json?.message || json?.error || "Slack add failed.");
       }
-      setSaveSuccess("Tool added to Slack.");
+      const successMessage = "Tool submitted to Slack successfully.";
+      setSaveSuccess(successMessage);
+      setSlackResult({
+        show: true,
+        ok: true,
+        title: "Submitted To Slack",
+        message: successMessage,
+      });
     } catch (error) {
       console.error("Failed to add tool to Slack", error);
-      setSaveError(error?.message || "Failed to add tool to Slack.");
+      const errorMessage = error?.message || "Failed to add tool to Slack.";
+      setSaveError(errorMessage);
+      setSlackResult({
+        show: true,
+        ok: false,
+        title: "Slack Submit Failed",
+        message: errorMessage,
+      });
     } finally {
       setSlackLoading(false);
     }
@@ -905,104 +1087,133 @@ export default function ToolDetailPage() {
                   />
                 </div>
 
-                <div className={styles.grid}>
-                  <section className={styles.section}>
-                    <div className={styles.sectionTitle}>From</div>
-                    <Form.Group controlId="tool-from-client" className="mb-2">
-                      <Form.Label>Client</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={form.fromClientId}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setForm((prev) => ({
-                            ...prev,
-                            fromClientId: value,
-                            fromMachineId: "",
-                          }));
+                <div style={{ marginBottom: "1rem" }}>
+                  <Row className="mb-3">
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setMachinePick(true);
+                          handleShowClientModal();
                         }}
+                        className="me-2"
                       >
-                        <option value="">None selected</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name || client.id}
-                          </option>
-                        ))}
-                      </Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="tool-from-machine" className="mb-2">
-                      <Form.Label>Machine</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={form.fromMachineId}
-                        onChange={handleFieldChange("fromMachineId")}
-                      >
-                        <option value="">None selected</option>
-                        {filteredMachines(form.fromClientId).map((machine) => (
-                          <option key={machine.id} value={machine.id}>
-                            {machine.id} - {machine.name}
-                          </option>
-                        ))}
-                      </Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="tool-from-local">
-                      <Form.Label>Local Location</Form.Label>
-                      <Form.Control
-                        value={form.localLocFrom}
-                        onChange={handleFieldChange("localLocFrom")}
-                        placeholder="Region/section/bin/pallet"
-                      />
-                    </Form.Group>
-                  </section>
+                        Select From
+                      </Button>
+                      {selectedClientFrom && (
+                        <div className={styles.itemLikeSelectionBox}>
+                          <p>
+                            <strong>Selected Client (From):</strong>{" "}
+                            {selectedClientFrom.name}
+                          </p>
+                          <div style={{ marginTop: "0.5rem" }}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => openMachineModalForBranch(true)}
+                            >
+                              Select Machine for {selectedClientFrom.name}
+                            </Button>
+                            {selectedFromMachine && (
+                              <>
+                                <p style={{ marginTop: "0.5rem" }}>
+                                  <strong>Selected Machine (From):</strong>{" "}
+                                  {selectedFromMachine.name}
+                                </p>
+                                <Form.Group controlId="tool-from-local">
+                                  <Form.Label>Local Location</Form.Label>
+                                  <Form.Control
+                                    value={form.localLocFrom}
+                                    onChange={handleFieldChange("localLocFrom")}
+                                    placeholder="Region/section/bin/pallet"
+                                  />
+                                </Form.Group>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Col>
 
-                  <section className={styles.section}>
-                    <div className={styles.sectionTitle}>Current / To</div>
-                    <Form.Group controlId="tool-current-client" className="mb-2">
-                      <Form.Label>Client</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={form.currentClientId}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setForm((prev) => ({
-                            ...prev,
-                            currentClientId: value,
-                            currentMachineId: "",
-                          }));
+                    <Col
+                      xs={12}
+                      md="auto"
+                      className="d-flex align-items-start justify-content-center"
+                    >
+                      <Button
+                        variant="outline-primary"
+                        onClick={handleSwapFromCurrent}
+                        disabled={!selectedClientFrom && !selectedClientCurrent}
+                        title="Swap from and current client/machine"
+                        aria-label="Swap from and current client/machine"
+                        className="mb-3 p-1"
+                        style={{
+                          width: "2.25rem",
+                          height: "2.25rem",
+                          lineHeight: 1,
                         }}
                       >
-                        <option value="">None selected</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name || client.id}
-                          </option>
-                        ))}
-                      </Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="tool-current-machine" className="mb-2">
-                      <Form.Label>Machine</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={form.currentMachineId}
-                        onChange={handleFieldChange("currentMachineId")}
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.9rem",
+                            lineHeight: 0.9,
+                          }}
+                        >
+                          <span>&rarr;</span>
+                          <span>&larr;</span>
+                        </span>
+                      </Button>
+                    </Col>
+
+                    <Col>
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setMachinePick(false);
+                          handleShowClientModal();
+                        }}
+                        className="me-2"
                       >
-                        <option value="">None selected</option>
-                        {filteredMachines(form.currentClientId).map((machine) => (
-                          <option key={machine.id} value={machine.id}>
-                            {machine.id} - {machine.name}
-                          </option>
-                        ))}
-                      </Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="tool-current-local">
-                      <Form.Label>Local Location</Form.Label>
-                      <Form.Control
-                        value={form.localLocCurrent}
-                        onChange={handleFieldChange("localLocCurrent")}
-                        placeholder="Region/section/bin/pallet"
-                      />
-                    </Form.Group>
-                  </section>
+                        Select Current
+                      </Button>
+                      {selectedClientCurrent && (
+                        <div className={styles.itemLikeSelectionBox}>
+                          <p>
+                            <strong>Selected Client (Current):</strong>{" "}
+                            {selectedClientCurrent.name}
+                          </p>
+                          <div style={{ marginTop: "0.5rem" }}>
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => openMachineModalForBranch(false)}
+                            >
+                              Select Machine for {selectedClientCurrent.name}
+                            </Button>
+                            {selectedCurrentMachine && (
+                              <>
+                                <p style={{ marginTop: "0.5rem" }}>
+                                  <strong>Selected Machine (Current):</strong>{" "}
+                                  {selectedCurrentMachine.name}
+                                </p>
+                                <Form.Group controlId="tool-current-local">
+                                  <Form.Label>Local Location</Form.Label>
+                                  <Form.Control
+                                    value={form.localLocCurrent}
+                                    onChange={handleFieldChange("localLocCurrent")}
+                                    placeholder="Region/section/bin/pallet"
+                                  />
+                                </Form.Group>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
                 </div>
 
                 <section className={styles.tableCard}>
@@ -1190,6 +1401,114 @@ export default function ToolDetailPage() {
             )}
           </section>
 
+          <Modal show={showMachineModal} onHide={handleCloseMachineModal}>
+            <Modal.Header closeButton>
+              <Modal.Title>
+                Select Machine
+                {(machinePick ? selectedClientFrom?.name : selectedClientCurrent?.name)
+                  ? ` for ${machinePick ? selectedClientFrom?.name : selectedClientCurrent?.name}`
+                  : ""}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <FormControl
+                type="text"
+                placeholder="Search by machine name"
+                className="mb-3"
+                value={machineSearch}
+                onChange={(event) => setMachineSearch(event.target.value)}
+              />
+              <Table striped bordered hover size="sm">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Select</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={3}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleClearMachineSelection}
+                      >
+                        Clear Selection
+                      </Button>
+                    </td>
+                  </tr>
+                  {filteredMachines(
+                    machinePick ? form.fromClientId : form.currentClientId
+                  )
+                    .filter((machine) =>
+                      `${machine.name || ""} ${machine.id || ""}`
+                        .toLowerCase()
+                        .includes(machineSearch.toLowerCase())
+                    )
+                    .map((machine) => (
+                      <tr key={machine.id}>
+                        <td>{machine.name}</td>
+                        <td>{machine.local || "-"}</td>
+                        <td>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleSetSelectedMachine(machine)}
+                          >
+                            Select
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  {filteredMachines(
+                    machinePick ? form.fromClientId : form.currentClientId
+                  ).filter((machine) =>
+                    `${machine.name || ""} ${machine.id || ""}`
+                      .toLowerCase()
+                      .includes(machineSearch.toLowerCase())
+                  ).length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="text-center text-muted">
+                        No machines found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleCloseMachineModal}>
+                Close
+              </Button>
+            </Modal.Footer>
+          </Modal>
+
+          <Modal show={showClientModal} onHide={handleCloseClientModal}>
+            <Modal.Header closeButton>
+              <Modal.Title>Select Client</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <FormControl
+                type="text"
+                placeholder="Search by name"
+                className="mb-3"
+                value={clientSearch}
+                onChange={(event) => setClientSearch(event.target.value)}
+              />
+              <ClientTable
+                clients={clients.filter((client) =>
+                  (client.name || "")
+                    .toLowerCase()
+                    .includes(clientSearch.toLowerCase())
+                )}
+                onSelectClient={handleClientInfo}
+                onInfoClick={handleClientInfo}
+                clearSelection={handleClearClientSelection}
+              />
+            </Modal.Body>
+          </Modal>
+
           <ParentModal
             show={showComponentModal}
             handleClose={() => setShowComponentModal(false)}
@@ -1252,6 +1571,29 @@ export default function ToolDetailPage() {
                 </tbody>
               </Table>
             </Modal.Body>
+          </Modal>
+
+          <Modal
+            show={slackResult.show}
+            onHide={() => setSlackResult((prev) => ({ ...prev, show: false }))}
+            centered
+          >
+            <Modal.Header closeButton>
+              <Modal.Title>{slackResult.title}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Alert variant={slackResult.ok ? "success" : "danger"} className="mb-0">
+                {slackResult.message}
+              </Alert>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant={slackResult.ok ? "success" : "secondary"}
+                onClick={() => setSlackResult((prev) => ({ ...prev, show: false }))}
+              >
+                OK
+              </Button>
+            </Modal.Footer>
           </Modal>
         </div>
       </div>

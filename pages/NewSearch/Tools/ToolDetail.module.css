@@ -71,6 +71,15 @@
   margin-bottom: 10px;
 }
 
+.itemLikeSelectionBox {
+  border: 1px solid #cccccc;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  margin-top: 0.75rem;
+  background: #ffffff;
+}
+
 .loadingRow {
   display: flex;
   align-items: center;
