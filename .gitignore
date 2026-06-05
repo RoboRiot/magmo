@@ -22,3 +22,9 @@ firebase-debug.log
 # Generated Next.js build output
 .next/
 functions/.next/
+
+# Dependencies and generated local artifacts
+node_modules/
+scripts/__pycache__/
+*.pyc
+tmp-askmagmo-test-logs/
