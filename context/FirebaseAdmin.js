@@ -1,6 +1,7 @@
 import fs from "fs";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 // Import Firebase Functions for config access
 let functions;
@@ -73,12 +74,20 @@ if (!getApps().length) {
           privateKey: privateKey.replace(/\\n/g, "\n"),
         }),
         databaseURL: "https://magmo-ac10c.firebaseio.com",
+        storageBucket:
+          process.env.FIREBASE_STORAGE_BUCKET ||
+          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+          `${projectId}.appspot.com`,
       });
     } else if (canUseAdc) {
       // Fall back to Application Default Credentials (e.g. Cloud Functions/Run)
       initializeApp({
         projectId,
         databaseURL: "https://magmo-ac10c.firebaseio.com",
+        storageBucket:
+          process.env.FIREBASE_STORAGE_BUCKET ||
+          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+          `${projectId}.appspot.com`,
       });
     } else {
       console.warn(
@@ -93,13 +102,15 @@ if (!getApps().length) {
 
 // Only export Firestore if Firebase Admin is properly initialized
 let adminDb = null;
+let adminBucket = null;
 try {
   if (getApps().length > 0) {
     adminDb = getFirestore();
+    adminBucket = getStorage().bucket();
   }
 } catch (error) {
   console.warn("Firebase Admin not available:", error.message);
 }
 
-export { adminDb };
+export { adminDb, adminBucket };
 export default adminDb;

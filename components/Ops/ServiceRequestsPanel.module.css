@@ -1,0 +1,778 @@
+.requestsPanel {
+  background:
+    radial-gradient(circle at 100% 0, rgba(61, 178, 143, 0.08), transparent 26rem),
+    #f7faf8;
+}
+
+.requestsToolbar {
+  padding: 25px 26px 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #e3ebe8;
+}
+
+.requestsToolbar > div:first-child > span,
+.aiLabel,
+.requestAcceptance > div:first-child > span {
+  color: #2c8b70;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.requestsToolbar h2 {
+  margin: 5px 0 4px;
+  color: #173531;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 29px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.requestsToolbar p {
+  max-width: 650px;
+  margin: 0;
+  color: #71817e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.requestsToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.requestsToolbarActions > button {
+  min-height: 42px;
+  padding: 0 16px;
+  color: #3f5e58;
+  border: 1px solid #d5e2de;
+  border-radius: 11px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.requestsToolbarActions > button:hover,
+.requestsToolbarActions > button.archiveActive {
+  color: #fff;
+  border-color: #365b54;
+  background: #365b54;
+}
+
+.requestSearch {
+  width: 220px;
+  min-height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7a8d88;
+  border: 1px solid #d9e5e1;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.requestSearch input {
+  width: 100%;
+  color: #183431;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 12px;
+}
+
+.requestList {
+  padding: 16px 20px 24px;
+  display: grid;
+  gap: 13px;
+}
+
+.requestCard {
+  padding: 20px;
+  border: 1px solid #dce7e3;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 22px rgba(16, 42, 42, 0.055);
+}
+
+.requestCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.requestEyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #6f817d;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.requestEyebrow span:first-child {
+  color: #23745f;
+}
+
+.requestEyebrow span + span::before {
+  margin-right: 8px;
+  color: #bdc8c5;
+  content: "•";
+}
+
+.requestEyebrow .syncWarning {
+  color: #a05c17;
+}
+
+.requestCard h3 {
+  margin: 7px 0 2px;
+  color: #173531;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+
+.requestCardTop p {
+  margin: 0;
+  color: #526a65;
+  font-size: 14px;
+}
+
+.requestUrgency {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  color: #315f54;
+  border: 1px solid #cde0da;
+  border-radius: 999px;
+  background: #edf7f3;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requestUrgency[data-urgency="hard_down"] {
+  color: #a03730;
+  border-color: #efc2bd;
+  background: #fff0ee;
+}
+
+.requestUrgency[data-urgency="asap"] {
+  color: #a35c12;
+  border-color: #efcf9f;
+  background: #fff7e8;
+}
+
+.requestBrief {
+  margin-top: 17px;
+  padding: 13px 0;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.35fr 0.5fr;
+  gap: 16px;
+  border-top: 1px solid #edf2f0;
+  border-bottom: 1px solid #edf2f0;
+}
+
+.requestBrief span,
+.requestDetailGrid span {
+  display: block;
+  color: #8a9a96;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requestBrief strong,
+.requestDetailGrid strong {
+  margin-top: 4px;
+  display: block;
+  color: #294b44;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.clientMatch {
+  margin-top: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #dce9e5;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #f4faf7, #f8fbfa);
+}
+
+.clientMatch > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.clientMatch strong {
+  color: #284a43;
+  font-size: 13px;
+}
+
+.clientMatch strong.confirmedMatch {
+  color: #14745a;
+}
+
+.clientMatch small {
+  color: #72837f;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.clientConfirmControls {
+  flex: 0 1 520px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.clientConfirmControls select,
+.requestAcceptance select {
+  min-width: 260px;
+  min-height: 39px;
+  padding: 0 10px;
+  color: #294942;
+  border: 1px solid #cfddd9;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 11px;
+}
+
+.clientConfirmControls button {
+  min-height: 39px;
+  padding: 0 13px;
+  color: #fff;
+  border: 0;
+  border-radius: 9px;
+  background: #2f836c;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.clientConfirmControls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.requestActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.requestActions button {
+  min-height: 38px;
+  padding: 0 14px;
+  color: #4c6560;
+  border: 1px solid #d6e1de;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.requestActions button.requestDetailButton {
+  margin-right: auto;
+}
+
+.requestActions button.requestAcceptButton {
+  color: #fff;
+  border-color: #25785f;
+  background: #25785f;
+}
+
+.requestActions button.requestDenyButton {
+  color: #9d3d36;
+  border-color: #edccc8;
+  background: #fff7f6;
+}
+
+.requestActions button:hover {
+  transform: translateY(-1px);
+}
+
+.requestSkeleton {
+  height: 230px;
+  border: 1px solid #e0e9e6;
+  border-radius: 17px;
+  background: linear-gradient(90deg, #fff, #f1f6f4, #fff);
+  background-size: 200% 100%;
+  animation: requestPulse 1.4s linear infinite;
+}
+
+@keyframes requestPulse {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.requestsEmpty {
+  min-height: 300px;
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.requestsEmpty > span {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  color: #278166;
+  border-radius: 50%;
+  background: #e3f5ee;
+  font-size: 24px;
+}
+
+.requestsEmpty h3 {
+  margin: 15px 0 4px;
+  color: #21423c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+}
+
+.requestsEmpty p {
+  margin: 0;
+  color: #778884;
+  font-size: 13px;
+}
+
+.requestModalBackdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 25, 23, 0.62);
+  backdrop-filter: blur(7px);
+}
+
+.requestModal {
+  width: min(940px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  background: #f8fbf9;
+  box-shadow: 0 32px 100px rgba(5, 25, 22, 0.35);
+}
+
+.requestModalHeader {
+  padding: 22px 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 90% -100%, rgba(255, 255, 255, 0.22), transparent 22rem),
+    linear-gradient(135deg, #163c36, #285e54);
+}
+
+.requestModalHeader > div > span {
+  color: #9de0cd;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.requestModalHeader h2 {
+  margin: 5px 0 3px;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 27px;
+  font-weight: 600;
+}
+
+.requestModalHeader p {
+  margin: 0;
+  color: #c8ded8;
+  font-size: 12px;
+}
+
+.requestModalHeader > button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.requestModalBody {
+  padding: 22px 24px 28px;
+  overflow-y: auto;
+}
+
+.requestProcessingError {
+  margin-bottom: 16px;
+  padding: 13px 14px;
+  display: grid;
+  gap: 3px;
+  color: #913b34;
+  border: 1px solid #eec5c1;
+  border-radius: 11px;
+  background: #fff1ef;
+  font-size: 12px;
+}
+
+.requestDetailSection {
+  padding: 18px 0;
+  border-bottom: 1px solid #e2ebe8;
+}
+
+.requestDetailSection:first-of-type {
+  padding-top: 0;
+}
+
+.requestDetailSection h3 {
+  margin: 0 0 12px;
+  color: #23443e;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.requestDetailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+}
+
+.requestDetailWide {
+  grid-column: 1 / -1;
+}
+
+.requestDescription {
+  margin: 0;
+  color: #435f59;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.requestFiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.requestFile {
+  min-width: 0;
+  overflow: hidden;
+  color: #294b44;
+  border: 1px solid #d9e5e1;
+  border-radius: 12px;
+  background: #fff;
+  text-decoration: none;
+}
+
+.requestFile > img,
+.requestFile > span {
+  width: 100%;
+  height: 125px;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  color: #3a7f6b;
+  background: #eaf5f1;
+  font-weight: 900;
+}
+
+.requestFile > div {
+  padding: 9px 10px;
+}
+
+.requestFile strong,
+.requestFile small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestFile strong {
+  font-size: 11px;
+}
+
+.requestFile small {
+  margin-top: 2px;
+  color: #84948f;
+  font-size: 9px;
+}
+
+.requestAcceptance {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #cfe0db;
+  border-radius: 15px;
+  background: #f0f8f5;
+}
+
+.requestAcceptance > div:first-child h3 {
+  margin: 4px 0;
+}
+
+.requestAcceptance > div:first-child p {
+  margin: 0 0 15px;
+  color: #6d807b;
+  font-size: 12px;
+}
+
+.requestAcceptance > label {
+  display: grid;
+  gap: 6px;
+  color: #59706a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.requestAcceptance select {
+  width: 100%;
+}
+
+.requestAcceptance fieldset {
+  margin: 15px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.requestAcceptance legend {
+  margin-bottom: 8px;
+  color: #59706a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.requestAssignees {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.requestAssignees label {
+  min-height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #31534b;
+  border: 1px solid #d6e4df;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.requestAssignees input {
+  accent-color: #25785f;
+}
+
+.modalAcceptButton {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  color: #fff;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #22745d, #2e8c70);
+  box-shadow: 0 9px 20px rgba(35, 116, 93, 0.2);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.modalAcceptButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@media (max-width: 900px) {
+  .requestsToolbar,
+  .clientMatch {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .requestsToolbarActions {
+    width: 100%;
+  }
+
+  .requestSearch {
+    flex: 1;
+    width: auto;
+  }
+
+  .requestBrief {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .clientConfirmControls {
+    flex: 1;
+    justify-content: stretch;
+  }
+
+  .clientConfirmControls select {
+    flex: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .requestsToolbar {
+    padding: 20px 14px 15px;
+  }
+
+  .requestsToolbarActions,
+  .clientConfirmControls,
+  .requestActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .requestsToolbarActions > button,
+  .requestActions button,
+  .requestActions button.requestDetailButton {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .requestSearch,
+  .clientConfirmControls select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .requestList {
+    padding: 12px 10px 18px;
+  }
+
+  .requestCard {
+    padding: 16px;
+  }
+
+  .requestCardTop {
+    flex-direction: column-reverse;
+  }
+
+  .requestBrief,
+  .requestDetailGrid,
+  .requestAssignees,
+  .requestFiles {
+    grid-template-columns: 1fr;
+  }
+
+  .requestDetailWide {
+    grid-column: auto;
+  }
+
+  .requestModalBackdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .requestModal {
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .requestModalHeader,
+  .requestModalBody {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+:global(html[data-theme="dark"]) .requestsPanel {
+  background: #0d1421;
+}
+
+:global(html[data-theme="dark"]) .requestsToolbar,
+:global(html[data-theme="dark"]) .requestDetailSection {
+  border-color: #29364a;
+}
+
+:global(html[data-theme="dark"]) .requestsToolbar h2,
+:global(html[data-theme="dark"]) .requestCard h3,
+:global(html[data-theme="dark"]) .requestsEmpty h3,
+:global(html[data-theme="dark"]) .requestDetailSection h3 {
+  color: #edf5ff;
+}
+
+:global(html[data-theme="dark"]) .requestsToolbar p,
+:global(html[data-theme="dark"]) .requestCardTop p,
+:global(html[data-theme="dark"]) .clientMatch small,
+:global(html[data-theme="dark"]) .requestDescription {
+  color: #aebdca;
+}
+
+:global(html[data-theme="dark"]) .requestCard,
+:global(html[data-theme="dark"]) .requestSearch,
+:global(html[data-theme="dark"]) .requestsToolbarActions > button,
+:global(html[data-theme="dark"]) .clientMatch,
+:global(html[data-theme="dark"]) .clientConfirmControls select,
+:global(html[data-theme="dark"]) .requestActions button,
+:global(html[data-theme="dark"]) .requestFile,
+:global(html[data-theme="dark"]) .requestAssignees label,
+:global(html[data-theme="dark"]) .requestAcceptance select {
+  color: #dbe7f5;
+  border-color: #334258;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .requestBrief {
+  border-color: #29364a;
+}
+
+:global(html[data-theme="dark"]) .requestBrief strong,
+:global(html[data-theme="dark"]) .requestDetailGrid strong,
+:global(html[data-theme="dark"]) .clientMatch strong {
+  color: #dce9f4;
+}
+
+:global(html[data-theme="dark"]) .requestModal {
+  border-color: #34435a;
+  background: #0d1421;
+}
+
+:global(html[data-theme="dark"]) .requestAcceptance {
+  border-color: #315044;
+  background: #111d1a;
+}
