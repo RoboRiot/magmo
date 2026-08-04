@@ -3,6 +3,10 @@ import { inferWorkOrderAssignment } from "../../../lib/ai/inferWorkOrderAssignme
 import { ingestCreatedWorkOrder } from "../../../lib/ops/ingestCreatedWorkOrder";
 import { getRelevantOpsCompanyMemory } from "../../../lib/ops/companyMemory";
 import {
+  applyTrailerMovementCommand,
+  getTrailerCommandContext,
+} from "../../../lib/ops/trailers";
+import {
   completeOpsWorkOrder,
   getOpsCommandContext,
   markOpsMessageAnalysisFailed,
@@ -118,6 +122,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, context });
     }
 
+    if (eventType === "trailer.command_context") {
+      const context = await getTrailerCommandContext();
+      return res.status(200).json({ ok: true, context });
+    }
+
+    if (eventType === "trailer.movement") {
+      const result = await applyTrailerMovementCommand({
+        commandTs: req.body?.commandTs,
+        changedBy: req.body?.changedBy,
+        analysis: req.body?.analysis,
+        sourceMessageCount: req.body?.sourceMessageCount,
+        source: req.body?.source,
+      });
+      return res.status(200).json({ ok: true, ...result });
+    }
+
     if (eventType === "work_order.reprocess_assignments") {
       const reset = await resetOpsAssignmentAnalysis(workOrderId);
       return res.status(200).json({ ok: true, reset: true, ...reset });
@@ -189,3 +209,4 @@ export default async function handler(req, res) {
     });
   }
 }
+
