@@ -1,0 +1,47 @@
+name: Ops integration CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "lib/ops/**"
+      - "pages/api/ops/**"
+      - "test/**"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "lib/ops/**"
+      - "pages/api/ops/**"
+      - "test/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-project
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.invalid
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
+      NEXT_PUBLIC_FIREBASE_APP_ID: "1:000000000000:web:0000000000000000000000"
+      OPS_ENVIRONMENT: ci
+      OPS_INGEST_MODE: read_only
+      OPS_DEPLOY_VERSION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:ops-integration
+      - run: npm run build
