@@ -129,6 +129,51 @@
   margin-bottom: 20px;
 }
 
+.trailerLinkPanel {
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.trailerLinkBody {
+  padding: 16px 18px;
+}
+
+.linkControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.linkControls :global(.form-control) {
+  min-height: 40px;
+  border-radius: 11px;
+}
+
+.linkedTrailerList {
+  display: grid;
+  gap: 10px;
+}
+
+.linkedTrailerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.linkedTrailerName {
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .tableCard {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
@@ -149,6 +194,14 @@
   font-weight: 600;
   color: #64748b;
   font-size: 0.85rem;
+}
+
+.successMessage {
+  display: block;
+  margin-top: 3px;
+  color: #047857;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .tableWrap {
@@ -210,4 +263,34 @@
   .actionRow :global(.btn) {
     width: 100%;
   }
+
+  .linkControls {
+    grid-template-columns: 1fr;
+  }
+
+  .linkedTrailerRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+:global(html[data-theme="dark"]) .trailerLinkPanel {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .trailerLinkBody {
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .linkedTrailerRow {
+  border-color: #29364a;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .linkControls :global(.form-control) {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background: #172033;
 }

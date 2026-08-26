@@ -2,7 +2,9 @@ import firebase from "../context/Firebase";
 
 function getRefId(ref) {
   if (!ref) return "";
-  if (typeof ref === "string") return ref;
+  if (typeof ref === "string") {
+    return ref.split("/").filter(Boolean).pop() || ref;
+  }
   if (ref.id) return ref.id;
   return "";
 }
@@ -38,13 +40,50 @@ export function formatPartDate(input) {
   return date.toLocaleDateString();
 }
 
+function getPartRoleMachineIds(data, role) {
+  const fields =
+    role === "from"
+      ? ["MachineFrom", "Machine", "machineFromId", "machineId"]
+      : [
+          "MachineCurrent",
+          "CurrentMachine",
+          "machineCurrentId",
+          "currentMachineId",
+        ];
+
+  return Array.from(
+    new Set(fields.map((field) => getRefId(data?.[field])).filter(Boolean))
+  );
+}
+
 function getPartMachineIds(data) {
-  const modernIds = [data?.MachineFrom, data?.MachineCurrent]
+  const modernIds = [
+    data?.MachineFrom,
+    data?.MachineCurrent,
+    data?.machineFromId,
+    data?.machineCurrentId,
+  ]
     .map(getRefId)
     .filter(Boolean);
   if (modernIds.length) return modernIds;
 
-  return [data?.Machine, data?.CurrentMachine].map(getRefId).filter(Boolean);
+  return [
+    data?.Machine,
+    data?.CurrentMachine,
+    data?.machineId,
+    data?.currentMachineId,
+  ]
+    .map(getRefId)
+    .filter(Boolean);
+}
+
+function partMatchesMachineRole(data, machineId, role) {
+  const roleMachineIds = getPartRoleMachineIds(data, role);
+  if (roleMachineIds.includes(machineId)) return true;
+
+  const allMachineIds = getPartMachineIds(data);
+  if (!allMachineIds.length) return role === "current";
+  return false;
 }
 
 async function resolvePartDoc(db, refOrId) {
@@ -66,7 +105,10 @@ async function resolvePartDoc(db, refOrId) {
   return null;
 }
 
-export async function fetchAssociatedPartsForMachine(machineId) {
+export async function fetchAssociatedPartsForMachine(
+  machineId,
+  { role = "any" } = {}
+) {
   const resolvedMachineId = String(machineId || "").trim();
   if (!resolvedMachineId) return [];
 
@@ -89,6 +131,9 @@ export async function fetchAssociatedPartsForMachine(machineId) {
     .filter((doc) => doc?.exists)
     .filter((doc) => {
       const data = doc.data() || {};
+      if (role === "current" || role === "from") {
+        return partMatchesMachineRole(data, resolvedMachineId, role);
+      }
       const machineIds = getPartMachineIds(data);
       return machineIds.length === 0 || machineIds.includes(resolvedMachineId);
     })
@@ -100,6 +145,8 @@ export async function fetchAssociatedPartsForMachine(machineId) {
         pn: toDisplayValue(data.pn),
         sn: toDisplayValue(data.sn),
         date: data.date || data.arrival_date || data.arrivalDate || "",
+        machineFromId: getPartRoleMachineIds(data, "from")[0] || "",
+        machineCurrentId: getPartRoleMachineIds(data, "current")[0] || "",
       };
     });
 }

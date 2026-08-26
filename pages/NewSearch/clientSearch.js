@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { FormControl, Button, Spinner, Alert, Modal } from "react-bootstrap";
+import { FormControl, Button, Alert, Modal } from "react-bootstrap";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import firebase from "../../context/Firebase";
+import { adminDb } from "../../context/FirebaseAdmin";
 import { useAuth } from "../../context/AuthUserContext";
 import { fetchClients } from "../../utils/fetchAssociations";
 import ClientTable from "../../utils/ClientTable";
 import styles from "../../styles/ClientSearch.module.css";
+import clientListHelpers from "../../lib/clientList.cjs";
+
+const { buildClientList, filterClientListRecords } = clientListHelpers;
 
 // import styles from "../../styles/ClientPage.module.css";
 
-const ClientPage = () => {
+const ClientPage = ({ initialClients = null }) => {
   const { authUser } = useAuth();
-  const [clients, setClients] = useState([]);
+  const [clients, setClients] = useState(() =>
+    Array.isArray(initialClients) ? initialClients : []
+  );
   const [clientSearchTerm, setClientSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!Array.isArray(initialClients));
   const [loadError, setLoadError] = useState(null);
   const [selectingClientId, setSelectingClientId] = useState("");
   const [clientToDelete, setClientToDelete] = useState(null);
@@ -28,6 +34,13 @@ const ClientPage = () => {
 
   // Fetch clients when the component mounts
   useEffect(() => {
+    if (Array.isArray(initialClients)) {
+      setClients(initialClients);
+      setLoadError(null);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchClientData = async () => {
       try {
         const clientsData = await fetchClients();
@@ -42,7 +55,7 @@ const ClientPage = () => {
     };
 
     fetchClientData();
-  }, []);
+  }, [initialClients]);
 
   // Handle search input changes
   const handleSearchChange = (event) => {
@@ -131,10 +144,6 @@ const ClientPage = () => {
   router.push(`client/AIS${randomNumber}/addClient`);
   };
 
-  const openTrailersClient = () => {
-    router.push("/NewSearch/client/AIS62854");
-  };
-
   const openLakeForestClient = () => {
     router.push("/NewSearch/client/AIS17182");
   };
@@ -143,10 +152,9 @@ const ClientPage = () => {
     router.push("/NewSearch/client/AIS25097");
   };
 
-  const normalizedSearch = clientSearchTerm.trim().toLowerCase();
-  const filteredClients = (Array.isArray(clients) ? clients : []).filter(
-    (client) =>
-      (client?.name || "").toLowerCase().includes(normalizedSearch)
+  const filteredClients = filterClientListRecords(
+    clients.filter((client) => client.id !== "AIS62854"),
+    clientSearchTerm
   );
 
   return (
@@ -201,18 +209,21 @@ const ClientPage = () => {
       )}
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href="/NewSearch/mainSearch">
-            <a className={styles.brand} aria-label="Go to Main Search">
-              <img
-                src="/magmo-logo.png"
-                alt="Magmo"
-                className={styles.brandLogo}
-              />
-              <div>
-                <div className={styles.brandName}>Magmo</div>
-                <div className={styles.brandSub}>Client Search</div>
-              </div>
-            </a>
+          <Link
+            href="/NewSearch/mainSearch"
+            className={styles.brand}
+            aria-label="Go to Main Search">
+
+            <img
+              src="/magmo-logo.png"
+              alt="Magmo"
+              className={styles.brandLogo}
+            />
+            <div>
+              <div className={styles.brandName}>Magmo</div>
+              <div className={styles.brandSub}>Client Search</div>
+            </div>
+
           </Link>
           <div className={styles.headerActions}>
             <Button
@@ -241,10 +252,18 @@ const ClientPage = () => {
           <div className={styles.cardBody}>
             {loadError && <Alert variant="danger">{loadError}</Alert>}
             {isLoading ? (
-              <div className={styles.loadingWrap}>
-                <Spinner animation="border" role="status">
-                  <span className="sr-only">Loading...</span>
-                </Spinner>
+              <div
+                className={styles.loadingWrap}
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <img
+                  src="/magmo-logo.png"
+                  alt=""
+                  className={styles.loadingLogo}
+                />
+                <div className={styles.loadingText}>Loading clients...</div>
               </div>
             ) : (
               <>
@@ -273,13 +292,6 @@ const ClientPage = () => {
                     onClick={addClient}
                   >
                     Add New Client
-                  </Button>
-                  <Button
-                    variant="outline-primary"
-                    className={styles.primaryButton}
-                    onClick={openTrailersClient}
-                  >
-                    Trailers
                   </Button>
                   <Button
                     variant="outline-primary"
@@ -319,3 +331,36 @@ const ClientPage = () => {
 };
 
 export default ClientPage;
+
+export async function getServerSideProps() {
+  if (!adminDb) {
+    return {
+      props: {
+        initialClients: null,
+      },
+    };
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("Client")
+      .select("name", "Name")
+      .get();
+    const initialClients = buildClientList(snapshot.docs).filter(
+      (client) => client.id !== "AIS62854"
+    );
+
+    return {
+      props: {
+        initialClients,
+      },
+    };
+  } catch (error) {
+    console.error("Error loading clients during SSR:", error);
+    return {
+      props: {
+        initialClients: null,
+      },
+    };
+  }
+}

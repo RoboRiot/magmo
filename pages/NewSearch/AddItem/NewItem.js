@@ -28,13 +28,15 @@ import ParentModal from "./parentModal";
 import MachineSelectionModal from "../item/[id]/MachineSelectionModal";
 import InfoModal from "../InfoModal";
 import InflowAPI from "../../../utils/inflowAPI";
-import NewLocal from "../item/[id]/NewLocal";
+import NewLocal, { LocationControls } from "../item/[id]/NewLocal";
 import {
   buildLocalLocObject,
   formatLoc,
   updateMachineFields,
   buildNameTokens,
+  buildGeneralSearchTokens,
   buildWorkOrderTokens,
+  findExistingItemByAis,
 } from "../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../components/MultiSelectDropdown";
 import ItemMovementDateField from "../../../components/ItemMovementDateField";
@@ -53,9 +55,22 @@ import {
 } from "../../../utils/warehouseAssociations";
 import {
   appendSaveHistory,
-  appendSubmitterToDescription,
 } from "../../../utils/itemAudit";
+import { preparePhotosForAnalysis } from "../../../utils/itemImageAnalysis";
+import {
+  createItemPhotoStorageName,
+  normalizeItemPhotoCategory,
+} from "../../../utils/itemPhotos";
+import { addItemToShippingGroup } from "../../../utils/inventoryGroups";
+import ItemPhotoTabs from "../../../components/ItemPhotoTabs";
+import ShippingGroupField from "../../../components/ShippingGroupField";
 import styles from "./NewItem.module.css";
+const {
+  trailerClientId,
+  trailerMachineId,
+  trailerName,
+  trailersForClient,
+} = require("../../../lib/ops/trailerClientLinks.cjs");
 
 // Load BarcodeScannerComponent only on the client-side.
 const BarcodeScannerComponent = dynamic(
@@ -84,15 +99,72 @@ function LoadingButton({ type, name, route }) {
   }, [isLoading]);
   const handleClick = () => setLoading(true);
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type}`}
-        disabled={isLoading}
-        onClick={!isLoading ? handleClick : null}
-      >
-        {isLoading ? "Loading…" : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type}`}
+      disabled={isLoading}
+      onClick={!isLoading ? handleClick : null}>
+
+      {isLoading ? "Loading…" : name}
+
     </Link>
+  );
+}
+
+function OemEvidenceCard({ evidence }) {
+  if (!evidence) return null;
+  const statusText = evidence.supportsMatch
+    ? "Supports this comparison"
+    : evidence.found
+    ? "Official reference found"
+    : "No exact official result";
+  return (
+    <div className={styles.analysisOemEvidence}>
+      <div className={styles.analysisOemEvidenceHeader}>
+        <div>
+          <div className={styles.analysisOemKicker}>Official OEM website</div>
+          <strong>
+            {evidence.productName || evidence.oem || "Manufacturer reference"}
+          </strong>
+        </div>
+        <span
+          className={
+            evidence.supportsMatch
+              ? styles.analysisOemSupported
+              : styles.analysisOemReference
+          }
+        >
+          {statusText}
+        </span>
+      </div>
+      {evidence.summary && <p>{evidence.summary}</p>}
+      {(evidence.officialPartNumbers || []).length > 0 && (
+        <div className={styles.analysisOemDetails}>
+          <span>Official PN</span>
+          <strong>{evidence.officialPartNumbers.join(", ")}</strong>
+        </div>
+      )}
+      {(evidence.models || []).length > 0 && (
+        <div className={styles.analysisOemDetails}>
+          <span>Models</span>
+          <strong>{evidence.models.join(", ")}</strong>
+        </div>
+      )}
+      {(evidence.sources || []).length > 0 && (
+        <div className={styles.analysisOemSources}>
+          {evidence.sources.map((source, index) => (
+            <a
+              key={`${source.url}-${index}`}
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {source.title || `Official source ${index + 1}`}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -162,7 +234,10 @@ export default function NewItem() {
   ]);
   const [workOrders, setWorkOrders] = useState([{ workOrder: "", date: "" }]);
   const [clients, setClients] = useState([]);
+  const [trailers, setTrailers] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [activePhotoCategory, setActivePhotoCategory] = useState("item");
+  const [selectedShippingGroupId, setSelectedShippingGroupId] = useState("");
   const [show, setShow] = useState(false); // error modal for missing required fields
   const [showErr, setShowErr] = useState(false);
   const [Err, setErr] = useState(
@@ -198,6 +273,11 @@ export default function NewItem() {
   const [bluefolderLoading, setBluefolderLoading] = useState(false);
   const [slackLoadingKey, setSlackLoadingKey] = useState("");
   const [saveHistory, setSaveHistory] = useState([]);
+  const [analyzingPhotos, setAnalyzingPhotos] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [matchPreviewUrl, setMatchPreviewUrl] = useState("");
+  const [matchPreviewLoading, setMatchPreviewLoading] = useState(false);
 
   const [trackerCatalog, setTrackerCatalog] = useState({
     modalities: [],
@@ -402,7 +482,9 @@ export default function NewItem() {
             ...prev,
             name: data.name || "",
             pn: toArray(data.pn),
-            sn: toArray(data.sn),
+            // A cloned item is a distinct physical item, so its serial number
+            // must be entered separately instead of inherited from the source.
+            sn: [""],
             localSN: "",
             date: dateValue || prev.date || "",
             price: data.price ?? "",
@@ -454,31 +536,23 @@ export default function NewItem() {
         if (data.TheMachine && !cancelled) {
           setTheMachine(data.TheMachine);
           setMachineFieldsInitialized(false);
-          if (!selectedOems.length) {
-            setSelectedOems(
-              uniqueSelection(
-                normalizeSelection(data.TheMachine.oem || data.TheMachine.OEM)
+          setSelectedOems(
+            uniqueSelection(
+              normalizeSelection(data.TheMachine.oem || data.TheMachine.OEM)
+            )
+          );
+          setSelectedModalities(
+            uniqueSelection(
+              normalizeSelection(
+                data.TheMachine.modality || data.TheMachine.Modality
               )
-            );
-          }
-          if (!selectedModalities.length) {
-            setSelectedModalities(
-              uniqueSelection(
-                normalizeSelection(
-                  data.TheMachine.modality || data.TheMachine.Modality
-                )
-              )
-            );
-          }
-          if (!selectedModels.length) {
-            setSelectedModels(
-              uniqueSelection(
-                normalizeSelection(
-                  data.TheMachine.model || data.TheMachine.Model
-                )
-              )
-            );
-          }
+            )
+          );
+          setSelectedModels(
+            uniqueSelection(
+              normalizeSelection(data.TheMachine.model || data.TheMachine.Model)
+            )
+          );
         }
 
         const parentDoc = await resolveDoc(data.Parent, "Test");
@@ -494,6 +568,56 @@ export default function NewItem() {
         const clientCurrentDoc = await resolveDoc(data.ClientCurrent, "Client");
         if (clientCurrentDoc && !cancelled) {
           setSelectedClientCurrent({ id: clientCurrentDoc.id, ...clientCurrentDoc });
+        }
+
+        const trailerFromDoc = await resolveDoc(
+          data.TrailerFrom || data.trailerFromId,
+          "Trailers"
+        );
+        if (trailerFromDoc && !cancelled) {
+          const linkedClientId = trailerClientId(trailerFromDoc);
+          setSelectedTrailerFrom({
+            id: trailerFromDoc.id,
+            ...trailerFromDoc,
+            name: trailerName(trailerFromDoc),
+            clientId: linkedClientId,
+            machineId: trailerMachineId(trailerFromDoc),
+          });
+          if (!clientFromDoc && linkedClientId) {
+            const linkedClientDoc = await resolveDoc(linkedClientId, "Client");
+            if (linkedClientDoc && !cancelled) {
+              setSelectedClientFrom({
+                id: linkedClientDoc.id,
+                ...linkedClientDoc,
+                derivedFromTrailer: true,
+              });
+            }
+          }
+        }
+
+        const trailerCurrentDoc = await resolveDoc(
+          data.TrailerCurrent || data.trailerCurrentId,
+          "Trailers"
+        );
+        if (trailerCurrentDoc && !cancelled) {
+          const linkedClientId = trailerClientId(trailerCurrentDoc);
+          setSelectedTrailerCurrent({
+            id: trailerCurrentDoc.id,
+            ...trailerCurrentDoc,
+            name: trailerName(trailerCurrentDoc),
+            clientId: linkedClientId,
+            machineId: trailerMachineId(trailerCurrentDoc),
+          });
+          if (!clientCurrentDoc && linkedClientId) {
+            const linkedClientDoc = await resolveDoc(linkedClientId, "Client");
+            if (linkedClientDoc && !cancelled) {
+              setSelectedClientCurrent({
+                id: linkedClientDoc.id,
+                ...linkedClientDoc,
+                derivedFromTrailer: true,
+              });
+            }
+          }
         }
 
         const machineFromDoc = await resolveDoc(
@@ -537,22 +661,34 @@ export default function NewItem() {
     return () => {
       cancelled = true;
     };
-  }, [
-    router.isReady,
-    router.query.cloneFrom,
-    selectedOems,
-    selectedModalities,
-    selectedModels,
-  ]);
+  }, [router.isReady, router.query.cloneFrom]);
 
   // -------------------- Since this is "add" mode, we do not fetch an existing document.
   // However, we still fetch global PN and SN options and clients for selection.
   useEffect(() => {
     async function fetchClientsData() {
       try {
-        const clientsData = await fetchClients();
+        const [clientsData, trailerSnapshot] = await Promise.all([
+          fetchClients(),
+          firebase.firestore().collection("Trailers").get(),
+        ]);
         console.log("Clients:", clientsData);
         setClients(clientsData);
+        setTrailers(
+          trailerSnapshot.docs
+            .filter((snapshot) => snapshot.id !== "layout_meta")
+            .map((snapshot) => {
+              const data = snapshot.data() || {};
+              return {
+                id: snapshot.id,
+                ...data,
+                name: trailerName({ id: snapshot.id, ...data }),
+                clientId: trailerClientId(data),
+                machineId: trailerMachineId(data),
+              };
+            })
+            .sort((left, right) => left.name.localeCompare(right.name))
+        );
       } catch (error) {
         console.error("Error fetching clients: ", error);
       }
@@ -777,6 +913,7 @@ export default function NewItem() {
         newPhotos.push({
           file: files[i],
           url: URL.createObjectURL(files[i]),
+          category: activePhotoCategory,
         });
       }
       setPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
@@ -806,7 +943,11 @@ export default function NewItem() {
   const savePhoto = () => {
     setPhotos((prevPhotos) => [
       ...prevPhotos,
-      { file: capturedPhoto, url: URL.createObjectURL(capturedPhoto) },
+      {
+        file: capturedPhoto,
+        url: URL.createObjectURL(capturedPhoto),
+        category: activePhotoCategory,
+      },
     ]);
     setCapturedPhoto(null);
     setShowCameraModal(false);
@@ -814,6 +955,115 @@ export default function NewItem() {
 
   const removePhoto = (index) => {
     setPhotos(photos.filter((_, i) => i !== index));
+  };
+
+  const handleAnalyzePhotos = async () => {
+    if (!photos.length || analyzingPhotos) return;
+    setAnalyzingPhotos(true);
+    try {
+      const preparedImages = await preparePhotosForAnalysis(photos, {
+        maxImages: 4,
+        maxDimension: 1600,
+        jpegQuality: 0.82,
+      });
+      if (!preparedImages.length) {
+        throw new Error("The selected photos could not be prepared for analysis.");
+      }
+
+      const currentUser = firebase.auth().currentUser;
+      const idToken = currentUser ? await currentUser.getIdToken() : "";
+      const response = await fetch("/api/items/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({
+          images: preparedImages,
+          hints: {
+            oem: selectedOems,
+            modality: selectedModalities,
+            model: selectedModels,
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error(
+            "Smart Camera is temporarily busy. Please wait a minute and try again."
+          );
+        }
+        throw new Error(result?.error || "The photos could not be analyzed.");
+      }
+      setAnalysisResult(result);
+      setShowAnalysisModal(true);
+    } catch (error) {
+      console.error("Smart Camera analysis failed:", error);
+      setErr(error?.message || "The photos could not be analyzed.");
+      setShowErr(true);
+    } finally {
+      setAnalyzingPhotos(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const match = analysisResult?.match;
+    if (!showAnalysisModal || !match?.id) {
+      setMatchPreviewUrl("");
+      setMatchPreviewLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setMatchPreviewUrl("");
+    setMatchPreviewLoading(true);
+    const prefix = match.photoStoragePrefix || `Parts/${match.id}/`;
+    firebase
+      .storage()
+      .ref()
+      .child(prefix)
+      .listAll()
+      .then((result) =>
+        result.items
+          .filter((entry) => /\.(?:png|jpe?g|webp|gif)$/i.test(entry.name))
+          .sort((left, right) => left.name.localeCompare(right.name))[0]
+      )
+      .then((photoRef) => (photoRef ? photoRef.getDownloadURL() : ""))
+      .then((url) => {
+        if (!cancelled) setMatchPreviewUrl(url || "");
+      })
+      .catch((error) => {
+        console.warn("Could not load comparison photo:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setMatchPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [analysisResult, showAnalysisModal]);
+
+  const applyAnalysisMatch = () => {
+    const match = analysisResult?.match;
+    if (!match) return;
+    const partNumbers = uniqueSelection(normalizeSelection(match.partNumbers));
+    const oems = uniqueSelection(normalizeSelection(match.oem));
+    const modalities = uniqueSelection(normalizeSelection(match.modality));
+    const models = uniqueSelection(normalizeSelection(match.model));
+
+    setItems((previous) => ({
+      ...previous,
+      name: match.name || previous.name,
+      pn: partNumbers.length ? partNumbers : previous.pn,
+    }));
+    if (oems.length) setSelectedOems(oems);
+    if (modalities.length) setSelectedModalities(modalities);
+    if (models.length) setSelectedModels(models);
+    setShowAnalysisModal(false);
   };
 
   // -------------------- Modal Handlers
@@ -924,12 +1174,31 @@ export default function NewItem() {
 
   // -------------------- Machine Selection (unchanged)
   const handleClientInfo = async (clientId) => {
+    if (!clientId) {
+      if (machinePick) {
+        setSelectedClientFrom(null);
+        setSelectedMachine(null);
+        setSelectedTrailerFrom(null);
+        setShowLocalLocFrom(false);
+      } else {
+        setSelectedClientCurrent(null);
+        setSelectedCurrentMachine(null);
+        setSelectedTrailerCurrent(null);
+        setShowLocalLocCurrent(false);
+      }
+      setTrailerLinkPrompt(null);
+      handleCloseClientModal();
+      return;
+    }
+
     // Clear any previously selected machine/local loc for the branch
     if (machinePick) {
       setSelectedMachine(null);
+      setSelectedTrailerFrom(null);
       setShowLocalLocFrom(false);
     } else {
       setSelectedCurrentMachine(null);
+      setSelectedTrailerCurrent(null);
       setShowLocalLocCurrent(false);
     }
 
@@ -942,14 +1211,17 @@ export default function NewItem() {
       } else {
         setSelectedClientCurrent({ id: clientDoc.id, ...clientData });
       }
-      if (clientData.name === "SoCalWarehouse") {
+      if (isSocalWarehouseClient({ id: clientDoc.id, ...clientData })) {
         if (machinePick) setShowLocalLocFrom(true);
         else setShowLocalLocCurrent(true);
       }
       // Fetch machines for this client:
-      const machinePromises = clientData.machines.map((machineRef) =>
-        machineRef.get()
-      );
+      const machinePromises = (Array.isArray(clientData.machines)
+        ? clientData.machines
+        : []
+      )
+        .filter((machineRef) => machineRef && typeof machineRef.get === "function")
+        .map((machineRef) => machineRef.get());
       const machineDocs = await Promise.all(machinePromises);
       const machines = machineDocs.map((machineDoc) => ({
         id: machineDoc.id,
@@ -957,7 +1229,45 @@ export default function NewItem() {
       }));
       setMachineOptions(machines);
       handleCloseClientModal();
+
+      const linkedTrailers = trailersForClient(trailers, clientId);
+      if (linkedTrailers.length) {
+        setTrailerLinkPrompt({
+          isFromBranch: machinePick,
+          clientName: clientData.name || clientId,
+          trailers: linkedTrailers,
+          machines,
+          trailerId: linkedTrailers.length === 1 ? linkedTrailers[0].id : "",
+        });
+      } else {
+        setTrailerLinkPrompt(null);
+      }
     }
+  };
+
+  const handleDeclineTrailerLink = () => {
+    setTrailerLinkPrompt(null);
+  };
+
+  const handleConfirmTrailerLink = () => {
+    const selectedTrailer = trailerLinkPrompt?.trailers?.find(
+      (trailer) => trailer.id === trailerLinkPrompt.trailerId
+    );
+    if (!selectedTrailer) return;
+
+    const associatedMachine = selectedTrailer.machineId
+      ? trailerLinkPrompt.machines.find(
+          (machine) => machine.id === selectedTrailer.machineId
+        ) || null
+      : null;
+    if (trailerLinkPrompt.isFromBranch) {
+      setSelectedTrailerFrom(selectedTrailer);
+      if (associatedMachine) setSelectedMachine(associatedMachine);
+    } else {
+      setSelectedTrailerCurrent(selectedTrailer);
+      if (associatedMachine) setSelectedCurrentMachine(associatedMachine);
+    }
+    setTrailerLinkPrompt(null);
   };
 
   const fetchMachine = async (machineId) => {
@@ -1035,15 +1345,28 @@ export default function NewItem() {
     const nextPhotos = [...photos];
     for (let i = 0; i < nextPhotos.length; i++) {
       if (nextPhotos[i].file) {
+        const category = normalizeItemPhotoCategory(nextPhotos[i].category);
+        const storageName = createItemPhotoStorageName(
+          category,
+          nextPhotos[i].file,
+          i
+        );
         const photoRef = storageRef.child(
-          `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
+          `Parts/${docID}/${storageName}`
         );
         const metadata = {
           contentType: nextPhotos[i]?.file?.type || "image/jpeg",
+          cacheControl: "public,max-age=31536000,immutable",
         };
         await photoRef.put(nextPhotos[i].file, metadata);
         const url = await photoRef.getDownloadURL();
-        nextPhotos[i] = { ...nextPhotos[i], url, file: null };
+        nextPhotos[i] = {
+          ...nextPhotos[i],
+          url,
+          file: null,
+          category,
+          storageName,
+        };
       }
     }
     setPhotos(nextPhotos);
@@ -1106,12 +1429,22 @@ export default function NewItem() {
         ? items.departure_date || ""
         : items.arrival_date || "";
     const initialHistorySnapshot = {
-      fromClientId: selectedClientFrom?.id || "",
-      fromClientName: (selectedClientFrom?.name || "").trim(),
+      fromClientId: selectedTrailerFrom?.id ? "" : selectedClientFrom?.id || "",
+      fromClientName: selectedTrailerFrom?.id
+        ? ""
+        : (selectedClientFrom?.name || "").trim(),
+      fromTrailerId: selectedTrailerFrom?.id || "",
+      fromTrailerName: (selectedTrailerFrom?.name || "").trim(),
       fromMachineId: selectedMachine?.id || "",
       fromMachineName: (selectedMachine?.name || "").trim(),
-      currentClientId: selectedClientCurrent?.id || "",
-      currentClientName: (selectedClientCurrent?.name || "").trim(),
+      currentClientId: selectedTrailerCurrent?.id
+        ? ""
+        : selectedClientCurrent?.id || "",
+      currentClientName: selectedTrailerCurrent?.id
+        ? ""
+        : (selectedClientCurrent?.name || "").trim(),
+      currentTrailerId: selectedTrailerCurrent?.id || "",
+      currentTrailerName: (selectedTrailerCurrent?.name || "").trim(),
       currentMachineId: selectedCurrentMachine?.id || "",
       currentMachineName: (selectedCurrentMachine?.name || "").trim(),
       workOrder: (mostRecentWorkOrder?.workOrder || "").trim(),
@@ -1124,8 +1457,10 @@ export default function NewItem() {
     };
     const hasInitialHistory = [
       initialHistorySnapshot.fromClientId,
+      initialHistorySnapshot.fromTrailerId,
       initialHistorySnapshot.fromMachineId,
       initialHistorySnapshot.currentClientId,
+      initialHistorySnapshot.currentTrailerId,
       initialHistorySnapshot.currentMachineId,
       initialHistorySnapshot.workOrder,
       initialHistorySnapshot.movementDate,
@@ -1186,6 +1521,8 @@ export default function NewItem() {
     delete formattedItems.MachineCurrent;
     delete formattedItems.ClientFrom;
     delete formattedItems.ClientCurrent;
+    delete formattedItems.TrailerFrom;
+    delete formattedItems.TrailerCurrent;
 
     // Set machine references for each branch.
     if (selectedMachine && selectedMachine.id) {
@@ -1199,16 +1536,29 @@ export default function NewItem() {
         .doc(selectedCurrentMachine.id);
     }
 
-    // ***** NEW: Set client references for each branch *****
-    if (selectedClientFrom && selectedClientFrom.id) {
+    // A trailer owns its items. Its client is displayed through the live
+    // trailer link, but is intentionally not persisted on the item.
+    if (selectedClientFrom?.id && !selectedTrailerFrom?.id) {
       formattedItems.ClientFrom = db
         .collection("Client")
         .doc(selectedClientFrom.id);
     }
-    if (selectedClientCurrent && selectedClientCurrent.id) {
+    if (selectedClientCurrent?.id && !selectedTrailerCurrent?.id) {
       formattedItems.ClientCurrent = db
         .collection("Client")
         .doc(selectedClientCurrent.id);
+    }
+    formattedItems.trailerFromId = selectedTrailerFrom?.id || "";
+    formattedItems.trailerCurrentId = selectedTrailerCurrent?.id || "";
+    if (selectedTrailerFrom?.id) {
+      formattedItems.TrailerFrom = db
+        .collection("Trailers")
+        .doc(selectedTrailerFrom.id);
+    }
+    if (selectedTrailerCurrent?.id) {
+      formattedItems.TrailerCurrent = db
+        .collection("Trailers")
+        .doc(selectedTrailerCurrent.id);
     }
     // ******************************************************
 
@@ -1271,27 +1621,45 @@ export default function NewItem() {
 
     const withLocalSn = (payload, value) => {
       const localSn = String(value || "").trim();
-      return {
+      const indexedPayload = {
         ...payload,
         localSN: localSn,
         local_sn: localSn,
       };
+      indexedPayload.generalSearchTokens = buildGeneralSearchTokens(
+        indexedPayload,
+        localSn
+      );
+      return indexedPayload;
     };
 
-    const duplicateLocalSnMessage = (localSn) =>
-      `There is already an item with local SN "${localSn}". Please use a different local SN.`;
+    const duplicateAisMessage = (localSn) =>
+      `There is already an item with AIS "${localSn}". Please use a different AIS.`;
 
-    const itemDocumentExists = async (localSn) => {
-      const existingDoc = await db.collection("Test").doc(localSn).get();
-      return existingDoc.exists;
+    const itemAisExists = async (localSn, ignoreDocId = "") => {
+      const existingItem = await findExistingItemByAis(db, localSn, {
+        ignoreDocId,
+      });
+      return Boolean(existingItem);
     };
 
-    const createItemDocumentIfAvailable = async (localSn, payload) => {
+    const createItemDocumentIfAvailable = async (
+      localSn,
+      payload,
+      ignoreDocId = ""
+    ) => {
+      const existingItem = await findExistingItemByAis(db, localSn, {
+        ignoreDocId,
+      });
+      if (existingItem) {
+        throw new Error(duplicateAisMessage(localSn));
+      }
+
       const targetRef = db.collection("Test").doc(localSn);
       await db.runTransaction(async (transaction) => {
         const existingDoc = await transaction.get(targetRef);
         if (existingDoc.exists) {
-          throw new Error(duplicateLocalSnMessage(localSn));
+          throw new Error(duplicateAisMessage(localSn));
         }
         transaction.set(targetRef, payload);
       });
@@ -1300,7 +1668,7 @@ export default function NewItem() {
     const generateAvailableDocId = async () => {
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const generatedId = generateCustomID();
-        if (!(await itemDocumentExists(generatedId))) {
+        if (!(await itemAisExists(generatedId))) {
           return generatedId;
         }
       }
@@ -1318,7 +1686,7 @@ export default function NewItem() {
         if (docId !== newDocId) {
           // Migrate: Create a new document with the newDocId.
           await withTimeout(
-            createItemDocumentIfAvailable(newDocId, payloadWithLocalSn),
+            createItemDocumentIfAvailable(newDocId, payloadWithLocalSn, docId),
             45000,
             "Firestore save"
           );
@@ -1352,12 +1720,20 @@ export default function NewItem() {
             cleanFormattedItems.MachineCurrent =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientFrom?.id) {
+          if (!selectedClientFrom?.id || selectedTrailerFrom?.id) {
             cleanFormattedItems.ClientFrom =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientCurrent?.id) {
+          if (!selectedClientCurrent?.id || selectedTrailerCurrent?.id) {
             cleanFormattedItems.ClientCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedTrailerFrom?.id) {
+            cleanFormattedItems.TrailerFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!selectedTrailerCurrent?.id) {
+            cleanFormattedItems.TrailerCurrent =
               firebase.firestore.FieldValue.delete();
           }
           await withTimeout(
@@ -1374,8 +1750,8 @@ export default function NewItem() {
         const requestedDocId =
           items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
         docId = requestedDocId || (await generateAvailableDocId());
-        if (requestedDocId && (await itemDocumentExists(docId))) {
-          throw new Error(duplicateLocalSnMessage(docId));
+        if (requestedDocId && (await itemAisExists(docId))) {
+          throw new Error(duplicateAisMessage(docId));
         }
         const payloadWithLocalSn = withLocalSn(formattedItems, docId);
         await withTimeout(
@@ -1386,6 +1762,41 @@ export default function NewItem() {
 
         await queueAssociationUpdates(docId);
         await queuePhotoUpload(docId);
+      }
+
+      if (selectedShippingGroupId) {
+        await addItemToShippingGroup({
+          db,
+          firebase,
+          groupId: selectedShippingGroupId,
+          itemId: docId,
+          previousItemId: existingId || "",
+        });
+      }
+
+      try {
+        const indexToken = currentUser ? await currentUser.getIdToken() : "";
+        const indexResponse = await withTimeout(
+          fetch("/api/items/sync-index", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(indexToken ? { Authorization: `Bearer ${indexToken}` } : {}),
+            },
+            body: JSON.stringify({
+              itemId: docId,
+              previousItemId: existingId && existingId !== docId ? existingId : "",
+            }),
+          }),
+          20000,
+          "Smart Camera index update"
+        );
+        if (!indexResponse.ok) {
+          const indexError = await indexResponse.json().catch(() => ({}));
+          throw new Error(indexError?.error || "Smart Camera index update failed.");
+        }
+      } catch (error) {
+        console.error("Smart Camera index update failed:", error);
       }
 
       console.log("Item saved!");
@@ -1616,16 +2027,25 @@ export default function NewItem() {
 
   const handleBluefolderButton = async () => {
     if (bluefolderLoading) return;
+
+    const currentWorkOrder = (mostRecentWorkOrder?.workOrder || "").trim();
+    if (!currentWorkOrder) {
+      alert("Please fill out the work order field before adding to BlueFolder.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Are you sure you want to send this item to BlueFolder work order ${currentWorkOrder}?`
+      )
+    ) {
+      return;
+    }
+
     setBluefolderLoading(true);
     try {
       const docId = await ensureSaved({ waitForPhotos: true });
       if (!docId) return;
 
-      const currentWorkOrder = (mostRecentWorkOrder?.workOrder || "").trim();
-      if (!currentWorkOrder) {
-        alert("Please fill out the work order field before adding to BlueFolder.");
-        return;
-      }
       const currentUser = firebase.auth().currentUser;
       const submittedByEmail = currentUser?.email || "";
 
@@ -1653,16 +2073,6 @@ export default function NewItem() {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
-      if (result?.bluefolderStatusCheck || result?.debug?.statusCheck) {
-        console.log(
-          "[BlueFolder][status-check]",
-          result.bluefolderStatusCheck || result.debug.statusCheck
-        );
-      }
-      if (response.status === 409 && result?.code === "work_order_closed") {
-        alert(result?.error || `Work order ${currentWorkOrder} is closed.`);
-        return;
-      }
       if (!response.ok || result?.ok === false) {
         const detail =
           result?.details ||
@@ -1677,11 +2087,11 @@ export default function NewItem() {
           }`
         );
       }
-      alert("BlueFolder service item added successfully!");
+      alert("Item has been sent to BlueFolder successfully.");
       console.log("BlueFolder result:", result);
     } catch (error) {
       console.error("BlueFolder error:", error);
-      alert(`Error adding data to BlueFolder: ${error?.message || "Unknown error"}`);
+      alert(`Item was not sent to BlueFolder: ${error?.message || "Unknown error"}`);
     } finally {
       setBluefolderLoading(false);
     }
@@ -1715,11 +2125,8 @@ export default function NewItem() {
           ? descriptions[selectedDesc].description || ""
           : items?.description || "";
       const currentUser = firebase.auth().currentUser;
-      const submittedByEmail = currentUser?.email || "";
-      const description = appendSubmitterToDescription(
-        rawDescription,
-        submittedByEmail
-      );
+      const submittedByEmail = currentUser?.email || authUser?.email || "";
+      const description = rawDescription;
 
       const tracking = items?.trackingNumber ?? items?.tracking ?? "";
       const local_sn = docId || items?.localSN || "";
@@ -1743,6 +2150,7 @@ export default function NewItem() {
           local_sn,
           tracking,
           description,
+          submittedByEmail,
           photoUrls,
           shipping_date: shippingDate,
           received_date: receivedDate,
@@ -1762,6 +2170,11 @@ export default function NewItem() {
         return;
       }
 
+      const opsNote = mostRecentWO && ["shipping", "receiving"].includes(which)
+        ? json?.opsMovement?.attached
+          ? ` It is also linked to work order #${mostRecentWO} in Ops.`
+          : ` Slack was updated, but work order #${mostRecentWO} could not be linked in Ops.`
+        : "";
       alert(
         `Added to Slack ${
           which === "shipping"
@@ -1769,7 +2182,7 @@ export default function NewItem() {
             : which === "receiving"
             ? "Receiving"
             : "Tasks"
-        } list.`
+        } list.${opsNote}`
       );
     } catch (e) {
       console.error(e);
@@ -1863,14 +2276,12 @@ export default function NewItem() {
     if (machinePick) {
       setSelectedMachine({ id: machine.id, name: machine.name });
       setShowLocalLocFrom(
-        isSocalInterior ||
-          selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+        isSocalInterior || isSocalWarehouseClient(selectedClientFrom)
       );
     } else {
       setSelectedCurrentMachine({ id: machine.id, name: machine.name });
       setShowLocalLocCurrent(
-        isSocalInterior ||
-          selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+        isSocalInterior || isSocalWarehouseClient(selectedClientCurrent)
       );
     }
     fetchMachine(machine.id);
@@ -1899,9 +2310,26 @@ export default function NewItem() {
 
   const [selectedClientFrom, setSelectedClientFrom] = useState(null);
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+  const [selectedTrailerFrom, setSelectedTrailerFrom] = useState(null);
+  const [selectedTrailerCurrent, setSelectedTrailerCurrent] = useState(null);
+  const [trailerLinkPrompt, setTrailerLinkPrompt] = useState(null);
 
-  const isSocalWarehouseClient = (client) =>
-    client?.name?.toLowerCase() === "socalwarehouse";
+  const normalizeWarehouseText = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+
+  const isSocalWarehouseClient = (client) => {
+    const name = normalizeWarehouseText(client?.name);
+    const location = normalizeWarehouseText(client?.location);
+    return (
+      client?.id === "AIS17182" ||
+      name === "socalwarehouse" ||
+      name.includes("socalwarehouselakeforest") ||
+      (name.includes("socalwarehouse") && location.includes("lakeforest"))
+    );
+  };
 
   const isInteriorWarehouseMachine = (machine) =>
     ["interior socal", "interior norcal"].includes(
@@ -1924,6 +2352,8 @@ export default function NewItem() {
   const handleSwapFromCurrent = () => {
     const nextFromClient = selectedClientCurrent;
     const nextCurrentClient = selectedClientFrom;
+    const nextFromTrailer = selectedTrailerCurrent;
+    const nextCurrentTrailer = selectedTrailerFrom;
     const nextFromMachine = selectedCurrentMachine;
     const nextCurrentMachine = selectedMachine;
     const nextNewLocalFrom = cloneLocalLocation(newLocalCurrent);
@@ -1931,6 +2361,8 @@ export default function NewItem() {
 
     setSelectedClientFrom(nextFromClient);
     setSelectedClientCurrent(nextCurrentClient);
+    setSelectedTrailerFrom(nextFromTrailer);
+    setSelectedTrailerCurrent(nextCurrentTrailer);
     setSelectedMachine(nextFromMachine);
     setSelectedCurrentMachine(nextCurrentMachine);
     setNewLocalFrom(nextNewLocalFrom);
@@ -2153,6 +2585,65 @@ export default function NewItem() {
         </Modal.Body>
       </Modal>
 
+      <Modal
+        show={Boolean(trailerLinkPrompt)}
+        onHide={handleDeclineTrailerLink}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Link this item to a trailer?</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            <strong>{trailerLinkPrompt?.clientName}</strong> currently has
+            {trailerLinkPrompt?.trailers?.length === 1
+              ? " a trailer"
+              : " multiple trailers"} linked to it. Should this item&apos;s{" "}
+            <strong>
+              {trailerLinkPrompt?.isFromBranch ? "From" : "Current"}
+            </strong>{" "}
+            location be connected to a trailer?
+          </p>
+          {trailerLinkPrompt?.trailers?.length === 1 ? (
+            <p className="mb-0">
+              Trailer: <strong>{trailerLinkPrompt.trailers[0].name}</strong>
+            </p>
+          ) : (
+            <Form.Group controlId="new-item-client-trailer-confirmation">
+              <Form.Label>Choose the trailer</Form.Label>
+              <Form.Select
+                value={trailerLinkPrompt?.trailerId || ""}
+                onChange={(event) =>
+                  setTrailerLinkPrompt((previous) => ({
+                    ...previous,
+                    trailerId: event.target.value,
+                  }))
+                }
+              >
+                <option value="">Select a trailer</option>
+                {(trailerLinkPrompt?.trailers || []).map((trailer) => (
+                  <option key={trailer.id} value={trailer.id}>
+                    {trailer.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleDeclineTrailerLink}>
+            No, client only
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleConfirmTrailerLink}
+            disabled={!trailerLinkPrompt?.trailerId}
+          >
+            Yes, link trailer
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       <ParentModal
         show={showParentModal}
         handleClose={handleCloseParentModal}
@@ -2232,6 +2723,156 @@ export default function NewItem() {
                 OK
               </Button>
             </>
+          )}
+        </Modal.Footer>
+      </Modal>
+      {/* Smart Camera comparison modal */}
+      <Modal
+        show={showAnalysisModal}
+        onHide={() => setShowAnalysisModal(false)}
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton className={styles.analysisModalHeader}>
+          <div>
+            <div className={styles.analysisKicker}>Smart Camera</div>
+            <Modal.Title>
+              {analysisResult?.match
+                ? "Is this a good comparison?"
+                : "No close catalog match found"}
+            </Modal.Title>
+          </div>
+        </Modal.Header>
+        <Modal.Body className={styles.analysisModalBody}>
+          {analysisResult?.match ? (
+            <>
+              <div className={styles.analysisSummary}>
+                <div>
+                  <div className={styles.analysisMatchLabel}>Closest match</div>
+                  <h4 className={styles.analysisMatchName}>
+                    {analysisResult.match.name || "Unnamed catalog item"}
+                  </h4>
+                  <div className={styles.analysisItemId}>
+                    Inventory ID: {analysisResult.match.id}
+                  </div>
+                </div>
+                <div
+                  className={`${styles.analysisConfidence} ${
+                    analysisResult.match.isLikelySameItem
+                      ? styles.analysisConfidenceStrong
+                      : styles.analysisConfidenceReview
+                  }`}
+                >
+                  {Math.round((analysisResult.match.confidence || 0) * 100)}%
+                  <span>match confidence</span>
+                </div>
+              </div>
+
+              {!analysisResult.match.isLikelySameItem && (
+                <div className={styles.analysisReviewNotice}>
+                  This is the closest available item, but the evidence is not
+                  strong. Check the PN and photos carefully before using it.
+                </div>
+              )}
+
+              <div className={styles.analysisComparisonGrid}>
+                <div className={styles.analysisPhotoCard}>
+                  <div className={styles.analysisPhotoLabel}>New item</div>
+                  {photos[0]?.url ? (
+                    <img src={photos[0].url} alt="New item" />
+                  ) : (
+                    <div className={styles.analysisPhotoPlaceholder}>
+                      No preview
+                    </div>
+                  )}
+                </div>
+                <div className={styles.analysisPhotoCard}>
+                  <div className={styles.analysisPhotoLabel}>Catalog item</div>
+                  {matchPreviewLoading ? (
+                    <div className={styles.analysisPhotoPlaceholder}>
+                      <Spinner animation="border" size="sm" />
+                    </div>
+                  ) : matchPreviewUrl ? (
+                    <img src={matchPreviewUrl} alt="Catalog comparison" />
+                  ) : (
+                    <div className={styles.analysisPhotoPlaceholder}>
+                      No catalog photo available
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.analysisFieldGrid}>
+                <div>
+                  <span>PN</span>
+                  <strong>
+                    {(analysisResult.match.partNumbers || []).join(", ") ||
+                      "Not recorded"}
+                  </strong>
+                </div>
+                <div>
+                  <span>OEM</span>
+                  <strong>
+                    {(analysisResult.match.oem || []).join(", ") ||
+                      "Not recorded"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Modality</span>
+                  <strong>
+                    {(analysisResult.match.modality || []).join(", ") ||
+                      "Not recorded"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Model</span>
+                  <strong>
+                    {(analysisResult.match.model || []).join(", ") ||
+                      "Not recorded"}
+                  </strong>
+                </div>
+              </div>
+
+              {(analysisResult.match.reasons || []).length > 0 && (
+                <div className={styles.analysisReasons}>
+                  <div>Why it matched</div>
+                  <ul>
+                    {analysisResult.match.reasons.map((reason, index) => (
+                      <li key={`${reason}-${index}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <OemEvidenceCard evidence={analysisResult.oemEvidence} />
+            </>
+          ) : (
+            <div className={styles.analysisEmptyState}>
+              <div className={styles.analysisEmptyIcon}>?</div>
+              <h4>We could not find a useful comparison yet.</h4>
+              <p>
+                {analysisResult?.message ||
+                  "Try adding a sharp, close photo of the label and another photo of the full item."}
+              </p>
+              {(analysisResult?.observation?.partNumbers || []).length > 0 && (
+                <div className={styles.analysisObservedPn}>
+                  Label PN read: {analysisResult.observation.partNumbers.join(", ")}
+                </div>
+              )}
+              <OemEvidenceCard evidence={analysisResult?.oemEvidence} />
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowAnalysisModal(false)}
+          >
+            {analysisResult?.match ? "No, keep my fields" : "Close"}
+          </Button>
+          {analysisResult?.match && (
+            <Button variant="primary" onClick={applyAnalysisMatch}>
+              Yes, fill item fields
+            </Button>
           )}
         </Modal.Footer>
       </Modal>
@@ -2670,7 +3311,7 @@ export default function NewItem() {
                       >
                         Select From
                       </Button>
-                      {selectedClientFrom && (
+                      {(selectedClientFrom || selectedTrailerFrom) && (
                         <div
                           style={{
                             border: "1px solid #ccc",
@@ -2679,79 +3320,63 @@ export default function NewItem() {
                             marginBottom: "1rem",
                           }}
                         >
-                          <p>
-                            <strong>Selected Client (From):</strong>{" "}
-                            {selectedClientFrom.name}
-                          </p>
+                          {selectedClientFrom && (
+                            <p>
+                              <strong>
+                                {selectedTrailerFrom
+                                  ? "Linked client/site (via trailer):"
+                                  : "Selected Client (From):"}
+                              </strong>{" "}
+                              {selectedClientFrom.name}
+                            </p>
+                          )}
+                          {selectedTrailerFrom && (
+                            <div className="mb-2">
+                              <div className="d-flex align-items-center gap-2">
+                              <span>
+                                <strong>Selected Trailer (From):</strong>{" "}
+                                {selectedTrailerFrom.name}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                onClick={() => setSelectedTrailerFrom(null)}
+                              >
+                                Remove trailer
+                              </Button>
+                              </div>
+                              <small className="text-muted">
+                                The item is linked to this trailer. The client/site is
+                                shown from the trailer&apos;s current link and is not
+                                stored on the item.
+                              </small>
+                            </div>
+                          )}
                           <div style={{ marginTop: "0.5rem" }}>
                             <Button
                               variant="outline-secondary"
                               onClick={() => setShowMachineModal(true)}
                             >
-                              Select Machine for {selectedClientFrom.name}
+                              Select Machine for{" "}
+                              {selectedClientFrom?.name || selectedTrailerFrom?.name}
                             </Button>
                             {selectedMachine && (
-                              <>
-                                <p style={{ marginTop: "0.5rem" }}>
-                                  <strong>Selected Machine (From):</strong>{" "}
-                                  {selectedMachine.name}
-                                </p>
-                                {showLocalLocFrom && (
-                                  <>
-                                    <Button
-                                      variant="outline-secondary"
-                                      onClick={() =>
-                                        setShowNewLocalModalFrom(true)
-                                      }
-                                      className="w-100 mb-2"
-                                    >
-                                      {[
-                                        newLocalFrom.region,
-                                        newLocalFrom.section?.letter +
-                                          newLocalFrom.section?.number,
-                                        newLocalFrom.bin &&
-                                          `B${newLocalFrom.bin}`,
-                                        newLocalFrom.pallet &&
-                                          `P${newLocalFrom.pallet}`,
-                                      ]
-                                        .filter(Boolean)
-                                        .join("-") || "Set Local Location"}
-                                    </Button>
-                                    <Modal
-                                      show={showNewLocalModalFrom}
-                                      onHide={() =>
-                                        setShowNewLocalModalFrom(false)
-                                      }
-                                      centered
-                                    >
-                                      <Modal.Header>
-                                        <Modal.Title>
-                                          Edit Local Loc (From)
-                                        </Modal.Title>
-                                      </Modal.Header>
-                                      <Modal.Body>
-                                        <NewLocal
-                                          selectedClient={selectedClientFrom}
-                                          showLocalLoc={showNewLocalModalFrom}
-                                          value={newLocalFrom}
-                                          onChange={setNewLocalFrom}
-                                          onSave={(p) => {
-                                            setNewLocalFrom(p);
-                                            setShowNewLocalModalFrom(false);
-                                          }}
-                                          onCancel={() =>
-                                            setShowNewLocalModalFrom(false)
-                                          }
-                                        />
-                                      </Modal.Body>
-                                    </Modal>
-                                  </>
-                                )}
-                              </>
+                              <p style={{ marginTop: "0.5rem" }}>
+                                <strong>Selected Machine (From):</strong>{" "}
+                                {selectedMachine.name}
+                              </p>
                             )}
                           </div>
                         </div>
                       )}
+                      <LocationControls
+                        selectedClient={selectedClientFrom}
+                        value={newLocalFrom}
+                        onChange={setNewLocalFrom}
+                        warehouseEnabled={isSocalWarehouseClient(selectedClientFrom)}
+                        variant="outline-secondary"
+                        borderColor="#9aa4b2"
+                      />
                     </Col>
                     <Col
                       xs={12}
@@ -2761,7 +3386,12 @@ export default function NewItem() {
                       <Button
                         variant="outline-primary"
                         onClick={handleSwapFromCurrent}
-                        disabled={!selectedClientFrom && !selectedClientCurrent}
+                        disabled={
+                          !selectedClientFrom &&
+                          !selectedClientCurrent &&
+                          !selectedTrailerFrom &&
+                          !selectedTrailerCurrent
+                        }
                         title="Swap from and current client/machine"
                         aria-label="Swap from and current client/machine"
                         className="mb-3 p-1"
@@ -2798,7 +3428,7 @@ export default function NewItem() {
                       >
                         Select Current
                       </Button>
-                      {selectedClientCurrent && (
+                      {(selectedClientCurrent || selectedTrailerCurrent) && (
                         <div
                           style={{
                             border: "1px solid #ccc",
@@ -2807,81 +3437,63 @@ export default function NewItem() {
                             marginBottom: "1rem",
                           }}
                         >
-                          <p>
-                            <strong>Selected Client (Current):</strong>{" "}
-                            {selectedClientCurrent.name}
-                          </p>
+                          {selectedClientCurrent && (
+                            <p>
+                              <strong>
+                                {selectedTrailerCurrent
+                                  ? "Linked client/site (via trailer):"
+                                  : "Selected Client (Current):"}
+                              </strong>{" "}
+                              {selectedClientCurrent.name}
+                            </p>
+                          )}
+                          {selectedTrailerCurrent && (
+                            <div className="mb-2">
+                              <div className="d-flex align-items-center gap-2">
+                              <span>
+                                <strong>Selected Trailer (Current):</strong>{" "}
+                                {selectedTrailerCurrent.name}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                onClick={() => setSelectedTrailerCurrent(null)}
+                              >
+                                Remove trailer
+                              </Button>
+                              </div>
+                              <small className="text-muted">
+                                The item is linked to this trailer. The client/site is
+                                shown from the trailer&apos;s current link and is not
+                                stored on the item.
+                              </small>
+                            </div>
+                          )}
                           <div style={{ marginTop: "0.5rem" }}>
                             <Button
                               variant="outline-secondary"
                               onClick={() => setShowMachineModal(true)}
                             >
-                              Select Machine for {selectedClientCurrent.name}
+                              Select Machine for{" "}
+                              {selectedClientCurrent?.name || selectedTrailerCurrent?.name}
                             </Button>
                             {selectedCurrentMachine && (
-                              <>
-                                <p style={{ marginTop: "0.5rem" }}>
-                                  <strong>Selected Machine (Current):</strong>{" "}
-                                  {selectedCurrentMachine.name}
-                                </p>
-                                {showLocalLocCurrent && (
-                                  <>
-                                    <Button
-                                      variant="outline-secondary"
-                                      onClick={() =>
-                                        setShowNewLocalModalCurrent(true)
-                                      }
-                                      className="w-100 mb-2"
-                                    >
-                                      {[
-                                        newLocalCurrent.region,
-                                        newLocalCurrent.section?.letter +
-                                          newLocalCurrent.section?.number,
-                                        newLocalCurrent.bin &&
-                                          `B${newLocalCurrent.bin}`,
-                                        newLocalCurrent.pallet &&
-                                          `P${newLocalCurrent.pallet}`,
-                                      ]
-                                        .filter(Boolean)
-                                        .join("-") || "Set Local Location"}
-                                    </Button>
-                                    <Modal
-                                      show={showNewLocalModalCurrent}
-                                      onHide={() =>
-                                        setShowNewLocalModalCurrent(false)
-                                      }
-                                      centered
-                                    >
-                                      <Modal.Header>
-                                        <Modal.Title>
-                                          Edit Local Loc (Current)
-                                        </Modal.Title>
-                                      </Modal.Header>
-                                      <Modal.Body>
-                                        <NewLocal
-                                          selectedClient={selectedClientCurrent}
-                                          showLocalLoc={
-                                            showNewLocalModalCurrent
-                                          }
-                                          value={newLocalCurrent}
-                                          onChange={setNewLocalCurrent}
-                                          onSave={(p) => {
-                                            setNewLocalCurrent(p);
-                                            setShowNewLocalModalCurrent(false);
-                                          }}
-                                          onCancel={() =>
-                                            setShowNewLocalModalCurrent(false)
-                                          }
-                                        />
-                                      </Modal.Body>
-                                    </Modal>
-                                  </>
-                                )}
-                              </>
+                              <p style={{ marginTop: "0.5rem" }}>
+                                <strong>Selected Machine (Current):</strong>{" "}
+                                {selectedCurrentMachine.name}
+                              </p>
                             )}
                           </div>
                         </div>
                       )}
+                      <LocationControls
+                        selectedClient={selectedClientCurrent}
+                        value={newLocalCurrent}
+                        onChange={setNewLocalCurrent}
+                        warehouseEnabled={isSocalWarehouseClient(selectedClientCurrent)}
+                        variant="outline-primary"
+                        borderColor="#4b8bf4"
+                      />
                     </Col>
                     <Col>
                       <Button
@@ -2903,6 +3515,12 @@ export default function NewItem() {
                     </Col>
                   </Row>
                 </div>
+                <ShippingGroupField
+                  itemId={savedDocId || ""}
+                  value={selectedShippingGroupId}
+                  onChange={setSelectedShippingGroupId}
+                />
+
                 {/* Photo Action Row */}
                 <div style={{ marginBottom: "1rem" }}>
                   <Row className={`mb-3 ${styles.photoActionsRow}`}>
@@ -2912,13 +3530,32 @@ export default function NewItem() {
                           variant="outline-secondary"
                           onClick={handleShowCameraModal}
                         >
-                          Take Photo
+                          Take {activePhotoCategory} Photo
                         </Button>
                         <Button
                           variant="outline-secondary"
                           onClick={handleBrowsePhotos}
                         >
-                          Browse
+                          Browse {activePhotoCategory}
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className={styles.analyzeButton}
+                          onClick={handleAnalyzePhotos}
+                          disabled={!photos.length || analyzingPhotos}
+                        >
+                          {analyzingPhotos ? (
+                            <>
+                              <Spinner
+                                animation="border"
+                                size="sm"
+                                className="me-2"
+                              />
+                              Analyzing...
+                            </>
+                          ) : (
+                            "Analyze"
+                          )}
                         </Button>
                       </ButtonGroup>
                     </Col>
@@ -2937,7 +3574,7 @@ export default function NewItem() {
                         disabled={!isReadyForActions || bluefolderLoading}
                         style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
                       >
-                        {bluefolderLoading ? "BlueFolder..." : "BlueFolder"}
+                        {bluefolderLoading ? "Sending..." : "BlueFolder"}
                       </Button>
                       <Button
                         variant={addToWebsite ? "primary" : "outline-primary"}
@@ -2971,45 +3608,12 @@ export default function NewItem() {
                     onChange={handleFilesSelected}
                   />
                 </div>
-                {/* Photo Gallery */}
-                <div className="mt-3 d-flex flex-wrap">
-                  {photos.map((photo, index) => (
-                    <div
-                      key={index}
-                      className="d-flex flex-column align-items-center mb-2 me-2"
-                      style={{
-                        width: "100px",
-                        height: "100px",
-                        position: "relative",
-                      }}
-                    >
-                      <img
-                        src={photo.url}
-                        alt={`Photo ${index + 1}`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                      {photo.file && (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            right: 0,
-                            padding: "0 5px",
-                          }}
-                          onClick={() => removePhoto(index)}
-                        >
-                          X
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <ItemPhotoTabs
+                  photos={photos}
+                  activeCategory={activePhotoCategory}
+                  onCategoryChange={setActivePhotoCategory}
+                  onRemovePhoto={removePhoto}
+                />
                 {/* Extra Section: Dimensions, Price, and DOM */}
 
                 {/* Submit Row */}

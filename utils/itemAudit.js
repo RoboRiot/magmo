@@ -15,9 +15,8 @@ export function appendSaveHistory(history, email, savedAt = new Date()) {
 }
 
 export function appendSubmitterToDescription(description, email) {
-  const submitterEmail = normalizeAuditEmail(email);
+  const submitterEmail = normalizeAuditEmail(email) || "unknown";
   const baseDescription = String(description || "").trim();
-  if (!submitterEmail) return baseDescription;
 
   return [baseDescription, `From ${submitterEmail}`].filter(Boolean).join("\n");
 }

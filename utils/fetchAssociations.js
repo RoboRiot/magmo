@@ -3,6 +3,8 @@ import firebase from "../context/Firebase";
 import { stripEmbeddedMachineAssociations } from "./warehouseAssociations";
 
 const MACHINE_LIST_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
+const CLIENT_MACHINE_IDS_CACHE_TTL_MS = 5 * 60 * 1000;
+const clientMachineIdsCache = new Map();
 
 function sanitizeMachineDataForList(data) {
   if (!data) return null;
@@ -59,6 +61,9 @@ export async function fetchPartsWithMachineData() {
       const currentMachineRef =
         partData.CurrentMachine || partData.MachineCurrent;
 
+      partData.machineFromId = getRefId(machineRef);
+      partData.currentMachineId = getRefId(currentMachineRef);
+
       const machineData = await fetchMachineData(machineRef);
       partData.machineData = machineData || {};
       if (machineData?.client) {
@@ -100,11 +105,16 @@ export async function fetchPartsWithMachineData() {
 // Uses documentId order for stable pagination.
 export async function fetchPartsWithMachineDataPage({
   pageSize = 25,
+  pageOffset = 0,
   startAfterDoc = null,
   visibleOnly = false,
   filterFn = null,
   needsMachineData = true,
   search = null,
+  queryOverride = null,
+  queryOverrideLabel = "",
+  allowLegacyScanFallback = true,
+  signal = null,
   selectedClientFrom = null,
   selectedClientCurrent = null,
   debugLabel = "",
@@ -112,7 +122,15 @@ export async function fetchPartsWithMachineDataPage({
 } = {}) {
   const db = firebase.firestore();
   const limit = pageSize + 1;
+  const normalizedPageOffset = Math.max(0, Number(pageOffset) || 0);
   const startedAt = Date.now();
+  const throwIfAborted = () => {
+    if (!signal?.aborted) return;
+    const error = new Error("Inventory search cancelled.");
+    error.name = "AbortError";
+    throw error;
+  };
+  throwIfAborted();
   let scannedDocs = 0;
   let scannedBatches = 0;
   let machineQueryCount = 0;
@@ -122,8 +140,17 @@ export async function fetchPartsWithMachineDataPage({
   const acceptedDocIds = [];
   const corruptDocs = [];
   const batchDebug = [];
-  const scanBatchLimit = Math.max(limit, Math.min(250, pageSize * 8));
-  const clientPrefilterTarget = Math.max(limit * 4, 100);
+  const initialSearchRaw = (search?.raw || "").toString().trim();
+  const hasSearchRequest = Boolean(initialSearchRaw);
+  const scanBatchLimit = Math.max(
+    limit,
+    Math.min(250, Math.max(pageSize * 8, hasSearchRequest ? 250 : 0))
+  );
+  const clientPrefilterTarget = Math.max(
+    limit * 4,
+    normalizedPageOffset + limit,
+    100
+  );
   const clientMachineQueryBudget = 12;
 
   const getRefId = (ref) => {
@@ -160,6 +187,7 @@ export async function fetchPartsWithMachineDataPage({
 
   emitDebug("request:start", {
     pageSize,
+    pageOffset: normalizedPageOffset,
     startAfterId: startAfterDoc?.id || null,
     visibleOnly,
     needsMachineData,
@@ -167,6 +195,7 @@ export async function fetchPartsWithMachineDataPage({
     selectedClientCurrent,
     searchType: search?.type || null,
     searchRaw: search?.raw || "",
+    queryOverrideLabel,
   });
 
   const fetchMachineIdsForClient = async (clientId, type) => {
@@ -174,6 +203,21 @@ export async function fetchPartsWithMachineDataPage({
 
     const machineLookupStartedAt = Date.now();
     emitDebug("client-machine-ids:start", { type, clientId });
+    const cacheKey = String(clientId);
+    const cached = clientMachineIdsCache.get(cacheKey);
+    if (
+      cached &&
+      Date.now() - Number(cached.at || 0) < CLIENT_MACHINE_IDS_CACHE_TTL_MS
+    ) {
+      emitDebug("client-machine-ids:cache-hit", {
+        type,
+        clientId,
+        machineIdCount: cached.ids.length,
+        phaseElapsedMs: Date.now() - machineLookupStartedAt,
+      });
+      return new Set(cached.ids);
+    }
+
     const ids = new Set();
     const clientRef = db.collection("Client").doc(clientId);
     const queries = [
@@ -201,6 +245,10 @@ export async function fetchPartsWithMachineDataPage({
       clientId,
       machineIdCount: ids.size,
       phaseElapsedMs: Date.now() - machineLookupStartedAt,
+    });
+    clientMachineIdsCache.set(cacheKey, {
+      ids: Array.from(ids),
+      at: Date.now(),
     });
     return ids;
   };
@@ -345,6 +393,9 @@ export async function fetchPartsWithMachineDataPage({
 
     const machineId = getRefId(machineRef);
     const currentMachineId = getRefId(currentMachineRef);
+
+    partData.machineFromId = machineId;
+    partData.currentMachineId = currentMachineId;
 
     const machineData = machineId ? machineMap[machineId] : null;
     const currentMachineData = currentMachineId
@@ -546,7 +597,17 @@ export async function fetchPartsWithMachineDataPage({
     return docs;
   };
 
-  const clientPrefilterDocs = await fetchClientPrefilterDocs();
+  const clientPrefilterDocs = hasSearchRequest
+    ? null
+    : await fetchClientPrefilterDocs();
+  if (!clientPrefilterDocs && (selectedClientFrom || selectedClientCurrent)) {
+    await Promise.all([
+      selectedClientFrom ? getMachineIdsForClient("from") : Promise.resolve(null),
+      selectedClientCurrent
+        ? getMachineIdsForClient("current")
+        : Promise.resolve(null),
+    ]);
+  }
 
   if (clientPrefilterDocs) {
     activeSearchMode = "client-query";
@@ -560,11 +621,15 @@ export async function fetchPartsWithMachineDataPage({
       : 0;
     const visibleDocs = clientPrefilterDocs.slice(Math.max(0, startIndex));
     const matchedDocs = [];
-    const candidateWindowSize = Math.max(limit, Math.min(100, pageSize * 4));
+    const targetMatchCount = normalizedPageOffset + pageSize + 1;
+    const candidateWindowSize = Math.max(
+      targetMatchCount,
+      Math.min(180, Math.max(pageSize * 4, targetMatchCount))
+    );
 
     for (
       let offset = 0;
-      offset < visibleDocs.length && matchedDocs.length <= pageSize;
+      offset < visibleDocs.length && matchedDocs.length < targetMatchCount;
       offset += candidateWindowSize
     ) {
       const windowStartedAt = Date.now();
@@ -626,7 +691,7 @@ export async function fetchPartsWithMachineDataPage({
             continue;
           }
           matchedDocs.push({ docSnap, built });
-          if (matchedDocs.length > pageSize) break;
+          if (matchedDocs.length >= targetMatchCount) break;
         } catch (error) {
           corruptDocs.push({
             id: docSnap.id,
@@ -649,24 +714,30 @@ export async function fetchPartsWithMachineDataPage({
       });
     }
 
-    const pageMatches = matchedDocs.slice(0, pageSize);
+    const pageMatches = matchedDocs.slice(
+      normalizedPageOffset,
+      normalizedPageOffset + pageSize
+    );
     pageMatches.forEach(({ docSnap }) => acceptedDocIds.push(docSnap.id));
+    const hasExtraMatch =
+      matchedDocs.length > normalizedPageOffset + pageSize;
 
     return {
       parts: pageMatches.map(({ built }) => built),
       lastDoc: pageMatches.length
         ? pageMatches[pageMatches.length - 1].docSnap
         : null,
-      hasNextPage: matchedDocs.length > pageSize,
+      hasNextPage: hasExtraMatch,
       debug: {
         ...buildDebug(),
         clientCandidateDocs: clientPrefilterDocs.length,
         clientRemainingDocs: visibleDocs.length,
+        pageOffset: normalizedPageOffset,
       },
     };
   }
 
-  const searchRaw = (search?.raw || "").toString().trim();
+  const searchRaw = initialSearchRaw;
   const searchLower = (search?.lower || "").toString().trim();
   const normalizeSearchType = (value) => {
     const normalized = String(value || "")
@@ -674,6 +745,8 @@ export async function fetchPartsWithMachineDataPage({
       .toLowerCase()
       .replace(/\s+/g, " ");
     switch (normalized) {
+      case "general":
+        return "General";
       case "name":
         return "Name";
       case "date":
@@ -698,14 +771,15 @@ export async function fetchPartsWithMachineDataPage({
   const searchType = normalizeSearchType(search?.type);
   const hasSearch = Boolean(searchRaw);
 
-  const toTitleCase = (text) =>
-    text
-      .split(" ")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-
   const buildSearchQuery = () => {
+    if (queryOverride) {
+      return {
+        mode: "query",
+        query: queryOverride,
+        fallback: null,
+        allowScanFallback: false,
+      };
+    }
     if (!hasSearch || !searchType) {
       return { mode: "scan", query: null, fallback: null, allowScanFallback: false };
     }
@@ -714,22 +788,12 @@ export async function fetchPartsWithMachineDataPage({
     switch (searchType) {
       case "SKU":
         return { mode: "sku", query: null, fallback: null, allowScanFallback: false };
-      case "Name": {
-        const terms = searchLower
-          ? searchLower.split(/[^a-z0-9]+/).filter(Boolean)
-          : [];
-        const uniqueTerms = Array.from(new Set(terms));
-        const queryTerms = uniqueTerms.length
-          ? uniqueTerms
-          : searchLower
-          ? [searchLower]
-          : [];
-        const rankedTerms = [...queryTerms].sort((a, b) => {
+      case "General": {
+        const terms = searchLower.split(/[^a-z0-9]+/).filter(Boolean);
+        const primaryToken = [...new Set(terms)].sort((a, b) => {
           if (b.length !== a.length) return b.length - a.length;
           return a.localeCompare(b);
-        });
-        const primaryToken = rankedTerms[0] || null;
-        const fallbackTokens = rankedTerms.slice(0, 10);
+        })[0];
         if (!primaryToken) {
           return {
             mode: "scan",
@@ -738,22 +802,40 @@ export async function fetchPartsWithMachineDataPage({
             allowScanFallback: false,
           };
         }
-        const titleFallback =
-          searchRaw && searchRaw === searchRaw.toLowerCase()
-            ? toTitleCase(searchRaw)
-            : null;
-        const prefixQuery = (value) =>
-          col.orderBy("name").startAt(value).endAt(`${value}\uf8ff`);
-
+        return {
+          mode: "query",
+          query: col.where(
+            "generalSearchTokens",
+            "array-contains",
+            primaryToken
+          ),
+          // This catches exact legacy name tokens while the full search index
+          // is being backfilled. If both token paths miss, scan legacy docs so
+          // older inventory is still searchable.
+          fallback: () =>
+            col.where("nameTokens", "array-contains", primaryToken),
+          allowScanFallback: allowLegacyScanFallback,
+        };
+      }
+      case "Name": {
+        const terms = searchLower.split(/[^a-z0-9]+/).filter(Boolean);
+        const primaryToken = [...new Set(terms)].sort((a, b) => {
+          if (b.length !== a.length) return b.length - a.length;
+          return a.localeCompare(b);
+        })[0];
+        if (!primaryToken) {
+          return {
+            mode: "scan",
+            query: null,
+            fallback: null,
+            allowScanFallback: false,
+          };
+        }
         return {
           mode: "query",
           query: col.where("nameTokens", "array-contains", primaryToken),
-          fallback: fallbackTokens.length > 1
-            ? () => col.where("nameTokens", "array-contains-any", fallbackTokens)
-            : titleFallback
-            ? () => prefixQuery(titleFallback)
-            : () => prefixQuery(searchRaw),
-          allowScanFallback: false,
+          fallback: null,
+          allowScanFallback: allowLegacyScanFallback,
         };
       }
       case "Work Order": {
@@ -802,8 +884,9 @@ export async function fetchPartsWithMachineDataPage({
               : fallbackTokens.length === 1
               ? () => col.where("workOrderTokens", "array-contains", fallbackTokens[0])
               : null,
-          // Avoid expensive full scans on the interactive search path.
-          allowScanFallback: false,
+          // Legacy items may not have workOrderTokens yet, so fall through to
+          // a scan when indexed token queries do not find the item.
+          allowScanFallback: allowLegacyScanFallback,
         };
       }
       case "Product Number":
@@ -820,22 +903,9 @@ export async function fetchPartsWithMachineDataPage({
           fallback: () => col.where("sn", "==", searchRaw),
           allowScanFallback: false,
         };
-      case "Date": {
-        const asDate = (() => {
-          try {
-            const d = new Date(searchRaw);
-            return isNaN(d.getTime()) ? null : d;
-          } catch {
-            return null;
-          }
-        })();
-        return {
-          mode: "query",
-          query: col.where("date", "==", searchRaw),
-          fallback: asDate ? () => col.where("date", "==", asDate) : null,
-          allowScanFallback: false,
-        };
-      }
+      case "Date":
+        // Creation dates exist in more than one legacy field and type.
+        return { mode: "scan", query: null, fallback: null, allowScanFallback: false };
       default:
         return { mode: "scan", query: null, fallback: null, allowScanFallback: false };
     }
@@ -850,26 +920,22 @@ export async function fetchPartsWithMachineDataPage({
   activeSearchMode = searchMode;
 
   if (searchMode === "sku" && hasSearch) {
+    throwIfAborted();
     const docs = [];
-    const rawUpper = searchRaw.toUpperCase();
-    let doc = await db.collection("Test").doc(searchRaw).get();
-    if (!doc.exists && rawUpper !== searchRaw) {
-      doc = await db.collection("Test").doc(rawUpper).get();
-    }
-    if (doc.exists) docs.push(doc);
-
-    const localValues =
-      rawUpper !== searchRaw ? [searchRaw, rawUpper] : [searchRaw];
-    const localSnap = await db
+    const digits = searchRaw.replace(/^ais/i, "").replace(/\D/g, "").slice(0, 5);
+    const skuPrefix = `AIS${digits}`;
+    let skuQuery = db
       .collection("Test")
-      .where("localSN", "in", localValues)
-      .limit(limit)
+      .orderBy(firebase.firestore.FieldPath.documentId());
+    skuQuery = startAfterDoc
+      ? skuQuery.startAfter(startAfterDoc)
+      : skuQuery.startAt(skuPrefix);
+    skuQuery = skuQuery.endAt(`${skuPrefix}\uf8ff`);
+    const skuSnap = await skuQuery
+      .limit(normalizedPageOffset + limit)
       .get();
-    localSnap.forEach((d) => {
-      if (!docs.find((existing) => existing.id === d.id)) {
-        docs.push(d);
-      }
-    });
+    throwIfAborted();
+    skuSnap.forEach((doc) => docs.push(doc));
     scannedDocs += docs.length;
     scannedBatches += 1;
 
@@ -893,16 +959,24 @@ export async function fetchPartsWithMachineDataPage({
       ]);
     }
 
-    const built = docs
-      .map((docSnap) => buildPart(docSnap, machineMap, currentMachineMap))
-      .filter((item) => (!visibleOnly || item?.visible !== false))
-      .filter((item) => (filterFn ? filterFn(item) : true))
-      .slice(0, pageSize);
+    const builtEntries = docs
+      .map((docSnap) => ({
+        docSnap,
+        item: buildPart(docSnap, machineMap, currentMachineMap),
+      }))
+      .filter(({ item }) => (!visibleOnly || item?.visible !== false))
+      .filter(({ item }) => (filterFn ? filterFn(item) : true));
+    const pageEntries = builtEntries.slice(
+      normalizedPageOffset,
+      normalizedPageOffset + pageSize
+    );
 
     return {
-      parts: built,
-      lastDoc: built.length ? docs[built.length - 1] : null,
-      hasNextPage: false,
+      parts: pageEntries.map(({ item }) => item),
+      lastDoc: pageEntries.length
+        ? pageEntries[pageEntries.length - 1].docSnap
+        : null,
+      hasNextPage: builtEntries.length > normalizedPageOffset + pageSize,
       debug: buildDebug(),
     };
   }
@@ -915,11 +989,14 @@ export async function fetchPartsWithMachineDataPage({
   let filled = false;
   let usedFallback = false;
   let usingScanFallback = searchMode === "scan";
+  let skippedMatches = 0;
+  const matchedDocIds = new Set();
   const scanBaseQuery = db
     .collection("Test")
     .orderBy(firebase.firestore.FieldPath.documentId());
 
   while (true) {
+    throwIfAborted();
     scannedBatches += 1;
     let query = usingScanFallback ? scanBaseQuery : searchQuery || scanBaseQuery;
     if (!usingScanFallback && searchMode === "query" && usedFallback && searchFallback) {
@@ -937,6 +1014,7 @@ export async function fetchPartsWithMachineDataPage({
     });
 
     const snap = await query.get();
+    throwIfAborted();
     if (snap.empty) {
       if (
         !usingScanFallback &&
@@ -1021,6 +1099,7 @@ export async function fetchPartsWithMachineDataPage({
     }
 
     for (let i = 0; i < snap.docs.length; i++) {
+      throwIfAborted();
       const doc = batchDocs[i];
       cursor = doc;
 
@@ -1051,6 +1130,16 @@ export async function fetchPartsWithMachineDataPage({
           currentMachineId:
             getRefId(raw?.CurrentMachine || raw?.MachineCurrent) || null,
         });
+        continue;
+      }
+
+      if (matchedDocIds.has(doc.id)) {
+        continue;
+      }
+      matchedDocIds.add(doc.id);
+
+      if (skippedMatches < normalizedPageOffset) {
+        skippedMatches += 1;
         continue;
       }
 
@@ -1172,6 +1261,79 @@ export async function fetchClients(selectedOEM, selectedModality) {
   }
 
   return clients;
+}
+
+export async function fetchMachinesForClient(clientId) {
+  if (!clientId) return [];
+
+  const db = firebase.firestore();
+  const clientRef = db.collection("Client").doc(clientId);
+  const machineDocs = new Map();
+  const addSnapshot = (snapshot) => {
+    snapshot?.docs?.forEach((doc) => machineDocs.set(doc.id, doc));
+  };
+
+  const [clientResult, referenceQueryResult, idQueryResult] =
+    await Promise.allSettled([
+      clientRef.get(),
+      db.collection("Machine").where("client", "==", clientRef).get(),
+      db.collection("Machine").where("client", "==", clientId).get(),
+    ]);
+
+  if (referenceQueryResult.status === "fulfilled") {
+    addSnapshot(referenceQueryResult.value);
+  }
+  if (idQueryResult.status === "fulfilled") {
+    addSnapshot(idQueryResult.value);
+  }
+
+  if (clientResult.status === "fulfilled" && clientResult.value.exists) {
+    const clientData = clientResult.value.data() || {};
+    const machineRefs = Array.isArray(clientData.machines)
+      ? clientData.machines
+      : [];
+    const linkedMachineResults = await Promise.allSettled(
+      machineRefs.map((machineRef) => {
+        if (typeof machineRef?.get === "function") return machineRef.get();
+        const linkedMachineId =
+          typeof machineRef === "string" ? machineRef : machineRef?.id;
+        return linkedMachineId
+          ? db.collection("Machine").doc(linkedMachineId).get()
+          : Promise.resolve(null);
+      })
+    );
+
+    linkedMachineResults.forEach((result) => {
+      if (
+        result.status === "fulfilled" &&
+        result.value?.exists &&
+        result.value.id
+      ) {
+        machineDocs.set(result.value.id, result.value);
+      }
+    });
+  }
+
+  return [...machineDocs.values()]
+    .map((doc) => {
+      const data = sanitizeMachineDataForList(doc.data() || {}) || {};
+      const generatedName = [data.OEM, data.Modality, data.Model]
+        .filter(Boolean)
+        .join(" ");
+      return {
+        id: doc.id,
+        ...data,
+        name: data.name || generatedName || doc.id,
+      };
+    })
+    .sort((a, b) => {
+      const nameComparison = String(a.name || "").localeCompare(
+        String(b.name || ""),
+        undefined,
+        { sensitivity: "base" }
+      );
+      return nameComparison || a.id.localeCompare(b.id);
+    });
 }
 
 export async function fetchModels(

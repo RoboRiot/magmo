@@ -1,9 +1,13 @@
 // NewLocal.js
 import React, { useState, useEffect } from "react";
-import { Form, Row, Col, Button, Stack } from "react-bootstrap";
+import { Form, Row, Col, Button, Stack, Modal } from "react-bootstrap";
 import { useRouter } from "next/router";
 import firebase from "../../../../context/Firebase";
 import WarehouseMapModal from "../../../../components/WarehouseMapModal";
+import {
+  formatBinPallet,
+  formatWarehousePosition,
+} from "../../../../utils/itemFormShared";
 import styles from "./NewLocal.module.css";
 
 export default function NewLocal({
@@ -12,10 +16,11 @@ export default function NewLocal({
   selectedClient,
   showLocalLoc,
   value = {},
-  onChange,
+  mode = "all",
 }) {
   const router = useRouter();
   const [regionOptions, setRegionOptions] = useState([]);
+  const [sectionDirectory, setSectionDirectory] = useState({});
   const [binCount, setBinCount]         = useState(0);
   const [palletCount, setPalletCount]   = useState(0);
 
@@ -25,6 +30,9 @@ export default function NewLocal({
   const [binSelected, setBinSelected]     = useState("");
   const [palletSelected, setPalletSelected] = useState("");
   const [showMap, setShowMap] = useState(false);
+  const showWarehouseFields = mode !== "container";
+  const showContainerFields = mode !== "warehouse";
+  const clientSelected = Boolean(selectedClient?.id);
 
   // 1) load directory exactly as before
   useEffect(() => {
@@ -33,6 +41,7 @@ export default function NewLocal({
     db.collection("Warehouse").doc("directory").get().then(doc => {
       const d = doc.data() || {};
       setRegionOptions(d.Region   || []);
+      setSectionDirectory(d.Section || {});
       setBinCount     (d.Bin      || 0);
       setPalletCount  (d.Pallet   || 0);
     });
@@ -48,23 +57,24 @@ export default function NewLocal({
     setPalletSelected(value.pallet?.toString()|| "");
   }, [showLocalLoc]);
 
-  // 3) notify parent on any change
-  useEffect(() => {
-    const p = {};
-    if (region)         p.region  = region;
-    if (sectionLetter && sectionNumber) p.section = { letter: sectionLetter, number: sectionNumber };
-    if (binSelected)    p.bin     = parseInt(binSelected,10);
-    if (palletSelected) p.pallet  = parseInt(palletSelected,10);
-    onChange(p);
-  }, [region, sectionLetter, sectionNumber, binSelected, palletSelected]);
-
   // helpers:
-  const letters = Array.from({ length: 26 }, (_, i) =>
+  const sectionDimensions = Array.isArray(sectionDirectory?.[region])
+    ? sectionDirectory[region]
+    : [];
+  const sectionColumnCount = Number(sectionDimensions[0]) || 0;
+  const sectionRowCount = Number(sectionDimensions[1]) || 0;
+  const letters = Array.from({ length: sectionRowCount }, (_, i) =>
     String.fromCharCode(65 + i)
   );
-  const numbers = Array.from({ length: 50 }, (_, i) => i + 1);
+  const numbers = Array.from({ length: sectionColumnCount }, (_, i) => i + 1);
   const binOptions = Array.from({ length: binCount }, (_, i) => i + 1);
   const palletOptions = Array.from({ length: palletCount }, (_, i) => i + 1);
+
+  const handleRegionChange = (nextRegion) => {
+    setRegion(nextRegion);
+    setSectionLetter("");
+    setSectionNumber("");
+  };
 
   // bump and persist bin count
   const handleAddBin = async () => {
@@ -113,10 +123,16 @@ export default function NewLocal({
         selection.sectionNumber ? String(selection.sectionNumber) : ""
       );
     }
-    if (Object.prototype.hasOwnProperty.call(selection, "pallet")) {
+    if (
+      showContainerFields &&
+      Object.prototype.hasOwnProperty.call(selection, "pallet")
+    ) {
       setPalletSelected(selection.pallet ? String(selection.pallet) : "");
     }
-    if (Object.prototype.hasOwnProperty.call(selection, "bin")) {
+    if (
+      showContainerFields &&
+      Object.prototype.hasOwnProperty.call(selection, "bin")
+    ) {
       setBinSelected(selection.bin ? String(selection.bin) : "");
     }
   };
@@ -144,12 +160,12 @@ export default function NewLocal({
 
   return (
     <div className={styles.wrapper}>
-      <Row className={styles.formRow}>
+      <Row className={styles.formRow + (!showWarehouseFields ? " d-none" : "")}>
         <Col>
           <Form.Group className={styles.formGroup}>
             <Form.Label>Region</Form.Label>
             <Form.Select
-              value={region} onChange={e=>setRegion(e.target.value)}
+              value={region} onChange={e=>handleRegionChange(e.target.value)}
             >
               <option value="">Select region</option>
               {regionOptions.map(r=> <option key={r} value={r}>{r}</option>)}
@@ -162,9 +178,11 @@ export default function NewLocal({
             <Form.Select
               value={sectionLetter}
               onChange={e=>setSectionLetter(e.target.value)}
-              // disabled={!region}
+              disabled={!region}
             >
-              <option value="">Letter</option>
+              <option value="">
+                {region ? "Letter" : "Select a region first"}
+              </option>
               {letters.map(l=> <option key={l} value={l}>{l}</option>)}
             </Form.Select>
           </Form.Group>
@@ -175,15 +193,17 @@ export default function NewLocal({
             <Form.Select
               value={sectionNumber}
               onChange={e=>setSectionNumber(e.target.value)}
-              // disabled={!region}
+              disabled={!region}
             >
-              <option value="">Number</option>
+              <option value="">
+                {region ? "Number" : "Select a region first"}
+              </option>
               {numbers.map(n=> <option key={n} value={n}>{n}</option>)}
             </Form.Select>
           </Form.Group>
         </Col>
       </Row>
-      <Row className="mt-3">
+      <Row className={!showContainerFields ? "d-none" : "mt-3"}>
         <Col>
           <Form.Group className={styles.formGroup}>
             <Form.Label>Bin</Form.Label>
@@ -191,12 +211,12 @@ export default function NewLocal({
               <Form.Select
                 value={binSelected}
                 onChange={e => setBinSelected(e.target.value)}
-                // disabled={!region}
+                disabled={!clientSelected}
               >
                 <option value="">Select bin</option>
                 {binOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </Form.Select>
-              <Button variant="outline-secondary" onClick={handleAddBin} >
+              <Button variant="outline-secondary" onClick={handleAddBin} disabled={!clientSelected}>
                 + Bin
               </Button>
             </Stack>
@@ -209,12 +229,12 @@ export default function NewLocal({
           <Form.Select
             value={palletSelected}
             onChange={e =>setPalletSelected(e.target.value)}
-              // disabled={!region}
+            disabled={!clientSelected}
             >
               <option value="">Select pallet</option>
                 {palletOptions.map(p => <option key={p} value={p}>{p}</option>)}
               </Form.Select>
-              <Button variant="outline-secondary" onClick={handleAddPallet} >
+              <Button variant="outline-secondary" onClick={handleAddPallet} disabled={!clientSelected}>
                 + Pallet
               </Button>
             </Stack>
@@ -223,14 +243,14 @@ export default function NewLocal({
       </Row>
       {/* OK / Cancel footer */}
       <div className={styles.actionRow}>
-        <Button variant="outline-primary" onClick={openMap}>
+        <Button variant="outline-primary" onClick={openMap} className={!showWarehouseFields ? "d-none" : ""}>
           Map
         </Button>
         <div className={styles.actionSpacer} />
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={handleOk}>
+        <Button variant="primary" onClick={handleOk} disabled={!clientSelected}>
           OK
         </Button>
       </div>
@@ -243,11 +263,124 @@ export default function NewLocal({
           region,
           sectionLetter,
           sectionNumber,
-          pallet: palletSelected,
-          bin: binSelected,
+          pallet: showContainerFields ? palletSelected : "",
+          bin: showContainerFields ? binSelected : "",
         }}
+        positionOnly={mode === "warehouse"}
       />
     </div>
   );
 }
 
+export function LocationControls({
+  selectedClient,
+  value = {},
+  onChange = () => {},
+  warehouseEnabled = false,
+  variant = "outline-secondary",
+  borderColor = "#9aa4b2",
+}) {
+  const [showContainer, setShowContainer] = useState(false);
+  const [showWarehouse, setShowWarehouse] = useState(false);
+  const clientSelected = Boolean(selectedClient?.id);
+  const containerLabel = formatBinPallet(value);
+  const warehouseLabel = formatWarehousePosition(value);
+
+  return (
+    <>
+      <div
+        style={{
+          border: "1px dashed " + borderColor,
+          padding: "0.75rem",
+          borderRadius: "4px",
+          marginBottom: "0.75rem",
+        }}
+      >
+        <p className="mb-2">
+          <strong>Bin / Pallet</strong>
+        </p>
+        <Button
+          variant={variant}
+          onClick={() => setShowContainer(true)}
+          className="w-100"
+          disabled={!clientSelected}
+          title={clientSelected ? "Select bin or pallet" : "Select a client first"}
+        >
+          {containerLabel ||
+            (clientSelected ? "Select Bin / Pallet" : "Select Client First")}
+        </Button>
+      </div>
+
+      <Modal
+        show={showContainer}
+        onHide={() => setShowContainer(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Bin / Pallet</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <NewLocal
+            selectedClient={selectedClient}
+            showLocalLoc={showContainer}
+            value={value}
+            mode="container"
+            onSave={(location) => {
+              onChange(location);
+              setShowContainer(false);
+            }}
+            onCancel={() => setShowContainer(false)}
+          />
+        </Modal.Body>
+      </Modal>
+
+      {warehouseEnabled && (
+        <>
+          <div
+            style={{
+              border: "1px dashed " + borderColor,
+              padding: "0.75rem",
+              borderRadius: "4px",
+              marginBottom: "1rem",
+            }}
+          >
+            <p className="mb-2">
+              <strong>Warehouse Position</strong>
+            </p>
+            <Button
+              variant={variant}
+              onClick={() => setShowWarehouse(true)}
+              className="w-100"
+            >
+              {warehouseLabel || "Select Position"}
+            </Button>
+          </div>
+
+          <Modal
+            show={showWarehouse}
+            onHide={() => setShowWarehouse(false)}
+            centered
+          >
+            <Modal.Header closeButton>
+              <Modal.Title>Warehouse Position</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <NewLocal
+                selectedClient={selectedClient}
+                showLocalLoc={showWarehouse}
+                value={value}
+                mode="warehouse"
+                onSave={(location) => {
+                  onChange(location);
+                  setShowWarehouse(false);
+                }}
+
+                onCancel={() => setShowWarehouse(false)}
+              />
+            </Modal.Body>
+          </Modal>
+        </>
+      )}
+    </>
+  );
+}

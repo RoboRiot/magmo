@@ -27,7 +27,7 @@ import dynamic from "next/dynamic";
 import InfoModal from "../../InfoModal";
 import MachineSelectionModal from "./MachineSelectionModal";
 import MachineCreationModal from "../../MachineCreationModal";
-import NewLocal from "./NewLocal";
+import NewLocal, { LocationControls } from "./NewLocal";
 import styles from "../../AddItem/NewItem.module.css";
 
 //inflow API
@@ -37,7 +37,12 @@ import {
   formatLoc,
   updateMachineFields,
   buildNameTokens,
+  buildGeneralSearchTokens,
   buildWorkOrderTokens,
+  getItemCreatedDate,
+  getMostRecentDatedEntry,
+  getMostRecentDatedEntryIndex,
+  findExistingItemByAis,
 } from "../../../../utils/itemFormShared";
 import MultiSelectDropdown from "../../../../components/MultiSelectDropdown";
 import ItemMovementDateField from "../../../../components/ItemMovementDateField";
@@ -57,8 +62,21 @@ import {
 } from "../../../../utils/warehouseAssociations";
 import {
   appendSaveHistory,
-  appendSubmitterToDescription,
 } from "../../../../utils/itemAudit";
+import {
+  createItemPhotoStorageName,
+  getItemPhotoCategory,
+  normalizeItemPhotoCategory,
+} from "../../../../utils/itemPhotos";
+import { addItemToShippingGroup } from "../../../../utils/inventoryGroups";
+import ItemPhotoTabs from "../../../../components/ItemPhotoTabs";
+import ShippingGroupField from "../../../../components/ShippingGroupField";
+const {
+  trailerClientId,
+  trailerMachineId,
+  trailerName,
+  trailersForClient,
+} = require("../../../../lib/ops/trailerClientLinks.cjs");
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -93,14 +111,14 @@ function LoadingButton({ type, name, route }) {
   const handleClick = () => setLoading(true);
 
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type}`}
-        disabled={isLoading}
-        onClick={!isLoading ? handleClick : null}
-      >
-        {isLoading ? "Loading…" : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type}`}
+      disabled={isLoading}
+      onClick={!isLoading ? handleClick : null}>
+
+      {isLoading ? "Loading…" : name}
+
     </Link>
   );
 }
@@ -203,7 +221,10 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     departure_date: initialItem?.departure_date || "",
     movementDateType:
       initialItem?.movementDateType === "departure" ? "departure" : "arrival",
+    date: initialItem?.date || "",
+    dateCreated: initialItem?.dateCreated || "",
     visible: initialItem?.visible ?? true,
+    attached: initialItem?.attached === true,
   });
   const [savedName, setSavedName] = useState(initialItem?.name || "");
   // ⬇️ put this INSIDE DisplayItem, after the related useState hooks
@@ -212,6 +233,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
 
     setDescriptions(initialItem.descriptions || []);
     setWorkOrders(initialItem.workOrders || []);
+    setSelectedDesc(
+      Math.max(
+        0,
+        getMostRecentDatedEntryIndex(initialItem.descriptions || [])
+      )
+    );
     setSelectionHistory(
       Array.isArray(initialItem.selectionHistory)
         ? initialItem.selectionHistory
@@ -239,6 +266,8 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
         initialItem.movementDateType === "departure"
           ? "departure"
           : prev.movementDateType || "arrival",
+      date: initialItem.date ?? prev.date ?? "",
+      dateCreated: initialItem.dateCreated ?? prev.dateCreated ?? "",
     }));
 
     if (initialItem.name) {
@@ -310,6 +339,23 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   // New states for separate client selections:
   const [selectedClientFrom, setSelectedClientFrom] = useState(null);
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
+  const [selectedTrailerFrom, setSelectedTrailerFrom] = useState(null);
+  const [selectedTrailerCurrent, setSelectedTrailerCurrent] = useState(null);
+  const [trailers, setTrailers] = useState([]);
+  const [trailerLinkPrompt, setTrailerLinkPrompt] = useState(null);
+  const trailerOptionsFrom = useMemo(() => {
+    const matches = trailersForClient(trailers, selectedClientFrom?.id);
+    return selectedTrailerFrom && !matches.some((entry) => entry.id === selectedTrailerFrom.id)
+      ? [selectedTrailerFrom, ...matches]
+      : matches;
+  }, [selectedClientFrom?.id, selectedTrailerFrom, trailers]);
+  const trailerOptionsCurrent = useMemo(() => {
+    const matches = trailersForClient(trailers, selectedClientCurrent?.id);
+    return selectedTrailerCurrent &&
+      !matches.some((entry) => entry.id === selectedTrailerCurrent.id)
+      ? [selectedTrailerCurrent, ...matches]
+      : matches;
+  }, [selectedClientCurrent?.id, selectedTrailerCurrent, trailers]);
 
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
@@ -361,6 +407,8 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [clientsLoaded, setClientsLoaded] = useState(false);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [photos, setPhotos] = useState([]);
+  const [activePhotoCategory, setActivePhotoCategory] = useState("item");
+  const [selectedShippingGroupId, setSelectedShippingGroupId] = useState("");
   const [show, setShow] = useState(false);
   const [showErr, setShowErr] = useState(false);
   const [Err, setErr] = useState("N/A");
@@ -376,7 +424,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [machineSelectionModal, setMachineSelectionModal] = useState(false);
-  const [selectedDesc, setSelectedDesc] = useState(0);
+  const [selectedDesc, setSelectedDesc] = useState(() =>
+    Math.max(
+      0,
+      getMostRecentDatedEntryIndex(initialItem?.descriptions || [])
+    )
+  );
   const cameraContainerRef = useRef(null);
 
   const [selectedParent, setSelectedParent] = useState(null);
@@ -443,38 +496,7 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   );
 
   const getMostRecentWorkOrderEntry = (orders = []) => {
-    if (!Array.isArray(orders) || orders.length === 0) {
-      return { workOrder: "", date: "" };
-    }
-
-    let bestIndex = 0;
-    let bestParsedDate = Date.parse(orders[0]?.date || "");
-    let bestHasDate = Number.isFinite(bestParsedDate);
-
-    for (let index = 1; index < orders.length; index++) {
-      const parsedDate = Date.parse(orders[index]?.date || "");
-      const hasDate = Number.isFinite(parsedDate);
-
-      if (hasDate && !bestHasDate) {
-        bestIndex = index;
-        bestParsedDate = parsedDate;
-        bestHasDate = true;
-        continue;
-      }
-
-      if (hasDate && bestHasDate && parsedDate > bestParsedDate) {
-        bestIndex = index;
-        bestParsedDate = parsedDate;
-        continue;
-      }
-
-      if (!hasDate && !bestHasDate) {
-        // If neither entry has a date, treat the latest row in the list as newest.
-        bestIndex = index;
-      }
-    }
-
-    return orders[bestIndex] || { workOrder: "", date: "" };
+    return getMostRecentDatedEntry(orders, { workOrder: "", date: "" });
   };
 
   const buildSelectionHistorySnapshot = () => {
@@ -486,14 +508,24 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
         ? items?.departure_date || ""
         : items?.arrival_date || "";
     return {
-      fromClientId: selectedClientFrom?.id || "",
-      fromClientName: (selectedClientFrom?.name || "").trim(),
+      fromClientId: selectedTrailerFrom?.id ? "" : selectedClientFrom?.id || "",
+      fromClientName: selectedTrailerFrom?.id
+        ? ""
+        : (selectedClientFrom?.name || "").trim(),
       fromMachineId: selectedMachine?.id || "",
       fromMachineName: (selectedMachine?.name || "").trim(),
-      currentClientId: selectedClientCurrent?.id || "",
-      currentClientName: (selectedClientCurrent?.name || "").trim(),
+      fromTrailerId: selectedTrailerFrom?.id || "",
+      fromTrailerName: (selectedTrailerFrom?.name || "").trim(),
+      currentClientId: selectedTrailerCurrent?.id
+        ? ""
+        : selectedClientCurrent?.id || "",
+      currentClientName: selectedTrailerCurrent?.id
+        ? ""
+        : (selectedClientCurrent?.name || "").trim(),
       currentMachineId: selectedCurrentMachine?.id || "",
       currentMachineName: (selectedCurrentMachine?.name || "").trim(),
+      currentTrailerId: selectedTrailerCurrent?.id || "",
+      currentTrailerName: (selectedTrailerCurrent?.name || "").trim(),
       workOrder: (latestWorkOrder?.workOrder || "").trim(),
       movementDateType,
       movementDate,
@@ -522,10 +554,14 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       snapshot?.fromClientName,
       snapshot?.fromMachineId,
       snapshot?.fromMachineName,
+      snapshot?.fromTrailerId,
+      snapshot?.fromTrailerName,
       snapshot?.currentClientId,
       snapshot?.currentClientName,
       snapshot?.currentMachineId,
       snapshot?.currentMachineName,
+      snapshot?.currentTrailerId,
+      snapshot?.currentTrailerName,
       snapshot?.workOrder,
       snapshot?.movementDate,
     ].some((value) => String(value || "").trim() !== "");
@@ -543,10 +579,14 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       a?.fromClientName === b?.fromClientName &&
       a?.fromMachineId === b?.fromMachineId &&
       a?.fromMachineName === b?.fromMachineName &&
+      a?.fromTrailerId === b?.fromTrailerId &&
+      a?.fromTrailerName === b?.fromTrailerName &&
       a?.currentClientId === b?.currentClientId &&
       a?.currentClientName === b?.currentClientName &&
       a?.currentMachineId === b?.currentMachineId &&
       a?.currentMachineName === b?.currentMachineName &&
+      a?.currentTrailerId === b?.currentTrailerId &&
+      a?.currentTrailerName === b?.currentTrailerName &&
       a?.workOrder === b?.workOrder &&
       datesMatch
     );
@@ -716,8 +756,22 @@ const handleSendToInflow = async () => {
   // }, [TheMachine, selectedCurrentMachine, selectedMachine]);
 
   // whenever the “From” client changes:
-  const isSocalWarehouseClient = (client) =>
-    client?.name?.toLowerCase() === "socalwarehouse";
+  const normalizeWarehouseText = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+
+  const isSocalWarehouseClient = (client) => {
+    const name = normalizeWarehouseText(client?.name);
+    const location = normalizeWarehouseText(client?.location);
+    return (
+      client?.id === "AIS17182" ||
+      name === "socalwarehouse" ||
+      name.includes("socalwarehouselakeforest") ||
+      (name.includes("socalwarehouse") && location.includes("lakeforest"))
+    );
+  };
 
   const isInteriorWarehouseMachine = (machine) =>
     ["interior socal", "interior norcal"].includes(
@@ -750,8 +804,26 @@ const handleSendToInflow = async () => {
     if (clientsLoaded || clientsLoading) return;
     setClientsLoading(true);
     try {
-      const clientsData = await fetchClients();
+      const [clientsData, trailerSnapshot] = await Promise.all([
+        fetchClients(),
+        firebase.firestore().collection("Trailers").get(),
+      ]);
       setClients(clientsData);
+      setTrailers(
+        trailerSnapshot.docs
+          .filter((snapshot) => snapshot.id !== "layout_meta")
+          .map((snapshot) => {
+            const data = snapshot.data() || {};
+            return {
+              id: snapshot.id,
+              ...data,
+              name: trailerName({ id: snapshot.id, ...data }),
+              clientId: trailerClientId(data),
+              machineId: trailerMachineId(data),
+            };
+          })
+          .sort((left, right) => left.name.localeCompare(right.name))
+      );
       setClientsLoaded(true);
     } catch (error) {
       console.error("Error fetching clients: ", error);
@@ -994,7 +1066,13 @@ const handleSendToInflow = async () => {
       const isSocalInterior = ["interior socal", "interior norcal"].includes(
         machineData.name?.toLowerCase()
       );
-      const shouldShow = isSocalInterior || clientName === "SoCalWarehouse";
+      const shouldShow =
+        isSocalInterior ||
+        isSocalWarehouseClient(
+          clientDoc && clientDoc.exists
+            ? { id: clientDoc.id, ...clientDoc.data() }
+            : { name: clientName }
+        );
 
       if (isFrom) {
         setShowLocalLocFrom(shouldShow);
@@ -1033,6 +1111,8 @@ const handleSendToInflow = async () => {
           departure_date: data.departure_date || "",
           movementDateType:
             data.movementDateType === "departure" ? "departure" : "arrival",
+          visible: data.visible !== undefined ? data.visible : true,
+          attached: data.attached === true,
         });
         if (!String(data.localSN || "").trim() && resolvedLocalSn) {
           db
@@ -1046,6 +1126,12 @@ const handleSendToInflow = async () => {
         setSavedName(data.name || "");
         setDescriptions(data.descriptions || []);
         setWorkOrders(data.workOrders || []);
+        setSelectedDesc(
+          Math.max(
+            0,
+            getMostRecentDatedEntryIndex(data.descriptions || [])
+          )
+        );
         setSelectionHistory(
           Array.isArray(data.selectionHistory) ? data.selectionHistory : []
         );
@@ -1093,6 +1179,61 @@ const handleSendToInflow = async () => {
           id: clientCurrentDoc.id,
           ...clientCurrentDoc.data(),
         });
+      }
+
+      const trailerFromId =
+        data.TrailerFrom?.id || data.trailerFromId || "";
+      const trailerCurrentId =
+        data.TrailerCurrent?.id || data.trailerCurrentId || "";
+      const [trailerFromDoc, trailerCurrentDoc] = await Promise.all([
+        trailerFromId
+          ? db.collection("Trailers").doc(trailerFromId).get()
+          : Promise.resolve(null),
+        trailerCurrentId
+          ? db.collection("Trailers").doc(trailerCurrentId).get()
+          : Promise.resolve(null),
+      ]);
+      if (trailerFromDoc?.exists) {
+        const trailerData = trailerFromDoc.data() || {};
+        const linkedClientId = trailerClientId(trailerData);
+        setSelectedTrailerFrom({
+          id: trailerFromDoc.id,
+          ...trailerData,
+          name: trailerName({ id: trailerFromDoc.id, ...trailerData }),
+          clientId: linkedClientId,
+          machineId: trailerMachineId(trailerData),
+        });
+        if (!clientFromDoc?.exists && linkedClientId) {
+          const linkedClientDoc = await db.collection("Client").doc(linkedClientId).get();
+          if (linkedClientDoc.exists) {
+            setSelectedClientFrom({
+              id: linkedClientDoc.id,
+              ...linkedClientDoc.data(),
+              derivedFromTrailer: true,
+            });
+          }
+        }
+      }
+      if (trailerCurrentDoc?.exists) {
+        const trailerData = trailerCurrentDoc.data() || {};
+        const linkedClientId = trailerClientId(trailerData);
+        setSelectedTrailerCurrent({
+          id: trailerCurrentDoc.id,
+          ...trailerData,
+          name: trailerName({ id: trailerCurrentDoc.id, ...trailerData }),
+          clientId: linkedClientId,
+          machineId: trailerMachineId(trailerData),
+        });
+        if (!clientCurrentDoc?.exists && linkedClientId) {
+          const linkedClientDoc = await db.collection("Client").doc(linkedClientId).get();
+          if (linkedClientDoc.exists) {
+            setSelectedClientCurrent({
+              id: linkedClientDoc.id,
+              ...linkedClientDoc.data(),
+              derivedFromTrailer: true,
+            });
+          }
+        }
       }
 
       if (
@@ -1163,12 +1304,18 @@ const handleSendToInflow = async () => {
       // new: combine machine-name OR client-name check, keep existing-data
       setShowLocalLocFrom(
         ["interior socal", "interior norcal"].includes(nameFrom) ||
-          resolvedClientFromName?.toLowerCase() === "socalwarehouse" ||
+          isSocalWarehouseClient({
+            id: data.ClientFrom?.id,
+            name: resolvedClientFromName,
+          }) ||
           Boolean(data.localLocFrom)
       );
       setShowLocalLocCurrent(
         ["interior socal", "interior norcal"].includes(nameCurrent) ||
-          resolvedClientCurrentName?.toLowerCase() === "socalwarehouse" ||
+          isSocalWarehouseClient({
+            id: data.ClientCurrent?.id,
+            name: resolvedClientCurrentName,
+          }) ||
           Boolean(data.localLocCurrent)
       );
 
@@ -1335,10 +1482,18 @@ const handleSendToInflow = async () => {
     const listRef = storageRef.child(`Parts/${docID}`);
     try {
       const res = await listRef.listAll();
-      const urls = await Promise.all(
-        res.items.map((item) => item.getDownloadURL())
+      const sortedItems = [...res.items].sort((left, right) =>
+        left.name.localeCompare(right.name)
       );
-      setPhotos(urls.map((url) => ({ url, file: null })));
+      const loadedPhotos = await Promise.all(
+        sortedItems.map(async (photoRef) => ({
+          url: await photoRef.getDownloadURL(),
+          file: null,
+          storageName: photoRef.name,
+          category: getItemPhotoCategory(photoRef.name),
+        }))
+      );
+      setPhotos(loadedPhotos);
     } catch (error) {
       console.error("Error fetching photos: ", error);
     }
@@ -1419,8 +1574,9 @@ const handleSendToInflow = async () => {
   const handleCloseChildModal = () => setShowChildModal(false);
   const handleShowChildModal = () => setShowChildModal(true);
 
-  const handleConfirmParentSelection = async (items = []) => {
-    const nextParent = items[0] || null;
+  const handleConfirmParentSelection = async (selectedItems = []) => {
+    const nextParent = selectedItems[0] || null;
+    const wasAttached = items.attached === true;
     setSelectedParent(nextParent);
 
     if (!id) return;
@@ -1434,8 +1590,20 @@ const handleSendToInflow = async () => {
           { merge: true }
         );
       } else {
+        setItems((prev) => ({
+          ...prev,
+          attached: false,
+          visible: wasAttached ? true : prev.visible,
+        }));
+        const clearParentPayload = {
+          Parent: firebase.firestore.FieldValue.delete(),
+          attached: false,
+        };
+        if (wasAttached) {
+          clearParentPayload.visible = true;
+        }
         await itemRef
-          .update({ Parent: firebase.firestore.FieldValue.delete() })
+          .update(clearParentPayload)
           .catch((error) => {
             if (error?.code === "not-found") return;
             throw error;
@@ -1444,6 +1612,45 @@ const handleSendToInflow = async () => {
     } catch (error) {
       console.error("Error updating parent relation:", error);
       setErr("Failed to update parent relation.");
+      setShowErr(true);
+    }
+  };
+
+  const handleAttachToggle = async () => {
+    if (!id) return;
+
+    const isCurrentlyAttached = items.attached === true;
+    if (!isCurrentlyAttached && !selectedParent?.id) {
+      setErr("Select a parent before attaching this item.");
+      setShowErr(true);
+      return;
+    }
+
+    const nextAttached = !isCurrentlyAttached;
+    const nextVisible = !nextAttached;
+    const previousVisible = items.visible !== false;
+    setItems((prev) => ({
+      ...prev,
+      attached: nextAttached,
+      visible: nextVisible,
+    }));
+
+    try {
+      await firebase.firestore().collection("Test").doc(id).set(
+        {
+          attached: nextAttached,
+          visible: nextVisible,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error updating attachment state:", error);
+      setItems((prev) => ({
+        ...prev,
+        attached: isCurrentlyAttached,
+        visible: previousVisible,
+      }));
+      setErr("Failed to update attachment state.");
       setShowErr(true);
     }
   };
@@ -1501,12 +1708,14 @@ const handleSendToInflow = async () => {
     if (isFromBranch) {
       setSelectedClientFrom(null);
       setSelectedMachine(null);
+      setSelectedTrailerFrom(null);
       setShowLocalLocFrom(false);
       setLocalLocFrom("");
       setNewLocalFrom(createEmptyLocal());
     } else {
       setSelectedClientCurrent(null);
       setSelectedCurrentMachine(null);
+      setSelectedTrailerCurrent(null);
       setShowLocalLocCurrent(false);
       setLocalLocCurrent("");
       setNewLocalCurrent(createEmptyLocal());
@@ -1527,11 +1736,13 @@ const handleSendToInflow = async () => {
     // Clear any previously selected machine and local loc info for this branch.
     if (isFromBranch) {
       setSelectedMachine(null);
+      setSelectedTrailerFrom(null);
       setShowLocalLocFrom(false);
       setLocalLocFrom("");
       setNewLocalFrom(createEmptyLocal());
     } else {
       setSelectedCurrentMachine(null);
+      setSelectedTrailerCurrent(null);
       setShowLocalLocCurrent(false);
       setLocalLocCurrent("");
       setNewLocalCurrent(createEmptyLocal());
@@ -1549,7 +1760,7 @@ const handleSendToInflow = async () => {
         setSelectedClientCurrent(clientData);
       }
 
-      if (clientData.name === "SoCalWarehouse") {
+      if (isSocalWarehouseClient(clientData)) {
         if (isFromBranch) setShowLocalLocFrom(true);
         else setShowLocalLocCurrent(true);
       }
@@ -1567,9 +1778,110 @@ const handleSendToInflow = async () => {
       }));
       setMachineOptions(machines);
       handleCloseClientModal();
+
+      const linkedTrailers = trailersForClient(trailers, clientId);
+      if (linkedTrailers.length) {
+        setTrailerLinkPrompt({
+          isFromBranch,
+          clientId,
+          clientName: clientData.name || clientId,
+          trailers: linkedTrailers,
+          machines,
+          trailerId: linkedTrailers.length === 1 ? linkedTrailers[0].id : "",
+        });
+      } else {
+        setTrailerLinkPrompt(null);
+      }
     } catch (error) {
       console.error("Error selecting client:", error);
       setErr("Failed to select client.");
+      setShowErr(true);
+    }
+  };
+
+  const handleDeclineTrailerLink = () => {
+    setTrailerLinkPrompt(null);
+  };
+
+  const handleConfirmTrailerLink = () => {
+    const selectedTrailer = trailerLinkPrompt?.trailers?.find(
+      (trailer) => trailer.id === trailerLinkPrompt.trailerId
+    );
+    if (!selectedTrailer) return;
+
+    const associatedMachine = selectedTrailer.machineId
+      ? trailerLinkPrompt.machines.find(
+          (machine) => machine.id === selectedTrailer.machineId
+        ) || null
+      : null;
+    if (trailerLinkPrompt.isFromBranch) {
+      setSelectedTrailerFrom(selectedTrailer);
+      if (associatedMachine) setSelectedMachine(associatedMachine);
+    } else {
+      setSelectedTrailerCurrent(selectedTrailer);
+      if (associatedMachine) setSelectedCurrentMachine(associatedMachine);
+    }
+    setTrailerLinkPrompt(null);
+  };
+
+  const handleTrailerSelection = async (isFromBranch, trailerId) => {
+    if (!trailerId) {
+      if (isFromBranch) setSelectedTrailerFrom(null);
+      else setSelectedTrailerCurrent(null);
+      return;
+    }
+    const trailer = trailers.find((entry) => entry.id === trailerId);
+    if (!trailer?.clientId) {
+      setErr(
+        "This trailer is not linked to a Client DB record. Link it in Trailer Setup first."
+      );
+      setShowErr(true);
+      return;
+    }
+    try {
+      const db = firebase.firestore();
+      const clientDoc = await db.collection("Client").doc(trailer.clientId).get();
+      if (!clientDoc.exists) throw new Error("The trailer's linked client no longer exists.");
+      const client = { id: clientDoc.id, ...clientDoc.data() };
+      const machineRefs = Array.isArray(client.machines) ? client.machines : [];
+      const machineDocs = await Promise.all(
+        machineRefs
+          .map((machineRef) => ({
+            ref: machineRef,
+            id:
+              typeof machineRef === "string"
+                ? machineRef
+                : String(machineRef?.id || "").trim(),
+          }))
+          .filter(({ ref, id }) => typeof ref?.get === "function" || id)
+          .map(({ ref, id }) =>
+            typeof ref?.get === "function"
+              ? ref.get()
+              : db.collection("Machine").doc(id).get()
+          )
+      );
+      const availableMachines = machineDocs
+        .filter((snapshot) => snapshot?.exists)
+        .map((snapshot) => ({
+          id: snapshot.id,
+          ...stripAssociatedPartsFromMachineSnapshot(snapshot.data() || {}),
+        }));
+      const associatedMachine = trailer.machineId
+        ? availableMachines.find((machine) => machine.id === trailer.machineId)
+        : null;
+      setMachineOptions(availableMachines);
+      if (isFromBranch) {
+        setSelectedClientFrom(client);
+        setSelectedTrailerFrom(trailer);
+        setSelectedMachine(associatedMachine || null);
+      } else {
+        setSelectedClientCurrent(client);
+        setSelectedTrailerCurrent(trailer);
+        setSelectedCurrentMachine(associatedMachine || null);
+      }
+    } catch (error) {
+      console.error("Error selecting trailer:", error);
+      setErr(error?.message || "Failed to select trailer.");
       setShowErr(true);
     }
   };
@@ -1608,13 +1920,13 @@ const handleSendToInflow = async () => {
       if (isFromBranch) {
         setSelectedClientFrom(createdClient);
         setSelectedMachine(null);
-        setShowLocalLocFrom(name.toLowerCase() === "socalwarehouse");
+        setShowLocalLocFrom(isSocalWarehouseClient(createdClient));
         setLocalLocFrom("");
         setNewLocalFrom(createEmptyLocal());
       } else {
         setSelectedClientCurrent(createdClient);
         setSelectedCurrentMachine(null);
-        setShowLocalLocCurrent(name.toLowerCase() === "socalwarehouse");
+        setShowLocalLocCurrent(isSocalWarehouseClient(createdClient));
         setLocalLocCurrent("");
         setNewLocalCurrent(createEmptyLocal());
       }
@@ -1843,6 +2155,8 @@ const handleSendToInflow = async () => {
     delete formattedItems.MachineCurrent;
     delete formattedItems.ClientFrom;
     delete formattedItems.ClientCurrent;
+    delete formattedItems.TrailerFrom;
+    delete formattedItems.TrailerCurrent;
 
     const fromDetails = buildLocalLocObject(newLocalFrom);
     const currentDetails = buildLocalLocObject(newLocalCurrent);
@@ -1904,17 +2218,37 @@ const handleSendToInflow = async () => {
     if (selectedParent && selectedParent.id) {
       formattedItems.Parent = db.collection("Test").doc(selectedParent.id);
     }
+    if (formattedItems.attached === true && selectedParent?.id) {
+      formattedItems.visible = false;
+    }
+    if (formattedItems.attached === true && !selectedParent?.id) {
+      formattedItems.attached = false;
+      formattedItems.visible = true;
+    }
 
-    // NEW: Set separate client references.
-    if (selectedClientFrom && selectedClientFrom.id) {
+    // A trailer owns its items. Its client is derived from the trailer's live
+    // link and is intentionally not persisted on the item.
+    if (selectedClientFrom?.id && !selectedTrailerFrom?.id) {
       formattedItems.ClientFrom = db
         .collection("Client")
         .doc(selectedClientFrom.id);
     }
-    if (selectedClientCurrent && selectedClientCurrent.id) {
+    if (selectedClientCurrent?.id && !selectedTrailerCurrent?.id) {
       formattedItems.ClientCurrent = db
         .collection("Client")
         .doc(selectedClientCurrent.id);
+    }
+    formattedItems.trailerFromId = selectedTrailerFrom?.id || "";
+    formattedItems.trailerCurrentId = selectedTrailerCurrent?.id || "";
+    if (selectedTrailerFrom?.id) {
+      formattedItems.TrailerFrom = db
+        .collection("Trailers")
+        .doc(selectedTrailerFrom.id);
+    }
+    if (selectedTrailerCurrent?.id) {
+      formattedItems.TrailerCurrent = db
+        .collection("Trailers")
+        .doc(selectedTrailerCurrent.id);
     }
 
     // Only attach the richer “newLocal” map when the user actually filled something in
@@ -1965,26 +2299,44 @@ const handleSendToInflow = async () => {
 
     const withLocalSn = (payload, value) => {
       const localSn = String(value || "").trim();
-      return {
+      const indexedPayload = {
         ...payload,
         localSN: localSn,
         local_sn: localSn,
       };
+      indexedPayload.generalSearchTokens = buildGeneralSearchTokens(
+        indexedPayload,
+        localSn
+      );
+      return indexedPayload;
     };
 
     const showDuplicateLocalSnError = (localSn) => {
       setErr(
-        `There is already an item with local SN "${localSn}". Please use a different local SN.`
+        `There is already an item with AIS "${localSn}". Please use a different AIS.`
       );
       setShowErr(true);
     };
 
-    const itemDocumentExists = async (localSn) => {
-      const existingDoc = await db.collection("Test").doc(localSn).get();
-      return existingDoc.exists;
+    const itemAisExists = async (localSn, ignoreDocId = "") => {
+      const existingItem = await findExistingItemByAis(db, localSn, {
+        ignoreDocId,
+      });
+      return Boolean(existingItem);
     };
 
-    const createItemDocumentIfAvailable = async (localSn, payload) => {
+    const createItemDocumentIfAvailable = async (
+      localSn,
+      payload,
+      ignoreDocId = ""
+    ) => {
+      const existingItem = await findExistingItemByAis(db, localSn, {
+        ignoreDocId,
+      });
+      if (existingItem) {
+        throw new Error("duplicate-local-sn");
+      }
+
       const targetRef = db.collection("Test").doc(localSn);
       await db.runTransaction(async (transaction) => {
         const existingDoc = await transaction.get(targetRef);
@@ -1998,7 +2350,7 @@ const handleSendToInflow = async () => {
     const generateAvailableDocId = async () => {
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const generatedId = generateCustomID();
-        if (!(await itemDocumentExists(generatedId))) {
+        if (!(await itemAisExists(generatedId))) {
           return generatedId;
         }
       }
@@ -2042,7 +2394,11 @@ const handleSendToInflow = async () => {
         const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
           try {
-            await createItemDocumentIfAvailable(newDocId, payloadWithLocalSn);
+            await createItemDocumentIfAvailable(
+              newDocId,
+              payloadWithLocalSn,
+              docId
+            );
           } catch (error) {
             if (error?.message !== "duplicate-local-sn") {
               throw error;
@@ -2069,11 +2425,11 @@ const handleSendToInflow = async () => {
             cleanFormattedItems.MachineCurrent =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientFrom?.id) {
+          if (!selectedClientFrom?.id || selectedTrailerFrom?.id) {
             cleanFormattedItems.ClientFrom =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientCurrent?.id) {
+          if (!selectedClientCurrent?.id || selectedTrailerCurrent?.id) {
             cleanFormattedItems.ClientCurrent =
               firebase.firestore.FieldValue.delete();
           }
@@ -2089,7 +2445,7 @@ const handleSendToInflow = async () => {
         const requestedDocId =
           items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
         docId = requestedDocId || (await generateAvailableDocId());
-        if (requestedDocId && (await itemDocumentExists(docId))) {
+        if (requestedDocId && (await itemAisExists(docId))) {
           showDuplicateLocalSnError(docId);
           return;
         }
@@ -2107,6 +2463,15 @@ const handleSendToInflow = async () => {
         await syncMachineAssociations(docId, null, null);
       }
       await syncChildrenForItem(docId);
+      if (selectedShippingGroupId) {
+        await addItemToShippingGroup({
+          db,
+          firebase,
+          groupId: selectedShippingGroupId,
+          itemId: docId,
+          previousItemId: id || "",
+        });
+      }
       setItems((prev) => ({ ...prev, localSN: docId }));
       // Update Tracker only on Save.
       try {
@@ -2176,6 +2541,8 @@ const handleSendToInflow = async () => {
     const nextCurrentClient = selectedClientFrom;
     const nextFromMachine = selectedCurrentMachine;
     const nextCurrentMachine = selectedMachine;
+    const nextFromTrailer = selectedTrailerCurrent;
+    const nextCurrentTrailer = selectedTrailerFrom;
     const nextNewLocalFrom = cloneLocalLocation(newLocalCurrent);
     const nextNewLocalCurrent = cloneLocalLocation(newLocalFrom);
     const nextLocalLocFrom = localLocCurrent;
@@ -2185,6 +2552,8 @@ const handleSendToInflow = async () => {
     setSelectedClientCurrent(nextCurrentClient);
     setSelectedMachine(nextFromMachine);
     setSelectedCurrentMachine(nextCurrentMachine);
+    setSelectedTrailerFrom(nextFromTrailer);
+    setSelectedTrailerCurrent(nextCurrentTrailer);
     setNewLocalFrom(nextNewLocalFrom);
     setNewLocalCurrent(nextNewLocalCurrent);
     setLocalLocFrom(nextLocalLocFrom);
@@ -2213,14 +2582,12 @@ const handleSendToInflow = async () => {
     if (isFromBranch) {
       setSelectedMachine({ id: machine.id, name: machine.name });
       setShowLocalLocFrom(
-        isSocalInterior ||
-          selectedClientFrom?.name?.toLowerCase() === "socalwarehouse"
+        isSocalInterior || isSocalWarehouseClient(selectedClientFrom)
       );
     } else {
       setSelectedCurrentMachine({ id: machine.id, name: machine.name });
       setShowLocalLocCurrent(
-        isSocalInterior ||
-          selectedClientCurrent?.name?.toLowerCase() === "socalwarehouse"
+        isSocalInterior || isSocalWarehouseClient(selectedClientCurrent)
       );
     }
     fetchMachine(machine.id);
@@ -2232,15 +2599,28 @@ const handleSendToInflow = async () => {
     const nextPhotos = [...photos];
     for (let i = 0; i < nextPhotos.length; i++) {
       if (nextPhotos[i].file) {
+        const category = normalizeItemPhotoCategory(nextPhotos[i].category);
+        const storageName = createItemPhotoStorageName(
+          category,
+          nextPhotos[i].file,
+          i
+        );
         const photoRef = storageRef.child(
-          `Parts/${docID}/${docID}${i === 0 ? ".jpg" : `.${i + 1}.jpg`}`
+          `Parts/${docID}/${storageName}`
         );
         const metadata = {
           contentType: nextPhotos[i]?.file?.type || "image/jpeg",
+          cacheControl: "public,max-age=31536000,immutable",
         };
         await photoRef.put(nextPhotos[i].file, metadata);
         const url = await photoRef.getDownloadURL();
-        nextPhotos[i] = { ...nextPhotos[i], url, file: null };
+        nextPhotos[i] = {
+          ...nextPhotos[i],
+          url,
+          file: null,
+          category,
+          storageName,
+        };
       }
     }
     setPhotos(nextPhotos);
@@ -2296,19 +2676,25 @@ const handleSendToInflow = async () => {
         clientName = items.client;
       }
     }
-    console.log("descriptions:", descriptions[selectedDesc]);
+    const mostRecentWorkOrder = getMostRecentDatedEntry(workOrders, {
+      workOrder: "",
+      date: "",
+    });
+    const mostRecentDescription = getMostRecentDatedEntry(descriptions, {
+      description: "",
+      date: "",
+    });
+    const currentWorkOrder = (mostRecentWorkOrder.workOrder || "").trim();
     const payload = {
       name: items.name,
       pn: items.pn,
       sn: items.sn,
-      wo: workOrders && workOrders.length > 0 ? workOrders[0].workOrder : "",
+      wo: currentWorkOrder,
       client: clientName,
       status: items.status,
       local_sn: id,
-      descriptions: [
-        descriptions[selectedDesc] || { description: "", date: "" },
-      ],
-      date: items.dateCreated || "",
+      descriptions: [mostRecentDescription],
+      date: getItemCreatedDate(items),
       DOM: DOM,
       oem: selectionToPrintValue(selectedOems),
       modality: selectionToPrintValue(selectedModalities),
@@ -2448,7 +2834,11 @@ const handleSendToInflow = async () => {
   const savePhoto = () => {
     setPhotos((prevPhotos) => [
       ...prevPhotos,
-      { file: capturedPhoto, url: URL.createObjectURL(capturedPhoto) },
+      {
+        file: capturedPhoto,
+        url: URL.createObjectURL(capturedPhoto),
+        category: activePhotoCategory,
+      },
     ]);
     setCapturedPhoto(null);
     handleCloseCameraModal();
@@ -2617,6 +3007,7 @@ const handleSendToInflow = async () => {
         newPhotos.push({
           file: files[i],
           url: URL.createObjectURL(files[i]),
+          category: activePhotoCategory,
         });
       }
       setPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
@@ -2673,6 +3064,13 @@ const handleSendToInflow = async () => {
       );
       return;
     }
+    if (
+      !window.confirm(
+        `Are you sure you want to send this item to BlueFolder work order ${currentWorkOrder}?`
+      )
+    ) {
+      return;
+    }
 
     const resolvedLocalSn = String(items.localSN || id || "").trim();
     const currentUser = firebase.auth().currentUser;
@@ -2705,16 +3103,6 @@ const handleSendToInflow = async () => {
         body: JSON.stringify(payload),
       });
       const result = await response.json();
-      if (result?.bluefolderStatusCheck || result?.debug?.statusCheck) {
-        console.log(
-          "[BlueFolder][status-check]",
-          result.bluefolderStatusCheck || result.debug.statusCheck
-        );
-      }
-      if (response.status === 409 && result?.code === "work_order_closed") {
-        alert(result?.error || `Work order ${currentWorkOrder} is closed.`);
-        return;
-      }
       if (!response.ok || result?.ok === false) {
         const detail =
           result?.details ||
@@ -2729,11 +3117,11 @@ const handleSendToInflow = async () => {
           }`
         );
       }
-      alert("BlueFolder service item added successfully!");
+      alert("Item has been sent to BlueFolder successfully.");
       console.log("BlueFolder result:", result);
     } catch (error) {
       console.error("BlueFolder error:", error);
-      alert(`Error adding data to BlueFolder: ${error?.message || "Unknown error"}`);
+      alert(`Item was not sent to BlueFolder: ${error?.message || "Unknown error"}`);
     } finally {
       setBluefolderLoading(false);
     }
@@ -2796,11 +3184,8 @@ const handleAddToSlack = async (which = "shipping") => {
         ? (descriptions[selectedDesc].description || "")
         : (items?.description || "");
     const currentUser = firebase.auth().currentUser;
-    const submittedByEmail = currentUser?.email || "";
-    const description = appendSubmitterToDescription(
-      rawDescription,
-      submittedByEmail
-    );
+    const submittedByEmail = currentUser?.email || authUser?.email || "";
+    const description = rawDescription;
 
     const tracking = items?.trackingNumber ?? items?.tracking ?? "";
     const local_sn = docId || items?.localSN || "";
@@ -2826,6 +3211,7 @@ const handleAddToSlack = async (which = "shipping") => {
         local_sn,
         tracking,
         description,
+        submittedByEmail,
         photoUrls,             // array of https URLs
         shipping_date: shippingDate,
         received_date: receivedDate,
@@ -2845,8 +3231,13 @@ const handleAddToSlack = async (which = "shipping") => {
       return;
     }
 
+    const opsNote = mostRecentWO && ["shipping", "receiving"].includes(which)
+      ? json?.opsMovement?.attached
+        ? ` It is also linked to work order #${mostRecentWO} in Ops.`
+        : ` Slack was updated, but work order #${mostRecentWO} could not be linked in Ops.`
+      : "";
     alert(
-      `Added to Slack ${which === "shipping" ? "Shipping" : which === "receiving" ? "Receiving" : "Tasks"} list.`
+      `Added to Slack ${which === "shipping" ? "Shipping" : which === "receiving" ? "Receiving" : "Tasks"} list.${opsNote}`
     );
   } catch (e) {
     console.error(e);
@@ -3219,6 +3610,65 @@ const handleAddToSlack = async (which = "shipping") => {
           </Modal.Body>
         </Modal>
 
+        <Modal
+          show={Boolean(trailerLinkPrompt)}
+          onHide={handleDeclineTrailerLink}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Link this item to a trailer?</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              <strong>{trailerLinkPrompt?.clientName}</strong> currently has
+              {trailerLinkPrompt?.trailers?.length === 1
+                ? " a trailer"
+                : " multiple trailers"} linked to it. Should this item&apos;s{" "}
+              <strong>
+                {trailerLinkPrompt?.isFromBranch ? "From" : "Current"}
+              </strong>{" "}
+              location be connected to a trailer?
+            </p>
+            {trailerLinkPrompt?.trailers?.length === 1 ? (
+              <p className="mb-0">
+                Trailer: <strong>{trailerLinkPrompt.trailers[0].name}</strong>
+              </p>
+            ) : (
+              <Form.Group controlId="item-client-trailer-confirmation">
+                <Form.Label>Choose the trailer</Form.Label>
+                <Form.Select
+                  value={trailerLinkPrompt?.trailerId || ""}
+                  onChange={(event) =>
+                    setTrailerLinkPrompt((previous) => ({
+                      ...previous,
+                      trailerId: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select a trailer</option>
+                  {(trailerLinkPrompt?.trailers || []).map((trailer) => (
+                    <option key={trailer.id} value={trailer.id}>
+                      {trailer.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleDeclineTrailerLink}>
+              No, client only
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmTrailerLink}
+              disabled={!trailerLinkPrompt?.trailerId}
+            >
+              Yes, link trailer
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
         <Modal show={showAddClientModal} onHide={handleCloseAddClientModal} centered>
           <Modal.Header closeButton>
             <Modal.Title>Add New Client</Modal.Title>
@@ -3490,7 +3940,7 @@ const handleAddToSlack = async (which = "shipping") => {
                                 overflowY: "auto",
                               }}
                             >
-                              {pnOptions.map((pnOption, idx) => (
+                              {(Array.isArray(items.pn) ? items.pn : []).map((pnOption, idx) => (
                                 <div
                                   key={idx}
                                   style={{ padding: "8px", cursor: "pointer" }}
@@ -3563,7 +4013,7 @@ const handleAddToSlack = async (which = "shipping") => {
                                 overflowY: "auto",
                               }}
                             >
-                              {snOptions.map((snOption, idx) => (
+                              {(Array.isArray(items.sn) ? items.sn : []).map((snOption, idx) => (
                                 <div
                                   key={idx}
                                   style={{ padding: "8px", cursor: "pointer" }}
@@ -3607,7 +4057,7 @@ const handleAddToSlack = async (which = "shipping") => {
                       </Form.Group>
                     </Col>
                   </Row>
-                  {/* Row for Local SN, Arrival Date, Tracking */}
+                  {/* Row for Local SN and movement date */}
                   <Row className="mb-3">
                     <Col>
                       <Form.Group controlId="localSN">
@@ -3622,17 +4072,6 @@ const handleAddToSlack = async (which = "shipping") => {
                     </Col>
                     <Col>
                       <ItemMovementDateField items={items} setItems={setItems} />
-                    </Col>
-                    <Col>
-                      <Form.Group controlId="trackingNumber">
-                        <Form.Label>Tracking Number</Form.Label>
-                        <Form.Control
-                          placeholder="Tracking Number"
-                          type="text"
-                          value={items.trackingNumber}
-                          onChange={handleChange("trackingNumber")}
-                        />
-                      </Form.Group>
                     </Col>
                   </Row>
                   {/* Row for OEM, Modality, Model */}
@@ -3786,7 +4225,7 @@ const handleAddToSlack = async (which = "shipping") => {
                         >
                           Select From
                         </Button>
-                        {selectedClientFrom && (
+                        {(selectedClientFrom || selectedTrailerFrom) && (
                           <div
                             style={{
                               border: "1px solid #ccc",
@@ -3795,16 +4234,58 @@ const handleAddToSlack = async (which = "shipping") => {
                               marginBottom: "1rem",
                             }}
                           >
-                            <p>
-                              <strong>Selected Client (From):</strong>{" "}
-                              {selectedClientFrom.name}
-                            </p>
+                            {selectedClientFrom && (
+                              <p>
+                                <strong>
+                                  {selectedTrailerFrom
+                                    ? "Linked client/site (via trailer):"
+                                    : "Selected Client (From):"}
+                                </strong>{" "}
+                                {selectedClientFrom.name}
+                              </p>
+                            )}
+                            <Form.Group className="mb-2">
+                              <Form.Label>Trailer at this client</Form.Label>
+                              <Form.Select
+                                value={selectedTrailerFrom?.id || ""}
+                                onFocus={loadClients}
+                                onChange={(event) =>
+                                  handleTrailerSelection(true, event.target.value)
+                                }
+                              >
+                                <option value="">
+                                  {trailerOptionsFrom.length > 1
+                                    ? "Choose the correct trailer"
+                                    : "No trailer selected"}
+                                </option>
+                                {trailerOptionsFrom.map((trailer) => (
+                                  <option value={trailer.id} key={trailer.id}>
+                                    {trailer.name}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              <Form.Text muted>
+                                {trailerOptionsFrom.length === 1
+                                  ? "This client has a linked trailer; client selection asks before connecting it."
+                                  : trailerOptionsFrom.length > 1
+                                  ? "This client has multiple trailers; client selection asks which one to connect."
+                                  : "No current trailer is linked to this client."}
+                              </Form.Text>
+                            </Form.Group>
+                            {selectedTrailerFrom && (
+                              <p className="text-muted small mb-2">
+                                The item is linked to this trailer. The client/site is
+                                derived from the trailer&apos;s current link and is not
+                                stored on the item.
+                              </p>
+                            )}
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
                                 onClick={() => openMachineModalForBranch(true)}
                               >
-                                Select Machine for {selectedClientFrom.name}
+                                Select Machine for{" "}
+                                {selectedClientFrom?.name || selectedTrailerFrom?.name}
                               </Button>
                               {selectedMachine && (
                                 <>
@@ -3812,7 +4293,7 @@ const handleAddToSlack = async (which = "shipping") => {
                                     <strong>Selected Machine (From):</strong>{" "}
                                     {selectedMachine.name}
                                   </p>
-                                  {showLocalLocFrom && (
+                                  {false && showLocalLocFrom && (
                                     <>
                                       <Button
                                         variant="outline-secondary"
@@ -3879,6 +4360,14 @@ const handleAddToSlack = async (which = "shipping") => {
                             </div>
                           </div>
                       )}
+                        <LocationControls
+                          selectedClient={selectedClientFrom}
+                          value={newLocalFrom}
+                          onChange={setNewLocalFrom}
+                          warehouseEnabled={isSocalWarehouseClient(selectedClientFrom)}
+                          variant="outline-secondary"
+                          borderColor="#9aa4b2"
+                        />
                     </Col>
                     <Col
                       xs={12}
@@ -3888,7 +4377,12 @@ const handleAddToSlack = async (which = "shipping") => {
                       <Button
                         variant="outline-primary"
                         onClick={handleSwapFromCurrent}
-                        disabled={!selectedClientFrom && !selectedClientCurrent}
+                        disabled={
+                          !selectedClientFrom &&
+                          !selectedClientCurrent &&
+                          !selectedTrailerFrom &&
+                          !selectedTrailerCurrent
+                        }
                         title="Swap from and current client/machine"
                         aria-label="Swap from and current client/machine"
                         className="mb-3 p-1"
@@ -3925,7 +4419,7 @@ const handleAddToSlack = async (which = "shipping") => {
                         >
                           Select Current
                         </Button>
-                        {selectedClientCurrent && (
+                        {(selectedClientCurrent || selectedTrailerCurrent) && (
                           <div
                             style={{
                               border: "1px solid #ccc",
@@ -3934,16 +4428,59 @@ const handleAddToSlack = async (which = "shipping") => {
                               marginBottom: "1rem",
                             }}
                           >
-                            <p>
-                              <strong>Selected Client (Current):</strong>{" "}
-                              {selectedClientCurrent.name}
-                            </p>
+                            {selectedClientCurrent && (
+                              <p>
+                                <strong>
+                                  {selectedTrailerCurrent
+                                    ? "Linked client/site (via trailer):"
+                                    : "Selected Client (Current):"}
+                                </strong>{" "}
+                                {selectedClientCurrent.name}
+                              </p>
+                            )}
+                            <Form.Group className="mb-2">
+                              <Form.Label>Trailer at this client</Form.Label>
+                              <Form.Select
+                                value={selectedTrailerCurrent?.id || ""}
+                                onFocus={loadClients}
+                                onChange={(event) =>
+                                  handleTrailerSelection(false, event.target.value)
+                                }
+                              >
+                                <option value="">
+                                  {trailerOptionsCurrent.length > 1
+                                    ? "Choose the correct trailer"
+                                    : "No trailer selected"}
+                                </option>
+                                {trailerOptionsCurrent.map((trailer) => (
+                                  <option value={trailer.id} key={trailer.id}>
+                                    {trailer.name}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              <Form.Text muted>
+                                {trailerOptionsCurrent.length === 1
+                                  ? "This client has a linked trailer; client selection asks before connecting it."
+                                  : trailerOptionsCurrent.length > 1
+                                  ? "This client has multiple trailers; client selection asks which one to connect."
+                                  : "No current trailer is linked to this client."}
+                              </Form.Text>
+                            </Form.Group>
+                            {selectedTrailerCurrent && (
+                              <p className="text-muted small mb-2">
+                                The item is linked to this trailer. The client/site is
+                                derived from the trailer&apos;s current link and is not
+                                stored on the item.
+                              </p>
+                            )}
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
                                 onClick={() => openMachineModalForBranch(false)}
                               >
-                                Select Machine for {selectedClientCurrent.name}
+                                Select Machine for{" "}
+                                {selectedClientCurrent?.name ||
+                                  selectedTrailerCurrent?.name}
                               </Button>
                               {selectedCurrentMachine && (
                                 <>
@@ -3951,7 +4488,7 @@ const handleAddToSlack = async (which = "shipping") => {
                                     <strong>Selected Machine (Current):</strong>{" "}
                                     {selectedCurrentMachine.name}
                                   </p>
-                                  {showLocalLocCurrent && (
+                                  {false && showLocalLocCurrent && (
                                     <>
                                       <Button
                                         variant="outline-secondary"
@@ -4021,6 +4558,14 @@ const handleAddToSlack = async (which = "shipping") => {
                             </div>
                           </div>
                         )}
+                        <LocationControls
+                          selectedClient={selectedClientCurrent}
+                          value={newLocalCurrent}
+                          onChange={setNewLocalCurrent}
+                          warehouseEnabled={isSocalWarehouseClient(selectedClientCurrent)}
+                          variant="outline-primary"
+                          borderColor="#4b8bf4"
+                        />
                       </Col>
                       <Col>
                         <Button
@@ -4033,9 +4578,24 @@ const handleAddToSlack = async (which = "shipping") => {
                         <Button
                           variant="outline-secondary"
                           onClick={handleShowChildModal}
-                          className="mb-2"
+                          className="me-2 mb-2"
                         >
                           Select Children
+                        </Button>
+                        <Button
+                          variant={items.attached ? "success" : "outline-secondary"}
+                          onClick={handleAttachToggle}
+                          className="mb-2"
+                          disabled={!items.attached && !selectedParent?.id}
+                          title={
+                            selectedParent?.id
+                              ? items.attached
+                                ? "Detach and show this item in searches"
+                                : "Attach to parent and hide from searches"
+                              : "Select a parent before attaching this item"
+                          }
+                        >
+                          {items.attached ? "Attached" : "Attach"}
                         </Button>
                         {selectedParent && (
                           <Form.Control
@@ -4066,7 +4626,9 @@ const handleAddToSlack = async (which = "shipping") => {
                           ) : (
                             selectedChildren.map((child) => (
                               <div key={child.id}>
-                                {child.name || child.id}
+                                <Link href={`/NewSearch/item/${child.id}`}>
+                                  {child.name || child.id}
+                                </Link>
                               </div>
                             ))
                           )}
@@ -4074,7 +4636,13 @@ const handleAddToSlack = async (which = "shipping") => {
                       </Col>
                     </Row>
                   </div>
-                  {/* Photo and Website Options */}
+                  <ShippingGroupField
+                    itemId={id || ""}
+                    value={selectedShippingGroupId}
+                    onChange={setSelectedShippingGroupId}
+                  />
+
+                  {/* Photo options */}
                   <div style={{ marginBottom: "1rem" }}>
                     <Row className={`mb-3 ${styles.photoActionsRow}`}>
                       <Col xs={12} md={6}>
@@ -4083,39 +4651,24 @@ const handleAddToSlack = async (which = "shipping") => {
                             variant="outline-secondary"
                             onClick={handleShowCameraModal}
                           >
-                            Take Photo
+                            Take {activePhotoCategory} Photo
                           </Button>
                           <Button
                             variant="outline-secondary"
                             onClick={handleBrowsePhotos}
                           >
-                            Browse
+                            Browse {activePhotoCategory}
                           </Button>
                         </ButtonGroup>
                       </Col>
                       <Col xs={12} md={6} className={styles.photoActionsRight}>
                         <Button
-                          variant="success"
-                          onClick={handleSendToInflow}
-                          style={{ marginLeft: "auto" }}
+                          variant="secondary"
+                          onClick={handleBluefolderButton}
+                          disabled={bluefolderLoading}
+                          style={{ marginLeft: "auto", marginRight: ".5rem" }}
                         >
-                          Send to inFlow
-                        </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={handleBluefolderButton}
-                        disabled={bluefolderLoading}
-                        style={{ marginLeft: "0.5rem", marginRight: ".5rem" }}
-                      >
-                        {bluefolderLoading ? "BlueFolder..." : "BlueFolder"}
-                      </Button>
-                        
-
-                        <Button
-                          variant={addToWebsite ? "primary" : "outline-primary"}
-                          onClick={() => setAddToWebsite((prev) => !prev)}
-                        >
-                          {addToWebsite ? "✓ Add to Website" : "Add to Website"}
+                          {bluefolderLoading ? "Sending..." : "BlueFolder"}
                         </Button>
 
                         <Form.Check
@@ -4130,6 +4683,7 @@ const handleAddToSlack = async (which = "shipping") => {
                             setItems((prev) => ({
                               ...prev,
                               visible: !isHidden,
+                              attached: isHidden ? prev.attached : false,
                             }));
                           }}
                           className="ms-3"
@@ -4145,57 +4699,13 @@ const handleAddToSlack = async (which = "shipping") => {
                       onChange={handleFilesSelected}
                     />
                   </div>
-                  {/* Photo Gallery */}
-                  {photos && photos.length > 0 && (
-                    <div
-                      className="photo-gallery"
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "10px",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      {photos.map((photo, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            position: "relative",
-                            width: "100px",
-                            height: "100px",
-                          }}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={`Photo ${index + 1}`}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              cursor: "zoom-in",
-                              borderRadius: "6px",
-                            }}
-                            onClick={() => openPhotoViewer(index)}
-                          />
-                          {photo.file && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                right: 0,
-                                padding: "0 5px",
-                              }}
-                              onClick={() => removePhoto(index)}
-                            >
-                              x
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <ItemPhotoTabs
+                    photos={photos}
+                    activeCategory={activePhotoCategory}
+                    onCategoryChange={setActivePhotoCategory}
+                    onRemovePhoto={removePhoto}
+                    onOpenPhoto={openPhotoViewer}
+                  />
                   {/* Action Buttons */}
                   <div className={`mt-3 d-flex flex-wrap align-items-center ${styles.actionRow}`}>
                     <Button
@@ -4361,6 +4871,15 @@ const handleAddToSlack = async (which = "shipping") => {
                             onChange={handleChange("poNumber")}
                           />
                         </Form.Group>
+                        <Form.Group as={Col} controlId="trackingNumber">
+                          <Form.Label>Tracking Number</Form.Label>
+                          <Form.Control
+                            placeholder="Tracking Number"
+                            type="text"
+                            value={items.trackingNumber || ""}
+                            onChange={handleChange("trackingNumber")}
+                          />
+                        </Form.Group>
                       </Row></div>
                   </Collapse>
                 </Form>
@@ -4429,7 +4948,10 @@ export async function getServerSideProps(context) {
       departure_date: itemData.departure_date || "",
       movementDateType:
         itemData.movementDateType === "departure" ? "departure" : "arrival",
+      date: itemData.date || "",
+      dateCreated: itemData.dateCreated || "",
       visible: itemData.visible !== undefined ? itemData.visible : true,
+      attached: itemData.attached === true,
 
       // add the pieces the UI reads directly
       descriptions: itemData.descriptions || [],

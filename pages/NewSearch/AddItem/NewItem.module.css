@@ -127,6 +127,302 @@
   gap: 8px;
 }
 
+.analyzeButton {
+  border-color: #236b78 !important;
+  background: linear-gradient(135deg, #236b78 0%, #174c62 100%) !important;
+  color: #ffffff !important;
+}
+
+.analyzeButton:disabled {
+  border-color: #aab8bc !important;
+  background: #d6dee0 !important;
+  color: #66777c !important;
+}
+
+.analysisModalHeader {
+  border-bottom: 1px solid #e3eaec;
+  background: linear-gradient(135deg, #f4fafb 0%, #fff8ef 100%);
+}
+
+.analysisKicker,
+.analysisMatchLabel,
+.analysisPhotoLabel {
+  color: #4d6a70;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.analysisModalBody {
+  padding: 24px;
+}
+
+.analysisSummary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.analysisMatchName {
+  margin: 3px 0 2px;
+  color: #203338;
+  font-size: 22px;
+}
+
+.analysisItemId {
+  color: #718186;
+  font-size: 13px;
+}
+
+.analysisConfidence {
+  min-width: 116px;
+  padding: 11px 14px;
+  border: 1px solid;
+  border-radius: 14px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.analysisConfidence span {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analysisConfidenceStrong {
+  border-color: #9bcabc;
+  background: #eaf7f1;
+  color: #205e4b;
+}
+
+.analysisConfidenceReview {
+  border-color: #e4c68a;
+  background: #fff7e6;
+  color: #805b16;
+}
+
+.analysisReviewNotice {
+  margin-bottom: 18px;
+  padding: 11px 13px;
+  border: 1px solid #ead4a7;
+  border-radius: 10px;
+  background: #fff9ed;
+  color: #71551c;
+  font-size: 13px;
+}
+
+.analysisComparisonGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.analysisPhotoCard {
+  overflow: hidden;
+  border: 1px solid #dbe4e6;
+  border-radius: 14px;
+  background: #f4f7f8;
+}
+
+.analysisPhotoLabel {
+  padding: 9px 12px;
+  border-bottom: 1px solid #dbe4e6;
+  background: #ffffff;
+}
+
+.analysisPhotoCard img,
+.analysisPhotoPlaceholder {
+  width: 100%;
+  height: 250px;
+}
+
+.analysisPhotoCard img {
+  display: block;
+  object-fit: contain;
+  background: #eef2f3;
+}
+
+.analysisPhotoPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #78888d;
+  text-align: center;
+}
+
+.analysisFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.analysisFieldGrid > div {
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid #e0e7e9;
+  border-radius: 10px;
+  background: #fafcfc;
+}
+
+.analysisFieldGrid span,
+.analysisFieldGrid strong {
+  display: block;
+}
+
+.analysisFieldGrid span {
+  margin-bottom: 3px;
+  color: #718186;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analysisFieldGrid strong {
+  overflow-wrap: anywhere;
+  color: #25393e;
+  font-size: 14px;
+}
+
+.analysisReasons {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f3f7f8;
+  color: #354a50;
+  font-size: 13px;
+}
+
+.analysisReasons > div {
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+.analysisReasons ul {
+  margin: 0;
+  padding-left: 19px;
+}
+
+.analysisOemEvidence {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #cfdde2;
+  border-radius: 12px;
+  background: #f8fbfc;
+  color: #354a50;
+  font-size: 13px;
+  text-align: left;
+}
+
+.analysisOemEvidenceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysisOemKicker {
+  margin-bottom: 2px;
+  color: #4d6a70;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.analysisOemEvidence p {
+  margin: 10px 0 0;
+}
+
+.analysisOemSupported,
+.analysisOemReference {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.analysisOemSupported {
+  background: #dff2e9;
+  color: #205e4b;
+}
+
+.analysisOemReference {
+  background: #e8eef0;
+  color: #52666c;
+}
+
+.analysisOemDetails {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.analysisOemDetails span {
+  color: #718186;
+  font-weight: 700;
+}
+
+.analysisOemDetails strong {
+  overflow-wrap: anywhere;
+}
+
+.analysisOemSources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  margin-top: 11px;
+}
+
+.analysisOemSources a {
+  color: #176276;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.analysisEmptyState {
+  padding: 24px 10px;
+  color: #52666c;
+  text-align: center;
+}
+
+.analysisEmptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #e9f0f2;
+  color: #315965;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.analysisObservedPn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: #f0f4f5;
+  color: #2d4c55;
+  font-weight: 600;
+}
+
 .loadingOverlay {
   position: fixed;
   inset: 0;
@@ -187,6 +483,29 @@
 
   .actionRow {
     align-items: stretch;
+  }
+
+  .analysisModalBody {
+    padding: 16px;
+  }
+
+  .analysisSummary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analysisConfidence {
+    width: 100%;
+  }
+
+  .analysisComparisonGrid,
+  .analysisFieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysisPhotoCard img,
+  .analysisPhotoPlaceholder {
+    height: 210px;
   }
 
   .actionRow :global(.btn-info) {

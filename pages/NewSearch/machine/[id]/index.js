@@ -17,23 +17,54 @@ import { adminDb } from "../../../../context/FirebaseAdmin";
 
 const getRefId = (ref) => {
   if (!ref) return null;
-  if (typeof ref === "string") return ref;
+  if (typeof ref === "string") return ref.split("/").filter(Boolean).pop() || ref;
   if (ref.id) return ref.id;
   return null;
 };
 
+const getPartRoleMachineIds = (data, role) => {
+  const fields =
+    role === "from"
+      ? ["MachineFrom", "Machine", "machineFromId", "machineId"]
+      : [
+          "MachineCurrent",
+          "CurrentMachine",
+          "machineCurrentId",
+          "currentMachineId",
+        ];
+  return Array.from(
+    new Set(fields.map((field) => getRefId(data?.[field])).filter(Boolean))
+  );
+};
+
 const getPartMachineIds = (data) => {
-  const modernIds = [data?.MachineFrom, data?.MachineCurrent]
+  const modernIds = [
+    data?.MachineFrom,
+    data?.MachineCurrent,
+    data?.machineFromId,
+    data?.machineCurrentId,
+  ]
     .map(getRefId)
     .filter(Boolean);
   if (modernIds.length) return modernIds;
 
-  return [data?.Machine, data?.CurrentMachine].map(getRefId).filter(Boolean);
+  return [data?.Machine, data?.CurrentMachine, data?.machineId, data?.currentMachineId]
+    .map(getRefId)
+    .filter(Boolean);
 };
 
 const partBelongsToMachine = (data, machineId) => {
   const machineIds = getPartMachineIds(data);
   return machineIds.length === 0 || machineIds.includes(machineId);
+};
+
+const partMatchesMachineRole = (data, machineId, role) => {
+  const roleMachineIds = getPartRoleMachineIds(data, role);
+  if (roleMachineIds.includes(machineId)) return true;
+
+  const allMachineIds = getPartMachineIds(data);
+  if (!allMachineIds.length) return role === "current";
+  return false;
 };
 
 const formatDateInput = (input) => {
@@ -282,6 +313,7 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
   const [associatedParts, setAssociatedParts] = useState(
     Array.isArray(initialAssociatedParts) ? initialAssociatedParts : []
   );
+  const [associatedPartsGroup, setAssociatedPartsGroup] = useState("current");
   const [error, setError] = useState(initialError || null);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -297,6 +329,17 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
   const activeMachineId = String(
     router.query.id || selectedMachine?.id || router.asPath.split("/").pop() || ""
   ).trim();
+  const associatedPartsForView = associatedParts.filter((part) =>
+    partMatchesMachineRole(part, activeMachineId, associatedPartsGroup)
+  );
+  const associatedPartCounts = {
+    from: associatedParts.filter((part) =>
+      partMatchesMachineRole(part, activeMachineId, "from")
+    ).length,
+    current: associatedParts.filter((part) =>
+      partMatchesMachineRole(part, activeMachineId, "current")
+    ).length,
+  };
 
   useEffect(() => {
     if (router.isReady) {
@@ -398,7 +441,7 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
     setIsPrinting(true);
     const db = firebase.firestore();
     const resolvedItems = await Promise.all(
-      associatedParts.map((part) => resolvePartForPrint(db, part))
+      associatedPartsForView.map((part) => resolvePartForPrint(db, part))
     );
     const payload = {
       items: resolvedItems.filter(Boolean),
@@ -532,36 +575,36 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
     }
   };
 
-  const handleDragStart = (index) => (event) => {
+  const handleDragStart = (partId) => (event) => {
     if (event.target.closest("button")) {
       event.preventDefault();
       return;
     }
-    setDragIndex(index);
+    setDragIndex(partId);
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData(
-      "text/plain",
-      associatedParts[index]?.id || String(index)
-    );
+    event.dataTransfer.setData("text/plain", partId || "");
   };
 
-  const handleDragOver = (index) => (event) => {
+  const handleDragOver = (partId) => (event) => {
     event.preventDefault();
-    if (dragOverIndex !== index) setDragOverIndex(index);
+    if (dragOverIndex !== partId) setDragOverIndex(partId);
     event.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (index) => (event) => {
+  const handleDrop = (partId) => (event) => {
     event.preventDefault();
-    if (dragIndex == null || dragIndex === index) {
+    if (dragIndex == null || dragIndex === partId) {
       setDragIndex(null);
       setDragOverIndex(null);
       return;
     }
     setAssociatedParts((prev) => {
       const next = [...prev];
-      const [moved] = next.splice(dragIndex, 1);
-      next.splice(index, 0, moved);
+      const fromIndex = next.findIndex((part) => part.id === dragIndex);
+      const toIndex = next.findIndex((part) => part.id === partId);
+      if (fromIndex < 0 || toIndex < 0) return prev;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
       return next;
     });
     setDragIndex(null);
@@ -607,14 +650,17 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       )}
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href="/NewSearch/mainSearch">
-            <a className={styles.brand} aria-label="Go to Main Search">
-              <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
-              <div>
-                <div className={styles.brandName}>Magmo</div>
-                <div className={styles.brandSub}>Machine Detail</div>
-              </div>
-            </a>
+          <Link
+            href="/NewSearch/mainSearch"
+            className={styles.brand}
+            aria-label="Go to Main Search">
+
+            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+            <div>
+              <div className={styles.brandName}>Magmo</div>
+              <div className={styles.brandSub}>Machine Detail</div>
+            </div>
+
           </Link>
           <Button
             variant="outline-secondary"
@@ -664,7 +710,7 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                 </Button>
               )}
               <div className={styles.cardMeta}>
-                {associatedParts.length} parts
+                {associatedPartsForView.length} of {associatedParts.length} parts
               </div>
             </div>
           </div>
@@ -778,10 +824,36 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
 
                 <div className={styles.tableCard}>
                   <div className={styles.tableHeader}>
-                    Associated Parts
-                    <span className={styles.tableHint}>
-                      Click + hold to move
-                    </span>
+                    <div>
+                      <div>Associated Parts</div>
+                      <span className={styles.tableHint}>
+                        Click + hold to move
+                      </span>
+                    </div>
+                    <div className={styles.partToggle} role="group" aria-label="Associated parts group">
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "current"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("current")}
+                      >
+                        Current ({associatedPartCounts.current})
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "from"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("from")}
+                      >
+                        From ({associatedPartCounts.from})
+                      </button>
+                    </div>
                   </div>
                   <div className={styles.tableWrap}>
                     <Table
@@ -802,25 +874,25 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                         </tr>
                       </thead>
                       <tbody>
-                        {associatedParts.length === 0 && (
+                        {associatedPartsForView.length === 0 && (
                           <tr>
                             <td colSpan={6} className={styles.emptyState}>
                               No associated parts found.
                             </td>
                           </tr>
                         )}
-                        {associatedParts.map((part, index) => (
+                        {associatedPartsForView.map((part) => (
                           <tr
                             key={part.id}
                             draggable
-                            onDragStart={handleDragStart(index)}
-                            onDragOver={handleDragOver(index)}
-                            onDrop={handleDrop(index)}
+                            onDragStart={handleDragStart(part.id)}
+                            onDragOver={handleDragOver(part.id)}
+                            onDrop={handleDrop(part.id)}
                             onDragEnd={handleDragEnd}
                             className={`${styles.draggableRow} ${
-                              dragIndex === index ? styles.dragging : ""
+                              dragIndex === part.id ? styles.dragging : ""
                             } ${
-                              dragOverIndex === index && dragIndex !== index
+                              dragOverIndex === part.id && dragIndex !== part.id
                                 ? styles.dropTarget
                                 : ""
                             }`}
@@ -851,8 +923,9 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                       variant="secondary"
                       className={styles.actionButton}
                       onClick={handlePrintMulti}
+                      disabled={!associatedPartsForView.length}
                     >
-                      Print All Items
+                      Print Shown Items
                     </Button>
                   </div>
                 </div>
@@ -942,6 +1015,10 @@ export async function getServerSideProps(context) {
               sn: toDisplayValue(data.sn),
               date: data.date || data.arrival_date || "",
               clientName,
+              machineFromId: getRefId(data.MachineFrom || data.Machine),
+              machineCurrentId: getRefId(
+                data.MachineCurrent || data.CurrentMachine
+              ),
             };
           })
         );

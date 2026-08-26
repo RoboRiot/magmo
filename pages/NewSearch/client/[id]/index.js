@@ -7,17 +7,33 @@ import {
   Alert,
   Spinner,
   Modal,
+  Form,
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
 import { useAuth } from "../../../../context/AuthUserContext";
 import ClientInfoModal from "../../ClientInfoModal";
 import MachineCreationModal from "../../MachineCreationModal";
+import MachineEditModal from "../../MachineEditModal";
 import styles from "../Client.module.css";
+import clientMachineHelpers from "../../../../lib/clientMachines.cjs";
+import trailerDirectoryHelpers from "../../../../lib/ops/trailerDirectory.cjs";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
 
-const Client = ({ initialClient, initialMachines, error: initialError }) => {
+const {
+  extractDocumentId,
+  serializeMachineDocument,
+  sortMachineRecords,
+} = clientMachineHelpers;
+const { serializeTrailerDirectory } = trailerDirectoryHelpers;
+
+const Client = ({
+  initialClient,
+  initialMachines,
+  initialTrailers,
+  error: initialError,
+}) => {
   const router = useRouter();
   const { authUser } = useAuth();
   const [selectedClient, setSelectedClient] = useState(initialClient || null);
@@ -34,10 +50,21 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
   const [showCreateMachineModal, setShowCreateMachineModal] = useState(false);
   const [availableMachines, setAvailableMachines] = useState([]);
+  const [machineToEdit, setMachineToEdit] = useState(null);
+  const [savingMachineId, setSavingMachineId] = useState("");
+  const [editMachineError, setEditMachineError] = useState("");
+  const [machineUpdateMessage, setMachineUpdateMessage] = useState("");
   const [machineToDelete, setMachineToDelete] = useState(null);
   const [deletingMachineId, setDeletingMachineId] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [blockingParts, setBlockingParts] = useState([]);
+  const [trailerOptions, setTrailerOptions] = useState(
+    Array.isArray(initialTrailers) ? initialTrailers : []
+  );
+  const [selectedTrailerId, setSelectedTrailerId] = useState("");
+  const [savingTrailerId, setSavingTrailerId] = useState("");
+  const [trailerLinkError, setTrailerLinkError] = useState("");
+  const [trailerLinkMessage, setTrailerLinkMessage] = useState("");
   const canDeleteMachines =
     authUser?.isAdmin === true ||
     String(authUser?.role || "").toLowerCase() === "admin";
@@ -46,8 +73,32 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
     if (!router.isReady) return;
     const activeId = router.query.id || router.asPath.split("/").pop();
     if (!activeId) return;
+
+    // The page is server-rendered with the client and its linked machines. Keep
+    // that data instead of immediately repeating the same reads through the
+    // browser Firestore SDK, which can be blocked by a proxy or streaming
+    // transport even while the Magmo server can reach Firestore normally.
+    if (initialClient?.id === activeId) {
+      setSelectedClient(initialClient);
+      setMachineOptions(
+        Array.isArray(initialMachines) ? initialMachines : []
+      );
+      setTrailerOptions(Array.isArray(initialTrailers) ? initialTrailers : []);
+      setError(initialError || null);
+      setIsLoading(false);
+      setMachinesLoading(false);
+      return;
+    }
+
     fetchClientData(activeId, { silent: Boolean(initialClient) });
-  }, [router.isReady, router.query.id, initialClient]);
+  }, [
+    router.isReady,
+    router.query.id,
+    initialClient,
+    initialMachines,
+    initialTrailers,
+    initialError,
+  ]);
 
   const fetchMachineRefs = async (machineRefs = []) => {
     const validRefs = machineRefs.filter(
@@ -66,9 +117,11 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
           id: machineDoc.id,
           name: machineData.name || "",
           local: machineData.local || "",
-          OEM: machineData.OEM || "",
-          Modality: machineData.Modality || "",
-          Model: machineData.Model || "",
+          OEM: machineData.OEM || machineData.oem || "",
+          Modality: machineData.Modality || machineData.modality || "",
+          Model: machineData.Model || machineData.model || "",
+          lastPM: machineData.lastPM || null,
+          nextPM: machineData.nextPM || null,
         });
       });
     }
@@ -130,6 +183,85 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
   const handleSelectMachine = (id, name) => {
     // Navigate to the machine details page if needed
     router.push("../machine/" + id);
+  };
+
+  const handleEditMachineClick = (machine) => {
+    setMachineToEdit(machine);
+    setEditMachineError("");
+    setMachineUpdateMessage("");
+  };
+
+  const handleCloseEditMachineModal = () => {
+    if (savingMachineId) return;
+    setMachineToEdit(null);
+    setEditMachineError("");
+  };
+
+  const handleSaveMachine = async (form) => {
+    if (!machineToEdit?.id || !canDeleteMachines) return;
+
+    const name = String(form?.name || "").trim();
+    if (!name) {
+      setEditMachineError("Machine name is required.");
+      return;
+    }
+
+    setSavingMachineId(machineToEdit.id);
+    setEditMachineError("");
+    setMachineUpdateMessage("");
+    try {
+      const OEM = String(form?.OEM || "").trim();
+      const Modality = String(form?.Modality || "").trim();
+      const Model = String(form?.Model || "").trim();
+      const db = firebase.firestore();
+      const updatePayload = {
+        name,
+        local: String(form?.local || "").trim(),
+        OEM,
+        oem: OEM,
+        Modality,
+        modality: Modality,
+        Model,
+        model: Model,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastPM: form?.lastPM
+          ? form.lastPM
+          : firebase.firestore.FieldValue.delete(),
+        nextPM: form?.nextPM
+          ? form.nextPM
+          : firebase.firestore.FieldValue.delete(),
+      };
+
+      await db.collection("Machine").doc(machineToEdit.id).set(updatePayload, {
+        merge: true,
+      });
+
+      const updatedMachine = {
+        ...machineToEdit,
+        name: updatePayload.name,
+        local: updatePayload.local,
+        OEM,
+        oem: OEM,
+        Modality,
+        modality: Modality,
+        Model,
+        model: Model,
+        lastPM: form?.lastPM || null,
+        nextPM: form?.nextPM || null,
+      };
+      setMachineOptions((current) =>
+        current.map((machine) =>
+          machine.id === updatedMachine.id ? updatedMachine : machine
+        )
+      );
+      setMachineToEdit(null);
+      setMachineUpdateMessage(`${name} was updated.`);
+    } catch (error) {
+      console.error("Error updating machine:", error);
+      setEditMachineError(error?.message || "Failed to update machine.");
+    } finally {
+      setSavingMachineId("");
+    }
   };
 
   const handleDeleteMachineClick = (machine) => {
@@ -249,6 +381,109 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
     setShowAddMachineModal(true);
   };
 
+  const linkedTrailers = trailerOptions.filter(
+    (trailer) => trailer.currentClientId === selectedClient?.id
+  );
+
+  const updateTrailerClientLink = async (trailer, clientId) => {
+    if (!trailer?.sourceId || !canDeleteMachines) return;
+    if (
+      clientId &&
+      trailer.currentClientId &&
+      trailer.currentClientId !== clientId &&
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `${trailer.name || trailer.id} is currently linked to ${
+          trailer.currentClientName || trailer.currentClientId
+        }. Move its client link to ${selectedClient?.name || clientId}?`
+      )
+    ) {
+      return;
+    }
+
+    setSavingTrailerId(trailer.id);
+    setTrailerLinkError("");
+    setTrailerLinkMessage("");
+    try {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) throw new Error("You must be signed in to change trailer links.");
+      const token = await currentUser.getIdToken(true);
+      const response = await fetch("/api/trailers/link-client", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          trailerId: trailer.sourceId,
+          clientId,
+          expectedClientId: trailer.currentClientId || "",
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update the trailer link.");
+      }
+
+      setTrailerOptions((current) =>
+        current.map((entry) =>
+          entry.id === trailer.id
+            ? {
+                ...entry,
+                currentClientId: result.clientId || "",
+                currentClientName: result.clientName || "",
+                currentClientAddress: result.clientAddress || "",
+                needsReview: !result.clientId || entry.legacySourceIds?.length > 0,
+              }
+            : entry
+        )
+      );
+      if (clientId && result.associatedMachineId) {
+        const machineDocument = await firebase
+          .firestore()
+          .collection("Machine")
+          .doc(result.associatedMachineId)
+          .get();
+        if (machineDocument.exists) {
+          const data = machineDocument.data() || {};
+          const machine = {
+            id: machineDocument.id,
+            name: data.name || "",
+            local: data.local || "",
+            OEM: data.OEM || data.oem || "",
+            Modality: data.Modality || data.modality || "",
+            Model: data.Model || data.model || "",
+            lastPM: data.lastPM || null,
+            nextPM: data.nextPM || null,
+          };
+          setMachineOptions((current) =>
+            sortMachineRecords([
+              ...current.filter((entry) => entry.id !== machine.id),
+              machine,
+            ])
+          );
+        }
+      } else if (!clientId && result.associatedMachineId) {
+        setMachineOptions((current) =>
+          current.filter((entry) => entry.id !== result.associatedMachineId)
+        );
+      }
+      setSelectedTrailerId("");
+      setTrailerLinkMessage(
+        clientId
+          ? `${trailer.name || trailer.id} is now linked to this client.`
+          : `${trailer.name || trailer.id} was unlinked from this client.`
+      );
+    } catch (linkError) {
+      console.error("Failed to update trailer client link:", linkError);
+      setTrailerLinkError(
+        linkError?.message || "Failed to update the trailer link."
+      );
+    } finally {
+      setSavingTrailerId("");
+    }
+  };
+
   return (
     <div className={styles.page}>
       <Modal show={Boolean(machineToDelete)} onHide={handleCloseDeleteMachineModal}>
@@ -292,14 +527,17 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
       </Modal>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <Link href="/NewSearch/mainSearch">
-            <a className={styles.brand} aria-label="Go to Main Search">
-              <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
-              <div>
-                <div className={styles.brandName}>Magmo</div>
-                <div className={styles.brandSub}>Client Detail</div>
-              </div>
-            </a>
+          <Link
+            href="/NewSearch/mainSearch"
+            className={styles.brand}
+            aria-label="Go to Main Search">
+
+            <img src="/magmo-logo.png" alt="Magmo" className={styles.brandLogo} />
+            <div>
+              <div className={styles.brandName}>Magmo</div>
+              <div className={styles.brandSub}>Client Detail</div>
+            </div>
+
           </Link>
           <Button
             variant="outline-secondary"
@@ -345,6 +583,105 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                   </div>
                 </div>
 
+                <div className={styles.trailerLinkPanel}>
+                  <div className={styles.tableHeader}>
+                    <div>
+                      <span>Linked trailers</span>
+                      {trailerLinkMessage && (
+                        <span className={styles.successMessage} role="status">
+                          {trailerLinkMessage}
+                        </span>
+                      )}
+                    </div>
+                    <Link href="/NewSearch/Trailers" className={styles.tableHint}>
+                      Open trailer directory
+                    </Link>
+                  </div>
+                  <div className={styles.trailerLinkBody}>
+                    {trailerLinkError && (
+                      <Alert variant="danger">{trailerLinkError}</Alert>
+                    )}
+                    {canDeleteMachines && (
+                      <div className={styles.linkControls}>
+                        <Form.Control
+                          as="select"
+                          value={selectedTrailerId}
+                          onChange={(event) => setSelectedTrailerId(event.target.value)}
+                          aria-label="Select a trailer to link"
+                        >
+                          <option value="">Select a trailer</option>
+                          {trailerOptions.map((trailer) => (
+                            <option key={trailer.id} value={trailer.id}>
+                              {trailer.name || trailer.id}
+                              {trailer.currentClientName
+                                ? ` — currently ${trailer.currentClientName}`
+                                : " — not linked"}
+                            </option>
+                          ))}
+                        </Form.Control>
+                        <Button
+                          variant="primary"
+                          disabled={!selectedTrailerId || Boolean(savingTrailerId)}
+                          onClick={() => {
+                            const trailer = trailerOptions.find(
+                              (entry) => entry.id === selectedTrailerId
+                            );
+                            if (trailer) {
+                              updateTrailerClientLink(trailer, selectedClient.id);
+                            }
+                          }}
+                        >
+                          {savingTrailerId ? "Saving..." : "Link trailer"}
+                        </Button>
+                      </div>
+                    )}
+                    <div className={styles.linkedTrailerList}>
+                      {linkedTrailers.length === 0 ? (
+                        <div className={styles.emptyState}>
+                          No trailers are linked to this client.
+                        </div>
+                      ) : (
+                        linkedTrailers.map((trailer) => (
+                          <div key={trailer.id} className={styles.linkedTrailerRow}>
+                            <div>
+                              <Link
+                                href={{
+                                  pathname: `/NewSearch/Trailers/${encodeURIComponent(
+                                    trailer.sourceId || trailer.id
+                                  )}`,
+                                  query: {
+                                    returnTo: `/NewSearch/client/${selectedClient.id}`,
+                                  },
+                                }}
+                                className={styles.linkedTrailerName}
+                              >
+                                {trailer.name || trailer.id}
+                              </Link>
+                              <div className={styles.tableHint}>
+                                {trailer.associatedMachineId
+                                  ? `Machine ${trailer.associatedMachineId}`
+                                  : "No associated machine"}
+                              </div>
+                            </div>
+                            {canDeleteMachines && (
+                              <Button
+                                size="sm"
+                                variant="outline-danger"
+                                disabled={Boolean(savingTrailerId)}
+                                onClick={() => updateTrailerClientLink(trailer, "")}
+                              >
+                                {savingTrailerId === trailer.id
+                                  ? "Saving..."
+                                  : "Unlink"}
+                              </Button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className={styles.actionRow}>
                   <Button variant="primary" onClick={openAddMachineModal}>
                     Add Existing Machine
@@ -359,7 +696,14 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
 
                 <div className={styles.tableCard}>
                   <div className={styles.tableHeader}>
-                    <span>Machines</span>
+                    <div>
+                      <span>Machines</span>
+                      {machineUpdateMessage && (
+                        <span className={styles.successMessage} role="status">
+                          {machineUpdateMessage}
+                        </span>
+                      )}
+                    </div>
                     <span className={styles.tableHint}>
                       {machinesLoading
                         ? "Loading machines..."
@@ -382,6 +726,7 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                           <th>OEM</th>
                           <th>Modality</th>
                           <th>Select</th>
+                          {canDeleteMachines && <th>Edit</th>}
                           {canDeleteMachines && <th>Delete</th>}
                         </tr>
                       </thead>
@@ -389,7 +734,7 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                         {machineOptions.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={canDeleteMachines ? 6 : 5}
+                              colSpan={canDeleteMachines ? 7 : 5}
                               className={styles.emptyState}
                             >
                               No machines assigned yet.
@@ -413,6 +758,18 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
                                   Select
                                 </Button>
                               </td>
+                              {canDeleteMachines && (
+                                <td>
+                                  <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    disabled={Boolean(savingMachineId || deletingMachineId)}
+                                    onClick={() => handleEditMachineClick(machine)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </td>
+                              )}
                               {canDeleteMachines && (
                                 <td>
                                   <Button
@@ -440,7 +797,6 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
           </div>
         </section>
       </div>
-
       {/* Modal to add an existing machine to the client */}
       <ClientInfoModal
         show={showAddMachineModal}
@@ -448,12 +804,19 @@ const Client = ({ initialClient, initialMachines, error: initialError }) => {
         machineOptions={availableMachines}
         setSelectedMachine={handleAddMachine}
       />
-
       {/* Modal to create a new machine and attach it to the client */}
       <MachineCreationModal
         show={showCreateMachineModal}
         handleClose={() => setShowCreateMachineModal(false)}
         onCreateMachine={handleCreateMachine}
+      />
+      <MachineEditModal
+        show={Boolean(machineToEdit)}
+        machine={machineToEdit}
+        saving={Boolean(savingMachineId)}
+        error={editMachineError}
+        handleClose={handleCloseEditMachineModal}
+        onSaveMachine={handleSaveMachine}
       />
     </div>
   );
@@ -484,6 +847,62 @@ export async function getServerSideProps(context) {
 
     const clientData = clientDoc.data();
 
+    const machineRefs = Array.isArray(clientData.machines) ? clientData.machines : [];
+    const machineDocsById = new Map();
+    const chunkSize = 20;
+
+    // Resolve machine references with the Admin SDK as part of SSR. A missing
+    // or malformed legacy reference should not prevent the rest of the
+    // client's machines from rendering.
+    for (let index = 0; index < machineRefs.length; index += chunkSize) {
+      const chunk = machineRefs.slice(index, index + chunkSize);
+      const machineResults = await Promise.allSettled(
+        chunk.map(async (machineRef) => {
+          if (machineRef && typeof machineRef.get === "function") {
+            return machineRef.get();
+          }
+
+          const machineId = extractDocumentId(machineRef, "Machine");
+
+          if (!machineId) return null;
+          return adminDb.collection("Machine").doc(machineId).get();
+        })
+      );
+
+      machineResults.forEach((result) => {
+        if (result.status !== "fulfilled" || !result.value?.exists) return;
+        machineDocsById.set(result.value.id, result.value);
+      });
+    }
+
+    // Older data is not always mirrored in Client.machines. Union the forward
+    // references above with machines that point back to this client, supporting
+    // both DocumentReference and historical string formats.
+    const machineCollection = adminDb.collection("Machine");
+    const reverseClientValues = [
+      clientDoc.ref,
+      id,
+      `Client/${id}`,
+      `/Client/${id}`,
+    ];
+    const reverseResults = await Promise.allSettled(
+      reverseClientValues.map((clientValue) =>
+        machineCollection.where("client", "==", clientValue).get()
+      )
+    );
+    reverseResults.forEach((result) => {
+      if (result.status !== "fulfilled") return;
+      result.value.docs.forEach((machineDoc) => {
+        machineDocsById.set(machineDoc.id, machineDoc);
+      });
+    });
+
+    const serializedMachines = sortMachineRecords(
+      Array.from(machineDocsById.values())
+        .map(serializeMachineDocument)
+        .filter(Boolean)
+    );
+
     // Serialize the client data, removing any non-serializable fields
     const serializedClient = {
       id,
@@ -492,10 +911,27 @@ export async function getServerSideProps(context) {
       // Add other client fields as needed, but ensure they're serializable
     };
 
+    const [trailerSnapshot, allClientsSnapshot] = await Promise.all([
+      adminDb.collection("Trailers").get(),
+      adminDb.collection("Client").get(),
+    ]);
+    const trailerRecords = trailerSnapshot.docs.map((document) => ({
+      id: document.id,
+      ...(document.data() || {}),
+    }));
+    const directoryClients = allClientsSnapshot.docs
+      .filter((document) => document.id !== "AIS62854")
+      .map((document) => ({ id: document.id, ...(document.data() || {}) }));
+    const serializedTrailers = serializeTrailerDirectory(
+      trailerRecords,
+      directoryClients
+    );
+
     return {
       props: {
         initialClient: serializedClient,
-        initialMachines: [],
+        initialMachines: serializedMachines,
+        initialTrailers: serializedTrailers,
       },
     };
   } catch (error) {
