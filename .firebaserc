@@ -1,0 +1,16 @@
+{
+  "projects": {},
+  "targets": {
+    "magmo-ac10c": {
+      "hosting": {
+        "production": [
+          "magmo-ac10c"
+        ],
+        "test": [
+          "magmo-test"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

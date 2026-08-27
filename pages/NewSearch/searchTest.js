@@ -51,14 +51,14 @@ function LoadingButton({ type, name, route }) {
   }, [isLoading]);
 
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type}`}
-        disabled={isLoading}
-        onClick={() => !isLoading && setLoading(true)}
-      >
-        {isLoading ? "Loading…" : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type}`}
+      disabled={isLoading}
+      onClick={() => !isLoading && setLoading(true)}>
+
+      {isLoading ? "Loading…" : name}
+
     </Link>
   );
 }

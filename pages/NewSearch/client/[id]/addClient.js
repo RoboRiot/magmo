@@ -157,7 +157,7 @@ const AddClient = () => {
           ),
         });
         // (Update machines with the new client reference as needed.)
-        clientId = newClientId;
+        setClientId(newClientId);
       }
       alert("Client and machines saved successfully.");
 

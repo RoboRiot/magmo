@@ -155,3 +155,100 @@
   font-weight: 600;
   text-align: center;
 }
+
+:global(html[data-theme="dark"]) .wrapper {
+  color-scheme: dark;
+  color: #e5edf8;
+}
+
+:global(html[data-theme="dark"]) .label {
+  color: #cbd5e1;
+}
+
+:global(html[data-theme="dark"]) .toggle {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .toggle:hover:not(:disabled),
+:global(html[data-theme="dark"]) .toggle:focus-visible {
+  border-color: #60a5fa;
+  background: #1b2940;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+:global(html[data-theme="dark"]) .toggle:disabled {
+  color: #7f8ea3;
+  border-color: #29364a;
+  background: #0d1422;
+}
+
+:global(html[data-theme="dark"]) .menu {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background: #111827;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+:global(html[data-theme="dark"]) .search,
+:global(html[data-theme="dark"]) .addInput {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .search::placeholder,
+:global(html[data-theme="dark"]) .addInput::placeholder {
+  color: #7f8ea3;
+}
+
+:global(html[data-theme="dark"]) .search:focus,
+:global(html[data-theme="dark"]) .addInput:focus {
+  border-color: #60a5fa;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+:global(html[data-theme="dark"]) .addButton {
+  color: #bfdbfe;
+  border-color: #36547a;
+  background: #172c49;
+}
+
+:global(html[data-theme="dark"]) .addButton:hover:not(:disabled),
+:global(html[data-theme="dark"]) .addButton:focus-visible {
+  color: #ffffff;
+  border-color: #60a5fa;
+  background: #1e3a5f;
+}
+
+:global(html[data-theme="dark"]) .option:hover {
+  background: #1b2940;
+}
+
+:global(html[data-theme="dark"]) .optionLabel {
+  color: #dbe7f5;
+}
+
+:global(html[data-theme="dark"]) .optionCheckbox {
+  accent-color: #60a5fa;
+}
+
+:global(html[data-theme="dark"]) .deleteButton {
+  color: #fca5a5;
+  border-color: #7f2935;
+  background: #3a1d25;
+}
+
+:global(html[data-theme="dark"]) .deleteButton:hover,
+:global(html[data-theme="dark"]) .deleteButton:focus-visible {
+  color: #fecaca;
+  border-color: #b94a5a;
+  background: #4a2430;
+}
+
+:global(html[data-theme="dark"]) .emptyState {
+  color: #94a3b8;
+}

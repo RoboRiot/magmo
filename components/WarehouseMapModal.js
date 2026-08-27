@@ -56,6 +56,7 @@ export default function WarehouseMapModal({
   onView,
   onSelectionChange,
   initialSelection = {},
+  positionOnly = false,
 }) {
   const [regionOptions, setRegionOptions] = useState([]);
   const [sectionMap, setSectionMap] = useState({});
@@ -73,11 +74,14 @@ export default function WarehouseMapModal({
   const [mapItemsLoading, setMapItemsLoading] = useState(false);
   const [mapItemsLoaded, setMapItemsLoaded] = useState(false);
   const [mapItemsError, setMapItemsError] = useState("");
+  const [photoViewerItem, setPhotoViewerItem] = useState(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
   const [directoryLoaded, setDirectoryLoaded] = useState(false);
   const lastShowRef = useRef(false);
   const itemCacheRef = useRef({});
+  const photoCacheRef = useRef({});
 
   const notifySelectionChange = useCallback(
     (selection) => {
@@ -215,6 +219,8 @@ export default function WarehouseMapModal({
     setMapItemsError("");
     setMapItemsLoaded(false);
     setMapItemsLoading(false);
+    setPhotoViewerItem(null);
+    setActivePhotoIndex(0);
     const {
       region,
       sectionLetter,
@@ -238,6 +244,29 @@ export default function WarehouseMapModal({
     setMapItemsError("");
     setMapItemsLoaded(false);
     setMapItemsLoading(false);
+  }, []);
+
+  const loadItemPhotos = useCallback(async (itemId) => {
+    if (photoCacheRef.current[itemId]) {
+      return photoCacheRef.current[itemId];
+    }
+
+    try {
+      const listRef = firebase.storage().ref().child(`Parts/${itemId}`);
+      const result = await listRef.listAll();
+      const sortedItems = [...result.items].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+      const photos = await Promise.all(
+        sortedItems.map((item) => item.getDownloadURL())
+      );
+      photoCacheRef.current[itemId] = photos;
+      return photos;
+    } catch (error) {
+      console.warn(`Failed to load photos for item ${itemId}`, error);
+      photoCacheRef.current[itemId] = [];
+      return [];
+    }
   }, []);
 
   const loadItemsForSelection = useCallback(
@@ -276,7 +305,7 @@ export default function WarehouseMapModal({
           .where("newLocalCurrent.region", "==", region)
           .get();
 
-        const items = [];
+        const itemPromises = [];
         snap.forEach((doc) => {
           const data = doc.data() || {};
           const loc = normalizeLocation(data.newLocalCurrent || {});
@@ -285,14 +314,20 @@ export default function WarehouseMapModal({
           if (normalizedPallet && loc.pallet !== normalizedPallet) return;
           if (normalizedBin && loc.bin !== normalizedBin) return;
 
-          items.push({
-            id: doc.id,
-            name: formatSimpleField(data.name),
-            pn: formatSimpleField(data.pn),
-            sn: formatSimpleField(data.sn),
-          });
+          itemPromises.push(
+            loadItemPhotos(doc.id).then((photos) => ({
+              id: doc.id,
+              name: formatSimpleField(data.name),
+              pn: formatSimpleField(data.pn),
+              sn: formatSimpleField(data.sn),
+              bin: formatSimpleField(loc.bin),
+              pallet: formatSimpleField(loc.pallet),
+              photos,
+            }))
+          );
         });
 
+        const items = await Promise.all(itemPromises);
         items.sort((a, b) => a.name.localeCompare(b.name));
         itemCacheRef.current[cacheKey] = items;
         setMapItems(items);
@@ -305,8 +340,46 @@ export default function WarehouseMapModal({
         setMapItemsLoaded(true);
       }
     },
-    [clearItemPanel]
+    [clearItemPanel, loadItemPhotos]
   );
+
+  const openPhotoViewer = (item, index) => {
+    setPhotoViewerItem(item);
+    setActivePhotoIndex(index);
+  };
+
+  const closePhotoViewer = () => {
+    setPhotoViewerItem(null);
+    setActivePhotoIndex(0);
+  };
+
+  const showPreviousPhoto = () => {
+    const photoCount = photoViewerItem?.photos?.length || 0;
+    if (!photoCount) return;
+    setActivePhotoIndex((current) =>
+      current === 0 ? photoCount - 1 : current - 1
+    );
+  };
+
+  const showNextPhoto = () => {
+    const photoCount = photoViewerItem?.photos?.length || 0;
+    if (!photoCount) return;
+    setActivePhotoIndex((current) =>
+      current === photoCount - 1 ? 0 : current + 1
+    );
+  };
+
+  useEffect(() => {
+    if (!photoViewerItem) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "ArrowLeft") showPreviousPhoto();
+      if (event.key === "ArrowRight") showNextPhoto();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [photoViewerItem]);
 
   const handleSelectRegion = (regionId) => {
     const selection = {
@@ -349,7 +422,9 @@ export default function WarehouseMapModal({
     setMapCol(colValue);
     setMapPallet("");
     setMapBin("");
-    if (hasOnlyNoPalletBins) {
+    if (positionOnly) {
+      setMapStep("grid");
+    } else if (hasOnlyNoPalletBins) {
       setMapPallet(NO_PALLET);
       setMapStep("bins");
     } else {
@@ -472,319 +547,451 @@ export default function WarehouseMapModal({
     });
   };
 
+  const viewerPhotos = photoViewerItem?.photos || [];
+
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Warehouse Map</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {mapLoading && (
-          <div className={styles.loadingState}>
-            <img
-              src="/magmo-logo.png"
-              alt="Loading Magmo"
-              className={styles.loadingLogo}
-            />
-            <div className={styles.loadingText}>Loading map data...</div>
-          </div>
-        )}
-        {mapError && <div className={styles.mapError}>{mapError}</div>}
+    <>
+      <Modal
+        show={show && !photoViewerItem}
+        onHide={onHide}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Warehouse Map</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {mapLoading && (
+            <div className={styles.loadingState}>
+              <img
+                src="/magmo-logo.png"
+                alt="Loading Magmo"
+                className={styles.loadingLogo}
+              />
+              <div className={styles.loadingText}>Loading map data...</div>
+            </div>
+          )}
+          {mapError && <div className={styles.mapError}>{mapError}</div>}
 
-        {!mapLoading && mapStep === "regions" && (
-          <div className={styles.mapStage}>
-            <div className={styles.mapHint}>Select a region</div>
-            <div className={styles.mapCanvas}>
-              {REGION_ORDER.map((regionId) => (
-                <button
-                  key={regionId}
-                  type="button"
-                  className={`${styles.regionBlock} ${styles[`region${regionId}`]}`}
-                  onClick={() => handleSelectRegion(regionId)}
-                  disabled={
-                    Array.isArray(regionOptions) &&
-                    regionOptions.length > 0 &&
-                    !regionOptions.includes(regionId)
-                  }
-                >
-                  {regionId}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!mapLoading && mapStep === "grid" && (
-          <div className={styles.mapStage}>
-            <div className={styles.mapHint}>
-              Region {mapRegion}: choose a row and column
-            </div>
-            <div className={styles.legend}>
-              <span className={styles.legendItem}>
-                <span
-                  className={`${styles.legendSwatch} ${styles.legendBins}`}
-                />
-                Bin
-              </span>
-              <span className={styles.legendItem}>
-                <span
-                  className={`${styles.legendSwatch} ${styles.legendItems}`}
-                />
-                Item
-              </span>
-              <span className={styles.legendItem}>
-                <span
-                  className={`${styles.legendSwatch} ${styles.legendEmpty}`}
-                />
-                Empty
-              </span>
-            </div>
-            {(() => {
-              const dims = getRegionDimensions(mapRegion);
-              const rows = LETTERS.slice(0, dims.rows || 0).reverse();
-              const cols = NUMBERS.slice(0, dims.cols || 0);
-              if (!rows.length || !cols.length) {
-                const sectionKeys = Array.from(
-                  new Set([
-                    ...Object.keys(mapCellPallets || {}),
-                    ...Object.keys(mapCellState || {}),
-                  ])
-                )
-                  .filter(Boolean)
-                  .map((key) => {
-                    const [row, col] = key.split("-");
-                    return { key, row, col };
-                  })
-                  .sort((a, b) => {
-                    if (a.row === b.row) {
-                      return Number(a.col) - Number(b.col);
+          {!mapLoading && mapStep === "regions" && (
+            <div className={styles.mapStage}>
+              <div className={styles.mapHint}>Select a region</div>
+              <div className={styles.mapCanvas}>
+                {REGION_ORDER.map((regionId) => (
+                  <button
+                    key={regionId}
+                    type="button"
+                    className={`${styles.regionBlock} ${styles[`region${regionId}`]}`}
+                    onClick={() => handleSelectRegion(regionId)}
+                    disabled={
+                      Array.isArray(regionOptions) &&
+                      regionOptions.length > 0 &&
+                      !regionOptions.includes(regionId)
                     }
-                    return b.row.localeCompare(a.row);
-                  });
+                  >
+                    {regionId}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-                if (!sectionKeys.length) {
+          {!mapLoading && mapStep === "grid" && (
+            <div className={styles.mapStage}>
+              <div className={styles.mapHint}>
+                Region {mapRegion}: choose a row and column
+              </div>
+              <div className={styles.legend}>
+                <span className={styles.legendItem}>
+                  <span
+                    className={`${styles.legendSwatch} ${styles.legendBins}`}
+                  />
+                  Bin
+                </span>
+                <span className={styles.legendItem}>
+                  <span
+                    className={`${styles.legendSwatch} ${styles.legendItems}`}
+                  />
+                  Item
+                </span>
+                <span className={styles.legendItem}>
+                  <span
+                    className={`${styles.legendSwatch} ${styles.legendEmpty}`}
+                  />
+                  Empty
+                </span>
+              </div>
+              {(() => {
+                const dims = getRegionDimensions(mapRegion);
+                const rows = LETTERS.slice(0, dims.rows || 0).reverse();
+                const cols = NUMBERS.slice(0, dims.cols || 0);
+                if (!rows.length || !cols.length) {
+                  const sectionKeys = Array.from(
+                    new Set([
+                      ...Object.keys(mapCellPallets || {}),
+                      ...Object.keys(mapCellState || {}),
+                    ])
+                  )
+                    .filter(Boolean)
+                    .map((key) => {
+                      const [row, col] = key.split("-");
+                      return { key, row, col };
+                    })
+                    .sort((a, b) => {
+                      if (a.row === b.row) {
+                        return Number(a.col) - Number(b.col);
+                      }
+                      return b.row.localeCompare(a.row);
+                    });
+
+                  if (!sectionKeys.length) {
+                    return (
+                      <div className={styles.mapEmpty}>
+                        No grid data for this region.
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div className={styles.mapEmpty}>
-                      No grid data for this region.
+                    <div className={styles.gridWrapper}>
+                      <div className={styles.mapHint}>
+                        Grid not available. Select an available section below.
+                      </div>
+                      <div className={styles.palletGrid}>
+                        {sectionKeys.map(({ key, row, col }) => (
+                          <button
+                            key={key}
+                            type="button"
+                            className={`${styles.palletButton} ${
+                              mapCellState?.[key]?.hasBins
+                                ? styles.gridCellBins
+                                : mapCellState?.[key]?.hasItems
+                                ? styles.gridCellItems
+                                : styles.gridCellEmpty
+                            }`}
+                            onClick={() => handleSelectCell(row, col)}
+                          >
+                            {row}
+                            {col}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   );
                 }
-
                 return (
                   <div className={styles.gridWrapper}>
-                    <div className={styles.mapHint}>
-                      Grid not available. Select an available section below.
-                    </div>
-                    <div className={styles.palletGrid}>
-                      {sectionKeys.map(({ key, row, col }) => (
-                        <button
-                          key={key}
-                          type="button"
-                          className={`${styles.palletButton} ${
-                            mapCellState?.[key]?.hasBins
-                              ? styles.gridCellBins
-                              : mapCellState?.[key]?.hasItems
-                              ? styles.gridCellItems
-                              : styles.gridCellEmpty
-                          }`}
-                          onClick={() => handleSelectCell(row, col)}
-                        >
-                          {row}
-                          {col}
-                        </button>
-                      ))}
+                    <div
+                      className={styles.grid}
+                      style={{ "--grid-cols": cols.length }}
+                    >
+                      {rows.map((row) =>
+                        cols.map((col) => {
+                          const cellKey = `${row}-${col}`;
+                          const hasBins = Boolean(mapCellState[cellKey]?.hasBins);
+                          const hasItems = Boolean(
+                            mapCellState[cellKey]?.hasItems
+                          );
+                          const isSelected =
+                            mapRow === row && mapCol === String(col);
+                          return (
+                            <button
+                              key={cellKey}
+                              type="button"
+                              className={`${styles.gridCell} ${
+                                hasBins
+                                  ? styles.gridCellBins
+                                  : hasItems
+                                  ? styles.gridCellItems
+                                  : styles.gridCellEmpty
+                              } ${isSelected ? styles.gridCellSelected : ""}
+                              `}
+                              onClick={() => handleSelectCell(row, col)}
+                            >
+                              <span>
+                                {row}
+                                {col}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 );
-              }
-              return (
-                <div className={styles.gridWrapper}>
-                  <div
-                    className={styles.grid}
-                    style={{ "--grid-cols": cols.length }}
-                  >
-                    {rows.map((row) =>
-                      cols.map((col) => {
-                        const cellKey = `${row}-${col}`;
-                        const hasBins = Boolean(mapCellState[cellKey]?.hasBins);
-                        const hasItems = Boolean(
-                          mapCellState[cellKey]?.hasItems
-                        );
-                        const isSelected =
-                          mapRow === row && mapCol === String(col);
-                        return (
-                          <button
-                            key={cellKey}
-                            type="button"
-                            className={`${styles.gridCell} ${
-                              hasBins
-                                ? styles.gridCellBins
-                                : hasItems
-                                ? styles.gridCellItems
-                                : styles.gridCellEmpty
-                            } ${isSelected ? styles.gridCellSelected : ""}
-                            `}
-                            onClick={() => handleSelectCell(row, col)}
-                          >
-                            <span>
-                              {row}
-                              {col}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {!mapLoading && mapStep === "pallets" && (
-          <div className={styles.mapStage}>
-            <div className={styles.mapHint}>
-              Region {mapRegion} - Section {mapRow}
-              {mapCol}: select a pallet
-            </div>
-            <div className={styles.palletGrid}>
-              {(mapCellPallets[`${mapRow}-${mapCol}`] || [])
-                .filter((pallet) => pallet !== NO_PALLET)
-                .map((pallet) => {
-                  const palletKey = `${mapRow}-${mapCol}-P${pallet}`;
-                  const bins = mapPalletBins[palletKey] || [];
-                  const hasBins = bins.length > 0;
-                  return (
-                    <div key={pallet} className={styles.palletCard}>
-                      <button
-                        type="button"
-                        className={styles.palletButton}
-                        disabled={!hasBins}
-                        onClick={() => handleSelectPallet(pallet)}
-                      >
-                        {`Pallet ${pallet}`}
-                      </button>
-                      <div className={styles.palletMeta}>
-                        {hasBins
-                          ? `${bins.length} bin${bins.length === 1 ? "" : "s"}`
-                          : "No bins"}
-                      </div>
-                      <div className={styles.palletActions}>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleViewPallet(pallet)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleSelectPalletOnly(pallet)}
-                        >
-                          Select
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              {!(mapCellPallets[`${mapRow}-${mapCol}`] || [])
-                .filter((pallet) => pallet !== NO_PALLET)
-                .length && (
-                <div className={styles.mapEmpty}>
-                  No pallets available here.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!mapLoading && mapStep === "bins" && (
-          <div className={styles.mapStage}>
-            <div className={styles.mapHint}>
-              Region {mapRegion} - Section {mapRow}
-              {mapCol} - Pallet {mapPallet}
-            </div>
-            <div className={styles.palletGrid}>
-              {(mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || []).map(
-                (bin) => (
-                  <button
-                    key={bin}
-                    type="button"
-                    className={`${styles.palletButton} ${styles.binButton}`}
-                    onClick={() => handleSelectBin(bin)}
-                  >
-                    Bin {bin}
-                  </button>
-                )
-              )}
-              {!(mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || [])
-                .length && (
-                <div className={styles.mapEmpty}>
-                  No bins available on this pallet.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!mapLoading &&
-          (mapItemsLoading || mapItemsLoaded || Boolean(mapItemsError)) && (
-            <div className={styles.itemsPanel}>
-              <div className={styles.itemsTitle}>
-                {mapItemsContext || "Items"}
-              </div>
-              {mapItemsLoading && (
-                <div className={styles.inlineLoadingState}>
-                  <img
-                    src="/magmo-logo.png"
-                    alt="Loading Magmo"
-                    className={styles.loadingLogo}
-                  />
-                  <div className={styles.loadingText}>Loading items...</div>
-                </div>
-              )}
-              {!mapItemsLoading && mapItemsError && (
-                <div className={styles.mapError}>{mapItemsError}</div>
-              )}
-              {!mapItemsLoading && !mapItemsError && mapItems.length === 0 && (
-                <div className={styles.mapEmpty}>No items found here.</div>
-              )}
-              {!mapItemsLoading && !mapItemsError && mapItems.length > 0 && (
-                <div className={styles.itemList}>
-                  <div className={styles.itemHeader}>
-                    <span>Name</span>
-                    <span>PN</span>
-                    <span>SN</span>
-                  </div>
-                  {mapItems.map((item) => (
-                    <Link key={item.id} href={`/NewSearch/item/${item.id}`}>
-                      <a className={styles.itemRow} onClick={onHide}>
-                        <span>{item.name}</span>
-                        <span>{item.pn}</span>
-                        <span>{item.sn}</span>
-                      </a>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              })()}
             </div>
           )}
-      </Modal.Body>
-      <Modal.Footer className={styles.mapFooter}>
-        <Button
-          variant="outline-secondary"
-          onClick={handleBack}
-          disabled={mapStep === "regions"}
-        >
-          Back
-        </Button>
-        <Button variant="outline-primary" onClick={handleView}>
-          View
-        </Button>
-        <Button variant="secondary" onClick={onHide}>
-          Close
-        </Button>
-      </Modal.Footer>
-    </Modal>
+
+          {!mapLoading && mapStep === "pallets" && (
+            <div className={styles.mapStage}>
+              <div className={styles.mapHint}>
+                Region {mapRegion} - Section {mapRow}
+                {mapCol}: select a pallet
+              </div>
+              <div className={styles.palletGrid}>
+                {(mapCellPallets[`${mapRow}-${mapCol}`] || [])
+                  .filter((pallet) => pallet !== NO_PALLET)
+                  .map((pallet) => {
+                    const palletKey = `${mapRow}-${mapCol}-P${pallet}`;
+                    const bins = mapPalletBins[palletKey] || [];
+                    const hasBins = bins.length > 0;
+                    return (
+                      <div key={pallet} className={styles.palletCard}>
+                        <button
+                          type="button"
+                          className={styles.palletButton}
+                          disabled={!hasBins}
+                          onClick={() => handleSelectPallet(pallet)}
+                        >
+                          {`Pallet ${pallet}`}
+                        </button>
+                        <div className={styles.palletMeta}>
+                          {hasBins
+                            ? `${bins.length} bin${bins.length === 1 ? "" : "s"}`
+                            : "No bins"}
+                        </div>
+                        <div className={styles.palletActions}>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleViewPallet(pallet)}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleSelectPalletOnly(pallet)}
+                          >
+                            Select
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {!(mapCellPallets[`${mapRow}-${mapCol}`] || [])
+                  .filter((pallet) => pallet !== NO_PALLET)
+                  .length && (
+                  <div className={styles.mapEmpty}>
+                    No pallets available here.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!mapLoading && mapStep === "bins" && (
+            <div className={styles.mapStage}>
+              <div className={styles.mapHint}>
+                Region {mapRegion} - Section {mapRow}
+                {mapCol} - Pallet {mapPallet}
+              </div>
+              <div className={styles.palletGrid}>
+                {(mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || []).map(
+                  (bin) => (
+                    <button
+                      key={bin}
+                      type="button"
+                      className={`${styles.palletButton} ${styles.binButton}`}
+                      onClick={() => handleSelectBin(bin)}
+                    >
+                      Bin {bin}
+                    </button>
+                  )
+                )}
+                {!(mapPalletBins[`${mapRow}-${mapCol}-P${mapPallet}`] || [])
+                  .length && (
+                  <div className={styles.mapEmpty}>
+                    No bins available on this pallet.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!mapLoading &&
+            (mapItemsLoading || mapItemsLoaded || Boolean(mapItemsError)) && (
+              <div className={styles.itemsPanel}>
+                <div className={styles.itemsTitle}>
+                  {mapItemsContext || "Items"}
+                </div>
+                {mapItemsLoading && (
+                  <div className={styles.inlineLoadingState}>
+                    <img
+                      src="/magmo-logo.png"
+                      alt="Loading Magmo"
+                      className={styles.loadingLogo}
+                    />
+                    <div className={styles.loadingText}>Loading items...</div>
+                  </div>
+                )}
+                {!mapItemsLoading && mapItemsError && (
+                  <div className={styles.mapError}>{mapItemsError}</div>
+                )}
+                {!mapItemsLoading && !mapItemsError && mapItems.length === 0 && (
+                  <div className={styles.mapEmpty}>No items found here.</div>
+                )}
+                {!mapItemsLoading && !mapItemsError && mapItems.length > 0 && (
+                  <div className={styles.itemList}>
+                    <div className={styles.itemHeader}>
+                      <span>Pictures</span>
+                      <span>Name</span>
+                      <span>PN</span>
+                      <span>SN</span>
+                      <span>Bin</span>
+                      <span>Pallet</span>
+                    </div>
+                    {mapItems.map((item) => (
+                      <div key={item.id} className={styles.itemRow}>
+                        <div
+                          className={styles.itemThumbnails}
+                          aria-label={`Pictures for ${item.name}`}
+                        >
+                          {item.photos.length > 0 ? (
+                            item.photos.map((photo, photoIndex) => (
+                              <button
+                                key={photo}
+                                type="button"
+                                className={styles.thumbnailButton}
+                                onClick={() =>
+                                  openPhotoViewer(item, photoIndex)
+                                }
+                                aria-label={`Open picture ${photoIndex + 1} of ${
+                                  item.photos.length
+                                } for ${item.name}`}
+                              >
+                                <img
+                                  src={photo}
+                                  alt=""
+                                  className={styles.itemThumbnail}
+                                  loading="lazy"
+                                />
+                              </button>
+                            ))
+                          ) : (
+                            <span className={styles.noPictures}>-</span>
+                          )}
+                        </div>
+                        <Link
+                          href={`/NewSearch/item/${item.id}`}
+                          className={styles.itemLink}
+                          onClick={onHide}>
+
+                          {item.name}
+
+                        </Link>
+                        <Link
+                          href={`/NewSearch/item/${item.id}`}
+                          className={styles.itemLink}
+                          onClick={onHide}>
+
+                          {item.pn}
+
+                        </Link>
+                        <Link
+                          href={`/NewSearch/item/${item.id}`}
+                          className={styles.itemLink}
+                          onClick={onHide}>
+
+                          {item.sn}
+
+                        </Link>
+                        <span>{item.bin}</span>
+                        <span>{item.pallet}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+        </Modal.Body>
+        <Modal.Footer className={styles.mapFooter}>
+          <Button
+            variant="outline-secondary"
+            onClick={handleBack}
+            disabled={mapStep === "regions"}
+          >
+            Back
+          </Button>
+          <Button variant="outline-primary" onClick={handleView}>
+            View
+          </Button>
+          <Button variant="secondary" onClick={onHide}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={show && Boolean(photoViewerItem)}
+        onHide={closePhotoViewer}
+        centered
+        size="lg"
+        className={styles.photoViewerModal}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {photoViewerItem?.name || "Item picture"}
+            {viewerPhotos.length > 0 &&
+              ` - Picture ${activePhotoIndex + 1} of ${viewerPhotos.length}`}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={styles.photoViewerBody}>
+          {viewerPhotos[activePhotoIndex] ? (
+            <img
+              src={viewerPhotos[activePhotoIndex]}
+              alt={`${photoViewerItem?.name || "Item"} picture ${
+                activePhotoIndex + 1
+              }`}
+              className={styles.fullPhoto}
+            />
+          ) : (
+            <div className={styles.mapEmpty}>No picture selected.</div>
+          )}
+          {viewerPhotos.length > 1 && (
+            <div className={styles.viewerThumbnails}>
+              {viewerPhotos.map((photo, index) => (
+                <button
+                  key={photo}
+                  type="button"
+                  className={`${styles.viewerThumbnailButton} ${
+                    index === activePhotoIndex
+                      ? styles.viewerThumbnailSelected
+                      : ""
+                  }`}
+                  onClick={() => setActivePhotoIndex(index)}
+                  aria-label={`Show picture ${index + 1}`}
+                >
+                  <img
+                    src={photo}
+                    alt=""
+                    className={styles.viewerThumbnail}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={showPreviousPhoto}
+            disabled={viewerPhotos.length <= 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline-secondary"
+            onClick={showNextPhoto}
+            disabled={viewerPhotos.length <= 1}
+          >
+            Next
+          </Button>
+          <Button variant="secondary" onClick={closePhotoViewer}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }

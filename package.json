@@ -1,55 +1,61 @@
 {
   "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
-    "prebuild": "node prebuild.js",
-    "dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider next dev",
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider next build",
-    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider next start",
+    "test:magmonitor": "node --test test/magmonitor-event-control.test.cjs",
+    "verify:magmonitor-device-session": "node scripts/verify-magmonitor-device-session.mjs",
+    "verify:magmonitor-rtdb": "node scripts/verify-magmonitor-rtdb.mjs",
+    "test:ops-integration": "node --test test/ops-dispatch-ingest-guard.test.cjs test/ops-dispatch-evidence-policy.test.cjs test/ops-dispatch-receipt.test.cjs test/ops-ingest-contract.test.cjs test/ops-sender-identity.test.cjs test/ops-recovery-state.test.cjs test/ops-reconciliation-contract.test.cjs test/ops-engineer-directory.test.cjs test/ops-responsibility-evidence.test.cjs test/ops-assignment-inference.test.cjs test/ops-calendar-session-evidence.test.cjs test/ops-search-tabs.test.cjs test/ops-snapshot-history.test.cjs test/ops-command-report-contract.test.cjs test/ops-command-responsibility-contract.test.cjs test/ops-inventory-connections.test.cjs test/ops-service-request-slack-config.test.cjs test/ops-service-request-client-match.test.cjs test/ops-service-request-approval.test.cjs test/ops-work-order-numbering.test.cjs test/slack-client-pagination.test.cjs test/ops-dispatch-queue.test.cjs test/trailer-monitor-contract.test.cjs test/trailer-client-links.test.cjs test/trailer-migration.test.cjs test/trailer-directory.test.cjs test/client-machines.test.cjs test/client-list.test.cjs test/firestore-service-request-rules.test.cjs",
+    "dev": "node scripts/dev-server.js",
+    "build": "next build --webpack",
+    "start": "next start",
     "auth:set-role": "node scripts/set-user-role.mjs",
-    "firebase:build": "cross-env NODE_OPTIONS=--openssl-legacy-provider next build && node -e \"const fs=require('fs'); const path='functions/.next'; const sleep=(ms)=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms); for(let i=0;i<6;i++){ try{ fs.rmSync(path,{recursive:true,force:true}); break; } catch(err){ if(!['EBUSY','EPERM','ENOTEMPTY'].includes(err.code) || i===5){ throw err; } sleep(500); } } fs.cpSync('.next', path, {recursive:true, force:true});\"",
-    "firebase:deploy": "npm run firebase:build && firebase deploy",
+    "search:backfill": "node scripts/backfill-part-search.js",
+    "vision:index": "node scripts/backfill-item-vision-index.js",
+    "storage:cache": "node scripts/backfill-storage-cache-control.js",
+    "firebase:build": "npm run build && node -e \"const fs=require('fs'); const path='functions/.next'; const sleep=(ms)=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms); for(let i=0;i<6;i++){ try{ fs.rmSync(path,{recursive:true,force:true}); break; } catch(err){ if(!['EBUSY','EPERM','ENOTEMPTY'].includes(err.code) || i===5){ throw err; } sleep(500); } } fs.cpSync('.next', path, {recursive:true, force:true}); for(const name of ['cache','dev','diagnostics','types']) fs.rmSync(path+'/'+name,{recursive:true,force:true});\" && node scripts/verify-firebase-build.js",
+    "deploy:production": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./deploy.ps1",
+    "deploy:test": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./testdeploy.ps1",
+    "deploy:production:dry-run": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./deploy.ps1 -DryRun",
+    "deploy:test:dry-run": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./testdeploy.ps1 -DryRun",
+    "firebase:deploy": "npm run deploy:production",
     "deploy:ssr": "bash ./deploy.sh"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^3.5.0",
-    "@fullcalendar/core": "^6.1.11",
-    "@fullcalendar/daygrid": "^6.1.11",
-    "@fullcalendar/react": "^6.1.11",
-    "@react-pdf/renderer": "^3.3.8",
-    "babel-loader": "^9.1.3",
     "bootstrap": "^5.3.3",
-    "buffer": "^6.0.3",
-    "clsx": "^2.1.0",
+    "d3-geo": "^3.1.1",
     "date-fns": "^3.3.1",
-    "dequal": "^2.0.3",
-    "firebase": "^10.14.1",
-    "firebase-admin": "^12.0.0",
-    "firebase-functions": "^4.7.0",
-    "make-cancellable-promise": "^1.3.2",
-    "make-event-props": "^1.6.2",
-    "merge-refs": "^1.2.2",
-    "next": "^10.0.0",
-    "nodemailer": "^6.9.10",
+    "firebase": "12.16.0",
+    "firebase-admin": "14.2.0",
+    "google-auth-library": "10.9.0",
+    "next": "16.2.11",
     "openai": "^6.7.0",
-    "pdfjs-dist": "^4.0.379",
-    "prop-types": "^15.8.1",
-    "raw-loader": "^4.0.2",
-    "react": "^16.13.1",
+    "pdfjs-dist": "5.4.296",
+    "react": "19.2.8",
     "react-bootstrap": "^2.9.1",
-    "react-dom": "^16.13.1",
-    "react-pdf": "^7.7.1",
-    "react-qr-barcode-scanner": "^1.0.6",
-    "react-qr-reader": "^3.0.0-beta-1",
-    "styled-jsx": "^5.1.7",
-    "tiny-invariant": "^1.3.2",
-    "warning": "^4.0.3",
-    "webpack": "^5.90.3",
+    "react-dom": "19.2.8",
+    "react-pdf": "10.4.1",
+    "react-qr-barcode-scanner": "2.1.25",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@babel/core": "^7.23.2",
     "@babel/plugin-proposal-optional-chaining": "^7.21.0",
-    "@babel/preset-env": "^7.23.2",
-    "cross-env": "^7.0.3"
+    "@babel/preset-env": "^7.23.2"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10",
+      "sharp": "0.35.0"
+    },
+    "@google-cloud/storage": {
+      "gaxios": "7.2.0",
+      "retry-request": "8.0.3",
+      "teeny-request": "10.1.3"
+    }
   }
 }

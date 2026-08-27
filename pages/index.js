@@ -1,38 +1,69 @@
 // pages/index.js
 import Head from "next/head";
 import React, { useState, useEffect, useRef } from "react";
+import Script from "next/script";
 import { Button, Alert } from "react-bootstrap";
 import styles from "../styles/Login.module.css";
 import { useRouter } from "next/router";
 import firebase from "../context/Firebase"; // compat default export ONLY
 import {
   ALLOWED_EMAIL_DOMAIN,
+  canAccessMagmo,
+  isAccessRevokedError,
   isAllowedEmailDomain,
 } from "../utils/authAccess";
+
+// OAuth client IDs are browser-visible public identifiers. The fallback keeps
+// production login working while allowing environment-specific overrides.
+const GOOGLE_OAUTH_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID ||
+  "177857525147-ulm94bugsp0r7kb3eotmbqahvdft38mr.apps.googleusercontent.com";
 
 export default function Home() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [hasMounted, setHasMounted] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [mobileBrowser, setMobileBrowser] = useState(false);
+  const [googleIdentityReady, setGoogleIdentityReady] = useState(false);
+  const [googleIdentityFailed, setGoogleIdentityFailed] = useState(false);
   const unsubRef = useRef(null);
   const persistenceModeRef = useRef("unknown");
-  const domainErrorMessage = `Only @${ALLOWED_EMAIL_DOMAIN} accounts can sign in.`;
+  const googleButtonRef = useRef(null);
+  const googleIdentityInitializedRef = useRef(false);
+  const accessErrorMessage = `Only @${ALLOWED_EMAIL_DOMAIN} accounts and approved Viewer accounts can sign in.`;
+
+  const userCanAccess = async (user) => {
+    if (!user) return false;
+    try {
+      const tokenResult = await user.getIdTokenResult(true);
+      return canAccessMagmo(user.email, tokenResult?.claims || {});
+    } catch (authError) {
+      console.error("[auth] Could not verify access claims:", authError);
+      if (isAccessRevokedError(authError)) return false;
+      return isAllowedEmailDomain(user.email);
+    }
+  };
 
   const getDestination = () => {
     const q = router?.query?.redirect;
     return Array.isArray(q) ? q[0] || "/NewSearch/mainSearch" : (q || "/NewSearch/mainSearch");
   };
 
-  const isIosSafari = () => {
+  const isMobileBrowser = () => {
     if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent;
-    const isIOS = /iP(hone|ad|od)/i.test(ua);
-    const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/i.test(ua);
-    return isIOS && isSafari;
+    const ua = String(navigator.userAgent || '');
+    const isMobileDevice =
+      /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
+    const isIpadosDesktopMode =
+      /Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1;
+    return isMobileDevice || isIpadosDesktopMode;
   };
 
-  useEffect(() => setHasMounted(true), []);
+  useEffect(() => {
+    setHasMounted(true);
+    setMobileBrowser(isMobileBrowser());
+  }, []);
 
   const ensurePersistence = async () => {
     try {
@@ -71,10 +102,9 @@ export default function Home() {
         try {
           const redirectResult = await firebase.auth().getRedirectResult();
           if (redirectResult && redirectResult.user) {
-            const redirectEmail = redirectResult.user.email;
-            if (!isAllowedEmailDomain(redirectEmail)) {
+            if (!(await userCanAccess(redirectResult.user))) {
               await firebase.auth().signOut();
-              setError(domainErrorMessage);
+              setError(accessErrorMessage);
               return;
             }
             const dest = getDestination();
@@ -103,18 +133,17 @@ export default function Home() {
           }
         } catch (_) {}
 
-        unsubRef.current = firebase.auth().onAuthStateChanged((user) => {
+        unsubRef.current = firebase.auth().onAuthStateChanged(async (user) => {
           console.log("[auth] onAuthStateChanged:", user);
           setAuthReady(true);
           if (user) {
-            if (!isAllowedEmailDomain(user.email)) {
-              firebase
-                .auth()
-                .signOut()
-                .catch((error) => {
-                  console.error("[auth] sign-out failed for unauthorized domain:", error);
-                });
-              setError(domainErrorMessage);
+            if (!(await userCanAccess(user))) {
+              try {
+                await firebase.auth().signOut();
+              } catch (error) {
+                console.error("[auth] sign-out failed for unauthorized user:", error);
+              }
+              setError(accessErrorMessage);
               return;
             }
             const dest = getDestination();
@@ -136,6 +165,81 @@ export default function Home() {
 
   if (!hasMounted) return null;
 
+  const finishGoogleSignIn = async (result) => {
+    if (!result?.user) {
+      throw new Error("Google did not return a signed-in user.");
+    }
+    if (!(await userCanAccess(result.user))) {
+      await firebase.auth().signOut();
+      setError(accessErrorMessage);
+      return;
+    }
+    router.replace(getDestination());
+  };
+
+  const handleGoogleIdentityCredential = async (response) => {
+    setError("");
+    try {
+      await ensurePersistence();
+      if (!response?.credential) {
+        throw new Error("Google did not return an identity credential.");
+      }
+      const credential = firebase.auth.GoogleAuthProvider.credential(
+        response.credential
+      );
+      const result = await firebase.auth().signInWithCredential(credential);
+      await finishGoogleSignIn(result);
+    } catch (identityError) {
+      console.error("[auth] Google Identity sign-in error:", identityError);
+      if (isAccessRevokedError(identityError)) {
+        setError("This account no longer has access to Magmo.");
+      } else {
+        setError(
+          "Google sign-in could not be completed. Please close any old Google sign-in tabs and try again."
+        );
+      }
+    }
+  };
+
+  const initializeGoogleIdentity = () => {
+    if (
+      googleIdentityInitializedRef.current ||
+      !mobileBrowser ||
+      !googleButtonRef.current ||
+      !window.google?.accounts?.id
+    ) {
+      return;
+    }
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_OAUTH_CLIENT_ID,
+        callback: handleGoogleIdentityCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      googleButtonRef.current.replaceChildren();
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "rectangular",
+        logo_alignment: "left",
+        width: Math.min(
+          400,
+          Math.max(240, googleButtonRef.current.clientWidth || 320)
+        ),
+      });
+      googleIdentityInitializedRef.current = true;
+      setGoogleIdentityReady(true);
+      setGoogleIdentityFailed(false);
+    } catch (identityError) {
+      console.error("[auth] Google Identity initialization failed:", identityError);
+      setGoogleIdentityFailed(true);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setError("");
     try {
@@ -143,28 +247,42 @@ export default function Home() {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope("email");
       provider.addScope("profile");
-      provider.setCustomParameters({
-        prompt: "select_account",
-        hd: ALLOWED_EMAIL_DOMAIN,
-      });
+      if (!isMobileBrowser()) {
+        provider.setCustomParameters({
+          prompt: "select_account",
+        });
+      }
 
-      console.log("[auth] Using popup");
+      const authDomain = String(
+        firebase.app().options.authDomain || ''
+      ).toLowerCase();
+      const currentHostname = String(window.location.hostname || '').toLowerCase();
+      const shouldUseRedirect =
+        isMobileBrowser() && authDomain === currentHostname;
+
+      // Firebase recommends redirect sign-in on mobile. With magmo.cloud as the
+      // auth domain, the helper and app share an origin, so Safari returns to
+      // Magmo cleanly instead of leaving a Google popup or tab on screen.
+      if (shouldUseRedirect) {
+        try {
+          localStorage.setItem('__magmo_signin_attempt', '1');
+        } catch (_) {}
+        console.log('[auth] Using same-origin redirect');
+        await firebase.auth().signInWithRedirect(provider);
+        return;
+      }
+
+      console.log('[auth] Using popup');
       try {
         const result = await firebase.auth().signInWithPopup(provider);
         console.log("[auth] popup result:", result && result.user);
         // onAuthStateChanged will route; but we can route immediately too:
         if (result && result.user) {
-          if (!isAllowedEmailDomain(result.user.email)) {
-            await firebase.auth().signOut();
-            setError(domainErrorMessage);
-            return;
-          }
-          const dest = getDestination();
-          router.replace(dest);
+          await finishGoogleSignIn(result);
         }
       } catch (popupError) {
         if (
-          isIosSafari() &&
+          isMobileBrowser() &&
           (popupError?.code === "auth/popup-blocked" ||
             popupError?.code === "auth/popup-closed-by-user" ||
             popupError?.code === "auth/operation-not-supported-in-this-environment")
@@ -175,8 +293,13 @@ export default function Home() {
         throw popupError;
       }
     } catch (err) {
-      console.error("[auth] sign-in error:", err);
-      if (err?.code === "auth/unauthorized-domain") {
+      console.error('[auth] sign-in error:', err);
+      try {
+        localStorage.removeItem('__magmo_signin_attempt');
+      } catch (_) {}
+      if (isAccessRevokedError(err)) {
+        setError("This account no longer has access to Magmo.");
+      } else if (err?.code === "auth/unauthorized-domain") {
         setError(
           "This host is not authorized in Firebase Auth settings. Add your app host in Firebase Auth > Settings > Authorized domains."
         );
@@ -186,25 +309,16 @@ export default function Home() {
     }
   };
 
-  const handleTestLogin = async () => {
-    setError("");
-    const testEmail = "test@test.com";
-    if (!isAllowedEmailDomain(testEmail)) {
-      setError(domainErrorMessage);
-      return;
-    }
-    const password = prompt("Enter password:");
-    if (!password) return;
-    try {
-      await firebase.auth().signInWithEmailAndPassword(testEmail, password);
-      router.replace("/NewSearch/searchTest");
-    } catch (err) {
-      setError("Test login failed: " + (err && err.message ? err.message : String(err)));
-    }
-  };
-
   return (
     <div className={styles.page}>
+      {mobileBrowser && (
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+          onReady={initializeGoogleIdentity}
+          onError={() => setGoogleIdentityFailed(true)}
+        />
+      )}
       <Head>
         <title>magmo</title>
         <link rel="icon" href="/favicon.ico" />
@@ -221,29 +335,40 @@ export default function Home() {
           )}
           {error && <Alert variant="danger">{error}</Alert>}
 
-          <Button
-            variant="light"
-            className={styles.googleButton}
-            onClick={handleGoogleSignIn}
-          >
-            <span className={styles.googleIcon}>
-              <img
-                src="https://www.svgrepo.com/show/355037/google.svg"
-                alt="Google logo"
-                width="20"
-                height="20"
+          {mobileBrowser && !googleIdentityFailed ? (
+            <div className={styles.googleIdentityShell}>
+              <div
+                ref={googleButtonRef}
+                className={styles.googleIdentityButton}
+                aria-label="Continue with Google"
               />
-            </span>
-            Continue with Google
-          </Button>
+              {!googleIdentityReady && (
+                <div className={styles.googleIdentityLoading}>
+                  Loading secure Google sign-in…
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="light"
+              className={styles.googleButton}
+              onClick={handleGoogleSignIn}
+            >
+              <span className={styles.googleIcon}>
+                <img
+                  src="https://www.svgrepo.com/show/355037/google.svg"
+                  alt="Google logo"
+                  width="20"
+                  height="20"
+                />
+              </span>
+              Continue with Google
+            </Button>
+          )}
 
-          <Button
-            variant="outline-secondary"
-            className={styles.testButton}
-            onClick={handleTestLogin}
-          >
-            Test
-          </Button>
+          <div className={styles.status}>
+            Staff accounts and approved guest viewers
+          </div>
         </div>
       </div>
     </div>

@@ -12,9 +12,11 @@ import {
 } from "react-bootstrap";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { getCountFromServer } from "firebase/firestore";
 import {
   fetchPartsWithMachineDataPage,
   fetchClients,
+  fetchMachinesForClient,
   fetchModels,
 } from "../../utils/fetchAssociations";
 import { useAuth } from "../../context/AuthUserContext";
@@ -27,6 +29,9 @@ import firebase from "../../context/Firebase";
 import {
   buildNameTokens,
   buildWorkOrderTokens,
+  getItemCreatedDate,
+  getPartSearchScore,
+  itemMatchesGeneralSearch,
   normalizeWorkOrderValue,
 } from "../../utils/itemFormShared";
 import WarehouseMapModal from "../../components/WarehouseMapModal";
@@ -36,7 +41,27 @@ import TrailerMapModal from "../../components/TrailerMapModal";
 const SOCAL_CLIENT_ID = "AIS17182";
 const NORCAL_CLIENT_ID = "AIS25097";
 const UNASSIGNED_CLIENT_ID = "AIS00404";
+const CLIENT_PLACEHOLDER = "Not selected";
+const WAREHOUSE_CLIENT_LABELS = {
+  [SOCAL_CLIENT_ID]: "Lake Forest",
+  [NORCAL_CLIENT_ID]: "NorCal Warehouse",
+  [UNASSIGNED_CLIENT_ID]: "Unassigned",
+};
 const DEFAULT_PAGE_SIZE = 25;
+const LIST_ALL_BATCH_SIZE = 100;
+
+function getClientDisplayName(clientId, fallback = CLIENT_PLACEHOLDER) {
+  if (!clientId) return CLIENT_PLACEHOLDER;
+  return WAREHOUSE_CLIENT_LABELS[clientId] || fallback || clientId;
+}
+
+function getResponsivePageSize(width) {
+  if (width <= 640) return 8;
+  if (width <= 991) return 12;
+  if (width <= 1280) return 14;
+  if (width <= 1600) return 16;
+  return 20;
+}
 
 
 // Simulates a network request delay
@@ -61,14 +86,14 @@ function LoadingButton({ type, name, route, className }) {
   }, [isLoading]);
 
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type} ${className || ""}`}
-        disabled={isLoading}
-        onClick={() => !isLoading && setLoading(true)}
-      >
-        {isLoading ? "Loading..." : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type} ${className || ""}`}
+      disabled={isLoading}
+      onClick={() => !isLoading && setLoading(true)}>
+
+      {isLoading ? "Loading..." : name}
+
     </Link>
   );
 }
@@ -150,7 +175,32 @@ function getMachineField(item, key) {
   );
 }
 
+function getReferenceId(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  return value?.id || null;
+}
+
+function getItemMachineId(item, type) {
+  if (type === "current") {
+    return (
+      item?.currentMachineId ??
+      getReferenceId(item?.MachineCurrent) ??
+      getReferenceId(item?.CurrentMachine) ??
+      null
+    );
+  }
+
+  return (
+    item?.machineFromId ??
+    getReferenceId(item?.MachineFrom) ??
+    getReferenceId(item?.Machine) ??
+    null
+  );
+}
+
 const SEARCH_TYPE_MAP = {
+  general: "General",
   name: "Name",
   date: "Date",
   "work order": "Work Order",
@@ -168,8 +218,8 @@ function normalizeSearchType(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
-  if (!raw) return "Name";
-  return SEARCH_TYPE_MAP[raw] || "Name";
+  if (!raw) return "General";
+  return SEARCH_TYPE_MAP[raw] || "General";
 }
 
 function buildSearchTerms(value) {
@@ -188,6 +238,23 @@ function nameMatchesSearch(nameValue, searchValue) {
   return terms.every((term) => nameLower.includes(term));
 }
 
+function createdDateMatchesRange(item, startDate, endDate) {
+  const createdYMD = toYMD(getItemCreatedDate(item));
+  if (!createdYMD || !startDate) return false;
+  const rangeEnd = endDate || startDate;
+  return createdYMD >= startDate && createdYMD <= rangeEnd;
+}
+
+function rankSearchResults(items, searchType, searchValue) {
+  if (normalizeSearchType(searchType) !== "General" || !searchValue) {
+    return items;
+  }
+  return [...items].sort(
+    (a, b) =>
+      getPartSearchScore(b, searchValue) - getPartSearchScore(a, searchValue)
+  );
+}
+
 
 export default function MainSearch() {
   const { signOut, authUser } = useAuth();
@@ -200,20 +267,31 @@ export default function MainSearch() {
   const [show, setShow] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [isListAll, setIsListAll] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [dItem, setDItem] = useState();
-  const [select, setSelect] = useState("Name");
+  const [select, setSelect] = useState("General");
   const [showList, setShowList] = useState(false);
   const [showListSearch, setShowListSearch] = useState("text");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
   const [selectedOEM, setSelectedOEM] = useState(null);
   const [selectedModality, setSelectedModality] = useState(null);
   // Replace the old single client state with two sets:
   const [selectedClientFrom, setSelectedClientFrom] = useState(null);
   const [clientFromButtonText, setClientFromButtonText] = useState("Select Option");
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
-  const [clientCurrentButtonText, setClientCurrentButtonText] = useState("Select Option");
+  const [clientCurrentButtonText, setClientCurrentButtonText] =
+    useState("Select Option");
+  const [selectedMachineFrom, setSelectedMachineFrom] = useState(null);
+  const [machineFromOptions, setMachineFromOptions] = useState([]);
+  const [isLoadingMachineFrom, setIsLoadingMachineFrom] = useState(false);
+  const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
+  const [currentMachineOptions, setCurrentMachineOptions] = useState([]);
+  const [isLoadingCurrentMachines, setIsLoadingCurrentMachines] =
+    useState(false);
 
   const [clients, setClients] = useState([]);
   const [showClientModal, setShowClientModal] = useState(false);
@@ -221,6 +299,7 @@ export default function MainSearch() {
   const [clientSelectionType, setClientSelectionType] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [showTrailerMap, setShowTrailerMap] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
 
   const router = useRouter();
   const labelBase = ["name", "date", "w/o", "p/n", "s/n"];
@@ -246,7 +325,13 @@ export default function MainSearch() {
   const [page, setPage] = useState(1);
   const [pageCursors, setPageCursors] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [paginationWindow, setPaginationWindow] = useState(3);
+  const [totalPageCount, setTotalPageCount] = useState(null);
+  const [totalItemCount, setTotalItemCount] = useState(null);
+  const [isPageSizeReady, setIsPageSizeReady] = useState(false);
+  const visibleItemIdsRef = useRef(null);
   const fetchSeq = useRef(0);
+  const previousPageSizeRef = useRef(DEFAULT_PAGE_SIZE);
   const slowQueryWarnRef = useRef({ key: "", at: 0 });
   const latestFetchDebugRef = useRef(null);
   const searchDropdownCloseTimer = useRef(null);
@@ -254,11 +339,9 @@ export default function MainSearch() {
   const workOrderBackfillInFlight = useRef(false);
   const [queryEpoch, setQueryEpoch] = useState(0);
   const [loadError, setLoadError] = useState(null);
-  const tableBodyRef = useRef(null);
-  const rowHeightRef = useRef(46);
-  const headerHeightRef = useRef(38);
 
   const LOAD_TIMEOUT_MS = 30000;
+  const LIST_ALL_TIMEOUT_MS = 120000;
   const openMap = () => setShowMap(true);
   const openTrailerMap = () => setShowTrailerMap(true);
 
@@ -299,6 +382,74 @@ export default function MainSearch() {
     }, 350);
     return () => clearTimeout(timerId);
   }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelectedMachineFrom(null);
+    setMachineFromOptions([]);
+
+    if (!selectedClientFrom) {
+      setIsLoadingMachineFrom(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsLoadingMachineFrom(true);
+    fetchMachinesForClient(selectedClientFrom)
+      .then((machines) => {
+        if (!cancelled) {
+          setMachineFromOptions(Array.isArray(machines) ? machines : []);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Failed to load Machine From options", error);
+          setMachineFromOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingMachineFrom(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClientFrom]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelectedCurrentMachine(null);
+    setCurrentMachineOptions([]);
+
+    if (!selectedClientCurrent) {
+      setIsLoadingCurrentMachines(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsLoadingCurrentMachines(true);
+    fetchMachinesForClient(selectedClientCurrent)
+      .then((machines) => {
+        if (!cancelled) {
+          setCurrentMachineOptions(Array.isArray(machines) ? machines : []);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Failed to load Current Machine options", error);
+          setCurrentMachineOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingCurrentMachines(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClientCurrent]);
 
   const handleMapView = useCallback(
     (selection = {}) => {
@@ -452,7 +603,7 @@ export default function MainSearch() {
 
         snap.docs.forEach((doc) => {
           const data = doc.data() || {};
-          const workOrderTokens = buildWorkOrderTokens(data.workOrders || []);
+          const workOrderTokens = buildWorkOrderTokens(data);
           const existingTokens = Array.isArray(data.workOrderTokens)
             ? Array.from(new Set(data.workOrderTokens.map((v) => String(v))))
             : [];
@@ -484,14 +635,27 @@ export default function MainSearch() {
     }
   }, []);
 
-  const searchLower = (debouncedSearch || "").toLowerCase().trim();
+  const normalizedSelectedType = normalizeSearchType(select);
+  const searchLower =
+    normalizedSelectedType === "Date"
+      ? dateStart
+      : (debouncedSearch || "").toLowerCase().trim();
   const hasActiveFilters =
     Boolean(selectedOEM) ||
     Boolean(selectedModality) ||
     Boolean(selectedModel) ||
     Boolean(selectedClientFrom) ||
     Boolean(selectedClientCurrent) ||
-    Boolean(searchLower);
+    Boolean(selectedMachineFrom) ||
+    Boolean(selectedCurrentMachine) ||
+    Boolean(searchLower) ||
+    Boolean(normalizedSelectedType === "Date" && dateEnd);
+  const selectedClientFromDisplay = selectedClientFrom
+    ? getClientDisplayName(selectedClientFrom, clientFromButtonText)
+    : CLIENT_PLACEHOLDER;
+  const selectedClientCurrentDisplay = selectedClientCurrent
+    ? getClientDisplayName(selectedClientCurrent, clientCurrentButtonText)
+    : CLIENT_PLACEHOLDER;
 
   const valueMatches = (value, s) => {
     if (!value) return false;
@@ -519,6 +683,8 @@ export default function MainSearch() {
       const activeSearchLower =
         overrides.searchLower != null ? overrides.searchLower : searchLower;
       const activeSelect = normalizeSearchType(overrides.select ?? select);
+      const activeDateEnd =
+        overrides.dateEnd != null ? overrides.dateEnd : dateEnd;
 
       // hide explicitly hidden items
       if (item?.visible === false) return false;
@@ -550,34 +716,44 @@ export default function MainSearch() {
       ) {
         return false;
       }
+      if (
+        selectedMachineFrom &&
+        getItemMachineId(item, "from") !== selectedMachineFrom
+      ) {
+        return false;
+      }
+      if (
+        selectedCurrentMachine &&
+        getItemMachineId(item, "current") !== selectedCurrentMachine
+      ) {
+        return false;
+      }
 
       // Search
       if (activeSearchLower) {
+        if (activeSelect === "General") {
+          return itemMatchesGeneralSearch(item, activeSearchLower);
+        }
         if (activeSelect === "Name") {
           return nameMatchesSearch(item?.name, activeSearchLower);
         }
         if (activeSelect === "Date") {
-          const wantedDay = activeSearchLower; // yyyy-mm-dd from input
-          const itemYMD = toYMD(item?.date);
-          if (itemYMD && itemYMD === wantedDay) return true;
-          if (Array.isArray(item?.descriptions)) {
-            if (item.descriptions.some((d) => toYMD(d?.date) === wantedDay)) {
-              return true;
-            }
-          }
-          if (Array.isArray(item?.workOrders)) {
-            if (item.workOrders.some((w) => toYMD(w?.date) === wantedDay)) {
-              return true;
-            }
-          }
-          return false;
+          return createdDateMatchesRange(
+            item,
+            activeSearchLower,
+            activeDateEnd
+          );
         }
         if (activeSelect === "Work Order") {
-          return (
-            Array.isArray(item?.workOrders) &&
-            item.workOrders.some((wo) =>
-              workOrderMatches(wo?.workOrder, activeSearchLower)
-            )
+          const workOrderValues = [
+            item?.wo,
+            item?.workOrder,
+            ...(Array.isArray(item?.workOrders)
+              ? item.workOrders.map((wo) => wo?.workOrder ?? wo)
+              : []),
+          ];
+          return workOrderValues.some((value) =>
+            workOrderMatches(value, activeSearchLower)
           );
         }
         if (activeSelect === "Product Number") {
@@ -597,10 +773,11 @@ export default function MainSearch() {
           return false;
         }
         if (activeSelect === "SKU") {
-          return (
-            valueMatches(item?.id, activeSearchLower) ||
-            valueMatches(item?.localSN, activeSearchLower) ||
-            valueMatches(item?.local_sn, activeSearchLower)
+          const skuDigits = String(activeSearchLower).replace(/\D/g, "");
+          if (!skuDigits) return true;
+          const wantedSku = `ais${skuDigits}`;
+          return [item?.id, item?.localSN, item?.local_sn].some((value) =>
+            String(value || "").toLowerCase().startsWith(wantedSku)
           );
         }
       }
@@ -613,8 +790,11 @@ export default function MainSearch() {
       selectedModel,
       selectedClientFrom,
       selectedClientCurrent,
+      selectedMachineFrom,
+      selectedCurrentMachine,
       searchLower,
       select,
+      dateEnd,
       workOrderMatches,
     ]
   );
@@ -628,6 +808,9 @@ export default function MainSearch() {
     setPage(1);
     setPageCursors([]);
     setHasNextPage(false);
+    setTotalPageCount(null);
+    setTotalItemCount(null);
+    visibleItemIdsRef.current = null;
   };
 
   // Reset pagination on route/query change (prevents stale pages like “starting at 6”)
@@ -650,7 +833,11 @@ export default function MainSearch() {
     selectedModel,
     selectedClientFrom,
     selectedClientCurrent,
+    selectedMachineFrom,
+    selectedCurrentMachine,
     debouncedSearch,
+    dateStart,
+    dateEnd,
     select,
   ]);
 
@@ -664,8 +851,9 @@ export default function MainSearch() {
 
   // Fetch data on component mount and route change
   useEffect(() => {
+    if (!isPageSizeReady) return;
     fetchData(page);
-  }, [page, queryEpoch]);
+  }, [isPageSizeReady, page, queryEpoch]);
 
   useEffect(() => {
     if (!router?.events) return;
@@ -678,9 +866,69 @@ export default function MainSearch() {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const updatePaginationWindow = () => {
+      if (window.innerWidth <= 900) {
+        setPaginationWindow(2);
+      } else if (window.innerWidth <= 1200) {
+        setPaginationWindow(3);
+      } else {
+        setPaginationWindow(3);
+      }
+    };
+    updatePaginationWindow();
+    window.addEventListener("resize", updatePaginationWindow);
+    return () => window.removeEventListener("resize", updatePaginationWindow);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    let resizeTimer = null;
+
+    const applyResponsivePageSize = () => {
+      const nextPageSize = getResponsivePageSize(window.innerWidth);
+      previousPageSizeRef.current = nextPageSize;
+      setPageSize(nextPageSize);
+      setIsPageSizeReady(true);
+    };
+
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const nextPageSize = getResponsivePageSize(window.innerWidth);
+        setPageSize((current) =>
+          current === nextPageSize ? current : nextPageSize
+        );
+      }, 180);
+    };
+
+    applyResponsivePageSize();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPageSizeReady) return;
+    if (previousPageSizeRef.current === pageSize) return;
+
+    previousPageSizeRef.current = pageSize;
+    resetPagination();
+    if (page === 1) {
+      setQueryEpoch((value) => value + 1);
+    }
+  }, [isPageSizeReady, page, pageSize]);
+
   async function fetchData(requestedPage = 1) {
     const seq = ++fetchSeq.current;
     const requestStartedAt = Date.now();
+    const requestTimeoutMs = isListAll
+      ? LIST_ALL_TIMEOUT_MS
+      : LOAD_TIMEOUT_MS;
     let timedOut = false;
     latestFetchDebugRef.current = null;
     setIsLoading(true);
@@ -696,6 +944,8 @@ export default function MainSearch() {
           selectedModel,
           selectedClientFrom,
           selectedClientCurrent,
+          selectedMachineFrom,
+          selectedCurrentMachine,
           select,
           search: debouncedSearch,
           elapsedMs: Date.now() - requestStartedAt,
@@ -704,34 +954,36 @@ export default function MainSearch() {
         setLoadError({
           code: "timeout",
           message: `Loading is taking longer than ${Math.round(
-            LOAD_TIMEOUT_MS / 1000
+            requestTimeoutMs / 1000
           )}s. This is likely due to very selective filters.`,
         });
         setIsLoading(false);
       }
-    }, LOAD_TIMEOUT_MS);
+    }, requestTimeoutMs);
     try {
       if (router.query.inputText && router.query.selectedType) {
-        setSelect(normalizeSearchType(router.query.selectedType));
-        setSearch(router.query.inputText);
-      }
-      const startAfterDoc =
-        requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
-      if (requestedPage > 1 && !startAfterDoc) {
-        setPage(1);
-        if (seq === fetchSeq.current) {
-          clearTimeout(timeoutId);
-          setIsLoading(false);
+        const routeSearchType = normalizeSearchType(router.query.selectedType);
+        setSelect(routeSearchType);
+        if (routeSearchType === "Date") {
+          setDateStart(router.query.inputText);
+        } else {
+          setSearch(router.query.inputText);
         }
-        return;
       }
+      let startAfterDoc =
+        requestedPage > 1 ? pageCursors[requestedPage - 2] : null;
       const effectiveSelect = normalizeSearchType(
         router.query.selectedType || select
       );
-      const effectiveSearch = router.query.inputText || debouncedSearch;
+      const effectiveSearch =
+        effectiveSelect === "Date"
+          ? dateStart || router.query.inputText || ""
+          : router.query.inputText || debouncedSearch;
       const effectiveSearchLower = (effectiveSearch || "")
         .toLowerCase()
         .trim();
+      const effectiveDateEnd =
+        effectiveSelect === "Date" ? dateEnd || effectiveSearchLower : "";
       const hasWorkOrderSearch =
         Boolean(effectiveSearchLower) && effectiveSelect === "Work Order";
       if (hasWorkOrderSearch) {
@@ -743,11 +995,15 @@ export default function MainSearch() {
         Boolean(selectedModel) ||
         Boolean(selectedClientFrom) ||
         Boolean(selectedClientCurrent) ||
+        Boolean(selectedMachineFrom) ||
+        Boolean(selectedCurrentMachine) ||
         Boolean(effectiveSearchLower);
       const debugSearchFetch =
         requestedPage >= 3 ||
         Boolean(selectedClientFrom) ||
-        Boolean(selectedClientCurrent);
+        Boolean(selectedClientCurrent) ||
+        Boolean(selectedMachineFrom) ||
+        Boolean(selectedCurrentMachine);
       let lastFetchDebugAt = 0;
       let lastFetchDebugAccepted = -1;
       const logFetchDebug = (event) => {
@@ -759,6 +1015,8 @@ export default function MainSearch() {
           pageSize,
           selectedClientFrom,
           selectedClientCurrent,
+          selectedMachineFrom,
+          selectedCurrentMachine,
           effectiveSelect,
           effectiveSearchLower,
           seenAtMs: now - requestStartedAt,
@@ -786,23 +1044,33 @@ export default function MainSearch() {
           pageSize,
           selectedClientFrom,
           selectedClientCurrent,
+          selectedMachineFrom,
+          selectedCurrentMachine,
           effectiveSelect,
           effectiveSearchLower,
         });
       };
 
       // light retry for transient Firestore hiccups
-      const load = async (attempt = 1) => {
+      const load = async ({
+        cursor = startAfterDoc,
+        batchSize = pageSize,
+        batchNumber = requestedPage,
+        pageOffset = 0,
+        attempt = 1,
+      } = {}) => {
         try {
           return await fetchPartsWithMachineDataPage({
-            pageSize,
-            startAfterDoc,
+            pageSize: batchSize,
+            pageOffset,
+            startAfterDoc: cursor,
             visibleOnly: true,
             filterFn: hasActiveFiltersForRequest
               ? (item) =>
                   itemMatchesFilters(item, {
                     searchLower: effectiveSearchLower,
                     select: effectiveSelect,
+                    dateEnd: effectiveDateEnd,
                   })
               : null,
             search: effectiveSearchLower
@@ -810,6 +1078,7 @@ export default function MainSearch() {
                   type: effectiveSelect,
                   raw: effectiveSearch,
                   lower: effectiveSearchLower,
+                  end: effectiveDateEnd,
                 }
               : null,
             needsMachineData:
@@ -817,29 +1086,187 @@ export default function MainSearch() {
               Boolean(selectedModality) ||
               Boolean(selectedModel) ||
               Boolean(selectedClientFrom) ||
-              Boolean(selectedClientCurrent),
+              Boolean(selectedClientCurrent) ||
+              Boolean(selectedMachineFrom) ||
+              Boolean(selectedCurrentMachine),
             selectedClientFrom,
             selectedClientCurrent,
-            debugLabel: `mainSearch:p${requestedPage}:attempt${attempt}`,
+            debugLabel: `mainSearch:p${batchNumber}:attempt${attempt}`,
             onDebug: logFetchDebug,
           });
         } catch (e) {
           if (attempt >= 3) throw e;
           await new Promise(r => setTimeout(r, 250 * Math.pow(2, attempt - 1)));
-          return load(attempt + 1);
+          return load({
+            cursor,
+            batchSize,
+            batchNumber,
+            pageOffset,
+            attempt: attempt + 1,
+          });
         }
       };
-      const {
-        parts: data,
-        lastDoc,
-        hasNextPage: nextPage,
-        debug: queryDebug = null,
-      } = await load();
+
+      let data = [];
+      let lastDoc = null;
+      let nextPage = false;
+      let queryDebug = null;
+      const canLoadFromCatalog =
+        !hasActiveFiltersForRequest &&
+        totalPageCount != null &&
+        totalItemCount != null &&
+        (visibleItemIdsRef.current != null ||
+          requestedPage >=
+            Math.max(1, totalPageCount - paginationWindow + 1));
+
+      if (isListAll) {
+        let cursor = null;
+        let batchNumber = 1;
+        let hasMore = true;
+        const seenCursors = new Set();
+
+        while (hasMore) {
+          const result = await load({
+            cursor,
+            batchSize: LIST_ALL_BATCH_SIZE,
+            batchNumber,
+          });
+          if (timedOut || seq !== fetchSeq.current) return;
+
+          data.push(...result.parts);
+          queryDebug = result.debug || queryDebug;
+          lastDoc = result.lastDoc || null;
+          hasMore = Boolean(result.hasNextPage && lastDoc);
+
+          if (hasMore) {
+            if (seenCursors.has(lastDoc.id)) {
+              throw new Error("List All pagination did not advance.");
+            }
+            seenCursors.add(lastDoc.id);
+            cursor = lastDoc;
+            batchNumber += 1;
+          }
+        }
+      } else if (canLoadFromCatalog && requestedPage > 1 && !startAfterDoc) {
+        const db = firebase.firestore();
+        let visibleIds = visibleItemIdsRef.current;
+
+        if (!visibleIds) {
+          const currentUser = firebase.auth().currentUser;
+          const projectId = firebase.app().options.projectId;
+          const collectedIds = [];
+          try {
+            const idToken = currentUser
+              ? await currentUser.getIdToken()
+              : null;
+            let pageToken = "";
+
+            if (!projectId || !idToken) {
+              throw new Error("Authentication is not ready.");
+            }
+
+            do {
+              const params = new URLSearchParams({
+                pageSize: "1000",
+                "mask.fieldPaths": "visible",
+              });
+              if (pageToken) params.set("pageToken", pageToken);
+
+              const response = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+                  projectId
+                )}/databases/(default)/documents/Test?${params.toString()}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${idToken}`,
+                  },
+                }
+              );
+              if (!response.ok) {
+                throw new Error(
+                  `Page catalog request failed with status ${response.status}.`
+                );
+              }
+
+              const payload = await response.json();
+              (payload.documents || []).forEach((document) => {
+                const isHidden =
+                  document.fields?.visible?.booleanValue === false;
+                if (!isHidden && document.name) {
+                  collectedIds.push(
+                    decodeURIComponent(document.name.split("/").pop())
+                  );
+                }
+              });
+              pageToken = payload.nextPageToken || "";
+            } while (pageToken);
+          } catch (catalogError) {
+            console.warn(
+              "[mainSearch] Lightweight page catalog unavailable; using ascending Firestore scan.",
+              catalogError
+            );
+            collectedIds.length = 0;
+            let catalogCursor = null;
+            const catalogBatchSize = 500;
+
+            while (true) {
+              let catalogQuery = db
+                .collection("Test")
+                .orderBy(firebase.firestore.FieldPath.documentId())
+                .limit(catalogBatchSize);
+              if (catalogCursor) {
+                catalogQuery = catalogQuery.startAfter(catalogCursor);
+              }
+              const snapshot = await catalogQuery.get();
+              snapshot.docs.forEach((document) => {
+                if (document.data()?.visible !== false) {
+                  collectedIds.push(document.id);
+                }
+              });
+              if (snapshot.size < catalogBatchSize) break;
+              catalogCursor = snapshot.docs[snapshot.docs.length - 1];
+            }
+          }
+
+          visibleIds = collectedIds;
+          visibleItemIdsRef.current = collectedIds;
+        }
+
+        const pageStart = (requestedPage - 1) * pageSize;
+        const pageIds = visibleIds.slice(pageStart, pageStart + pageSize);
+        const pageSnapshots = await Promise.all(
+          pageIds.map((id) => db.collection("Test").doc(id).get())
+        );
+        data = pageSnapshots
+          .filter((snapshot) => snapshot.exists)
+          .map((snapshot) => ({
+            id: snapshot.id,
+            ...(snapshot.data() || {}),
+          }));
+        nextPage = requestedPage < totalPageCount;
+      } else {
+        const result =
+          requestedPage > 1 && !startAfterDoc
+            ? await load({
+                cursor: null,
+                pageOffset: (requestedPage - 1) * pageSize,
+                batchNumber: requestedPage,
+              })
+            : await load();
+        data = result.parts;
+        lastDoc = result.lastDoc;
+        nextPage = result.hasNextPage;
+        queryDebug = result.debug || null;
+      }
+
       if (timedOut || seq !== fetchSeq.current) return;
+      const effectivePageSize = isListAll
+        ? Math.max(data.length, LIST_ALL_BATCH_SIZE)
+        : pageSize;
       const slowQueryDetected =
         queryDebug &&
         (queryDebug.elapsedMs > 2000 ||
-          queryDebug.scannedDocs > pageSize * 8 ||
+          queryDebug.scannedDocs > effectivePageSize * 8 ||
           queryDebug.scannedBatches > 8);
       if (slowQueryDetected && hasWorkOrderSearch) {
         startWorkOrderTokenBackfill("work-order-slow-query");
@@ -849,7 +1276,7 @@ export default function MainSearch() {
           queryDebug.searchMode || "unknown",
           effectiveSelect,
           effectiveSearchLower || "",
-          String(pageSize),
+          String(effectivePageSize),
           String(requestedPage),
         ].join("|");
         const now = Date.now();
@@ -859,7 +1286,7 @@ export default function MainSearch() {
         if (shouldWarn) {
           console.warn("[mainSearch][slow-query]", {
             ...queryDebug,
-            pageSize,
+            pageSize: effectivePageSize,
             requestedPage,
             effectiveSelect,
             hasActiveFilters: hasActiveFiltersForRequest,
@@ -902,17 +1329,22 @@ export default function MainSearch() {
       setID(data.map((item) => item.id));
       if (requestedPage > 1 && data.length === 0) {
         setHasNextPage(false);
-        setPage(1);
+        setInfo([]);
+        setAugmentedInfo([]);
         return;
       }
-      setHasNextPage(nextPage);
-      setPageCursors((prev) => {
-        const next = requestedPage === 1 ? [] : [...prev];
-        if (lastDoc) {
-          next[requestedPage - 1] = lastDoc;
-        }
-        return next;
-      });
+      setHasNextPage(isListAll ? false : nextPage);
+      if (isListAll) {
+        setPageCursors([]);
+      } else {
+        setPageCursors((prev) => {
+          const next = requestedPage === 1 ? [] : [...prev];
+          if (lastDoc) {
+            next[requestedPage - 1] = lastDoc;
+          }
+          return next;
+        });
+      }
       setSelectedItems([]);
 
       // Normalize client ids for filtering
@@ -928,16 +1360,31 @@ export default function MainSearch() {
           (typeof item?.ClientCurrent === "string" ? item.ClientCurrent : null) ??
           item?.ClientCurrent?.id ??
           null,
+        machineFromId:
+          item?.machineFromId ??
+          getReferenceId(item?.MachineFrom) ??
+          getReferenceId(item?.Machine) ??
+          null,
+        currentMachineId:
+          item?.currentMachineId ??
+          getReferenceId(item?.MachineCurrent) ??
+          getReferenceId(item?.CurrentMachine) ??
+          null,
       }));
 
       setAugmentedInfo(augmented);
       // default view = filtered (keeps pagination and filters consistent)
       setInfo(
-        augmented.filter((item) =>
-          itemMatchesFilters(item, {
-            searchLower: effectiveSearchLower,
-            select: effectiveSelect,
-          })
+        rankSearchResults(
+          augmented.filter((item) =>
+            itemMatchesFilters(item, {
+              searchLower: effectiveSearchLower,
+              select: effectiveSelect,
+              dateEnd: effectiveDateEnd,
+            })
+          ),
+          effectiveSelect,
+          effectiveSearchLower
         )
       );
     } catch (err) {
@@ -956,13 +1403,107 @@ export default function MainSearch() {
     }
   }
 
-  const searchChangeHandler = (event) => setSearch(event.target.value);
+  useEffect(() => {
+    if (!router.isReady || isListAll || !isPageSizeReady) return undefined;
+    const hasActiveFilters =
+      Boolean(selectedOEM) ||
+      Boolean(selectedModality) ||
+      Boolean(selectedModel) ||
+      Boolean(selectedClientFrom) ||
+      Boolean(selectedClientCurrent) ||
+      Boolean(selectedMachineFrom) ||
+      Boolean(selectedCurrentMachine) ||
+      Boolean(debouncedSearch || router.query.inputText);
+
+    if (hasActiveFilters) {
+      setTotalPageCount(null);
+      setTotalItemCount(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const loadCount = async () => {
+      const collectionRef = firebase.firestore().collection("Test");
+      const [allSnapshot, hiddenSnapshot] = await Promise.all([
+        getCountFromServer(collectionRef._delegate),
+        getCountFromServer(
+          collectionRef.where("visible", "==", false)._delegate
+        ),
+      ]);
+      if (cancelled) return;
+      const visibleCount = Math.max(
+        0,
+        Number(allSnapshot.data().count || 0) -
+          Number(hiddenSnapshot.data().count || 0)
+      );
+      setTotalItemCount(visibleCount);
+      setTotalPageCount(Math.max(1, Math.ceil(visibleCount / pageSize)));
+    };
+
+    loadCount().catch((error) => {
+      if (!cancelled) {
+        console.error("Failed to count inventory pages", error);
+        setTotalPageCount(null);
+        setTotalItemCount(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedSearch,
+    dateStart,
+    dateEnd,
+    isListAll,
+    isPageSizeReady,
+    pageSize,
+    router.isReady,
+    router.query.inputText,
+    selectedClientCurrent,
+    selectedClientFrom,
+    selectedCurrentMachine,
+    selectedMachineFrom,
+    selectedModality,
+    selectedModel,
+    selectedOEM,
+  ]);
+
+  const searchChangeHandler = (event) => {
+    const nextValue =
+      normalizeSearchType(select) === "SKU"
+        ? event.target.value.replace(/\D/g, "").slice(0, 5)
+        : event.target.value;
+    setSearch(nextValue);
+  };
+
+  const handleSearchTypeSelect = (nextType) => {
+    setSelect(nextType);
+    setShowListSearch(nextType === "Date" ? "date" : "text");
+    setShowList(false);
+    setSearch("");
+    if (nextType !== "Date") {
+      setDateStart("");
+      setDateEnd("");
+    }
+  };
+
+  const toggleListAll = () => {
+    setIsListAll((current) => !current);
+    resetPagination();
+    setQueryEpoch((value) => value + 1);
+  };
 
   // Filter the currently loaded items (now consistent with paged filtering)
   useEffect(() => {
     const base = augmentedInfo || [];
-    setInfo(base.filter(matchesFilters));
-  }, [augmentedInfo, matchesFilters]);
+    setInfo(
+      rankSearchResults(
+        base.filter(matchesFilters),
+        select,
+        searchLower
+      )
+    );
+  }, [augmentedInfo, matchesFilters, searchLower, select]);
 
   function sortCheckAll(pos) {
     // Determine next direction: toggle the clicked column only
@@ -974,8 +1515,8 @@ export default function MainSearch() {
 
       if (pos === 1) {
         // DATE column
-        const ta = toTime(a[key]);
-        const tb = toTime(b[key]);
+        const ta = toTime(getItemCreatedDate(a));
+        const tb = toTime(getItemCreatedDate(b));
 
         // Put missing dates at the end for ascending, at the start for descending
         if (ta === null && tb === null) return 0;
@@ -1247,11 +1788,12 @@ export default function MainSearch() {
       const clientSnap = await firebase.firestore().collection("Client").doc(clientId).get();
       if (clientSnap.exists) {
         const clientData = clientSnap.data();
+        const displayName = getClientDisplayName(clientId, clientData.name);
         if (clientSelectionType === "from") {
-          setClientFromButtonText(clientData.name);
+          setClientFromButtonText(displayName);
           setSelectedClientFrom(clientId);
         } else if (clientSelectionType === "current") {
-          setClientCurrentButtonText(clientData.name);
+          setClientCurrentButtonText(displayName);
           setSelectedClientCurrent(clientId);
         }
       } else {
@@ -1313,19 +1855,19 @@ export default function MainSearch() {
   // WAREHOUSE BUTTONS (for Client Current)
   // --------------------
   const handleSoCalWarehouseClick = () => {
-    setClientCurrentButtonText("SoCal Warehouse");
+    setClientCurrentButtonText(getClientDisplayName(SOCAL_CLIENT_ID));
     setSelectedClientCurrent(SOCAL_CLIENT_ID);
     console.log("Warehouse button clicked: setting Client Current to", SOCAL_CLIENT_ID);
   };
 
   const handleNorCalWarehouseClick = () => {
-    setClientCurrentButtonText("NorCal Warehouse");
+    setClientCurrentButtonText(getClientDisplayName(NORCAL_CLIENT_ID));
     setSelectedClientCurrent(NORCAL_CLIENT_ID);
     console.log("Warehouse button clicked: setting Client Current to", NORCAL_CLIENT_ID);
   };
 
   const handleWarehouseUnassignedClick = () => {
-    setClientCurrentButtonText("Unassigned");
+    setClientCurrentButtonText(getClientDisplayName(UNASSIGNED_CLIENT_ID));
     setSelectedClientCurrent(UNASSIGNED_CLIENT_ID);
     console.log("Warehouse button clicked: setting Client Current to", UNASSIGNED_CLIENT_ID);
   };
@@ -1401,13 +1943,14 @@ export default function MainSearch() {
   //   return isNaN(t) ? null : t;
   // }
 
-  const totalKnownPages = Math.max(
-    1,
-    pageCursors.filter(Boolean).length + (hasNextPage ? 1 : 0)
-  );
+  const totalKnownPages =
+    totalPageCount ??
+    Math.max(
+      1,
+      pageCursors.filter(Boolean).length + (hasNextPage ? 1 : 0)
+    );
   const pageButtons = (() => {
     const buttons = [];
-    const maxVisible = 7;
 
     const pushPage = (p) =>
       buttons.push(
@@ -1423,88 +1966,55 @@ export default function MainSearch() {
     const pushEllipsis = (key) =>
       buttons.push(<Pagination.Ellipsis key={key} disabled />);
 
-    if (totalKnownPages <= maxVisible) {
+    const edgeWindow = Math.max(2, paginationWindow);
+    const maxWithoutEllipsis = edgeWindow + 2;
+
+    if (totalKnownPages <= maxWithoutEllipsis) {
       for (let i = 1; i <= totalKnownPages; i += 1) pushPage(i);
       return buttons;
     }
 
-    let start = Math.max(2, page - 1);
-    let end = Math.min(totalKnownPages - 1, page + 1);
-
-    const desiredWindow = maxVisible - 2;
-    let currentWindow = end - start + 1;
-    let remaining = desiredWindow - currentWindow;
-
-    while (remaining > 0) {
-      if (start > 2) {
-        start -= 1;
-        remaining -= 1;
-      }
-      if (remaining > 0 && end < totalKnownPages - 1) {
-        end += 1;
-        remaining -= 1;
-      }
-      if (start === 2 && end === totalKnownPages - 1) break;
+    let visiblePages = [];
+    if (page < edgeWindow) {
+      visiblePages = Array.from(
+        { length: edgeWindow },
+        (_, index) => index + 1
+      );
+    } else if (page === edgeWindow) {
+      visiblePages = Array.from(
+        { length: Math.min(edgeWindow + 1, totalKnownPages - 1) },
+        (_, index) => index + 1
+      );
+    } else if (page === totalKnownPages - edgeWindow + 1) {
+      visiblePages = Array.from(
+        { length: Math.min(edgeWindow + 1, totalKnownPages - 1) },
+        (_, index) => totalKnownPages - edgeWindow + index
+      );
+    } else if (page > totalKnownPages - edgeWindow + 1) {
+      visiblePages = Array.from(
+        { length: edgeWindow },
+        (_, index) => totalKnownPages - edgeWindow + index + 1
+      );
+    } else {
+      const before = Math.floor((edgeWindow - 1) / 2);
+      const start = page - before;
+      visiblePages = Array.from(
+        { length: edgeWindow },
+        (_, index) => start + index
+      );
     }
 
-    pushPage(1);
-    if (start > 2) pushEllipsis("start-ellipsis");
-    for (let i = start; i <= end; i += 1) pushPage(i);
-    if (end < totalKnownPages - 1) pushEllipsis("end-ellipsis");
-    pushPage(totalKnownPages);
-    if (hasNextPage) pushEllipsis("more-ellipsis");
-
+    const pageSet = new Set([1, ...visiblePages, totalKnownPages]);
+    const orderedPages = Array.from(pageSet).sort((a, b) => a - b);
+    orderedPages.forEach((pageNumber, index) => {
+      const previousPage = orderedPages[index - 1];
+      if (previousPage && pageNumber - previousPage > 1) {
+        pushEllipsis(`ellipsis-${previousPage}-${pageNumber}`);
+      }
+      pushPage(pageNumber);
+    });
     return buttons;
   })();
-
-  const recalcPageSize = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (page !== 1) return;
-    if (!tableBodyRef.current) return;
-    const containerHeight =
-      tableBodyRef.current.getBoundingClientRect().height || 0;
-    if (!containerHeight) return;
-
-    const headerRow =
-      tableBodyRef.current.querySelector("table thead tr") ||
-      tableBodyRef.current.querySelector("thead tr");
-    const bodyRow =
-      tableBodyRef.current.querySelector("table tbody tr") ||
-      tableBodyRef.current.querySelector("tbody tr");
-
-    if (headerRow) {
-      const h = headerRow.getBoundingClientRect().height;
-      if (h) headerHeightRef.current = h;
-    }
-    if (bodyRow) {
-      const r = bodyRow.getBoundingClientRect().height;
-      if (r) rowHeightRef.current = r;
-    }
-
-    const verticalPadding = 24;
-    const available =
-      containerHeight - headerHeightRef.current - verticalPadding;
-    const estimated = Math.floor(available / rowHeightRef.current);
-    const clamped = Math.max(5, Math.min(50, estimated));
-    if (clamped > 0 && clamped !== pageSize) {
-      setPageSize(clamped);
-      resetPagination();
-      setQueryEpoch((v) => v + 1);
-    }
-  }, [page, pageSize]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    recalcPageSize();
-    const onResize = () => recalcPageSize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [recalcPageSize]);
-
-  useEffect(() => {
-    if (isLoading || page !== 1) return;
-    recalcPageSize();
-  }, [page, isLoading, recalcPageSize]);
 
   const renderFilters = (idPrefix) => (
     <div className={styles.filtersPanel}>
@@ -1570,6 +2080,7 @@ export default function MainSearch() {
             {modelButtonText}
           </Button>
         </InputGroup>
+
       </div>
 
       <div className={styles.filterSection}>
@@ -1586,6 +2097,34 @@ export default function MainSearch() {
         </InputGroup>
 
         <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Machine From</InputGroup.Text>
+          <Form.Select
+            aria-label="Filter by Machine From"
+            className={styles.inputSelect}
+            value={selectedMachineFrom || ""}
+            disabled={!selectedClientFrom || isLoadingMachineFrom}
+            onChange={(event) =>
+              setSelectedMachineFrom(event.target.value || null)
+            }
+          >
+            <option value="">
+              {!selectedClientFrom
+                ? "Select Client From first"
+                : isLoadingMachineFrom
+                  ? "Loading machines..."
+                  : machineFromOptions.length
+                    ? "Select Machine"
+                    : "No machines for this client"}
+            </option>
+            {machineFromOptions.map((machine) => (
+              <option key={machine.id} value={machine.id}>
+                {machine.name || machine.id}
+              </option>
+            ))}
+          </Form.Select>
+        </InputGroup>
+
+        <InputGroup className={styles.inputGroup}>
           <InputGroup.Text>Client Current</InputGroup.Text>
           <Button
             variant="outline-secondary"
@@ -1594,6 +2133,34 @@ export default function MainSearch() {
           >
             {clientCurrentButtonText}
           </Button>
+        </InputGroup>
+
+        <InputGroup className={styles.inputGroup}>
+          <InputGroup.Text>Current Machine</InputGroup.Text>
+          <Form.Select
+            aria-label="Filter by Current Machine"
+            className={styles.inputSelect}
+            value={selectedCurrentMachine || ""}
+            disabled={!selectedClientCurrent || isLoadingCurrentMachines}
+            onChange={(event) =>
+              setSelectedCurrentMachine(event.target.value || null)
+            }
+          >
+            <option value="">
+              {!selectedClientCurrent
+                ? "Select Client Current first"
+                : isLoadingCurrentMachines
+                  ? "Loading machines..."
+                  : currentMachineOptions.length
+                    ? "Select Machine"
+                    : "No machines for this client"}
+            </option>
+            {currentMachineOptions.map((machine) => (
+              <option key={machine.id} value={machine.id}>
+                {machine.name || machine.id}
+              </option>
+            ))}
+          </Form.Select>
         </InputGroup>
       </div>
 
@@ -1607,7 +2174,7 @@ export default function MainSearch() {
               className={styles.flexButton}
               onClick={handleSoCalWarehouseClick}
             >
-              SoCal Warehouse
+              Lake Forest
             </Button>
             <Button
               variant="outline-secondary"
@@ -1658,7 +2225,6 @@ export default function MainSearch() {
           </Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showClientModal} onHide={() => setShowClientModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -1684,7 +2250,6 @@ export default function MainSearch() {
           />
         </Modal.Body>
       </Modal>
-
       <Modal show={showModelModal} onHide={() => setShowModelModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Select Model</Modal.Title>
@@ -1708,7 +2273,6 @@ export default function MainSearch() {
           />
         </Modal.Body>
       </Modal>
-
       <div className={styles.page}>
         <div className={styles.pageInner}>
           <header className={styles.header}>
@@ -1723,18 +2287,21 @@ export default function MainSearch() {
                 <span></span>
                 <span></span>
               </button>
-              <Link href="/NewSearch/mainSearch">
-                <a className={styles.brand} aria-label="Go to Main Search">
-                  <img
-                    src="/magmo-logo.png"
-                    alt="Magmo"
-                    className={styles.brandLogo}
-                  />
-                  <div>
-                    <div className={styles.brandName}>Magmo</div>
-                    <div className={styles.brandSub}>Inventory Search</div>
-                  </div>
-                </a>
+              <Link
+                href="/NewSearch/mainSearch"
+                className={styles.brand}
+                aria-label="Go to Main Search">
+
+                <img
+                  src="/magmo-logo.png"
+                  alt="Magmo"
+                  className={styles.brandLogo}
+                />
+                <div>
+                  <div className={styles.brandName}>Magmo</div>
+                  <div className={styles.brandSub}>Inventory Search</div>
+                </div>
+
               </Link>
             </div>
             <div className={styles.headerRight}>
@@ -1749,18 +2316,55 @@ export default function MainSearch() {
             <main className={styles.main}>
               <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
-                  <div>
-                    <div className={styles.tableTitle}>Items</div>
-                    <div className={styles.tableSubtitle}>
-                      {isLoading ? "Loading items" : `${info.length} items on this page`}
+                  <Link
+                    href="/NewSearch/mainSearch"
+                    className={styles.mobileTableBrand}
+                    aria-label="Go to Main Search">
+
+                    <img
+                      src="/magmo-logo.png"
+                      alt="Magmo"
+                      className={styles.mobileTableLogo}
+                    />
+
+                  </Link>
+                  <div className={styles.clientSelectionSummary}>
+                    <div className={styles.clientSelectionLabel}>Client From</div>
+                    <div
+                      className={`${styles.clientSelectionValue} ${
+                        selectedClientFrom ? styles.clientSelectionActive : styles.clientSelectionEmpty
+                      }`}
+                      title={selectedClientFromDisplay}
+                    >
+                      {selectedClientFromDisplay}
                     </div>
                   </div>
-                  <div className={styles.tableMeta}>
-                    Page {page} {hasNextPage ? `of ${totalKnownPages}+` : `of ${totalKnownPages}`}
+                  <div
+                    className={`${styles.clientSelectionSummary} ${styles.clientSelectionSummaryRight}`}
+                  >
+                    <div className={styles.clientSelectionLabel}>Current</div>
+                    <div
+                      className={`${styles.clientSelectionValue} ${
+                        selectedClientCurrent ? styles.clientSelectionActive : styles.clientSelectionEmpty
+                      }`}
+                      title={selectedClientCurrentDisplay}
+                    >
+                      {selectedClientCurrentDisplay}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    className={styles.mobileTableBurger}
+                    onClick={() => setShowFilters(true)}
+                    aria-label="Open filters"
+                  >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </button>
                 </div>
 
-                <div className={styles.tableBody} ref={tableBodyRef}>
+                <div className={styles.tableBody}>
                   {isLoading ? (
                     <div className={styles.loadingState}>
                       <img
@@ -1768,7 +2372,9 @@ export default function MainSearch() {
                         alt="Loading Magmo"
                         className={styles.loadingLogo}
                       />
-                      <div className={styles.loadingText}>Loading</div>
+                      <div className={styles.loadingText}>
+                        {isListAll ? "Loading all items..." : "Loading"}
+                      </div>
                     </div>
                   ) : loadError ? (
                     <div className={styles.errorState}>
@@ -1801,39 +2407,115 @@ export default function MainSearch() {
                       hoverIndex={hoverIndex}
                       selectedItems={selectedItems}
                       setSelectedItems={setSelectedItems}
-                      minRows={pageSize}
+                      minRows={isListAll ? 0 : pageSize}
                       canDelete={canDeleteItems}
+                      showPictures
                     />
                   )}
                 </div>
 
                 <div className={styles.tableFooter}>
-                  <div className={styles.paginationRow}>
-                    <Pagination size="sm">
-                      <Pagination.Prev
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page <= 1}
-                      >
-                        Previous
-                      </Pagination.Prev>
-                      {pageButtons}
-                      <Pagination.Next
-                        onClick={() => setPage((p) => p + 1)}
-                        disabled={!hasNextPage}
-                      >
-                        Next
-                      </Pagination.Next>
-                    </Pagination>
+                  <div className={styles.listControls}>
+                    {!isListAll && (
+                      <div className={styles.paginationRow}>
+                        <Pagination size="sm">
+                          <Pagination.Item
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page <= 1}
+                            aria-label="Previous page"
+                            title="Previous page"
+                            className={styles.paginationArrow}
+                          >
+                            <span className={styles.paginationChevron}>
+                              {"\u2039"}
+                            </span>
+                            <span>Previous</span>
+                          </Pagination.Item>
+                          {pageButtons}
+                          <Pagination.Item
+                            onClick={() => setPage((p) => p + 1)}
+                            disabled={
+                              totalPageCount != null
+                                ? page >= totalPageCount
+                                : !hasNextPage
+                            }
+                            aria-label="Next page"
+                            title="Next page"
+                            className={styles.paginationArrow}
+                          >
+                            <span>Next</span>
+                            <span className={styles.paginationChevron}>
+                              {"\u203a"}
+                            </span>
+                          </Pagination.Item>
+                        </Pagination>
+                      </div>
+                    )}
+                    <Button
+                      variant={isListAll ? "outline-secondary" : "outline-primary"}
+                      size="sm"
+                      className={styles.listAllButton}
+                      onClick={toggleListAll}
+                      disabled={isLoading}
+                    >
+                      {isListAll ? "Show Paged List" : "List All"}
+                    </Button>
                   </div>
                   <Form className={styles.searchRow}>
-                    <FormControl
-                      type={showListSearch}
-                      placeholder="Search"
-                      className={styles.searchInput}
-                      aria-label="Search"
-                      value={search}
-                      onChange={searchChangeHandler}
-                    />
+                    {normalizedSelectedType === "Date" ? (
+                      <div className={styles.dateSearchGroup}>
+                        <FormControl
+                          type="date"
+                          className={styles.dateSearchInput}
+                          aria-label="Created on or after"
+                          value={dateStart}
+                          max={dateEnd || undefined}
+                          onChange={(event) => {
+                            const nextStart = event.target.value;
+                            setDateStart(nextStart);
+                            if (dateEnd && nextStart > dateEnd) {
+                              setDateEnd(nextStart);
+                            }
+                          }}
+                        />
+                        <span className={styles.dateRangeLabel}>to</span>
+                        <FormControl
+                          type="date"
+                          className={styles.dateSearchInput}
+                          aria-label="Created on or before"
+                          value={dateEnd}
+                          min={dateStart || undefined}
+                          disabled={!dateStart}
+                          onChange={(event) => setDateEnd(event.target.value)}
+                        />
+                      </div>
+                    ) : normalizedSelectedType === "SKU" ? (
+                      <InputGroup className={styles.skuSearchGroup}>
+                        <InputGroup.Text className={styles.skuPrefix}>
+                          AIS
+                        </InputGroup.Text>
+                        <FormControl
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={5}
+                          placeholder="12345"
+                          className={styles.searchInput}
+                          aria-label="SKU digits"
+                          value={search}
+                          onChange={searchChangeHandler}
+                        />
+                      </InputGroup>
+                    ) : (
+                      <FormControl
+                        type={showListSearch}
+                        placeholder="Search"
+                        className={styles.searchInput}
+                        aria-label={`${select} search`}
+                        value={search}
+                        onChange={searchChangeHandler}
+                      />
+                    )}
                     <NavDropdown
                       title={select}
                       id="collasible-nav-dropdown"
@@ -1843,103 +2525,123 @@ export default function MainSearch() {
                       className={styles.searchSelect}
                     >
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Name");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("General")}
+                      >
+                        General
+                      </NavDropdown.Item>
+                      <NavDropdown.Item
+                        onClick={() => handleSearchTypeSelect("Name")}
                       >
                         Name
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Date");
-                          setShowListSearch("date");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("Date")}
                       >
-                        Date
+                        Created Date
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Work Order");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("Work Order")}
                       >
                         Work Order
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Product Number");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("Product Number")}
                       >
                         Product Number
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Serial Number");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("Serial Number")}
                       >
                         Serial Number
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("Description");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("Description")}
                       >
                         Description
                       </NavDropdown.Item>
                       <NavDropdown.Item
-                        onClick={() => {
-                          setSelect("SKU");
-                          setShowListSearch("text");
-                          setShowList(false);
-                        }}
+                        onClick={() => handleSearchTypeSelect("SKU")}
                       >
                         SKU
                       </NavDropdown.Item>
                     </NavDropdown>
                   </Form>
-                  <div className={styles.footerActions}>
-                    <LoadingButton
-                      type="secondary"
-                      name="Add New Item"
-                      route="NewSearch/AddItem/NewItem"
-                      className={styles.actionButton}
-                    />
-                    <Button
-                      variant="info"
-                      className={`${styles.actionButton} ${styles.trailerActionButton}`}
-                      onClick={openTrailerMap}
+                  <div className={styles.mobileActionsRegion}>
+                    <button
+                      type="button"
+                      className={styles.mobileActionsToggle}
+                      onClick={() => setShowMobileActions((isOpen) => !isOpen)}
+                      aria-expanded={showMobileActions}
+                      aria-controls="mobile-footer-actions"
+                      aria-label={
+                        showMobileActions
+                          ? "Hide navigation buttons"
+                          : "Show navigation buttons"
+                      }
+                      title={
+                        showMobileActions
+                          ? "Hide navigation buttons"
+                          : "Show navigation buttons"
+                      }
                     >
-                      Trailers
-                    </Button>
-                    <LoadingButton
-                      type="info"
-                      name="Tools"
-                      route="NewSearch/Tools"
-                      className={`${styles.actionButton} ${styles.toolsActionButton}`}
-                    />
-                    <Button
-                      variant="info"
-                      className={`${styles.actionButton} ${styles.mapActionButton}`}
-                      onClick={openMap}
+                      <span
+                        className={`${styles.mobileActionsChevron} ${
+                          showMobileActions
+                            ? styles.mobileActionsChevronOpen
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <div
+                      id="mobile-footer-actions"
+                      className={`${styles.mobileActionsPanel} ${
+                        showMobileActions ? styles.mobileActionsPanelOpen : ""
+                      }`}
                     >
-                      Map
-                    </Button>
-                    <LoadingButton
-                      type="primary"
-                      name="Back"
-                      route="Warehousedb/WarehouseSelect"
-                      className={styles.actionButton}
-                    />
+                      <div className={styles.mobileActionsInner}>
+                        <div className={styles.footerActions}>
+                          <LoadingButton
+                            type="secondary"
+                            name="Add New Item"
+                            route="NewSearch/AddItem/NewItem"
+                            className={styles.actionButton}
+                          />
+                          <LoadingButton
+                            type="info"
+                            name="Scan"
+                            route="Warehousedb/WarehouseScan"
+                            className={`${styles.actionButton} ${styles.scanActionButton}`}
+                          />
+                          <Button
+                            variant="info"
+                            className={`${styles.actionButton} ${styles.trailerActionButton}`}
+                            onClick={openTrailerMap}
+                          >
+                            Trailers
+                          </Button>
+                          <LoadingButton
+                            type="info"
+                            name="Tools"
+                            route="NewSearch/Tools"
+                            className={`${styles.actionButton} ${styles.toolsActionButton}`}
+                          />
+                          <Button
+                            variant="info"
+                            className={`${styles.actionButton} ${styles.mapActionButton}`}
+                            onClick={openMap}
+                          >
+                            Map
+                          </Button>
+                          <LoadingButton
+                            type="primary"
+                            name="Back"
+                            route="Warehousedb/WarehouseSelect"
+                            className={styles.actionButton}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1976,4 +2678,3 @@ export default function MainSearch() {
 
 
 }
-

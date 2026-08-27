@@ -3,9 +3,9 @@
 .page {
   min-height: 100vh;
   background:
-    radial-gradient(900px circle at 10% -10%, rgba(90, 180, 255, 0.2), transparent 60%),
-    radial-gradient(800px circle at 90% 0%, rgba(110, 220, 190, 0.2), transparent 55%),
-    #f4f6fb;
+    radial-gradient(900px circle at 12% -10%, rgba(66, 153, 225, 0.14), transparent 58%),
+    radial-gradient(820px circle at 88% -4%, rgba(45, 212, 191, 0.12), transparent 56%),
+    #f6f8fc;
   color: #0f172a;
   font-family: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
 }
@@ -169,6 +169,20 @@
   font-weight: 600;
 }
 
+.inputSelect {
+  height: 42px;
+  min-width: 0;
+  border-color: #d8e1f0;
+  border-radius: 0 12px 12px 0;
+  font-weight: 600;
+}
+
+.inputSelect:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
 .buttonGroup {
   display: flex;
   width: 100%;
@@ -199,43 +213,77 @@
 
 .main {
   width: 100%;
+  min-width: 0;
 }
 
 .tableCard {
   background: #ffffff;
-  border-radius: 22px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 180px);
-  min-height: 520px;
+  height: calc(100vh - 132px);
+  min-height: 620px;
   overflow: hidden;
 }
 
 .tableHeader {
-  padding: 18px 22px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5edf6;
+  background: #fbfdff;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.tableTitle {
-  font-size: 1.1rem;
+.mobileTableBrand,
+.mobileTableBurger {
+  display: none;
+}
+
+.mobileTableLogo {
+  display: block;
+}
+
+.clientSelectionSummary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.clientSelectionSummaryRight {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.clientSelectionLabel {
+  color: #718096;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.tableSubtitle {
-  font-size: 0.85rem;
-  color: #64748b;
+.clientSelectionValue {
+  max-width: min(42vw, 430px);
+  overflow: hidden;
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tableMeta {
-  font-size: 0.85rem;
-  color: #475569;
+.clientSelectionActive {
+  color: #0f172a;
+}
+
+.clientSelectionEmpty {
+  color: #94a3b8;
+  font-style: italic;
   font-weight: 600;
 }
 
@@ -247,45 +295,73 @@
 }
 
 .tableFooter {
-  padding: 16px 20px 18px;
-  border-top: 1px solid #e2e8f0;
+  padding: 10px 16px 12px;
+  border-top: 1px solid #e5edf6;
   background: #fbfdff;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .paginationRow {
   display: flex;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 6px;
-  max-width: 620px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 8px 10px;
-  border-radius: 16px;
+  padding: 0;
+  border-radius: 9px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid #d5d9d9;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.12);
   overflow-x: auto;
 }
 
-.paginationRow :global(.page-link) {
+.listControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.listAllButton {
+  min-width: 150px;
   border-radius: 10px;
-  border-color: #e2e8f0;
+  font-weight: 600;
+}
+
+.paginationRow :global(.page-link) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 38px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #0f172a;
-  min-width: 34px;
   text-align: center;
+  font-size: 0.88rem;
 }
 
 .paginationRow :global(.page-item.active .page-link) {
-  background: #0ea5e9;
-  border-color: #0ea5e9;
-  color: #ffffff;
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: inset 0 0 0 1px #0f172a;
+  font-weight: 700;
 }
 
 .paginationRow :global(.page-item) {
-  margin: 0 2px;
+  margin: 0;
+}
+
+.paginationRow :global(.page-item.disabled .page-link) {
+  background: transparent;
+  color: #94a3b8;
 }
 
 .paginationRow :global(.pagination) {
@@ -293,11 +369,43 @@
   flex-wrap: nowrap;
 }
 
-.paginationRow :global(.page-item:first-child .page-link),
-.paginationRow :global(.page-item:last-child .page-link) {
-  min-width: unset;
-  padding: 6px 14px;
-  font-weight: 600;
+.paginationArrow :global(.page-link) {
+  min-width: 94px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.paginationChevron {
+  color: #64748b;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 0.7;
+}
+
+.paginationArrow:not(:global(.disabled)) .paginationChevron {
+  color: #0f172a;
+}
+
+@media (max-width: 900px) {
+  .paginationRow :global(.page-link) {
+    min-width: 36px;
+    min-height: 34px;
+    padding: 5px 8px;
+  }
+
+  .paginationArrow :global(.page-link) {
+    min-width: 86px;
+  }
+}
+
+@media (max-width: 620px) {
+  .paginationArrow :global(.page-link) {
+    min-width: 48px;
+  }
+
+  .paginationArrow :global(.page-link) span:not(.paginationChevron) {
+    display: none;
+  }
 }
 
 .searchRow {
@@ -311,13 +419,52 @@
   flex: 1 1 260px;
   border-radius: 12px;
   border-color: #d8e1f0;
-  height: 42px;
+  height: 38px;
+}
+
+.skuSearchGroup {
+  flex: 1 1 260px;
+}
+
+.skuSearchGroup .searchInput {
+  min-width: 0;
+  border-radius: 0 12px 12px 0;
+}
+
+.skuPrefix {
+  height: 38px;
+  border-color: #d8e1f0;
+  border-radius: 12px 0 0 12px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dateSearchGroup {
+  flex: 1 1 360px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dateSearchInput {
+  min-width: 145px;
+  height: 38px;
+  border-radius: 12px;
+  border-color: #d8e1f0;
+}
+
+.dateRangeLabel {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .searchSelect :global(.dropdown-toggle) {
   border-radius: 12px;
   border-color: #d8e1f0;
-  height: 42px;
+  height: 38px;
   font-weight: 600;
   background: #ffffff;
 }
@@ -327,11 +474,40 @@
   margin-top: -1px !important;
 }
 
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-toggle) {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #111827 !important;
+  box-shadow: none !important;
+}
+
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-toggle:hover),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-toggle:focus),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-toggle[aria-expanded="true"]) {
+  color: #f8fafc !important;
+  border-color: #60a5fa !important;
+  background: #172033 !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18) !important;
+}
+
 .footerActions {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.mobileActionsToggle {
+  display: none;
+}
+
+.mobileActionsPanel {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.mobileActionsInner {
+  min-height: 0;
 }
 
 .actionButton {
@@ -594,16 +770,28 @@
 }
 
 @media (max-width: 991px) {
+  .page {
+    overflow-x: hidden;
+  }
+
   .pageInner {
-    padding: 18px;
+    padding: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .header {
+    display: none;
   }
 
   .burger {
-    display: inline-flex;
+    display: none;
   }
 
   .content {
     grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .sidebar {
@@ -615,16 +803,211 @@
   }
 
   .tableCard {
-    height: calc(100vh - 140px);
-    min-height: 460px;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
+    min-height: 0;
+    border-radius: 14px;
+  }
+
+  .tableHeader {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #fbfdff;
+  }
+
+  .clientSelectionValue {
+    max-width: 42vw;
+    font-size: 0.95rem;
+  }
+
+  .clientSelectionLabel {
+    font-size: 0.68rem;
+  }
+
+  .mobileTableBrand,
+  .mobileTableBurger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dbe5f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
+
+  .mobileTableLogo {
+    width: 21px;
+    height: 21px;
+    object-fit: contain;
+  }
+
+  .mobileTableBurger {
+    flex-direction: column;
+    gap: 3px;
+    padding: 0;
+  }
+
+  .mobileTableBurger span {
+    display: block;
+    width: 18px;
+    height: 4px;
+    background: #0f172a;
+    border-radius: 999px;
+  }
+
+  .tableFooter {
+    padding: 8px 10px 10px;
+    gap: 7px;
+  }
+
+  .listControls {
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .paginationRow {
+    margin: 0;
+    max-width: none;
+  }
+
+  .listAllButton {
+    min-width: 96px;
+    min-height: 34px;
+    border-radius: 9px;
+  }
+
+  .searchRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(104px, 34%);
+    gap: 7px;
+  }
+
+  .searchInput,
+  .dateSearchInput,
+  .skuPrefix,
+  .searchSelect :global(.dropdown-toggle) {
+    height: 36px;
+  }
+
+  .searchInput,
+  .skuSearchGroup {
+    min-width: 0;
+  }
+
+  .skuSearchGroup,
+  .dateSearchGroup {
+    flex: 1 1 auto;
+  }
+
+  .searchSelect :global(.dropdown-toggle) {
+    width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
+    overflow: hidden;
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .footerActions {
     justify-content: stretch;
   }
 
+  .mobileActionsRegion {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .mobileActionsToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 28px;
+    margin: 0 auto;
+    padding: 0;
+    border: 1px solid #d8e1f0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.1);
+    transition:
+      background-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .mobileActionsToggle:hover,
+  .mobileActionsToggle:focus-visible {
+    background: #f8fafc;
+    box-shadow: 0 7px 18px rgba(15, 23, 42, 0.14);
+    outline: none;
+  }
+
+  .mobileActionsToggle:active {
+    transform: scale(0.96);
+  }
+
+  .mobileActionsChevron {
+    width: 11px;
+    height: 11px;
+    border-top: 3px solid currentColor;
+    border-left: 3px solid currentColor;
+    transform: translateY(3px) rotate(45deg);
+    transition: transform 0.3s ease;
+  }
+
+  .mobileActionsChevronOpen {
+    transform: translateY(-3px) rotate(225deg);
+  }
+
+  .mobileActionsPanel {
+    grid-template-rows: 0fr;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      grid-template-rows 0.35s ease,
+      opacity 0.25s ease,
+      transform 0.35s ease,
+      visibility 0s linear 0.35s;
+  }
+
+  .mobileActionsPanelOpen {
+    grid-template-rows: 1fr;
+    height: auto;
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      grid-template-rows 0.35s ease,
+      opacity 0.3s ease 0.05s,
+      transform 0.35s ease,
+      visibility 0s linear;
+  }
+
+  .mobileActionsInner {
+    overflow: hidden;
+  }
+
   .actionButton {
     width: 100%;
+    padding: 7px 12px;
   }
 
   .filtersDrawer {
@@ -633,6 +1016,74 @@
 }
 
 @media (max-width: 600px) {
+  .pageInner {
+    padding: 6px;
+  }
+
+  .tableCard {
+    height: calc(100vh - 12px);
+    height: calc(100dvh - 12px);
+    border-radius: 12px;
+  }
+
+  .tableHeader {
+    grid-template-columns: 31px minmax(0, 1fr) minmax(0, 1fr) 31px;
+    gap: 7px;
+    padding: 7px 8px;
+  }
+
+  .clientSelectionValue {
+    font-size: 0.88rem;
+  }
+
+  .mobileTableBrand,
+  .mobileTableBurger {
+    width: 29px;
+    height: 29px;
+    border-radius: 8px;
+  }
+
+  .mobileTableLogo {
+    width: 19px;
+    height: 19px;
+  }
+
+  .mobileTableBurger span {
+    width: 17px;
+    height: 3px;
+  }
+
+  .tableFooter {
+    padding: 6px 8px 8px;
+    gap: 6px;
+  }
+
+  .paginationRow :global(.page-link) {
+    min-width: 32px;
+    min-height: 31px;
+    padding: 4px 7px;
+    font-size: 0.82rem;
+  }
+
+  .paginationArrow :global(.page-link) {
+    min-width: 40px;
+  }
+
+  .listAllButton {
+    min-width: 82px;
+    min-height: 31px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .dateSearchGroup {
+    flex-wrap: wrap;
+  }
+
+  .dateSearchInput {
+    flex: 1 1 135px;
+  }
+
   .mapCanvas {
     min-height: 200px;
   }
@@ -644,4 +1095,238 @@
   .mapFooter :global(.btn) {
     flex: 1;
   }
+}
+
+/* Mobile footer controls are declared after the base dark rules. */
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-toggle),
+:global(html[data-theme="dark"]) .mobileTableBrand,
+:global(html[data-theme="dark"]) .mobileTableBurger,
+:global(html[data-theme="dark"]) .mobileActionsToggle,
+:global(html[data-theme="dark"]) .paginationRow {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .mobileTableBurger span {
+  background: #dbe7f5 !important;
+}
+
+:global(html[data-theme="dark"]) .searchInput,
+:global(html[data-theme="dark"]) .dateSearchInput,
+:global(html[data-theme="dark"]) .skuPrefix {
+  color: #e5edf8 !important;
+  border-color: #3a4a62 !important;
+  background: #172033 !important;
+}
+
+/* Dark-mode page shell and inventory table chrome. */
+:global(html[data-theme="dark"]) .page {
+  color: #e5edf8;
+  color-scheme: dark;
+  background:
+    radial-gradient(900px circle at 12% -10%, rgba(37, 99, 235, 0.18), transparent 58%),
+    radial-gradient(820px circle at 88% -4%, rgba(13, 148, 136, 0.14), transparent 56%),
+    #0a0f1c !important;
+}
+
+:global(html[data-theme="dark"]) .header,
+:global(html[data-theme="dark"]) .content,
+:global(html[data-theme="dark"]) .main,
+:global(html[data-theme="dark"]) .sidebar {
+  color: #e5edf8;
+}
+
+:global(html[data-theme="dark"]) .brandLogo,
+:global(html[data-theme="dark"]) .mobileTableLogo,
+:global(html[data-theme="dark"]) .loadingLogo {
+  border: 1px solid #29364a;
+  background: #111827;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+:global(html[data-theme="dark"]) .brandName,
+:global(html[data-theme="dark"]) .filtersTitle,
+:global(html[data-theme="dark"]) .filterSectionTitle,
+:global(html[data-theme="dark"]) .clientSelectionActive {
+  color: #f8fafc !important;
+}
+
+:global(html[data-theme="dark"]) .brandSub,
+:global(html[data-theme="dark"]) .filtersSubtitle,
+:global(html[data-theme="dark"]) .clientSelectionLabel,
+:global(html[data-theme="dark"]) .clientSelectionEmpty,
+:global(html[data-theme="dark"]) .dateRangeLabel,
+:global(html[data-theme="dark"]) .loadingText {
+  color: #94a3b8 !important;
+}
+
+:global(html[data-theme="dark"]) .filtersPanel,
+:global(html[data-theme="dark"]) .filtersDrawer {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.3);
+}
+
+:global(html[data-theme="dark"]) .filtersPanel :global(.input-group-text),
+:global(html[data-theme="dark"]) .filtersPanel :global(.btn),
+:global(html[data-theme="dark"]) .inputButton,
+:global(html[data-theme="dark"]) .inputSelect,
+:global(html[data-theme="dark"]) .flexButton {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .inputSelect:disabled {
+  color: #64748b !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .filtersPanel :global(.btn:hover),
+:global(html[data-theme="dark"]) .filtersPanel :global(.btn:focus),
+:global(html[data-theme="dark"]) .inputButton:hover,
+:global(html[data-theme="dark"]) .inputButton:focus,
+:global(html[data-theme="dark"]) .flexButton:hover,
+:global(html[data-theme="dark"]) .flexButton:focus {
+  color: #f8fafc !important;
+  border-color: #60a5fa !important;
+  background: #1e3a5f !important;
+}
+
+:global(html[data-theme="dark"]) .filtersPanel :global(.dropdown-menu),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-menu) {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .filtersPanel :global(.dropdown-item),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-item) {
+  color: #dbe7f5;
+}
+
+:global(html[data-theme="dark"]) .filtersPanel :global(.dropdown-item:hover),
+:global(html[data-theme="dark"]) .filtersPanel :global(.dropdown-item:focus),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-item:hover),
+:global(html[data-theme="dark"]) .searchSelect :global(.dropdown-item:focus) {
+  color: #f8fafc;
+  background: #1e3a5f;
+}
+
+:global(html[data-theme="dark"]) .tableCard {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827 !important;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+}
+
+:global(html[data-theme="dark"]) .tableHeader {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .tableBody {
+  color: #e5edf8;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .tableFooter {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .paginationRow {
+  border-color: #3a4a62 !important;
+  background: #111827 !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.28);
+}
+
+:global(html[data-theme="dark"]) .paginationRow :global(.page-link) {
+  color: #dbe7f5 !important;
+  background: transparent !important;
+}
+
+:global(html[data-theme="dark"]) .paginationRow :global(.page-item.active .page-link) {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  box-shadow: inset 0 0 0 1px #60a5fa;
+}
+
+:global(html[data-theme="dark"]) .paginationRow :global(.page-item.disabled .page-link),
+:global(html[data-theme="dark"]) .paginationChevron {
+  color: #64748b !important;
+}
+
+:global(html[data-theme="dark"]) .paginationArrow:not(:global(.disabled)) .paginationChevron {
+  color: #dbe7f5 !important;
+}
+
+:global(html[data-theme="dark"]) .listAllButton {
+  color: #bfdbfe !important;
+  border-color: #3b82f6 !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .searchInput,
+:global(html[data-theme="dark"]) .dateSearchInput,
+:global(html[data-theme="dark"]) .skuPrefix {
+  color: #e5edf8 !important;
+  border-color: #3a4a62 !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .searchInput::placeholder,
+:global(html[data-theme="dark"]) .dateSearchInput::placeholder {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .loadingState,
+:global(html[data-theme="dark"]) .errorState {
+  color: #cbd5e1;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .mobileActionsPanel,
+:global(html[data-theme="dark"]) .mobileActionsInner {
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .burger,
+:global(html[data-theme="dark"]) .mobileTableBurger {
+  color: #dbe7f5;
+  border-color: #3a4a62;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .burger span,
+:global(html[data-theme="dark"]) .mobileTableBurger span {
+  background: #dbe7f5 !important;
+}
+
+:global(html[data-theme="dark"]) .filtersDrawer :global(.offcanvas-header),
+:global(html[data-theme="dark"]) .filtersDrawer :global(.offcanvas-body) {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .filtersDrawer :global(.btn-close) {
+  filter: invert(1) grayscale(1) brightness(1.8);
+}
+
+.scanActionButton {
+  background: linear-gradient(135deg, #2563eb, #06b6d4) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24);
+}
+
+.scanActionButton:hover,
+.scanActionButton:focus {
+  color: #ffffff !important;
+  filter: brightness(0.98);
 }

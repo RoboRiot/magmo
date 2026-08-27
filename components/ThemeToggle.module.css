@@ -1,0 +1,132 @@
+.positioner {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 1040;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 5px 6px 5px 14px;
+  border: 1px solid var(--magmo-border-strong);
+  border-radius: 999px;
+  color: var(--magmo-text);
+  background: var(--magmo-surface-elevated);
+  box-shadow: var(--magmo-shadow-sm);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease, background 160ms ease;
+}
+
+.toggle:hover {
+  border-color: var(--magmo-accent);
+  box-shadow: var(--magmo-shadow-md);
+  transform: translateY(-1px);
+}
+
+.toggle:focus-visible {
+  outline: 3px solid var(--magmo-focus);
+  outline-offset: 2px;
+}
+
+.label {
+  min-width: 35px;
+  text-align: right;
+}
+
+.track {
+  position: relative;
+  width: 64px;
+  height: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--magmo-toggle-track);
+  overflow: hidden;
+}
+
+.icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--magmo-muted);
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sun {
+  color: #b45309;
+}
+
+.moon {
+  color: #c7d2fe;
+}
+
+.thumb {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--magmo-toggle-thumb);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.28);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.thumbDark {
+  transform: translateX(32px);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 520px) {
+  .positioner {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+  }
+
+  .toggle {
+    min-height: 40px;
+    padding-left: 10px;
+  }
+
+  .label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle,
+  .thumb {
+    transition: none;
+  }
+}

@@ -1,3 +1,86 @@
+.viewTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 5px;
+  border: 1px solid #dbe3f0;
+  border-radius: 15px;
+  background: #f1f5f9;
+}
+
+.viewTab {
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: #526175;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.2;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.viewTab:hover {
+  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.74);
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.viewTab:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 1px;
+}
+
+.viewTabActive,
+.viewTabActive:hover {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: #ffffff;
+  color: #123d76;
+  box-shadow:
+    0 5px 14px rgba(15, 23, 42, 0.09),
+    inset 0 -2px 0 #2563eb;
+  transform: none;
+}
+
+.viewTabLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewTabCount {
+  min-width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dfe8f5;
+  color: #315273;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewTabActive .viewTabCount {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -20,6 +103,19 @@
   font-size: 1.25rem;
   line-height: 1;
   flex: 0 0 auto;
+}
+
+.menuIcon {
+  width: 18px;
+  display: grid;
+  gap: 3px;
+}
+
+.menuIcon span {
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .mapTitleWrap {
@@ -56,6 +152,12 @@
   display: flex;
   align-items: stretch;
   gap: 12px;
+}
+
+.nationalContent {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 3px 0 1px;
 }
 
 .boardsPanel {
@@ -175,6 +277,56 @@
   font-weight: 600;
 }
 
+:global(html[data-theme="dark"]) .boardsPanel {
+  border-color: #29364a;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .boardsHeader {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .boardsList {
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .folderToggle {
+  color: #a9b7ca;
+}
+
+:global(html[data-theme="dark"]) .folderToggle:hover {
+  color: #f8fafc;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .boardItem {
+  color: #dbe7f5;
+  border-color: #29364a;
+}
+
+:global(html[data-theme="dark"]) .boardItem:hover {
+  color: #ffffff;
+  background: #1e293b;
+}
+
+:global(html[data-theme="dark"]) .boardItemHighlighted,
+:global(html[data-theme="dark"]) .boardItemHighlighted:hover {
+  color: #fed7aa;
+  background: rgba(234, 88, 12, 0.2);
+  box-shadow: inset 3px 0 0 #fb923c;
+}
+
+:global(html[data-theme="dark"]) .boardsState,
+:global(html[data-theme="dark"]) .emptyFolder {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .boardsError {
+  color: #fca5a5;
+}
+
 .cancelMoveButton {
   margin-left: auto;
 }
@@ -207,8 +359,143 @@
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
 }
 
+.simpleYardSurface {
+  min-height: 310px;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 35%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(100, 116, 139, 0.07) 0 1px,
+      transparent 1px 52px
+    ),
+    linear-gradient(145deg, #e9edf2, #dce3ea);
+}
+
+.simpleYardSurface::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 12% 4%;
+  border: 2px solid rgba(100, 116, 139, 0.32);
+  border-radius: 18px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 8%,
+      rgba(255, 255, 255, 0.2) 8% 8.25%
+    ),
+    rgba(148, 163, 184, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.simpleYardSurface::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 7%;
+  right: 7%;
+  top: 50%;
+  border-top: 1px dashed rgba(71, 85, 105, 0.22);
+  pointer-events: none;
+}
+
+.warehouseComplex {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.warehouseBody {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #9aa9b4;
+  border-radius: 4px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.46), transparent 34%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.18) 0 1px,
+      transparent 1px 8%
+    ),
+    linear-gradient(180deg, #b7c3ca, #8f9da6);
+  box-shadow:
+    inset 0 5px 0 rgba(255, 255, 255, 0.3),
+    inset -10px -12px 20px rgba(70, 84, 94, 0.14),
+    9px 11px 14px rgba(15, 23, 42, 0.2);
+}
+
+.warehouseBody::after {
+  content: "";
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  bottom: 4%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(71, 85, 94, 0.25);
+  box-shadow: 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.topDockDoor,
+.dockDoor {
+  position: absolute;
+  border: 1px solid #7f8e98;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      #e1e7ea 0 11%,
+      #aab6bd 11% 14%
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(55, 65, 72, 0.28),
+    -2px 2px 4px rgba(15, 23, 42, 0.18);
+}
+
+.topDockDoor {
+  top: -1px;
+  width: 19%;
+  height: 6%;
+  border-top: 0;
+  border-radius: 0 0 3px 3px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #e1e7ea 0 11%,
+      #aab6bd 11% 14%
+    );
+}
+
+.topDockDoorLeft {
+  left: 18%;
+}
+
+.topDockDoorRight {
+  left: 55%;
+}
+
+.dockDoor {
+  right: -1px;
+  width: 5.5%;
+  height: 23%;
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+.dockDoorNorth {
+  top: 16%;
+}
+
+.dockDoorSouth {
+  top: 61%;
+}
+
 .slotButton {
   position: absolute;
+  z-index: 2;
   border-radius: 4px;
   border: 1px solid #cbd5e1;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
@@ -233,6 +520,11 @@
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.35), 0 14px 26px rgba(15, 23, 42, 0.22) !important;
 }
 
+.slotDropTarget {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 10px 20px rgba(15, 23, 42, 0.18) !important;
+}
+
 .slotButton:disabled {
   opacity: 0.72;
   cursor: not-allowed;
@@ -247,6 +539,7 @@
   background: linear-gradient(135deg, #fed7aa, #fdba74);
   border-color: #f97316;
   color: #7c2d12;
+  touch-action: none;
 }
 
 .slotPlaceholder {
@@ -359,6 +652,29 @@
   line-height: 1;
 }
 
+.heliumBadge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #67e8f9;
+  border-radius: 7px;
+  background: #083344;
+  color: #cffafe;
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 3px 8px rgba(6, 182, 212, 0.35);
+  pointer-events: none;
+}
+
+.slotNumber:empty {
+  display: none;
+}
+
 .slotValue {
   font-size: 0.62rem;
   font-weight: 600;
@@ -423,6 +739,14 @@
   margin-bottom: 10px;
 }
 
+.locationHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .locationTitle,
 .locationHistoryHeader span {
   font-weight: 800;
@@ -438,11 +762,91 @@
   margin-bottom: 10px;
 }
 
+.transitStatusCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(170px, 0.55fr);
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(8, 145, 178, 0.24);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(236, 254, 255, 0.96), #f8fafc);
+}
+
+.transitStatusIcon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  align-self: center;
+  border-radius: 11px;
+  background: #0891b2;
+  color: #ecfeff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(8, 145, 178, 0.2);
+}
+
+.transitStatusCopy {
+  display: flex;
+  align-self: center;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.transitStatusCopy strong {
+  color: #0e7490;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.transitStatusCopy span {
+  overflow: hidden;
+  color: #164e63;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .locationGrid {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) 150px 150px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
+}
+
+.locationGroupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.locationLabelWithBadge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.locationGroupHeading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .locationDisplay {
@@ -683,8 +1087,13 @@
 }
 
 @media (max-width: 900px) {
+  .viewTabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .nameEditorForm,
   .locationGrid,
+  .transitStatusCard,
   .locationHistoryItem {
     grid-template-columns: 1fr;
   }
@@ -699,6 +1108,19 @@
 }
 
 @media (max-width: 640px) {
+  .viewTabs {
+    display: flex;
+    overflow-x: auto;
+    padding: 5px;
+    scroll-snap-type: x proximity;
+  }
+
+  .viewTab {
+    min-width: 168px;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
   .toolbar {
     flex-direction: column;
   }
@@ -726,4 +1148,179 @@
     gap: 6px;
     padding: 4px 6px;
   }
+}
+
+/* Dark-mode hard stop for the trailer map and all of its secondary panels. */
+:global(html[data-theme="dark"]) .toolbar,
+:global(html[data-theme="dark"]) .mapContent {
+  color: #e5edf8;
+}
+
+:global(html[data-theme="dark"]) .viewTabs {
+  border-color: #29364a;
+  background: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .viewTab {
+  color: #a9b7ca;
+}
+
+:global(html[data-theme="dark"]) .viewTab:hover {
+  border-color: #34445c;
+  background: #172033;
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .viewTabActive,
+:global(html[data-theme="dark"]) .viewTabActive:hover {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: #18243a;
+  color: #eff6ff;
+  box-shadow:
+    0 5px 14px rgba(2, 8, 23, 0.34),
+    inset 0 -2px 0 #60a5fa;
+}
+
+:global(html[data-theme="dark"]) .viewTabCount {
+  background: #26344b;
+  color: #b8c7da;
+}
+
+:global(html[data-theme="dark"]) .viewTabActive .viewTabCount {
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+}
+
+:global(html[data-theme="dark"]) .mapTitle,
+:global(html[data-theme="dark"]) .nameEditorValue,
+:global(html[data-theme="dark"]) .locationTitle,
+:global(html[data-theme="dark"]) .locationHistoryHeader span,
+:global(html[data-theme="dark"]) .createTitle {
+  color: #e5edf8 !important;
+}
+
+:global(html[data-theme="dark"]) .mapSubtitle,
+:global(html[data-theme="dark"]) .infoText,
+:global(html[data-theme="dark"]) .nameEditorLabel,
+:global(html[data-theme="dark"]) .locationSubtext,
+:global(html[data-theme="dark"]) .assocTableHint,
+:global(html[data-theme="dark"]) .emptyRow,
+:global(html[data-theme="dark"]) .clientPickerOption small,
+:global(html[data-theme="dark"]) .clientPickerEmpty {
+  color: #94a3b8 !important;
+}
+
+:global(html[data-theme="dark"]) .locationGroupHeading {
+  color: #cbd5e1 !important;
+  border-color: #29364a !important;
+}
+
+:global(html[data-theme="dark"]) .transitStatusCard {
+  border-color: rgba(34, 211, 238, 0.25);
+  background: linear-gradient(135deg, rgba(8, 51, 68, 0.72), #111827);
+}
+
+:global(html[data-theme="dark"]) .transitStatusCopy strong {
+  color: #67e8f9;
+}
+
+:global(html[data-theme="dark"]) .transitStatusCopy span {
+  color: #cffafe;
+}
+
+:global(html[data-theme="dark"]) .mapFrame,
+:global(html[data-theme="dark"]) .boardsPanel,
+:global(html[data-theme="dark"]) .nameEditorCard,
+:global(html[data-theme="dark"]) .locationCard,
+:global(html[data-theme="dark"]) .locationDisplay,
+:global(html[data-theme="dark"]) .clientPickerMenu,
+:global(html[data-theme="dark"]) .locationHistoryItem,
+:global(html[data-theme="dark"]) .assocTableCard,
+:global(html[data-theme="dark"]) .createForm,
+:global(html[data-theme="dark"]) .tableWrap {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .mapSurface {
+  background: linear-gradient(140deg, #0f172a, #172033) !important;
+  box-shadow: inset 0 0 0 1px #29364a;
+}
+
+:global(html[data-theme="dark"]) .simpleYardSurface {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 35%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.045) 0 1px,
+      transparent 1px 52px
+    ),
+    linear-gradient(145deg, #101827, #172033) !important;
+}
+
+:global(html[data-theme="dark"]) .simpleYardSurface::before {
+  border-color: rgba(148, 163, 184, 0.22);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 8%,
+      rgba(148, 163, 184, 0.055) 8% 8.25%
+    ),
+    rgba(30, 41, 59, 0.36);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 18px 40px rgba(2, 8, 23, 0.28);
+}
+
+:global(html[data-theme="dark"]) .boardsHeader,
+:global(html[data-theme="dark"]) .assocTableHeader {
+  color: #dbe7f5 !important;
+  border-color: #29364a !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .slotEmpty,
+:global(html[data-theme="dark"]) .slotPlaceholder {
+  color: #cbd5e1 !important;
+  border-color: #3a4a62 !important;
+  background: #24324a !important;
+}
+
+:global(html[data-theme="dark"]) .layoutToggle,
+:global(html[data-theme="dark"]) .layoutControls {
+  color: #e5edf8 !important;
+  border-color: #3a4a62 !important;
+  background: rgba(17, 24, 39, 0.96) !important;
+}
+
+:global(html[data-theme="dark"]) .layoutToggle :global(.form-check-label),
+:global(html[data-theme="dark"]) .clientPickerOption {
+  color: #dbe7f5 !important;
+}
+
+:global(html[data-theme="dark"]) .clientPickerOption {
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .clientPickerOption:hover {
+  color: #f8fafc !important;
+  background: #1e3a5f !important;
+}
+
+:global(html[data-theme="dark"]) .assocTable thead th {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .assocTable tbody td {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .assocTable tbody tr:nth-of-type(odd) td {
+  background: #172033 !important;
 }

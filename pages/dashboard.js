@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthUserContext";
 import { useRouter } from "next/router";
 
 import LoggedIn from "./LoggedIn";
+import { getRoleLabel, hasRequiredRole, USER_ROLES } from "../utils/authAccess";
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -45,15 +46,15 @@ function LoadingButton({ type, name, route, enable = true }) {
     );
   } else {
     return (
-      <Link href={route}>
-        <a
-          className={`btn btn-${type}`}
-          disabled={!enable || isLoading}
-          onClick={!isLoading ? handleClick : null}
-          style={{ pointerEvents: !enable ? 'none' : 'auto', opacity: !enable ? 0.65 : 1 }}
-        >
-          {isLoading ? "Loading…" : name}
-        </a>
+      <Link
+        href={route}
+        className={`btn btn-${type}`}
+        disabled={!enable || isLoading}
+        onClick={!isLoading ? handleClick : null}
+        style={{ pointerEvents: !enable ? 'none' : 'auto', opacity: !enable ? 0.65 : 1 }}>
+
+        {isLoading ? "Loading…" : name}
+
       </Link>
     );
   }
@@ -96,7 +97,9 @@ export default function dashboard() {
             <Card.Body>
               <h2 className="text-center mb-4">Main Menu</h2>
               <div className="text-center mb-3 text-muted">
-                Signed in as {authUser.email} ({authUser.role})
+                Signed in as {authUser.displayName || authUser.email}
+                {authUser.displayName ? ` (${authUser.email})` : ""}
+                {` - ${getRoleLabel(authUser.role)}`}
               </div>
               <div class="d-grid gap-3">
                 <LoadingButton
@@ -119,6 +122,14 @@ export default function dashboard() {
                   name="Warehouse db"
                   route="Warehousedb/WarehouseSelect"
                 />
+
+                {hasRequiredRole(authUser, USER_ROLES.ADMIN) ? (
+                  <LoadingButton
+                    type="primary"
+                    name="Website Analysis"
+                    route="/website-analysis"
+                  />
+                ) : null}
 
                 {/* <LoadingButton
                   type="secondary"

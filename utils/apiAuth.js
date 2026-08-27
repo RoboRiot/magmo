@@ -24,7 +24,7 @@ export async function requireFirebaseAuth(req, res) {
       }
       return null;
     }
-    const decoded = await getAuth().verifyIdToken(token);
+    const decoded = await getAuth().verifyIdToken(token, true);
     return decoded;
   } catch (error) {
     if (isProduction) {

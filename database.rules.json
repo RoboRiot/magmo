@@ -1,0 +1,18 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "magmonitor": {
+      "commands": {
+        "$systemId": {
+          ".read": "auth != null && auth.token.magmonitorDevice == true && auth.token.magmonitorSystemId == $systemId && auth.token.magmonitorSessionExpiresAt * 1000 > now",
+          ".write": false
+        }
+      },
+      "ingestThrottle": {
+        ".read": false,
+        ".write": false
+      }
+    }
+  }
+}

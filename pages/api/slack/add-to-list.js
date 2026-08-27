@@ -189,7 +189,7 @@ export default async function handler(req, res) {
     }
 
     const { requireFirebaseAuth } = await import("../../../utils/apiAuth");
-    await requireFirebaseAuth(req, res);
+    const authUser = await requireFirebaseAuth(req, res);
     if (res.writableEnded) return;
 
     const token = process.env.SLACK_BOT_TOKEN;
@@ -208,6 +208,8 @@ export default async function handler(req, res) {
       tracking,
       local_sn,         // preferred input
       description,
+      submittedByEmail,
+      userEmail,
       photoUrls,        // preferred input: array
       shipping_date,
       received_date,
@@ -234,7 +236,13 @@ export default async function handler(req, res) {
     const work_order_norm = plain(work_order || workOrder || "");
     const local_sn_norm   = plain(local_sn   || localSN   || "");
     const tracking_norm   = plain(tracking   || trackingNumber || "");
-    const description_norm = plain(description || "");
+    const submitterEmail = plain(authUser?.email || "");
+    const submitterLabel = submitterEmail || "unknown";
+    const appendSubmitterToDescription = (text) => {
+      const base = plain(text);
+      return [base, `Submitted by ${submitterLabel}`].filter(Boolean).join("\n");
+    };
+    const description_norm = appendSubmitterToDescription(description);
     const envValue = (value) => plain(value).replace(/\s+#.*$/, "").trim();
     const dateOnly = (value) => {
       const text = plain(value);
@@ -671,6 +679,47 @@ export default async function handler(req, res) {
       }
     }
 
+    let opsMovement = null;
+    if (
+      work_order_norm &&
+      (listKey === "shipping" || listKey === "receiving")
+    ) {
+      try {
+        const { recordOpsInventoryMovement } = await import(
+          "../../../lib/ops/workOrders"
+        );
+        opsMovement = await recordOpsInventoryMovement({
+          workOrderNumber: work_order_norm,
+          direction: listKey,
+          itemId: local_sn_norm,
+          partName: local_sn_norm
+            ? titleText.replace(
+                new RegExp(
+                  `\\s*\\(${local_sn_norm.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\)\\s*$`,
+                  "i"
+                ),
+                ""
+              )
+            : titleText,
+          pnSn: pn_sn_norm,
+          tracking: tracking_norm,
+          description: plain(description),
+          recordedBy: submitterEmail,
+          sourceId: `${list_id}-${rowId}`,
+        });
+        logStep("[OPS][WORK-ORDER-MOVEMENT]", opsMovement);
+      } catch (opsError) {
+        opsMovement = {
+          attached: false,
+          reason: "ops_write_failed",
+        };
+        logStep("[OPS][WORK-ORDER-MOVEMENT]", {
+          attached: false,
+          error: opsError?.message || String(opsError),
+        });
+      }
+    }
+
     return res.status(200).json({
       ok: true,
       list_id,
@@ -686,6 +735,7 @@ export default async function handler(req, res) {
         date_col: CFG.date || null,
       },
       debug: { steps, photos: uploadedFileIds, photosAttached: attachedOk },
+      opsMovement,
       ms: Date.now() - t0,
     });
   } catch (err) {

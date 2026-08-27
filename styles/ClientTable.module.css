@@ -47,3 +47,48 @@
   font-size: calc(12px + 0.5vw);
   text-truncate: ellipsis;
 }
+
+:global(html[data-theme="dark"]) .clientTableContainer,
+:global(html[data-theme="dark"]) .clientTable {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .clientTable {
+  --bs-table-color: #e5edf8;
+  --bs-table-bg: #111827;
+  --bs-table-border-color: #29364a;
+  --bs-table-striped-color: #e5edf8;
+  --bs-table-striped-bg: #172033;
+  --bs-table-hover-color: #f8fafc;
+  --bs-table-hover-bg: #1e3a5f;
+}
+
+:global(html[data-theme="dark"]) .clientTable thead,
+:global(html[data-theme="dark"]) .clientTable thead th {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .clientTable tbody,
+:global(html[data-theme="dark"]) .clientTable tbody tr,
+:global(html[data-theme="dark"]) .clientTable tbody td {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .clientTable tbody tr:nth-of-type(odd) td {
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .clientTable tbody tr:hover td {
+  color: #f8fafc !important;
+  background: #1e3a5f !important;
+}
+
+:global(html[data-theme="dark"]) .actionRow td {
+  background: #0f172a !important;
+}

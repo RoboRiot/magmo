@@ -35,14 +35,14 @@ function LoadingButton({ type, name, route }) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type}`}
-        disabled={isLoading.name}
-        onClick={!isLoading.name ? handleClick : null}
-      >
-        {isLoading.name ? "Loading…" : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type}`}
+      disabled={isLoading.name}
+      onClick={!isLoading.name ? handleClick : null}>
+
+      {isLoading.name ? "Loading…" : name}
+
     </Link>
   );
 }

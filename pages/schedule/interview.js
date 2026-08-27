@@ -45,14 +45,14 @@ function LoadingButton(type, name, route) {
     );
   } else {
     return (
-      <Link href={route}>
-        <a
-          className={`btn btn-${type}`}
-          disabled={isLoading}
-          onClick={!isLoading ? handleClick : null}
-        >
-          {isLoading ? "Loading…" : name}
-        </a>
+      <Link
+        href={route}
+        className={`btn btn-${type}`}
+        disabled={isLoading}
+        onClick={!isLoading ? handleClick : null}>
+
+        {isLoading ? "Loading…" : name}
+
       </Link>
     );
   }
@@ -168,6 +168,7 @@ export default function interview() {
   //   const { signOut } = useAuth();
   return (
     // <LoggedIn>
+    // </LoggedIn>
     <>
       <Modal show={modalShow} onHide={handleModalClose}>
         <Modal.Header closeButton>
@@ -220,6 +221,5 @@ export default function interview() {
         </div>
       </Container>
     </>
-    // </LoggedIn>
   );
 }

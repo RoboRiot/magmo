@@ -84,10 +84,34 @@
   background: #ffffff;
 }
 
-.testButton {
-  border-radius: 12px;
-  font-weight: 600;
-  padding: 10px 16px;
+.googleIdentityShell {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.googleIdentityButton {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.googleIdentityLoading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8e1f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 900px) {
@@ -110,10 +134,6 @@
   }
 
   .googleButton {
-    width: 100%;
-  }
-
-  .testButton {
     width: 100%;
   }
 }

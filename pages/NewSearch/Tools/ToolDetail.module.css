@@ -225,3 +225,108 @@
     grid-template-columns: 1fr;
   }
 }
+
+:global(html[data-theme="dark"]) .page {
+  color-scheme: dark;
+  color: #e5edf8;
+  background:
+    radial-gradient(850px circle at 8% -10%, rgba(20, 184, 166, 0.13), transparent 58%),
+    radial-gradient(740px circle at 90% 0%, rgba(59, 130, 246, 0.15), transparent 55%),
+    #0a0f1c;
+}
+
+:global(html[data-theme="dark"]) .title,
+:global(html[data-theme="dark"]) .sectionTitle {
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .subtitle,
+:global(html[data-theme="dark"]) .loadingRow,
+:global(html[data-theme="dark"]) .emptyState {
+  color: #9aa9bd;
+}
+
+:global(html[data-theme="dark"]) .card,
+:global(html[data-theme="dark"]) .section,
+:global(html[data-theme="dark"]) .itemLikeSelectionBox,
+:global(html[data-theme="dark"]) .tableCard,
+:global(html[data-theme="dark"]) .currentWorkOrder {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .card {
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+}
+
+:global(html[data-theme="dark"]) .itemLikeSelectionBox {
+  border-color: #3a4a62;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .tableHeader {
+  color: #dbe7f5;
+  border-color: #29364a;
+  background: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .tableWrap {
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .table {
+  --bs-table-color: #e5edf8;
+  --bs-table-bg: #111827;
+  --bs-table-border-color: #29364a;
+  --bs-table-striped-color: #e5edf8;
+  --bs-table-striped-bg: #172033;
+  --bs-table-hover-color: #f8fafc;
+  --bs-table-hover-bg: #1b2940;
+  color: #e5edf8;
+  border-color: #29364a;
+}
+
+:global(html[data-theme="dark"]) .table thead th {
+  color: #dbe7f5;
+  border-color: #334155;
+  background: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .table tbody td {
+  border-color: #29364a;
+}
+
+:global(html[data-theme="dark"]) .card :global(.form-label) {
+  color: #cbd5e1;
+}
+
+:global(html[data-theme="dark"]) .card :global(.form-control) {
+  color: #e5edf8;
+  border-color: #3a4a62;
+  background-color: #172033;
+}
+
+:global(html[data-theme="dark"]) .card :global(.form-control)::placeholder {
+  color: #7f8ea3;
+}
+
+:global(html[data-theme="dark"]) .card :global(.form-control:focus) {
+  color: #f8fafc;
+  border-color: #60a5fa;
+  background-color: #19243a;
+  box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
+}
+
+:global(html[data-theme="dark"]) .card :global(.form-control[readonly]) {
+  color: #a9b7ca;
+  background-color: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .card :global(input[type="date"]) {
+  color-scheme: dark;
+}
+
+:global(html[data-theme="dark"]) .photoTile img {
+  border-color: #3a4a62;
+}

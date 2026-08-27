@@ -1,8 +1,46 @@
 This is a starter template for [Learn Next.js](https://nextjs.org/learn).
 
-## BlueFolder Slack Listener
+## Production and test deployments
 
-This project includes a Next.js backend port of the Python BlueFolder -> Slack listener.
+There are two independent Firebase deploy paths:
+
+- `npm run deploy:test` (or `.\testdeploy.ps1`) builds and deploys only the test server and
+  [magmo-test.web.app](https://magmo-test.web.app).
+- `npm run deploy:production` (or `.\deploy.ps1`) builds and deploys only the production server and
+  [magmo.cloud](https://magmo.cloud).
+
+Do not use a bare `firebase deploy`; the two scripts intentionally select one
+Hosting site and one server function at a time.
+Use `npm run deploy:test:dry-run` or `npm run deploy:production:dry-run` to run
+Firebase's validation without publishing. The legacy `npm run firebase:deploy`
+command is retained as a production-only alias.
+
+Before the first test deployment:
+
+1. Copy `.env.test.example` to `.env.test.local`.
+2. Add the Bot User OAuth Token and Signing Secret from the `magmo-test` Slack
+   app.
+3. Set a dedicated test Slack channel and any test Slack List IDs.
+4. In the `magmo-test` Slack app, set the Event Subscriptions request URL to
+   `https://magmo-test.web.app/api/slack/events`.
+5. Run `.\testdeploy.ps1`.
+
+The test site has its own Firebase Hosting site, Firebase Web App registration,
+Cloud Function, and Slack credentials. It is still inside the
+`magmo-ac10c` Firebase project, so it shares production Firestore, Storage, and
+Authentication data. The red `TEST BAY · SHARED DATA` badge is intentional.
+Create a separate Firebase project later if test data must also be isolated.
+
+## BlueFolder / Dispatch integration
+
+There are two authorized ways to create a Slack work-order root:
+
+- MAGMO Dispatch creates the root for requests generated and approved in MAGMO.
+- The standalone Python BlueFolder listener creates the root for work orders
+  created directly in BlueFolder, such as work orders entered by Yao.
+
+The legacy `/api/cron/bluefolder-slack` web poller is disabled so it cannot
+become a third creator or race either supported path.
 
 Routes:
 - Current Next 10-compatible route: `/api/cron/bluefolder-slack`
@@ -11,8 +49,8 @@ Routes:
 - Requested App Router Slack Events route: `app/api/slack/events/route.js`
 
 Behavior:
-- The cron route checks BlueFolder once and exits. It does not run a forever loop.
-- Processed work orders are stored in Firestore instead of a local JSON state file.
+- Clicking Add in MAGMO checks for an existing numeric Dispatch root before posting.
+- A new root is posted only to the configured production Dispatch channel.
 - The Slack parent message remains:
 
 ```text
@@ -20,8 +58,15 @@ Behavior:
 <BlueFolder link|Subject>
 ```
 
-- Fixed mentions are posted as the first thread reply, matching the Python listener.
-- The Slack channel, message ts, permalink, work order ID, subject, and processed timestamp are saved in Firestore.
+- Fixed mentions are posted as the first thread reply.
+- MAGMO stores the channel, root timestamp, canonical permalink, dispatch status,
+  dispatch time, and actor in Firestore.
+- The receipt exposed by `work_order.command_context` is the server signal that
+  MAGMO already created the root.
+- Retries reuse the existing numeric root and never create a duplicate.
+- BlueFolder-created work orders are posted by the standalone Python listener
+  and then ingested into MAGMO so MAGMO can track the same Slack root.
+- Neither MAGMO nor the Python server writes dispatch data back to BlueFolder.
 - A Slack message containing exactly `!done` fetches the relevant thread/conversation, asks OpenAI for a professional service report, and posts it back into that Slack thread.
 
 Required environment variables:
@@ -29,10 +74,10 @@ Required environment variables:
 ```text
 BLUEFOLDER_BASE_URL=https://app.bluefolder.com/api/2.0
 BLUEFOLDER_API_TOKEN=...
-BLUEFOLDER_WORK_ORDERS_PATH=/workOrders/list.aspx
+BLUEFOLDER_WORK_ORDERS_PATH=/serviceRequests/list.aspx
 BLUEFOLDER_WORK_ORDER_DETAIL_PATH=/serviceRequests/get.aspx?serviceRequestId={id}
+BLUEFOLDER_LIST_STATUS=open
 BLUEFOLDER_WORK_ORDER_URL_TEMPLATE=https://advancedimaging.bluefolder.com/service/sr.aspx?srid={id}
-BLUEFOLDER_LINK_FIELD_LABEL=Link to Slack Thread
 
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_CHANNEL_ID=C...
@@ -78,18 +123,21 @@ Recommended safety/config variables:
 DRY_RUN=true
 BASELINE_ON_STARTUP=true
 ENABLE_BLUEFOLDER=true
+POLL_SECONDS=60
 CRON_SECRET=long-random-secret
 SLACK_SIGNING_SECRET=...
 OPENAI_SERVICE_REPORT_MODEL=gpt-5.5
 ```
 
 Setup:
-1. Deploy the app with the existing Firebase Admin environment configured.
-2. Set `DRY_RUN=true` and call `/api/cron/bluefolder-slack` once. With `BASELINE_ON_STARTUP=true`, the first run captures existing work orders in Firestore and exits.
-3. Call `/api/cron/bluefolder-slack?testSlack=1` to send one test Slack message using `TEST_WORK_ORDER_NUMBER`, `TEST_WORK_ORDER_SUBJECT`, and `TEST_WORK_ORDER_URL`.
-4. Set `DRY_RUN=false` after BlueFolder parsing and Slack posting are confirmed.
-5. Configure your scheduler to call `/api/cron/bluefolder-slack` with `Authorization: Bearer $CRON_SECRET`.
-6. Configure Slack Event Subscriptions to POST to `/api/slack/events`, subscribe to message events, and set `SLACK_SIGNING_SECRET`.
+1. Deploy the app with Firebase Admin and Slack server credentials configured.
+2. Set `OPS_DISPATCH_CHANNEL_ID=C07EPLKV9JT` and keep Testing configured separately as `OPS_TESTING_CHANNEL_ID=C07F6V10PRS`.
+3. Run the standalone Python BlueFolder listener for BlueFolder-created work
+   orders; do not schedule `/api/cron/bluefolder-slack`, which is retained only
+   as a fail-closed compatibility endpoint.
+4. Run the Python report listener alongside it for `!daily`, `!complete`,
+   `!parts`, and `!done`.
+5. Configure Slack Event Subscriptions to POST to `/api/slack/events`, subscribe to message events, and set `SLACK_SIGNING_SECRET`.
 
 Slack scopes commonly needed:
 - `chat:write`
@@ -104,18 +152,33 @@ Firestore collections used:
 - `BlueFolderSlackThreadIndex`
 - `BlueFolderSlackEvents`
 
-### Local Python `!done` Listener
+### Local Python Ops report listener
 
 If you do not want to expose local Next.js through ngrok while developing, run the local Python listener instead. It works like the old Python BlueFolder listener: it makes outbound requests to Slack/OpenAI and does not need Slack Events, ngrok, or a public callback URL.
 
 ```bash
-py scripts/slack_done_report_listener.py --channel C0123456789
+py scripts/slack_done_report_listener_v2.py --channel C0123456789
 ```
 
-Then type this in that Slack channel or in a work-order thread:
+Use these commands in the corresponding work-order thread:
 
 ```text
+!daily
+!complete
+!parts
 !done
 ```
 
-The script reads `.env.local`/`.env` for `SLACK_BOT_TOKEN` and `OPENAI_API_KEY`. If you do not pass `--channel`, set `SLACK_CHANNEL_ID` or `SLACK_CHANNEL_NAME`.
+- `!daily` posts a short update for the current Pacific-time day.
+- `!complete` posts the service report and moves the Ops record to Service complete while parts return remains pending.
+- `!parts` posts and saves a concise parts-movement summary without changing workflow status.
+- `!done` posts the final closeout, marks the Ops record done, preserves its summaries, and clears the temporary Firebase chat log.
+
+The report listener and `bluefolder_slack_listener_v2.py` should run together. Keep `OPS_REPORT_COMMANDS_MANAGED_BY_DONE_LISTENER=true` so the BlueFolder listener delegates these workflow/report commands instead of racing the report listener.
+
+The server service manager must keep both Python processes running. The report
+listener watches only `OPS_DISPATCH_CHANNEL_ID` and refuses Testing. It requires
+`OPS_INGEST_SECRET` for `!complete`, `!parts`, and `!done`; `!daily` does not
+require an Ops write.
+
+The script reads `.env.local`/`.env` for Slack, OpenAI, and Firebase credentials. If you do not pass `--channel`, set `SLACK_CHANNEL_ID` or `SLACK_CHANNEL_NAME`. Existing `slack_done_report_state.json` files remain compatible; no state migration is required.

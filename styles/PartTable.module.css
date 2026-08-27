@@ -6,9 +6,9 @@
 .scrollableTable {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: auto;
   position: relative;
-  padding: 0 18px 16px;
+  padding: 0;
 }
 
 .stickyHeader {
@@ -48,37 +48,183 @@
 .fixedTable {
   table-layout: fixed;
   width: 100%;
-  border-color: #e2e8f0;
-  font-size: 0.86rem;
+  border-color: #e8eef6;
+  font-size: 0.93rem;
   color: #0f172a;
 }
 
 .fixedTable th,
 .fixedTable td {
-  padding: 10px 8px;
+  padding: 10px 10px;
   vertical-align: middle;
+  line-height: 1.3;
+  border-color: #e8eef6;
 }
 
 .fixedTable thead th {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e1eaf4;
   background: #f8fafc;
   font-weight: 700;
   color: #0f172a;
 }
 
-.fixedTable tbody tr:hover {
-  background: #f1f5f9;
+.fixedTable tbody td {
+  background-clip: padding-box;
 }
 
-/* clamp cell text to 10 characters per line, max 3 lines */
+.fixedTable tbody tr:nth-of-type(odd) td {
+  background-color: #f3f6f9;
+}
+
+.fixedTable tbody tr:nth-of-type(even) td {
+  background-color: #ffffff;
+}
+
+.fixedTable tbody tr:hover td {
+  background: #eef6ff;
+}
+
+.fixedTable :global(.btn-outline-danger) {
+  border-color: #fb7185;
+  border-radius: 7px;
+  color: #e11d48;
+  font-weight: 600;
+}
+
+.fixedTable :global(.btn-outline-danger:hover),
+.fixedTable :global(.btn-outline-danger:focus) {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.pictureCol {
+  width: 132px;
+}
+
+.nameCol {
+  width: 32%;
+}
+
+.dateCol {
+  width: 12%;
+}
+
+.workOrderCol {
+  width: 12%;
+}
+
+.partNumberCol,
+.serialNumberCol {
+  width: 13%;
+}
+
+.pictureCell {
+  width: 132px;
+  text-align: center;
+  cursor: default;
+}
+
+.thumbnailList {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.thumbnailButton,
+.viewerThumbnailButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: 7px;
+  flex: 0 0 auto;
+}
+
+.thumbnailButton:focus-visible,
+.viewerThumbnailButton:focus-visible {
+  outline: 3px solid rgba(3, 105, 161, 0.35);
+  outline-offset: 2px;
+}
+
+.thumbnail {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+}
+
+.photoLoading,
+.noPictures {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.noResultsCell {
+  height: 160px;
+  color: #64748b;
+  font-weight: 600;
+  text-align: center;
+}
+
+.photoViewerBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.fullPhoto {
+  display: block;
+  max-width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.viewerThumbnails {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+}
+
+.viewerThumbnailButton {
+  border: 2px solid transparent;
+}
+
+.viewerThumbnailSelected {
+  border-color: #0369a1;
+}
+
+.viewerThumbnail {
+  display: block;
+  width: 58px;
+  height: 58px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
 .cellClamp {
-  max-width: 10ch;
+  max-width: none;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;           /* 3 rows max */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   word-break: break-word;           /* wrap long tokens like long SNs */
   white-space: normal;              /* allow wrapping */
+}
+
+.nameCol .cellClamp {
+  -webkit-line-clamp: 4;
+}
+
+.partNumberCol .cellClamp,
+.serialNumberCol .cellClamp {
+  font-variant-numeric: tabular-nums;
 }
 
 /* keep action/delete column from shrinking */
@@ -113,49 +259,174 @@
 
 @media (max-width: 640px) {
   .scrollableTable {
-    padding: 0 12px 14px;
+    padding: 0;
+    overflow-x: hidden;
   }
 
   .fixedTable {
-    font-size: 0.98rem;
+    min-width: 0;
+    width: 100%;
+    font-size: 0.8rem;
+  }
+
+  .picturesTable {
+    min-width: 0;
   }
 
   .fixedTable th,
   .fixedTable td {
-    padding: 14px 10px;
+    padding: 7px 4px;
+    line-height: 1.2;
   }
 
   .cellClamp {
-    max-width: 20ch;
-    -webkit-line-clamp: 4;
+    max-width: none;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .nameCol .cellClamp {
+    -webkit-line-clamp: 2;
   }
 
   .actionCol {
     width: 64px;
   }
 
-  .fixedTable th:nth-child(1),
-  .fixedTable td:nth-child(1) {
-    width: 40%;
+  .pictureCol,
+  .pictureCell {
+    width: 23%;
   }
 
-  .fixedTable th:nth-child(2),
-  .fixedTable td:nth-child(2),
-  .fixedTable th:nth-child(3),
-  .fixedTable td:nth-child(3),
-  .fixedTable th:nth-child(4),
-  .fixedTable td:nth-child(4),
-  .fixedTable th:nth-child(5),
-  .fixedTable td:nth-child(5) {
-    width: 12%;
+  .nameCol {
+    width: 38%;
   }
 
-  .fixedTable th:nth-child(6),
-  .fixedTable td:nth-child(6) {
-    width: 9%;
-    padding-left: 6px;
-    padding-right: 6px;
+  .dateCol {
+    width: 20%;
+  }
+
+  .workOrderCol {
+    width: 19%;
+  }
+
+  .partNumberCol,
+  .serialNumberCol {
+    display: none;
+  }
+
+  .thumbnailList {
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .thumbnail {
+    width: 34px;
+    height: 34px;
   }
 }
 
   
+
+/* The inventory list supplies its own cell colors, so Bootstrap's dark theme
+   cannot correct the hard-coded light rows without these explicit overrides. */
+:global(html[data-theme="dark"]) .scrollableTable {
+  background: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .fixedTable {
+  --bs-table-color: #e5edf8;
+  --bs-table-bg: #111827;
+  --bs-table-border-color: #29364a;
+  --bs-table-striped-color: #e5edf8;
+  --bs-table-striped-bg: #172033;
+  --bs-table-hover-color: #f8fafc;
+  --bs-table-hover-bg: #1e3a5f;
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .fixedTable thead,
+:global(html[data-theme="dark"]) .fixedTable thead th {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .fixedTable tbody,
+:global(html[data-theme="dark"]) .fixedTable tbody tr,
+:global(html[data-theme="dark"]) .fixedTable tbody td {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .fixedTable tbody tr:nth-of-type(odd) td {
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .fixedTable tbody tr:hover td {
+  color: #f8fafc !important;
+  background: #1e3a5f !important;
+}
+
+:global(html[data-theme="dark"]) .photoLoading,
+:global(html[data-theme="dark"]) .noPictures,
+:global(html[data-theme="dark"]) .noResultsCell {
+  color: #94a3b8 !important;
+}
+
+:global(html[data-theme="dark"]) .longPressCard {
+  color: #e5edf8;
+  border: 1px solid #3a4a62;
+  background: #111827;
+}
+.itemPreviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.itemPreviewGrid > div {
+  min-width: 0;
+  padding: 14px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid #dfe7e5;
+  border-radius: 12px;
+  background: #f7faf9;
+}
+
+.itemPreviewGrid span {
+  color: #70817d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.itemPreviewGrid strong {
+  overflow-wrap: anywhere;
+  color: #213d38;
+  font-size: 13px;
+}
+
+:global(html[data-theme="dark"]) .itemPreviewGrid > div {
+  border-color: #3a4a62;
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .itemPreviewGrid span {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .itemPreviewGrid strong {
+  color: #e5edf8;
+}
+
+@media (max-width: 640px) {
+  .itemPreviewGrid {
+    grid-template-columns: 1fr;
+  }
+}

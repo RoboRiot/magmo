@@ -143,8 +143,8 @@ export default function TrailerSetup() {
                   <Button variant="secondary" onClick={() => startFlow("Departure")}>
                     Departure
                   </Button>
-                  <Link href="/Warehousedb/WarehouseSelect">
-                    <a className="btn btn-secondary">Back</a>
+                  <Link href="/Warehousedb/WarehouseSelect" className="btn btn-secondary">
+                    Back
                   </Link>
                 </div>
               )}
@@ -186,8 +186,8 @@ export default function TrailerSetup() {
                   <Button variant="primary" onClick={resetFlow}>
                     Start Another
                   </Button>
-                  <Link href="/Warehousedb/WarehouseSelect">
-                    <a className="btn btn-secondary">Back</a>
+                  <Link href="/Warehousedb/WarehouseSelect" className="btn btn-secondary">
+                    Back
                   </Link>
                 </div>
               )}

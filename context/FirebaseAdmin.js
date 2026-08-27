@@ -1,16 +1,24 @@
 import fs from "fs";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getDatabaseWithUrl } from "firebase-admin/database";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
-// Import Firebase Functions for config access
-let functions;
-try {
-  functions = require("firebase-functions");
-} catch (error) {
-  // Not running in Firebase Functions environment
-  functions = null;
-}
+const adminProjectId =
+  process.env.FIREBASE_ADMIN_PROJECT_ID ||
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  "magmo-ac10c";
+const adminStorageBucket =
+  process.env.FIREBASE_STORAGE_BUCKET ||
+  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  `${adminProjectId}.appspot.com`;
+const configuredDatabaseUrl = String(
+  process.env.FIREBASE_DATABASE_URL ||
+    process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
+    `https://${adminProjectId}-default-rtdb.firebaseio.com`
+).replace(/\/+$/, "");
 
 // Initialize Firebase Admin if it hasn't been initialized
 if (!getApps().length) {
@@ -34,27 +42,15 @@ if (!getApps().length) {
     process.env.FIREBASE_CLIENT_EMAIL ||
     process.env.FIREBASE_FUNCTIONS_CLIENT_EMAIL ||
     process.env.FIREBASE_ADMIN_CLIENT_EMAIL ||
-    serviceAccount?.client_email ||
-    (functions
-      ? functions.config().admin?.client_email ||
-        functions.config().ssr?.firebase_client_email
-      : undefined);
+    serviceAccount?.client_email;
 
   const privateKey =
     process.env.FIREBASE_PRIVATE_KEY ||
     process.env.FIREBASE_FUNCTIONS_PRIVATE_KEY ||
     process.env.FIREBASE_ADMIN_PRIVATE_KEY ||
-    serviceAccount?.private_key ||
-    (functions
-      ? functions.config().admin?.private_key ||
-        functions.config().ssr?.firebase_private_key
-      : undefined);
+    serviceAccount?.private_key;
 
-  const projectId =
-    process.env.FIREBASE_ADMIN_PROJECT_ID ||
-    process.env.FIREBASE_PROJECT_ID ||
-    serviceAccount?.project_id ||
-    "magmo-ac10c";
+  const projectId = serviceAccount?.project_id || adminProjectId;
   const hasExplicitAdminCreds = Boolean(clientEmail && privateKey);
   const isGoogleRuntime = Boolean(
     process.env.K_SERVICE ||
@@ -73,21 +69,15 @@ if (!getApps().length) {
           clientEmail: clientEmail,
           privateKey: privateKey.replace(/\\n/g, "\n"),
         }),
-        databaseURL: "https://magmo-ac10c.firebaseio.com",
-        storageBucket:
-          process.env.FIREBASE_STORAGE_BUCKET ||
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-          `${projectId}.appspot.com`,
+        databaseURL: configuredDatabaseUrl,
+        storageBucket: adminStorageBucket,
       });
     } else if (canUseAdc) {
       // Fall back to Application Default Credentials (e.g. Cloud Functions/Run)
       initializeApp({
         projectId,
-        databaseURL: "https://magmo-ac10c.firebaseio.com",
-        storageBucket:
-          process.env.FIREBASE_STORAGE_BUCKET ||
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-          `${projectId}.appspot.com`,
+        databaseURL: configuredDatabaseUrl,
+        storageBucket: adminStorageBucket,
       });
     } else {
       console.warn(
@@ -103,14 +93,19 @@ if (!getApps().length) {
 // Only export Firestore if Firebase Admin is properly initialized
 let adminDb = null;
 let adminBucket = null;
+let adminRealtimeDb = null;
 try {
   if (getApps().length > 0) {
     adminDb = getFirestore();
-    adminBucket = getStorage().bucket();
+    adminRealtimeDb = getDatabaseWithUrl(configuredDatabaseUrl);
+    // The Functions entrypoint may initialize the default app before this
+    // module is loaded. Always pass the bucket explicitly so Cloud Storage
+    // never tries to discover the project through the metadata service.
+    adminBucket = getStorage().bucket(adminStorageBucket);
   }
 } catch (error) {
   console.warn("Firebase Admin not available:", error.message);
 }
 
-export { adminDb, adminBucket };
+export { adminDb, adminBucket, adminRealtimeDb, configuredDatabaseUrl };
 export default adminDb;

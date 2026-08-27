@@ -779,6 +779,7 @@ export default function ToolDetailPage() {
       const photoRef = storageRef.child(`Tools/${toolId}/${Date.now()}-${i}-${safeName}`);
       await photoRef.put(photo.file, {
         contentType: photo.file.type || "image/jpeg",
+        cacheControl: "public,max-age=31536000,immutable",
       });
       uploadedUrls.push(await photoRef.getDownloadURL());
     }

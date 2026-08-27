@@ -3,10 +3,42 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/global.css";
+import "../styles/theme.css";
 import Layout from "../components/Layout";
 import { AuthUserProvider, useAuth } from "../context/AuthUserContext";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
 
 const PUBLIC_ROUTES = new Set(["/", "/404", "/500"]);
+const IS_TEST_ENV = process.env.NEXT_PUBLIC_DEPLOY_ENV === "test";
+const INITIAL_THEME_SCRIPT = `(function () {
+  try {
+    var theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute("data-bs-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+  } catch (error) {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.setAttribute("data-bs-theme", "light");
+  }
+})();`;
+
+function ThemeHead() {
+  const { theme } = useTheme();
+  return (
+    <Head>
+      <script
+        key="magmo-initial-theme"
+        dangerouslySetInnerHTML={{ __html: INITIAL_THEME_SCRIPT }}
+      />
+      <meta
+        name="theme-color"
+        content={theme === "dark" ? "#0a0f1c" : "#f4f6fb"}
+      />
+    </Head>
+  );
+}
 
 function AuthGate({ children }) {
   const router = useRouter();
@@ -38,19 +70,6 @@ function AuthGate({ children }) {
   if (!authUser) return null;
 
   return children;
-}
-
-// Setup pdfjs (if used) - only on client side
-let pdfjs = null;
-if (typeof window !== "undefined") {
-  // Only import on client side
-  try {
-    const { pdfjs: pdfjsModule } = require("react-pdf");
-    pdfjs = pdfjsModule;
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-  } catch (error) {
-    // Avoid noisy runtime warnings on pages that do not use PDF rendering.
-  }
 }
 
 function MyApp({ Component, pageProps }) {
@@ -90,10 +109,19 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <AuthUserProvider>
+      <ThemeProvider>
+        <ThemeHead />
       <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        {IS_TEST_ENV && <meta name="robots" content="noindex,nofollow,noarchive" />}
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0f172a" />
-        <meta name="application-name" content="Magmo Inventory" />
+        <meta
+          name="application-name"
+          content={IS_TEST_ENV ? "Magmo Test Bay" : "Magmo Inventory"}
+        />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Magmo" />
@@ -105,6 +133,28 @@ function MyApp({ Component, pageProps }) {
           <Component {...pageProps} />
         </AuthGate>
       </Layout>
+      {IS_TEST_ENV && (
+        <div
+          aria-label="Magmo test environment using shared Firebase data"
+          style={{
+            position: "fixed",
+            right: "12px",
+            bottom: "12px",
+            zIndex: 2147483647,
+            padding: "7px 10px",
+            borderRadius: "999px",
+            background: "#b42318",
+            color: "#fff",
+            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)",
+            fontSize: "12px",
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+          }}
+        >
+          TEST BAY · SHARED DATA
+        </div>
+      )}
+      </ThemeProvider>
     </AuthUserProvider>
   );
 }

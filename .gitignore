@@ -21,10 +21,16 @@ firebase-debug.log
 
 # Generated Next.js build output
 .next/
+.next-test-*/
 functions/.next/
 
 # Dependencies and generated local artifacts
 node_modules/
+.tools/
 scripts/__pycache__/
 *.pyc
 tmp-askmagmo-test-logs/
+
+# Local Windows-agent build mirror. Its installer payload embeds device
+# bootstrap credentials and must not be committed with the web application.
+magmonitor_agent_updates/

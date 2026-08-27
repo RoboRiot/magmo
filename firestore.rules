@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function accessNotRevoked() {
+      return !('magmoAccessRevoked' in request.auth.token)
+        || request.auth.token.magmoAccessRevoked != true;
+    }
+
+    function internalUser() {
+      return signedIn()
+        && accessNotRevoked()
+        && request.auth.token.email.matches('.*@advancedimagingparts[.]com$');
+    }
+
+    function approvedViewer() {
+      return signedIn()
+        && accessNotRevoked()
+        && ('role' in request.auth.token)
+        && request.auth.token.role == 'viewer';
+    }
+
+    function approvedUser() {
+      return internalUser() || approvedViewer();
+    }
+
+    match /UserPreferences/{userId} {
+      allow read: if approvedUser() && request.auth.uid == userId;
+      allow create, update: if approvedUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "theme",
+          "opsActiveCollapsedTiers",
+          "opsActiveCollapsedUpdatedAt",
+          "updatedAt"
+        ])
+        && (!request.resource.data.keys().hasAny(["theme"])
+          || request.resource.data.theme in ["light", "dark"])
+        && (!request.resource.data.keys().hasAny(["opsActiveCollapsedTiers"])
+          || request.resource.data.opsActiveCollapsedTiers is map);
+      allow delete: if approvedUser() && request.auth.uid == userId;
+    match /SearchConsoleTrackedPages/{document} {
+      allow read, write: if false;
+    }
+    match /SearchConsoleIndexStatus/{document} {
+      allow read, write: if false;
+    }
+    }
+
+    match /WebsiteAnalyticsEvents/{document} {
+      allow read, write: if false;
+    }
+    match /WebsiteAnalyticsDaily/{document} {
+      allow read, write: if false;
+    }
+    match /WebsitePartSearchDaily/{document} {
+      allow read, write: if false;
+    }
+    match /WebsiteRateLimits/{document} {
+      allow read, write: if false;
+    }
+    match /mail/{document} {
+      allow read, write: if false;
+    }
+
+    // Employee hour-edit requests are only read and changed through the
+    // authenticated Ops APIs. Firebase Admin bypasses these client rules.
+    match /OpsTimeEditRequests/{document} {
+      allow read, write: if false;
+    }
+
+    // Service-request approvals and lifecycle changes are written only through
+    // the authenticated Ops/AIS APIs. Admin SDK callers bypass these rules;
+    // browser clients must not be able to forge an overseer approval or status.
+    match /ServiceRequests/{document} {
+      allow read: if approvedUser();
+      allow create, update, delete: if false;
+    }
+
+
+    // The current public website release reads the published catalog directly.
+    // Keep this collection read-only until the server-side catalog API is live.
+    match /Parts/{document=**} {
+      allow read: if true;
+      allow create, update, delete: if internalUser();
+    }
+
+    match /{collection}/{document=**} {
+      allow read: if approvedUser();
+      allow create, update, delete: if internalUser()
+        && collection != "ServiceRequests";
+    }
+  }
+}

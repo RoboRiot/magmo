@@ -12,6 +12,7 @@ import {
 } from "react-bootstrap";
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
+import ThemeToggle from "../../components/ThemeToggle";
 import Link from "next/link";
 
 function simulateNetworkRequest() {
@@ -32,20 +33,20 @@ function LoadingButton({ type, name, route }) {
   const handleClick = () => setLoading({ name: true });
 
   return (
-    <Link href={`/${route}`}>
-      <a
-        className={`btn btn-${type}`}
-        disabled={isLoading.name}
-        onClick={!isLoading.name ? handleClick : null}
-      >
-        {isLoading.name ? "Loading…" : name}
-      </a>
+    <Link
+      href={`/${route}`}
+      className={`btn btn-${type}`}
+      disabled={isLoading.name}
+      onClick={!isLoading.name ? handleClick : null}>
+
+      {isLoading.name ? "Loading…" : name}
+
     </Link>
   );
 }
 
 export default function WarehouseSelect() {
-  const { signOut } = useAuth();
+  const { authUser, signOut } = useAuth();
   const [show, setShow] = useState(false);
 
   //passsing variables to warehouse list
@@ -75,6 +76,7 @@ export default function WarehouseSelect() {
 
   return (
     <LoggedIn>
+      <ThemeToggle />
       <Container
         className="d-flex align-items-center justify-content-center"
         style={{ minHeight: "100vh" }}
@@ -85,14 +87,14 @@ export default function WarehouseSelect() {
               <h2 className="text-center mb-4">Warehouse DB</h2>
               <div className="d-grid gap-3">
                 <LoadingButton
-                  type="secondary"
-                  name="Scan"
-                  route="Warehousedb/WarehouseScan"
-                />
-                <LoadingButton
                   type="primary"
                   name="Ask Magmo"
                   route="../AskMagmo"
+                />
+                <LoadingButton
+                  type="success"
+                  name="Magmonitor"
+                  route="Magmonitor"
                 />
                 <LoadingButton
                   type="secondary"
@@ -105,9 +107,26 @@ export default function WarehouseSelect() {
                   route="../NewSearch/clientSearch"
                 />
                 <LoadingButton
+                  type="primary"
+                  name="Trailer List"
+                  route="../NewSearch/Trailers"
+                />
+                <LoadingButton
                   type="secondary"
                   name="Inventory manager"
                   route="../NewSearch/inventory/inventoryManage"
+                />
+                {authUser?.isAdmin && (
+                  <LoadingButton
+                    type="success"
+                    name="Ops-admin"
+                    route="Ops"
+                  />
+                )}
+                <LoadingButton
+                  type="success"
+                  name="Ops-General"
+                  route="Ops-General"
                 />
                 <LoadingButton
                   type="primary"
@@ -115,10 +134,22 @@ export default function WarehouseSelect() {
                   route="Warehousedb/TrailerSetup"
                 />
                 <LoadingButton
+                  type="dark"
+                  name="Display"
+                  route="Warehousedb/display"
+                />
+                <LoadingButton
                   type="secondary"
                   name="Test Print"
                   route="../NewSearch/TestPrint"
                 />
+                {authUser?.isMasterAdmin && (
+                  <LoadingButton
+                    type="warning"
+                    name="Admin Settings"
+                    route="Warehousedb/AdminSettings"
+                  />
+                )}
 
                 <Form className="d-flex">
                   <FormControl

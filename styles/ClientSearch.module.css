@@ -165,8 +165,16 @@
 .loadingWrap {
   min-height: 260px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  color: #475569;
+}
+
+.loadingText {
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .loadingOverlay {
@@ -236,4 +244,121 @@
   .primaryButton {
     width: 100%;
   }
+}
+
+/* Dark-mode page shell. The client table already supports dark rows, but the
+   surrounding page and sticky table header were still explicitly white. */
+:global(html[data-theme="dark"]) .page {
+  color: #e5edf8;
+  background:
+    radial-gradient(1000px 540px at 12% 6%, rgba(37, 99, 235, 0.18), transparent 55%),
+    radial-gradient(900px 520px at 88% 10%, rgba(13, 148, 136, 0.14), transparent 50%),
+    #0a0f1c !important;
+}
+
+:global(html[data-theme="dark"]) .brandLogo,
+:global(html[data-theme="dark"]) .loadingLogo {
+  border: 1px solid #29364a;
+  background: #111827;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32);
+}
+
+:global(html[data-theme="dark"]) .brandName,
+:global(html[data-theme="dark"]) .cardTitle {
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .brandSub,
+:global(html[data-theme="dark"]) .cardSubtitle {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .backButton,
+:global(html[data-theme="dark"]) .clearButton {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .backButton:hover,
+:global(html[data-theme="dark"]) .backButton:focus,
+:global(html[data-theme="dark"]) .clearButton:hover,
+:global(html[data-theme="dark"]) .clearButton:focus {
+  color: #f8fafc !important;
+  border-color: #60a5fa !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .card {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827 !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+:global(html[data-theme="dark"]) .cardHeader {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .cardBody {
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .cardBadge {
+  color: #99f6e4;
+  background: rgba(13, 148, 136, 0.24);
+}
+
+:global(html[data-theme="dark"]) .searchInput {
+  color: #e5edf8 !important;
+  border-color: #3a4a62 !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .searchInput::placeholder {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .tableWrap {
+  color: #e5edf8;
+  border-color: #29364a;
+  background: #111827 !important;
+}
+
+:global(html[data-theme="dark"]) .tableWrap :global(.table) {
+  --bs-table-color: #e5edf8;
+  --bs-table-bg: #111827;
+  --bs-table-border-color: #29364a;
+  --bs-table-striped-color: #e5edf8;
+  --bs-table-striped-bg: #172033;
+  --bs-table-hover-color: #f8fafc;
+  --bs-table-hover-bg: #1e3a5f;
+}
+
+:global(html[data-theme="dark"]) .tableWrap :global(.table thead th) {
+  color: #dbe7f5 !important;
+  border-color: #3a4a62 !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .tableWrap :global(.table tbody td) {
+  color: #e5edf8 !important;
+  border-color: #29364a !important;
+  background-color: inherit;
+}
+
+:global(html[data-theme="dark"]) .tableWrap :global(.table tbody tr:hover td) {
+  color: #f8fafc !important;
+  background: #1e3a5f !important;
+}
+
+:global(html[data-theme="dark"]) .loadingWrap {
+  color: #cbd5e1;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .loadingOverlay {
+  background: rgba(10, 15, 28, 0.82);
 }

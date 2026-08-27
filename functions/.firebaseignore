@@ -5,3 +5,9 @@ node_modules/**
 .vscode/**
 *.log
 **/*.log
+.env
+.env.*
+mail.js
+*.pem
+*.key
+*service-account*.json
