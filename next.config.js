@@ -12,9 +12,17 @@ module.exports = {
       ],
     };
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, defaultLoaders }) => {
     // Bypass Terser
     config.optimization.minimize = false;
+
+    // Next 10 does not run CommonJS files through Babel by default. Several
+    // shared browser/server helpers use modern syntax, so transpile local CJS.
+    config.module.rules.push({
+      test: /\.cjs$/,
+      exclude: /node_modules/,
+      use: defaultLoaders.babel,
+    });
 
     // Ignore pdfjs-dist and other client-side only modules on server
     if (isServer) {

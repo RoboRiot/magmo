@@ -1,10 +1,14 @@
+import associatedPartRoles from "../lib/associatedPartRoles.cjs";
+
+const {
+  firstEntityRoleValue,
+  normalizeRole,
+  referenceId,
+  selectRoleMachineSnapshot,
+} = associatedPartRoles;
+
 function getRefId(ref) {
-  if (!ref) return null;
-  if (typeof ref === "string") {
-    return ref.split("/").filter(Boolean).pop() || ref;
-  }
-  if (ref.id) return ref.id;
-  return null;
+  return referenceId(ref) || null;
 }
 
 async function resolveDocData(db, collection, refOrId) {
@@ -74,51 +78,57 @@ function pickLatestDescription(data) {
   return latest?.description || data?.description || "";
 }
 
-function getMachineField(data, key) {
+function getMachineField(data, machineData, key, role) {
   const lower = key.toLowerCase();
   return (
-    data?.machineData?.[key] ??
-    data?.machineData?.[lower] ??
-    data?.currentMachineData?.[key] ??
-    data?.currentMachineData?.[lower] ??
-    data?.TheMachine?.[key] ??
-    data?.TheMachine?.[lower] ??
-    data?.theMachineData?.[key] ??
-    data?.theMachineData?.[lower] ??
-    data?.[key] ??
-    data?.[lower] ??
+    machineData?.[key] ??
+    machineData?.[lower] ??
+    (role === "from" ? data?.[key] : undefined) ??
+    (role === "from" ? data?.[lower] : undefined) ??
     ""
   );
 }
 
-async function resolveClientName(db, data, machineData) {
-  if (data?.clientName) return data.clientName;
-  if (typeof data?.client === "string") return data.client;
+function getEmbeddedMachineData(data, role) {
+  return selectRoleMachineSnapshot(data, role);
+}
 
-  const directClient =
-    (await resolveDocData(db, "Client", data?.client)) ||
-    (await resolveDocData(db, "Client", data?.ClientFrom)) ||
-    (await resolveDocData(db, "Client", data?.clientFromId)) ||
-    (await resolveDocData(db, "Client", data?.ClientCurrent)) ||
-    (await resolveDocData(db, "Client", data?.clientCurrentId));
+async function resolveClientName(db, data, machineData, role) {
+  const directName =
+    role === "current"
+      ? data?.clientCurrentName || data?.currentClientName
+      : data?.clientFromName || data?.fromClientName;
+  if (directName) return directName;
+
+  const directClient = await resolveDocData(
+    db,
+    "Client",
+    firstEntityRoleValue(data, "client", role)
+  );
   if (directClient?.name) return directClient.name;
 
-  const machineClientName =
-    data?.machineData?.Client ||
-    data?.currentMachineData?.Client ||
-    machineData?.Client ||
-    "";
+  const machineClientName = machineData?.Client || machineData?.clientName || "";
   if (machineClientName) return machineClientName;
 
   const machineClient =
-    (await resolveDocData(db, "Client", machineData?.client)) ||
-    (await resolveDocData(db, "Client", data?.machineData?.client));
-  return machineClient?.name || "";
+    (await resolveDocData(db, "Client", machineData?.client)) || null;
+  if (machineClient?.name) return machineClient.name;
+
+  if (role === "from") {
+    if (data?.clientName) return data.clientName;
+    if (typeof data?.client === "string") return data.client;
+    const legacyClient = await resolveDocData(db, "Client", data?.client);
+    if (legacyClient?.name) return legacyClient.name;
+  }
+  return "";
 }
 
-export async function resolveAssociatedPartForPrint(db, part) {
+export async function resolveAssociatedPartForPrint(db, part, options = {}) {
   if (!part) return null;
   let data = part;
+  const role = normalizeRole(
+    typeof options === "string" ? options : options?.role
+  );
 
   try {
     const hasArrival = Boolean(
@@ -130,18 +140,15 @@ export async function resolveAssociatedPartForPrint(db, part) {
         (Array.isArray(data?.descriptions) && data.descriptions.length)
     );
     const hasMachineSource = Boolean(
-      data?.TheMachine ||
-        data?.machineData ||
-        data?.Machine ||
-        data?.MachineFrom ||
-        data?.CurrentMachine ||
-        data?.MachineCurrent
+      getEmbeddedMachineData(data, role) ||
+        firstEntityRoleValue(data, "machine", role)
     );
     const hasClientSource = Boolean(
-      data?.clientName ||
-        data?.client ||
-        data?.ClientFrom ||
-        data?.clientFromId
+      firstEntityRoleValue(data, "client", role) ||
+        (role === "current"
+          ? data?.clientCurrentName || data?.currentClientName
+          : data?.clientFromName || data?.fromClientName) ||
+        (role === "from" ? data?.clientName || data?.client : null)
     );
 
     if (
@@ -156,23 +163,19 @@ export async function resolveAssociatedPartForPrint(db, part) {
       if (partDoc) data = { ...data, ...partDoc };
     }
 
-    const machineRef =
-      data?.MachineFrom ||
-      data?.Machine ||
-      data?.CurrentMachine ||
-      data?.MachineCurrent;
-    let machineData = data?.TheMachine || data?.machineData || null;
-    const needsMachineData = !(
-      getMachineField({ ...data, machineData }, "OEM") ||
-      getMachineField({ ...data, machineData }, "Modality") ||
-      getMachineField({ ...data, machineData }, "Model")
+    const machineRef = firstEntityRoleValue(data, "machine", role);
+    let machineData = getEmbeddedMachineData(data, role);
+    const needsMachineData = Boolean(machineRef) && (
+      !machineData ||
+      ["OEM", "Modality", "Model"].some(
+        (field) => !getMachineField(data, machineData, field, role)
+      )
     );
 
     if (needsMachineData && machineRef) {
       const machineDoc = await resolveDocData(db, "Machine", machineRef);
       if (machineDoc) {
-        machineData = machineDoc;
-        data = { ...data, machineData: machineDoc };
+        machineData = { ...machineDoc, ...(machineData || {}) };
       }
     }
 
@@ -187,12 +190,12 @@ export async function resolveAssociatedPartForPrint(db, part) {
       name: data?.name || data?.itemName || "",
       arrival_date: formatDateForPrint(arrivalRaw),
       poNumber: data?.poNumber || data?.po_number || data?.po || "",
-      OEM: getMachineField(data, "OEM") || "",
-      modality: getMachineField(data, "Modality") || "",
-      model: getMachineField(data, "Model") || "",
+      OEM: getMachineField(data, machineData, "OEM", role) || "",
+      modality: getMachineField(data, machineData, "Modality", role) || "",
+      model: getMachineField(data, machineData, "Model", role) || "",
       local_sn:
         data?.local_sn || data?.localSN || data?.localsn || data?.id || "",
-      client: (await resolveClientName(db, data, machineData)) || "",
+      client: (await resolveClientName(db, data, machineData, role)) || "",
       description: pickLatestDescription(data) || "",
     };
   } catch (error) {
@@ -207,7 +210,7 @@ export async function resolveAssociatedPartForPrint(db, part) {
       modality: "",
       model: "",
       local_sn: data?.local_sn || data?.localSN || data?.id || "",
-      client: data?.clientName || "",
+      client: role === "from" ? data?.clientName || "" : "",
       description: data?.description || "",
     };
   }

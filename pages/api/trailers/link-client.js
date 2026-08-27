@@ -3,7 +3,7 @@ import { adminDb } from "../../../context/FirebaseAdmin";
 import {
   getRoleFromClaims,
   isAdminEmail,
-  isAdminRole,
+  USER_ROLES,
 } from "../../../utils/authAccess";
 import { requireFirebaseAuth } from "../../../utils/apiAuth";
 
@@ -54,7 +54,7 @@ function clientAddress(data = {}) {
 function isAdminUser(decodedToken) {
   return (
     isAdminEmail(decodedToken?.email) ||
-    isAdminRole(getRoleFromClaims(decodedToken))
+    getRoleFromClaims(decodedToken) === USER_ROLES.ADMIN
   );
 }
 

@@ -20,7 +20,10 @@ import { useAuth } from "../../../../context/AuthUserContext";
 import firebase from "../../../../context/Firebase";
 import LoggedIn from "../../../LoggedIn";
 import { useRouter } from "next/router";
-import { fetchClients } from "../../../../utils/fetchAssociations";
+import {
+  fetchClients,
+  fetchMachinesForClient,
+} from "../../../../utils/fetchAssociations";
 import ClientTable from "../../../../utils/ClientTable";
 import ParentModal from "../../AddItem/parentModal";
 import dynamic from "next/dynamic";
@@ -56,9 +59,13 @@ import {
 } from "../../../../utils/trackerCatalog";
 import {
   buildMachineSummary,
-  syncAssociatedPartsForItem,
+  buildMachineDetailHydrationSeed,
+  commitItemWithMachineBacklinks,
+  createMachineDetailHydrationState,
+  findMachineDetailRequestBranch,
   stripAssociatedPartsFromMachineSnapshot,
   stripEmbeddedMachineAssociations,
+  summarizeMachineDetailHydration,
 } from "../../../../utils/warehouseAssociations";
 import {
   appendSaveHistory,
@@ -71,12 +78,114 @@ import {
 import { addItemToShippingGroup } from "../../../../utils/inventoryGroups";
 import ItemPhotoTabs from "../../../../components/ItemPhotoTabs";
 import ShippingGroupField from "../../../../components/ShippingGroupField";
+import ItemAssociationTypeControl, {
+  buildItemAssociationSnapshot,
+  inferItemAssociationType,
+  itemAssociationTypeForStorage,
+  ITEM_ASSOCIATION_MACHINE,
+  ITEM_ASSOCIATION_SITE,
+  ITEM_ASSOCIATION_TRAILER,
+} from "../../../../components/ItemAssociationTypeControl";
+import associatedPartRoles from "../../../../lib/associatedPartRoles.cjs";
 const {
   trailerClientId,
   trailerMachineId,
   trailerName,
   trailersForClient,
 } = require("../../../../lib/ops/trailerClientLinks.cjs");
+const { firstEntityRoleValue } = associatedPartRoles;
+
+const LEGACY_TRAILER_CLIENT_ID = "AIS62854";
+const LEGACY_ITEM_ASSOCIATION_FIELDS = [
+  "Machine",
+  "fromMachine",
+  "fromMachineId",
+  "machineId",
+  "fromClient",
+  "clientFrom",
+  "Client",
+  "fromClientId",
+  "fromTrailer",
+  "trailerFrom",
+  "fromTrailerId",
+  "CurrentMachine",
+  "currentMachine",
+  "currentMachineId",
+  "currentClient",
+  "clientCurrent",
+  "CurrentClient",
+  "currentClientId",
+  "currentTrailer",
+  "trailerCurrent",
+  "currentTrailerId",
+  "associationTypeFrom",
+  "associationTypeCurrent",
+];
+const ITEM_RENAME_FIELDS_TO_REPLACE = Array.from(
+  new Set([
+    ...LEGACY_ITEM_ASSOCIATION_FIELDS,
+    "MachineFrom",
+    "MachineCurrent",
+    "ClientFrom",
+    "ClientCurrent",
+    "TrailerFrom",
+    "TrailerCurrent",
+    "fromAssociationType",
+    "currentAssociationType",
+    "clientFromId",
+    "clientCurrentId",
+    "machineFromId",
+    "machineCurrentId",
+    "trailerFromId",
+    "trailerCurrentId",
+    "associationFrom",
+    "associationCurrent",
+    "Parent",
+  ])
+);
+
+function isSelectableItemClient(client) {
+  return (
+    String(client?.id || "").trim() !== LEGACY_TRAILER_CLIENT_ID &&
+    String(client?.name || "").trim().toLowerCase() !== "ais trailers"
+  );
+}
+
+function preserveStoredAssociationSnapshot(nextAssociation, storedSnapshot) {
+  if (!nextAssociation || !storedSnapshot) return nextAssociation;
+  const identityFields = [
+    "associationType",
+    "clientId",
+    "machineId",
+    "trailerId",
+  ];
+  const matchesStoredIdentity = identityFields.every((field) => {
+    const nextValue = String(nextAssociation?.[field] || "")
+      .trim()
+      .toLowerCase();
+    const storedValue = String(storedSnapshot?.[field] || "")
+      .trim()
+      .toLowerCase();
+    return nextValue === storedValue;
+  });
+  if (!matchesStoredIdentity) return nextAssociation;
+
+  const preserveField = (field) =>
+    Object.prototype.hasOwnProperty.call(storedSnapshot, field)
+      ? storedSnapshot[field]
+      : nextAssociation[field];
+  return {
+    ...storedSnapshot,
+    ...nextAssociation,
+    clientNameSnapshot: preserveField("clientNameSnapshot"),
+    clientLocationSnapshot: preserveField("clientLocationSnapshot"),
+    machineNameSnapshot: preserveField("machineNameSnapshot"),
+    trailerNameSnapshot: preserveField("trailerNameSnapshot"),
+    effectiveAt: preserveField("effectiveAt"),
+    effectiveAtSource: preserveField("effectiveAtSource"),
+    resolutionSource: preserveField("resolutionSource"),
+  };
+}
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
@@ -195,9 +304,11 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     authUser?.isAdmin === true || String(authUser?.role || "").toLowerCase() === "admin";
   // const { id } = router.query;
   const { id: idFromRouter } = router.query;
-  const initialId = initialItem?.id || idFromRouter;
+  const initialId = idFromRouter || initialItem?.id;
   // Use a single local var everywhere in this component
   const id = initialId;
+  const itemLoadRequestRef = useRef(0);
+  const committedItemIdRef = useRef(String(initialId || "").trim());
 
   const [items, setItems] = useState({
     name: initialItem?.name || "",
@@ -341,6 +452,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [selectedClientCurrent, setSelectedClientCurrent] = useState(null);
   const [selectedTrailerFrom, setSelectedTrailerFrom] = useState(null);
   const [selectedTrailerCurrent, setSelectedTrailerCurrent] = useState(null);
+  const [associationTypeFrom, setAssociationTypeFrom] = useState(
+    ITEM_ASSOCIATION_SITE
+  );
+  const [associationTypeCurrent, setAssociationTypeCurrent] = useState(
+    ITEM_ASSOCIATION_SITE
+  );
   const [trailers, setTrailers] = useState([]);
   const [trailerLinkPrompt, setTrailerLinkPrompt] = useState(null);
   const trailerOptionsFrom = useMemo(() => {
@@ -356,6 +473,22 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       ? [selectedTrailerCurrent, ...matches]
       : matches;
   }, [selectedClientCurrent?.id, selectedTrailerCurrent, trailers]);
+  const allTrailerOptions = useMemo(
+    () => {
+      const byId = new Map();
+      [...trailers, selectedTrailerFrom, selectedTrailerCurrent]
+        .filter(Boolean)
+        .forEach((trailer) => byId.set(trailer.id, trailer));
+      return [...byId.values()].sort((left, right) =>
+        String(left?.name || left?.id || "").localeCompare(
+          String(right?.name || right?.id || ""),
+          undefined,
+          { sensitivity: "base", numeric: true }
+        )
+      );
+    },
+    [selectedTrailerCurrent, selectedTrailerFrom, trailers]
+  );
 
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedCurrentMachine, setSelectedCurrentMachine] = useState(null);
@@ -436,7 +569,38 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [selectedChildren, setSelectedChildren] = useState([]);
   const [originalChildIds, setOriginalChildIds] = useState([]);
   const [TheMachine, setTheMachine] = useState(null);
-  const [machineOptions, setMachineOptions] = useState([]);
+  const [machineOptionsFrom, setMachineOptionsFrom] = useState([]);
+  const [machineOptionsCurrent, setMachineOptionsCurrent] = useState([]);
+  const [machineOptionsLoadingFrom, setMachineOptionsLoadingFrom] =
+    useState(false);
+  const [machineOptionsLoadingCurrent, setMachineOptionsLoadingCurrent] =
+    useState(false);
+  const machineOptionsRequestRef = useRef({ from: 0, current: 0 });
+  const associationSelectionRequestRef = useRef({ from: 0, current: 0 });
+  const associationSelectionStatusRef = useRef({
+    from: { pending: false, error: "" },
+    current: { pending: false, error: "" },
+  });
+  const [associationSelectionStatus, setAssociationSelectionStatus] = useState(
+    associationSelectionStatusRef.current
+  );
+  const associationSelectionPending = Object.values(
+    associationSelectionStatus
+  ).some((status) => status.pending);
+  const associationSelectionError = Object.values(associationSelectionStatus)
+    .map((status) => status.error)
+    .find(Boolean) || "";
+  const machineDetailRequestRef = useRef(0);
+  const latestMachineDetailOwnerRef = useRef({ branch: "", requestId: 0 });
+  const machineDetailHydrationRef = useRef(
+    createMachineDetailHydrationState()
+  );
+  const [machineDetailHydration, setMachineDetailHydration] = useState(
+    createMachineDetailHydrationState
+  );
+  const machineDetailHydrationSummary = summarizeMachineDetailHydration(
+    machineDetailHydration
+  );
   const [clientSearch, setClientSearch] = useState("");
   const [machineSearch, setMachineSearch] = useState("");
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -452,6 +616,12 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [addToWebsite, setAddToWebsite] = useState(false);
   const [machinePick, setMachinePick] = useState(false);
+  const machineOptions = machinePick
+    ? machineOptionsFrom
+    : machineOptionsCurrent;
+  const machineOptionsLoading = machinePick
+    ? machineOptionsLoadingFrom
+    : machineOptionsLoadingCurrent;
   const [freqItem, setFreqItem] = useState(0);
   const [usagePastYear, setUsagePastYear] = useState(0);
   const [machineFrequency, setMachineFrequency] = useState(0);
@@ -507,21 +677,29 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
       movementDateType === "departure"
         ? items?.departure_date || ""
         : items?.arrival_date || "";
+    const storedFromAssociationType = itemAssociationTypeForStorage({
+      type: associationTypeFrom,
+      client: selectedClientFrom,
+      machine: selectedMachine,
+      trailer: selectedTrailerFrom,
+    });
+    const storedCurrentAssociationType = itemAssociationTypeForStorage({
+      type: associationTypeCurrent,
+      client: selectedClientCurrent,
+      machine: selectedCurrentMachine,
+      trailer: selectedTrailerCurrent,
+    });
     return {
-      fromClientId: selectedTrailerFrom?.id ? "" : selectedClientFrom?.id || "",
-      fromClientName: selectedTrailerFrom?.id
-        ? ""
-        : (selectedClientFrom?.name || "").trim(),
+      fromAssociationType: storedFromAssociationType,
+      fromClientId: selectedClientFrom?.id || "",
+      fromClientName: (selectedClientFrom?.name || "").trim(),
       fromMachineId: selectedMachine?.id || "",
       fromMachineName: (selectedMachine?.name || "").trim(),
       fromTrailerId: selectedTrailerFrom?.id || "",
       fromTrailerName: (selectedTrailerFrom?.name || "").trim(),
-      currentClientId: selectedTrailerCurrent?.id
-        ? ""
-        : selectedClientCurrent?.id || "",
-      currentClientName: selectedTrailerCurrent?.id
-        ? ""
-        : (selectedClientCurrent?.name || "").trim(),
+      currentAssociationType: storedCurrentAssociationType,
+      currentClientId: selectedClientCurrent?.id || "",
+      currentClientName: (selectedClientCurrent?.name || "").trim(),
       currentMachineId: selectedCurrentMachine?.id || "",
       currentMachineName: (selectedCurrentMachine?.name || "").trim(),
       currentTrailerId: selectedTrailerCurrent?.id || "",
@@ -552,12 +730,14 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     [
       snapshot?.fromClientId,
       snapshot?.fromClientName,
+      snapshot?.fromAssociationType,
       snapshot?.fromMachineId,
       snapshot?.fromMachineName,
       snapshot?.fromTrailerId,
       snapshot?.fromTrailerName,
       snapshot?.currentClientId,
       snapshot?.currentClientName,
+      snapshot?.currentAssociationType,
       snapshot?.currentMachineId,
       snapshot?.currentMachineName,
       snapshot?.currentTrailerId,
@@ -577,12 +757,14 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
     return (
       a?.fromClientId === b?.fromClientId &&
       a?.fromClientName === b?.fromClientName &&
+      a?.fromAssociationType === b?.fromAssociationType &&
       a?.fromMachineId === b?.fromMachineId &&
       a?.fromMachineName === b?.fromMachineName &&
       a?.fromTrailerId === b?.fromTrailerId &&
       a?.fromTrailerName === b?.fromTrailerName &&
       a?.currentClientId === b?.currentClientId &&
       a?.currentClientName === b?.currentClientName &&
+      a?.currentAssociationType === b?.currentAssociationType &&
       a?.currentMachineId === b?.currentMachineId &&
       a?.currentMachineName === b?.currentMachineName &&
       a?.currentTrailerId === b?.currentTrailerId &&
@@ -619,6 +801,7 @@ function DisplayItemInner({ initialItem, initialMachineData, error }) {
   const [machineFieldsInitialized, setMachineFieldsInitialized] =
     useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [associationLoadError, setAssociationLoadError] = useState("");
 
   // near the top of DisplayItem()
   const [showLocalModalFrom, setShowLocalModalFrom] = useState(false);
@@ -808,7 +991,7 @@ const handleSendToInflow = async () => {
         fetchClients(),
         firebase.firestore().collection("Trailers").get(),
       ]);
-      setClients(clientsData);
+      setClients((clientsData || []).filter(isSelectableItemClient));
       setTrailers(
         trailerSnapshot.docs
           .filter((snapshot) => snapshot.id !== "layout_meta")
@@ -831,6 +1014,55 @@ const handleSendToInflow = async () => {
       setClientsLoading(false);
     }
   };
+
+  const setMachineOptionsForBranch = useCallback((isFromBranch, next) => {
+    if (isFromBranch) setMachineOptionsFrom(next);
+    else setMachineOptionsCurrent(next);
+  }, []);
+
+  const loadMachineOptionsForBranch = useCallback(
+    async (isFromBranch, clientOverride = null) => {
+      const selectedClient = clientOverride ||
+        (isFromBranch ? selectedClientFrom : selectedClientCurrent);
+      const clientId = String(selectedClient?.id || "").trim();
+      const requestKey = isFromBranch ? "from" : "current";
+      const requestId = machineOptionsRequestRef.current[requestKey] + 1;
+      machineOptionsRequestRef.current[requestKey] = requestId;
+
+      setMachineOptionsForBranch(isFromBranch, []);
+      if (isFromBranch) setMachineOptionsLoadingFrom(true);
+      else setMachineOptionsLoadingCurrent(true);
+
+      try {
+        if (!clientId) {
+          setMachineOptionsForBranch(isFromBranch, []);
+          return [];
+        }
+        const machines = await fetchMachinesForClient(clientId);
+        if (machineOptionsRequestRef.current[requestKey] !== requestId) {
+          const supersededError = new Error(
+            "Machine options request was superseded."
+          );
+          supersededError.name = "AbortError";
+          throw supersededError;
+        }
+        setMachineOptionsForBranch(isFromBranch, machines);
+        return machines;
+      } catch (error) {
+        console.error("Failed to load machines for selected client:", error);
+        if (machineOptionsRequestRef.current[requestKey] === requestId) {
+          setMachineOptionsForBranch(isFromBranch, []);
+        }
+        throw error;
+      } finally {
+        if (machineOptionsRequestRef.current[requestKey] === requestId) {
+          if (isFromBranch) setMachineOptionsLoadingFrom(false);
+          else setMachineOptionsLoadingCurrent(false);
+        }
+      }
+    },
+    [selectedClientCurrent, selectedClientFrom, setMachineOptionsForBranch]
+  );
 
   const loadTracker = useCallback(
     async (force = false) => {
@@ -1024,16 +1256,89 @@ const handleSendToInflow = async () => {
 
 
   useEffect(() => {
-    if (id) fetchData();           // always hydrate on the client
+    const requestedId = String(id || "").trim();
+    if (!requestedId) return undefined;
+    const requestId = itemLoadRequestRef.current + 1;
+    itemLoadRequestRef.current = requestId;
+    committedItemIdRef.current = requestedId;
+
+    // Dynamic route navigation reuses this component. Clear every association
+    // before loading the next item so an absent field can never inherit the
+    // previous item's client, trailer, machine, or warehouse position.
+    setSelectedClientFrom(null);
+    setSelectedClientCurrent(null);
+    setSelectedTrailerFrom(null);
+    setSelectedTrailerCurrent(null);
+    setSelectedMachine(null);
+    setSelectedCurrentMachine(null);
+    setAssociationTypeFrom(ITEM_ASSOCIATION_SITE);
+    setAssociationTypeCurrent(ITEM_ASSOCIATION_SITE);
+    setMachineOptionsFrom([]);
+    setMachineOptionsCurrent([]);
+    machineOptionsRequestRef.current = {
+      from: machineOptionsRequestRef.current.from + 1,
+      current: machineOptionsRequestRef.current.current + 1,
+    };
+    associationSelectionRequestRef.current = {
+      from: associationSelectionRequestRef.current.from + 1,
+      current: associationSelectionRequestRef.current.current + 1,
+    };
+    associationSelectionStatusRef.current = {
+      from: { pending: false, error: "" },
+      current: { pending: false, error: "" },
+    };
+    setAssociationSelectionStatus(associationSelectionStatusRef.current);
+    machineDetailRequestRef.current += 1;
+    latestMachineDetailOwnerRef.current = { branch: "", requestId: 0 };
+    machineDetailHydrationRef.current = createMachineDetailHydrationState();
+    setMachineDetailHydration(machineDetailHydrationRef.current);
+    setMachineOptionsLoadingFrom(false);
+    setMachineOptionsLoadingCurrent(false);
+    setShowMachineModal(false);
+    setSelectedParent(null);
+    setSelectedChildren([]);
+    setOriginalChildIds([]);
+    setTheMachine(null);
+    setSelectedOems([]);
+    setSelectedModalities([]);
+    setSelectedModels([]);
+    setLocalLocFrom("");
+    setLocalLocCurrent("");
+    setNewLocalFrom(createEmptyLocal());
+    setNewLocalCurrent(createEmptyLocal());
+    setDOM("");
+    setPhotos([]);
+    setAddToWebsite(false);
+    setAssociationLoadError("");
+
+    fetchData(requestedId, requestId);
+    return () => {
+      if (itemLoadRequestRef.current === requestId) {
+        itemLoadRequestRef.current += 1;
+      }
+      associationSelectionRequestRef.current = {
+        from: associationSelectionRequestRef.current.from + 1,
+        current: associationSelectionRequestRef.current.current + 1,
+      };
+      machineOptionsRequestRef.current = {
+        from: machineOptionsRequestRef.current.from + 1,
+        current: machineOptionsRequestRef.current.current + 1,
+      };
+      machineDetailRequestRef.current += 1;
+      latestMachineDetailOwnerRef.current = { branch: "", requestId: 0 };
+      machineDetailHydrationRef.current = createMachineDetailHydrationState();
+    };
   }, [id]);
 
   async function resolveClientFromMachine(
     machineRef,
     setClient,
     setMachine,
-    isFrom = true
+    isFrom = true,
+    isActive = () => true
   ) {
     const machineDoc = await machineRef.get();
+    if (!isActive()) return;
     if (machineDoc.exists) {
       const machineData = stripAssociatedPartsFromMachineSnapshot(
         machineDoc.data() || {}
@@ -1061,6 +1366,7 @@ const handleSendToInflow = async () => {
         machineData.client && typeof machineData.client.get === "function"
           ? await machineData.client.get()
           : null;
+      if (!isActive()) return;
       const clientName =
         clientDoc && clientDoc.exists ? clientDoc.data().name : null;
       const isSocalInterior = ["interior socal", "interior norcal"].includes(
@@ -1086,14 +1392,42 @@ const handleSendToInflow = async () => {
     }
   }
 
-  const fetchData = async () => {
-    const id = initialItem?.id || idFromRouter; // <- make sure id exists here
+  const fetchData = async (requestedId, requestId) => {
+    const id = String(requestedId || "").trim();
     if (!id) return;
+    const isActiveLoad = () => itemLoadRequestRef.current === requestId;
     setIsLoading(true);
+    setAssociationLoadError("");
     const loadStartedAt = Date.now();
     const db = firebase.firestore();
+    const storedDocumentId = (value) => {
+      if (!value) return "";
+      const rawValue =
+        typeof value === "string" ? value : value?.id || value?.path || "";
+      const segments = String(rawValue).split("/").filter(Boolean);
+      return segments[segments.length - 1] || "";
+    };
+    const resolveStoredDocument = async (collection, value) => {
+      if (!value) return null;
+      let snapshot = null;
+      if (typeof value.get === "function") {
+        snapshot = await value.get();
+      } else {
+        const rawId =
+          typeof value === "string"
+            ? value
+            : value?.id || value?.path || "";
+        const segments = String(rawId).split("/").filter(Boolean);
+        const documentId = segments[segments.length - 1] || "";
+        if (!documentId) return null;
+        snapshot = await db.collection(collection).doc(documentId).get();
+      }
+      if (!isActiveLoad()) return null;
+      return snapshot;
+    };
     try {
       const doc = await db.collection("Test").doc(id).get();
+      if (!isActiveLoad()) return;
       if (doc.exists) {
         console.log("test");
         const data = stripEmbeddedMachineAssociations(doc.data() || {});
@@ -1153,25 +1487,40 @@ const handleSendToInflow = async () => {
         setItems((prev) => ({ ...prev, poNumber: data.poNumber }));
       }
 
+      const clientFromValue = firstEntityRoleValue(data, "client", "from");
+      const clientCurrentValue = firstEntityRoleValue(
+        data,
+        "client",
+        "current"
+      );
+      const clientFromId = storedDocumentId(clientFromValue);
+      const clientCurrentId = storedDocumentId(clientCurrentValue);
       const [clientFromDoc, clientCurrentDoc] = await Promise.all([
-        data.ClientFrom && typeof data.ClientFrom.get === "function"
-          ? data.ClientFrom.get()
-          : Promise.resolve(null),
-        data.ClientCurrent && typeof data.ClientCurrent.get === "function"
-          ? data.ClientCurrent.get()
-          : Promise.resolve(null),
+        resolveStoredDocument("Client", clientFromValue),
+        resolveStoredDocument("Client", clientCurrentValue),
       ]);
+      if (!isActiveLoad()) return;
+      const missingAssociationReferences = [];
       const resolvedClientFromName = clientFromDoc?.exists
         ? clientFromDoc.data()?.name
-        : null;
+        : data.associationFrom?.clientNameSnapshot || data.fromClientName || null;
       const resolvedClientCurrentName = clientCurrentDoc?.exists
         ? clientCurrentDoc.data()?.name
-        : null;
+        : data.associationCurrent?.clientNameSnapshot ||
+          data.currentClientName ||
+          null;
 
       if (clientFromDoc?.exists) {
         setSelectedClientFrom({
           id: clientFromDoc.id,
           ...clientFromDoc.data(),
+        });
+      } else if (clientFromId) {
+        missingAssociationReferences.push(`Client/${clientFromId}`);
+        setSelectedClientFrom({
+          id: clientFromId,
+          name: resolvedClientFromName || clientFromId,
+          missingReference: true,
         });
       }
       if (clientCurrentDoc?.exists) {
@@ -1179,20 +1528,50 @@ const handleSendToInflow = async () => {
           id: clientCurrentDoc.id,
           ...clientCurrentDoc.data(),
         });
+      } else if (clientCurrentId) {
+        missingAssociationReferences.push(`Client/${clientCurrentId}`);
+        setSelectedClientCurrent({
+          id: clientCurrentId,
+          name: resolvedClientCurrentName || clientCurrentId,
+          missingReference: true,
+        });
       }
 
-      const trailerFromId =
-        data.TrailerFrom?.id || data.trailerFromId || "";
-      const trailerCurrentId =
-        data.TrailerCurrent?.id || data.trailerCurrentId || "";
+      const trailerFromValue = firstEntityRoleValue(data, "trailer", "from");
+      const trailerCurrentValue = firstEntityRoleValue(
+        data,
+        "trailer",
+        "current"
+      );
+      const machineFromValue = firstEntityRoleValue(data, "machine", "from");
+      const machineCurrentValue = firstEntityRoleValue(
+        data,
+        "machine",
+        "current"
+      );
+      const trailerFromId = storedDocumentId(trailerFromValue);
+      const trailerCurrentId = storedDocumentId(trailerCurrentValue);
+      const storedMachineFromId = storedDocumentId(machineFromValue);
+      const storedMachineCurrentId = storedDocumentId(machineCurrentValue);
+      setAssociationTypeFrom(
+        inferItemAssociationType({
+          storedType: data.fromAssociationType || data.associationTypeFrom,
+          trailer: trailerFromId,
+          machine: machineFromValue,
+        })
+      );
+      setAssociationTypeCurrent(
+        inferItemAssociationType({
+          storedType: data.currentAssociationType || data.associationTypeCurrent,
+          trailer: trailerCurrentId,
+          machine: machineCurrentValue,
+        })
+      );
       const [trailerFromDoc, trailerCurrentDoc] = await Promise.all([
-        trailerFromId
-          ? db.collection("Trailers").doc(trailerFromId).get()
-          : Promise.resolve(null),
-        trailerCurrentId
-          ? db.collection("Trailers").doc(trailerCurrentId).get()
-          : Promise.resolve(null),
+        resolveStoredDocument("Trailers", trailerFromValue),
+        resolveStoredDocument("Trailers", trailerCurrentValue),
       ]);
+      if (!isActiveLoad()) return;
       if (trailerFromDoc?.exists) {
         const trailerData = trailerFromDoc.data() || {};
         const linkedClientId = trailerClientId(trailerData);
@@ -1202,17 +1581,38 @@ const handleSendToInflow = async () => {
           name: trailerName({ id: trailerFromDoc.id, ...trailerData }),
           clientId: linkedClientId,
           machineId: trailerMachineId(trailerData),
+          storedAssociationMachineId: storedMachineFromId,
         });
-        if (!clientFromDoc?.exists && linkedClientId) {
+        if (!clientFromValue && linkedClientId) {
           const linkedClientDoc = await db.collection("Client").doc(linkedClientId).get();
+          if (!isActiveLoad()) return;
           if (linkedClientDoc.exists) {
             setSelectedClientFrom({
               id: linkedClientDoc.id,
               ...linkedClientDoc.data(),
               derivedFromTrailer: true,
             });
+          } else {
+            missingAssociationReferences.push(`Client/${linkedClientId}`);
+            setSelectedClientFrom({
+              id: linkedClientId,
+              name: linkedClientId,
+              missingReference: true,
+              derivedFromTrailer: true,
+            });
           }
         }
+      } else if (trailerFromId) {
+        missingAssociationReferences.push(`Trailers/${trailerFromId}`);
+        setSelectedTrailerFrom({
+          id: trailerFromId,
+          name:
+            data.associationFrom?.trailerNameSnapshot ||
+            data.fromTrailerName ||
+            trailerFromId,
+          storedAssociationMachineId: storedMachineFromId,
+          missingReference: true,
+        });
       }
       if (trailerCurrentDoc?.exists) {
         const trailerData = trailerCurrentDoc.data() || {};
@@ -1223,73 +1623,80 @@ const handleSendToInflow = async () => {
           name: trailerName({ id: trailerCurrentDoc.id, ...trailerData }),
           clientId: linkedClientId,
           machineId: trailerMachineId(trailerData),
+          storedAssociationMachineId: storedMachineCurrentId,
         });
-        if (!clientCurrentDoc?.exists && linkedClientId) {
+        if (!clientCurrentValue && linkedClientId) {
           const linkedClientDoc = await db.collection("Client").doc(linkedClientId).get();
+          if (!isActiveLoad()) return;
           if (linkedClientDoc.exists) {
             setSelectedClientCurrent({
               id: linkedClientDoc.id,
               ...linkedClientDoc.data(),
               derivedFromTrailer: true,
             });
+          } else {
+            missingAssociationReferences.push(`Client/${linkedClientId}`);
+            setSelectedClientCurrent({
+              id: linkedClientId,
+              name: linkedClientId,
+              missingReference: true,
+              derivedFromTrailer: true,
+            });
           }
         }
-      }
-
-      if (
-        !data.ClientFrom &&
-        data.Machine &&
-        typeof data.Machine.get === "function"
-      ) {
-        console.log(
-          "Entered resolveClientFromMachine for Machine (old style for From)"
-        );
-        await resolveClientFromMachine(
-          data.Machine,
-          setSelectedClientFrom,
-          setSelectedMachine,
-          true
-        );
-      }
-      if (
-        !data.ClientCurrent &&
-        data.CurrentMachine &&
-        typeof data.CurrentMachine.get === "function"
-      ) {
-        console.log(
-          "Entered resolveClientFromMachine for CurrentMachine (old style for Current)"
-        );
-        await resolveClientFromMachine(
-          data.CurrentMachine,
-          setSelectedClientCurrent,
-          setSelectedCurrentMachine,
-          false
-        );
+      } else if (trailerCurrentId) {
+        missingAssociationReferences.push(`Trailers/${trailerCurrentId}`);
+        setSelectedTrailerCurrent({
+          id: trailerCurrentId,
+          name:
+            data.associationCurrent?.trailerNameSnapshot ||
+            data.currentTrailerName ||
+            trailerCurrentId,
+          storedAssociationMachineId: storedMachineCurrentId,
+          missingReference: true,
+        });
       }
 
       let machineFromData = null;
       let machineCurrentData = null;
 
       const [machineFromDoc, machineCurrentDoc] = await Promise.all([
-        data.MachineFrom && typeof data.MachineFrom.get === "function"
-          ? data.MachineFrom.get()
-          : Promise.resolve(null),
-        data.MachineCurrent && typeof data.MachineCurrent.get === "function"
-          ? data.MachineCurrent.get()
-          : Promise.resolve(null),
+        resolveStoredDocument("Machine", machineFromValue),
+        resolveStoredDocument("Machine", machineCurrentValue),
       ]);
+      if (!isActiveLoad()) return;
 
       if (machineFromDoc?.exists) {
         machineFromData = stripAssociatedPartsFromMachineSnapshot(
           machineFromDoc.data() || {}
         );
         setSelectedMachine({ id: machineFromDoc.id, ...machineFromData });
+      } else if (storedMachineFromId) {
+        missingAssociationReferences.push(`Machine/${storedMachineFromId}`);
+        setSelectedMachine({
+          id: storedMachineFromId,
+          name:
+            data.associationFrom?.machineNameSnapshot ||
+            data.fromMachineName ||
+            storedMachineFromId,
+          missingReference: true,
+        });
       }
       if (machineCurrentDoc?.exists) {
         machineCurrentData = stripAssociatedPartsFromMachineSnapshot(
           machineCurrentDoc.data() || {}
         );
         setSelectedCurrentMachine({ id: machineCurrentDoc.id, ...machineCurrentData });
+      } else if (storedMachineCurrentId) {
+        missingAssociationReferences.push(`Machine/${storedMachineCurrentId}`);
+        setSelectedCurrentMachine({
+          id: storedMachineCurrentId,
+          name:
+            data.associationCurrent?.machineNameSnapshot ||
+            data.currentMachineName ||
+            storedMachineCurrentId,
+          missingReference: true,
+        });
       }
       const nameFrom = machineFromData?.name?.toLowerCase();
       const nameCurrent = machineCurrentData?.name?.toLowerCase();
@@ -1321,6 +1728,19 @@ const handleSendToInflow = async () => {
 
       const theMachineData = data.TheMachine || null;
 
+      const initialMachineHydration = buildMachineDetailHydrationSeed({
+        fromMachine: machineFromData
+          ? { id: machineFromDoc.id, ...machineFromData }
+          : null,
+        currentMachine: machineCurrentData
+          ? { id: machineCurrentDoc.id, ...machineCurrentData }
+          : null,
+        preferredMachine: theMachineData,
+      });
+      machineDetailHydrationRef.current = initialMachineHydration.state;
+      setMachineDetailHydration(initialMachineHydration.state);
+      latestMachineDetailOwnerRef.current = initialMachineHydration.owner;
+
       setTheMachine(theMachineData);
       if (theMachineData) {
         // pull both variants, prefer lowercase if it exists
@@ -1337,7 +1757,7 @@ const handleSendToInflow = async () => {
         machineCurrentData,
         machineFromData
       );
-      applyMergedMachineFields(merged);
+      applyMergedMachineFields(merged, { force: true });
 
       console.log(
         "SelectedMachine:",
@@ -1368,6 +1788,7 @@ const handleSendToInflow = async () => {
           : Promise.resolve(null),
         db.collection("Test").where("Parent", "==", currentItemRef).get(),
       ]);
+      if (!isActiveLoad()) return;
       if (parentDoc?.exists) {
         setSelectedParent({ id: parentDoc.id, ...parentDoc.data() });
       } else {
@@ -1401,13 +1822,26 @@ const handleSendToInflow = async () => {
             hasParent: Boolean(data.Parent),
           });
         }
+        if (missingAssociationReferences.length) {
+          const uniqueMissingReferences = Array.from(
+            new Set(missingAssociationReferences)
+          );
+          setErr(
+            `Some saved associations no longer resolve (${uniqueMissingReferences.join(
+              ", "
+            )}). Their stored IDs were preserved; select replacements before saving.`
+          );
+          setShowErr(true);
+        }
         setIsLoading(false);
         Promise.all([
-          fetchPhotos(id),
-          checkIfAddedToWebsite(id),
-          calculateItemFrequencyAndUsage(data.pn),
+          fetchPhotos(id, requestId),
+          checkIfAddedToWebsite(id, requestId),
+          calculateItemFrequencyAndUsage(data.pn, requestId),
         ]).catch((err) => {
-          console.error("Background item loads failed:", err);
+          if (isActiveLoad()) {
+            console.error("Background item loads failed:", err);
+          }
         });
       } else {
         router.push({
@@ -1416,13 +1850,22 @@ const handleSendToInflow = async () => {
         });
       }
     } catch (error) {
-      console.error("Error fetching item:", error);
+      if (isActiveLoad()) {
+        console.error("Error fetching item:", error);
+        const message =
+          error?.message || "Failed to load every saved item association.";
+        setAssociationLoadError(message);
+        setErr(
+          `Saving is blocked because the saved associations could not be fully loaded: ${message}`
+        );
+        setShowErr(true);
+      }
     } finally {
-      setIsLoading(false);
+      if (isActiveLoad()) setIsLoading(false);
     }
   };
 
-  const calculateItemFrequencyAndUsage = async (pn) => {
+  const calculateItemFrequencyAndUsage = async (pn, requestId = null) => {
     const db = firebase.firestore();
     const currentDate = new Date();
     const oneYearAgo = new Date();
@@ -1433,6 +1876,8 @@ const handleSendToInflow = async () => {
       .collection("Test")
       .where("pn", "==", normalizedPN)
       .get();
+
+    if (requestId != null && itemLoadRequestRef.current !== requestId) return;
 
     setFreqItem(itemsSnapshot.size);
 
@@ -1449,35 +1894,149 @@ const handleSendToInflow = async () => {
     setUsagePastYear(usagePastYear);
   };
 
-  const fetchMachine = async (machineId) => {
+  const replaceMachineDetailHydration = (next) => {
+    machineDetailHydrationRef.current = next;
+    setMachineDetailHydration(next);
+  };
+
+  const updateMachineDetailHydrationForBranch = (branch, nextStatus) => {
+    const next = {
+      ...machineDetailHydrationRef.current,
+      [branch]: {
+        ...machineDetailHydrationRef.current[branch],
+        ...nextStatus,
+      },
+    };
+    replaceMachineDetailHydration(next);
+  };
+
+  const updateMachineDetailHydrationForRequest = (requestId, nextStatus) => {
+    const branch = findMachineDetailRequestBranch(
+      machineDetailHydrationRef.current,
+      requestId
+    );
+    if (!branch) return false;
+    updateMachineDetailHydrationForBranch(branch, nextStatus);
+    return true;
+  };
+
+  const cancelMachineDetailHydration = (isFromBranch) => {
+    const branch = isFromBranch ? "from" : "current";
+    const next = {
+      ...machineDetailHydrationRef.current,
+      [branch]: createMachineDetailHydrationState()[branch],
+    };
+    replaceMachineDetailHydration(next);
+    if (latestMachineDetailOwnerRef.current.branch === branch) {
+      const remaining = ["from", "current"]
+        .map((key) => ({ branch: key, ...next[key] }))
+        .filter((entry) => entry.machineId && !entry.error)
+        .sort((left, right) => right.requestId - left.requestId)[0];
+      latestMachineDetailOwnerRef.current = remaining
+        ? { branch: remaining.branch, requestId: remaining.requestId }
+        : { branch: "", requestId: 0 };
+      if (remaining?.machineData) {
+        applySelectedMachineDetails(remaining.machineData);
+      }
+    }
+  };
+
+  const swapMachineDetailHydrationBranches = () => {
+    replaceMachineDetailHydration({
+      from: machineDetailHydrationRef.current.current,
+      current: machineDetailHydrationRef.current.from,
+    });
+    const owner = latestMachineDetailOwnerRef.current;
+    if (owner.branch) {
+      latestMachineDetailOwnerRef.current = {
+        ...owner,
+        branch: owner.branch === "from" ? "current" : "from",
+      };
+    }
+  };
+
+  const applySelectedMachineDetails = (machineData) => {
+    const safeMachineData = stripAssociatedPartsFromMachineSnapshot(
+      machineData || {}
+    );
+    setTheMachine(safeMachineData);
+    applyMergedMachineFields(
+      updateMachineFields(safeMachineData, null, null),
+      { force: true }
+    );
+  };
+
+  const applyImmediateMachineDetails = (isFromBranch, machineData) => {
+    const branch = isFromBranch ? "from" : "current";
+    const safeMachineData = stripAssociatedPartsFromMachineSnapshot(
+      machineData || {}
+    );
+    cancelMachineDetailHydration(isFromBranch);
+    updateMachineDetailHydrationForBranch(branch, {
+      requestId: 0,
+      machineId: String(machineData?.id || "").trim(),
+      pending: false,
+      error: "",
+      machineData: safeMachineData,
+    });
+    latestMachineDetailOwnerRef.current = { branch, requestId: 0 };
+    applySelectedMachineDetails(safeMachineData);
+  };
+
+  const fetchMachine = async (machineId, requestId) => {
     const db = firebase.firestore();
     const doc = await db.collection("Machine").doc(machineId).get();
-    if (doc.exists) {
-      const machineData = stripAssociatedPartsFromMachineSnapshot(doc.data() || {});
-      setTheMachine(machineData);
-      // re-merge all three sources with correct priority:
-      const merged = updateMachineFields(
-        machineData,
-        selectedCurrentMachine,
-        selectedMachine
-      );
-      applyMergedMachineFields(merged, { force: true });
-      const machineModel = machineData.Model || machineData.model || "";
-      if (machineModel) {
+    if (
+      !findMachineDetailRequestBranch(
+        machineDetailHydrationRef.current,
+        requestId
+      )
+    ) return false;
+    if (!doc.exists) {
+      throw new Error(`The selected machine ${machineId} no longer exists.`);
+    }
+
+    const machineData = {
+      id: doc.id,
+      ...stripAssociatedPartsFromMachineSnapshot(doc.data() || {}),
+    };
+    if (latestMachineDetailOwnerRef.current.requestId === requestId) {
+      applySelectedMachineDetails(machineData);
+    }
+
+    const machineModel = machineData.Model || machineData.model || "";
+    if (machineModel) {
+      try {
         const machinesSnapshot = await db
           .collection("Machine")
           .where("Model", "==", machineModel)
           .get();
-        setMachineFrequency(machinesSnapshot.size);
-      } else {
-        setMachineFrequency(0);
+        if (
+          !findMachineDetailRequestBranch(
+            machineDetailHydrationRef.current,
+            requestId
+          )
+        ) return false;
+        if (latestMachineDetailOwnerRef.current.requestId === requestId) {
+          setMachineFrequency(machinesSnapshot.size);
+        }
+      } catch (error) {
+        console.error("Failed to calculate machine frequency:", error);
       }
     } else {
-      console.error("Machine not found");
+      if (latestMachineDetailOwnerRef.current.requestId === requestId) {
+        setMachineFrequency(0);
+      }
     }
+    return findMachineDetailRequestBranch(
+      machineDetailHydrationRef.current,
+      requestId
+    )
+      ? machineData
+      : false;
   };
 
-  const fetchPhotos = async (docID) => {
+  const fetchPhotos = async (docID, requestId = null) => {
     const storageRef = firebase.storage().ref();
     const listRef = storageRef.child(`Parts/${docID}`);
     try {
@@ -1493,15 +2052,17 @@ const handleSendToInflow = async () => {
           category: getItemPhotoCategory(photoRef.name),
         }))
       );
+      if (requestId != null && itemLoadRequestRef.current !== requestId) return;
       setPhotos(loadedPhotos);
     } catch (error) {
       console.error("Error fetching photos: ", error);
     }
   };
 
-  const checkIfAddedToWebsite = async (docID) => {
+  const checkIfAddedToWebsite = async (docID, requestId = null) => {
     const db = firebase.firestore();
     const partsDoc = await db.collection("Parts").doc(docID).get();
+    if (requestId != null && itemLoadRequestRef.current !== requestId) return;
     if (partsDoc.exists) {
       setAddToWebsite(true);
     }
@@ -1702,26 +2263,70 @@ const handleSendToInflow = async () => {
     }
   };
 
-  const handleClearClientSelection = () => {
-    const isFromBranch = machinePick;
+  const updateBranchAssociationSelectionStatus = (requestKey, next) => {
+    const updated = {
+      ...associationSelectionStatusRef.current,
+      [requestKey]: next,
+    };
+    associationSelectionStatusRef.current = updated;
+    setAssociationSelectionStatus(updated);
+  };
 
+  const beginBranchAssociationSelection = (
+    isFromBranch,
+    { pending = false } = {}
+  ) => {
+    const requestKey = isFromBranch ? "from" : "current";
+    const requestId =
+      associationSelectionRequestRef.current[requestKey] + 1;
+    associationSelectionRequestRef.current[requestKey] = requestId;
+    machineOptionsRequestRef.current[requestKey] += 1;
+    updateBranchAssociationSelectionStatus(requestKey, {
+      pending,
+      error: "",
+    });
+    return { requestKey, requestId };
+  };
+
+  const isBranchAssociationSelectionActive = (requestKey, requestId) =>
+    associationSelectionRequestRef.current[requestKey] === requestId;
+
+  const finishBranchAssociationSelection = (
+    requestKey,
+    requestId,
+    error = ""
+  ) => {
+    if (!isBranchAssociationSelectionActive(requestKey, requestId)) return;
+    updateBranchAssociationSelectionStatus(requestKey, {
+      pending: false,
+      error,
+    });
+  };
+
+  const clearBranchWarehousePosition = (isFromBranch) => {
     if (isFromBranch) {
-      setSelectedClientFrom(null);
-      setSelectedMachine(null);
-      setSelectedTrailerFrom(null);
       setShowLocalLocFrom(false);
       setLocalLocFrom("");
       setNewLocalFrom(createEmptyLocal());
     } else {
-      setSelectedClientCurrent(null);
-      setSelectedCurrentMachine(null);
-      setSelectedTrailerCurrent(null);
       setShowLocalLocCurrent(false);
       setLocalLocCurrent("");
       setNewLocalCurrent(createEmptyLocal());
     }
+  };
 
-    setMachineOptions([]);
+  const handleClearClientSelection = () => {
+    const isFromBranch = machinePick;
+    beginBranchAssociationSelection(isFromBranch);
+
+    if (isFromBranch) {
+      setSelectedClientFrom(null);
+    } else {
+      setSelectedClientCurrent(null);
+    }
+
+    clearBranchWarehousePosition(isFromBranch);
+    setMachineOptionsForBranch(isFromBranch, []);
     handleCloseClientModal();
   };
 
@@ -1732,69 +2337,63 @@ const handleSendToInflow = async () => {
       handleClearClientSelection();
       return;
     }
-
-    // Clear any previously selected machine and local loc info for this branch.
-    if (isFromBranch) {
-      setSelectedMachine(null);
-      setSelectedTrailerFrom(null);
-      setShowLocalLocFrom(false);
-      setLocalLocFrom("");
-      setNewLocalFrom(createEmptyLocal());
-    } else {
-      setSelectedCurrentMachine(null);
-      setSelectedTrailerCurrent(null);
-      setShowLocalLocCurrent(false);
-      setLocalLocCurrent("");
-      setNewLocalCurrent(createEmptyLocal());
-    }
+    const { requestKey, requestId } = beginBranchAssociationSelection(
+      isFromBranch,
+      { pending: true }
+    );
 
     try {
       const db = firebase.firestore();
       const clientDoc = await db.collection("Client").doc(clientId).get();
-      if (!clientDoc.exists) return;
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+        return;
+      }
+      if (!clientDoc.exists) {
+        throw new Error("The selected client/site no longer exists.");
+      }
 
       const clientData = { id: clientDoc.id, ...clientDoc.data() };
+      if (!isSelectableItemClient(clientData)) {
+        throw new Error(
+          "AIS TRAILERS is a retired grouping record. Select the actual client/site or a trailer instead."
+        );
+      }
+      const previousClientId = String(
+        (isFromBranch ? selectedClientFrom : selectedClientCurrent)?.id || ""
+      ).trim();
+      if (previousClientId !== String(clientData.id).trim()) {
+        clearBranchWarehousePosition(isFromBranch);
+      }
       if (isFromBranch) {
         setSelectedClientFrom(clientData);
       } else {
         setSelectedClientCurrent(clientData);
       }
 
-      if (isSocalWarehouseClient(clientData)) {
-        if (isFromBranch) setShowLocalLocFrom(true);
-        else setShowLocalLocCurrent(true);
-      }
-
-      const machineRefs = Array.isArray(clientData.machines)
-        ? clientData.machines
-        : [];
-      const machinePromises = machineRefs
-        .filter((machineRef) => machineRef && typeof machineRef.get === "function")
-        .map((machineRef) => machineRef.get());
-      const machineDocs = await Promise.all(machinePromises);
-      const machines = machineDocs.map((machineDoc) => ({
-        id: machineDoc.id,
-        ...stripAssociatedPartsFromMachineSnapshot(machineDoc.data() || {}),
-      }));
-      setMachineOptions(machines);
-      handleCloseClientModal();
-
-      const linkedTrailers = trailersForClient(trailers, clientId);
-      if (linkedTrailers.length) {
-        setTrailerLinkPrompt({
-          isFromBranch,
-          clientId,
-          clientName: clientData.name || clientId,
-          trailers: linkedTrailers,
-          machines,
-          trailerId: linkedTrailers.length === 1 ? linkedTrailers[0].id : "",
-        });
+      if (isFromBranch) {
+        setShowLocalLocFrom(isSocalWarehouseClient(clientData));
       } else {
-        setTrailerLinkPrompt(null);
+        setShowLocalLocCurrent(isSocalWarehouseClient(clientData));
       }
+
+      await loadMachineOptionsForBranch(isFromBranch, clientData);
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+        return;
+      }
+      handleCloseClientModal();
+      // Do not silently replace the independently selected trailer or machine.
+      setTrailerLinkPrompt(null);
+      finishBranchAssociationSelection(requestKey, requestId);
     } catch (error) {
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) return;
+      if (error?.name === "AbortError") {
+        finishBranchAssociationSelection(requestKey, requestId);
+        return;
+      }
       console.error("Error selecting client:", error);
-      setErr("Failed to select client.");
+      const message = error?.message || "Failed to select client.";
+      finishBranchAssociationSelection(requestKey, requestId, message);
+      setErr(message);
       setShowErr(true);
     }
   };
@@ -1814,74 +2413,129 @@ const handleSendToInflow = async () => {
           (machine) => machine.id === selectedTrailer.machineId
         ) || null
       : null;
+    beginBranchAssociationSelection(trailerLinkPrompt.isFromBranch);
+    if (associatedMachine) {
+      applyImmediateMachineDetails(
+        trailerLinkPrompt.isFromBranch,
+        associatedMachine
+      );
+    }
     if (trailerLinkPrompt.isFromBranch) {
       setSelectedTrailerFrom(selectedTrailer);
+      setAssociationTypeFrom(ITEM_ASSOCIATION_TRAILER);
       if (associatedMachine) setSelectedMachine(associatedMachine);
     } else {
       setSelectedTrailerCurrent(selectedTrailer);
+      setAssociationTypeCurrent(ITEM_ASSOCIATION_TRAILER);
       if (associatedMachine) setSelectedCurrentMachine(associatedMachine);
     }
     setTrailerLinkPrompt(null);
   };
 
   const handleTrailerSelection = async (isFromBranch, trailerId) => {
+    const { requestKey, requestId } = beginBranchAssociationSelection(
+      isFromBranch,
+      { pending: Boolean(trailerId) }
+    );
     if (!trailerId) {
-      if (isFromBranch) setSelectedTrailerFrom(null);
-      else setSelectedTrailerCurrent(null);
+      if (isFromBranch) {
+        setSelectedTrailerFrom(null);
+        setSelectedMachine(null);
+      } else {
+        setSelectedTrailerCurrent(null);
+        setSelectedCurrentMachine(null);
+      }
+      cancelMachineDetailHydration(isFromBranch);
       return;
     }
     const trailer = trailers.find((entry) => entry.id === trailerId);
     if (!trailer?.clientId) {
-      setErr(
-        "This trailer is not linked to a Client DB record. Link it in Trailer Setup first."
-      );
+      const message =
+        "This trailer is not linked to a Client DB record. Link it in Trailer Setup first.";
+      finishBranchAssociationSelection(requestKey, requestId, message);
+      setErr(message);
       setShowErr(true);
       return;
     }
     try {
       const db = firebase.firestore();
       const clientDoc = await db.collection("Client").doc(trailer.clientId).get();
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+        return;
+      }
       if (!clientDoc.exists) throw new Error("The trailer's linked client no longer exists.");
       const client = { id: clientDoc.id, ...clientDoc.data() };
-      const machineRefs = Array.isArray(client.machines) ? client.machines : [];
-      const machineDocs = await Promise.all(
-        machineRefs
-          .map((machineRef) => ({
-            ref: machineRef,
-            id:
-              typeof machineRef === "string"
-                ? machineRef
-                : String(machineRef?.id || "").trim(),
-          }))
-          .filter(({ ref, id }) => typeof ref?.get === "function" || id)
-          .map(({ ref, id }) =>
-            typeof ref?.get === "function"
-              ? ref.get()
-              : db.collection("Machine").doc(id).get()
-          )
+      let availableMachines = await loadMachineOptionsForBranch(
+        isFromBranch,
+        client
       );
-      const availableMachines = machineDocs
-        .filter((snapshot) => snapshot?.exists)
-        .map((snapshot) => ({
-          id: snapshot.id,
-          ...stripAssociatedPartsFromMachineSnapshot(snapshot.data() || {}),
-        }));
-      const associatedMachine = trailer.machineId
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+        return;
+      }
+      let associatedMachine = trailer.machineId
         ? availableMachines.find((machine) => machine.id === trailer.machineId)
         : null;
-      setMachineOptions(availableMachines);
+      if (trailer.machineId && !associatedMachine) {
+        const machineDoc = await db
+          .collection("Machine")
+          .doc(trailer.machineId)
+          .get();
+        if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+          return;
+        }
+        if (machineDoc.exists) {
+          associatedMachine = {
+            id: machineDoc.id,
+            ...stripAssociatedPartsFromMachineSnapshot(machineDoc.data() || {}),
+          };
+          availableMachines = [
+            associatedMachine,
+            ...availableMachines.filter(
+              (machine) => machine.id !== associatedMachine.id
+            ),
+          ];
+          if (isBranchAssociationSelectionActive(requestKey, requestId)) {
+            setMachineOptionsForBranch(isFromBranch, availableMachines);
+          }
+        }
+      }
+      if (!associatedMachine) {
+        throw new Error(
+          "This trailer has no linked machine. Link its machine on the trailer page before attaching an item."
+        );
+      }
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) {
+        return;
+      }
+      const previousClientId = String(
+        (isFromBranch ? selectedClientFrom : selectedClientCurrent)?.id || ""
+      ).trim();
+      if (previousClientId !== String(client.id).trim()) {
+        clearBranchWarehousePosition(isFromBranch);
+      }
+      applyImmediateMachineDetails(isFromBranch, associatedMachine);
       if (isFromBranch) {
         setSelectedClientFrom(client);
         setSelectedTrailerFrom(trailer);
-        setSelectedMachine(associatedMachine || null);
+        setSelectedMachine(associatedMachine);
+        setAssociationTypeFrom(ITEM_ASSOCIATION_TRAILER);
       } else {
         setSelectedClientCurrent(client);
         setSelectedTrailerCurrent(trailer);
-        setSelectedCurrentMachine(associatedMachine || null);
+        setSelectedCurrentMachine(associatedMachine);
+        setAssociationTypeCurrent(ITEM_ASSOCIATION_TRAILER);
       }
+      finishBranchAssociationSelection(requestKey, requestId);
     } catch (error) {
+      if (!isBranchAssociationSelectionActive(requestKey, requestId)) return;
+      if (error?.name === "AbortError") {
+        finishBranchAssociationSelection(requestKey, requestId);
+        return;
+      }
       console.error("Error selecting trailer:", error);
-      setErr(error?.message || "Failed to select trailer.");
+      const message = error?.message || "Failed to select trailer.";
+      finishBranchAssociationSelection(requestKey, requestId, message);
+      setErr(message);
       setShowErr(true);
     }
   };
@@ -1930,7 +2584,9 @@ const handleSendToInflow = async () => {
         setLocalLocCurrent("");
         setNewLocalCurrent(createEmptyLocal());
       }
-      setMachineOptions([]);
+      beginBranchAssociationSelection(isFromBranch);
+      cancelMachineDetailHydration(isFromBranch);
+      setMachineOptionsForBranch(isFromBranch, []);
       handleCloseAddClientModal();
       handleCloseClientModal();
     } catch (error) {
@@ -1971,7 +2627,7 @@ const handleSendToInflow = async () => {
       );
 
       const createdMachine = { id: machineId, ...newMachine };
-      setMachineOptions((prev) => [
+      setMachineOptionsForBranch(isFromBranch, (prev) => [
         ...prev.filter((machine) => machine.id !== machineId),
         createdMachine,
       ]);
@@ -1985,13 +2641,15 @@ const handleSendToInflow = async () => {
   };
 
   const handleDeleteHistoryEntry = async (indexToDelete) => {
-    const nextHistory = (selectionHistory || []).filter(
+    const previousHistory = Array.isArray(selectionHistory)
+      ? [...selectionHistory]
+      : [];
+    const itemId = String(id || "").trim();
+    if (!itemId) return;
+    const nextHistory = previousHistory.filter(
       (_, index) => index !== indexToDelete
     );
     setSelectionHistory(nextHistory);
-
-    const itemId = String(id || "").trim();
-    if (!itemId) return;
 
     try {
       const db = firebase.firestore();
@@ -2001,6 +2659,7 @@ const handleSendToInflow = async () => {
         .set({ selectionHistory: nextHistory }, { merge: true });
     } catch (error) {
       console.error("Error deleting history entry:", error);
+      setSelectionHistory(previousHistory);
       setErr("Failed to delete history entry.");
       setShowErr(true);
     }
@@ -2076,18 +2735,141 @@ const handleSendToInflow = async () => {
 
   async function toSend(options = {}) {
     const { redirect = true, showSaved = true } = options;
+    const liveAssociationStatus = Object.values(
+      associationSelectionStatusRef.current
+    );
+    const liveAssociationPending = liveAssociationStatus.some(
+      (status) => status.pending
+    );
+    const liveAssociationError =
+      liveAssociationStatus.map((status) => status.error).find(Boolean) || "";
+    const liveMachineDetail = summarizeMachineDetailHydration(
+      machineDetailHydrationRef.current
+    );
+    if (
+      isLoading ||
+      associationLoadError ||
+      liveAssociationPending ||
+      liveAssociationError ||
+      liveMachineDetail.pending ||
+      liveMachineDetail.error
+    ) {
+      const message = isLoading
+        ? "The saved item associations are still loading. Wait for loading to finish before saving."
+        : associationLoadError
+          ? `Saving is blocked because the saved associations were not fully loaded: ${associationLoadError}`
+          : liveAssociationPending
+            ? "A client, trailer, or linked machine selection is still loading. Wait for it to finish before saving."
+            : liveAssociationError
+              ? `Saving is blocked because an association selection failed: ${liveAssociationError}`
+              : liveMachineDetail.pending
+                ? "The selected machine details are still loading. Wait for them to finish before saving."
+                : `Saving is blocked because the selected machine could not be loaded: ${liveMachineDetail.error}`;
+      setErr(message);
+      setShowErr(true);
+      return null;
+    }
     const db = firebase.firestore();
     const currentUser = firebase.auth().currentUser;
     const userEmail = currentUser ? currentUser.email : "unknown";
     const savedAt = new Date();
     const nextSaveHistory = appendSaveHistory(saveHistory, userEmail, savedAt);
 
+    const validateAssociationBranch = ({
+      label,
+      type,
+      client,
+      trailer,
+      machine,
+    }) => {
+      const unresolved = [
+        ["client/site", client],
+        ["trailer", trailer],
+        ["machine", machine],
+      ].find(([, value]) => value?.missingReference);
+      if (unresolved) {
+        throw new Error(
+          `${label}: the saved ${unresolved[0]} ${unresolved[1].id} no longer resolves. Select a valid replacement before saving.`
+        );
+      }
+      if (type === ITEM_ASSOCIATION_MACHINE && !machine?.id) {
+        throw new Error(`${label}: select a machine or choose Site only.`);
+      }
+      if (type === ITEM_ASSOCIATION_TRAILER) {
+        if (!trailer?.id) {
+          throw new Error(`${label}: select a trailer.`);
+        }
+        if (!machine?.id) {
+          throw new Error(
+            `${label}: the selected trailer must have a linked machine.`
+          );
+        }
+        const linkedMachineId = String(trailer?.machineId || "").trim();
+        const storedAssociationMachineId = String(
+          trailer?.storedAssociationMachineId || ""
+        ).trim();
+        const selectedMachineId = String(machine.id).trim();
+        const matchesLiveLink =
+          Boolean(linkedMachineId) && linkedMachineId === selectedMachineId;
+        const matchesStoredHistoricalPair =
+          Boolean(storedAssociationMachineId) &&
+          storedAssociationMachineId === selectedMachineId;
+        if (!matchesLiveLink && !matchesStoredHistoricalPair) {
+          throw new Error(
+            `${label}: the selected machine is not the machine linked inside this trailer. Reselect the trailer or fix its machine link first.`
+          );
+        }
+      }
+      if (
+        (type === ITEM_ASSOCIATION_MACHINE ||
+          type === ITEM_ASSOCIATION_TRAILER) &&
+        !client?.id
+      ) {
+        throw new Error(`${label}: select the client/site for this association.`);
+      }
+      if (client && !isSelectableItemClient(client)) {
+        throw new Error(
+          `${label}: AIS TRAILERS is retired. Select the actual client/site.`
+        );
+      }
+      if (client?.derivedFromTrailer) {
+        throw new Error(
+          `${label}: this legacy site was derived from the trailer's present location, not proven history. Reselect the correct client/site before saving.`
+        );
+      }
+    };
+
+    try {
+      validateAssociationBranch({
+        label: "From",
+        type: associationTypeFrom,
+        client: selectedClientFrom,
+        trailer: selectedTrailerFrom,
+        machine: selectedMachine,
+      });
+      validateAssociationBranch({
+        label: "Current",
+        type: associationTypeCurrent,
+        client: selectedClientCurrent,
+        trailer: selectedTrailerCurrent,
+        machine: selectedCurrentMachine,
+      });
+    } catch (error) {
+      setErr(error?.message || "Association validation failed.");
+      setShowErr(true);
+      return null;
+    }
+
     // Always use the current state values for OEM, modality, and model.
     const storedOem = selectionToStoredValue(selectedOems);
     const storedModality = selectionToStoredValue(selectedModalities);
     const storedModel = selectionToStoredValue(selectedModels);
+    const machineDetailOwner = latestMachineDetailOwnerRef.current;
+    const hydratedMachineData = machineDetailOwner.branch
+      ? machineDetailHydrationRef.current[machineDetailOwner.branch]?.machineData
+      : null;
     const machineData = {
-      ...(TheMachine || {}),
+      ...(hydratedMachineData || TheMachine || {}),
       oem: storedOem,
       OEM: storedOem,
       modality: storedModality,
@@ -2137,6 +2919,7 @@ const handleSendToInflow = async () => {
     formattedItems.trackingNumber = items.trackingNumber || "";
     formattedItems.TheMachine = buildMachineSummary(machineData);
     formattedItems.addedToWebsite = addToWebsite;
+    formattedItems.associationSchemaVersion = 2;
 
     // NEW: Add the user's email under the field "user"
     formattedItems.lastEdited = userEmail;
@@ -2157,6 +2940,21 @@ const handleSendToInflow = async () => {
     delete formattedItems.ClientCurrent;
     delete formattedItems.TrailerFrom;
     delete formattedItems.TrailerCurrent;
+    delete formattedItems.fromAssociationType;
+    delete formattedItems.currentAssociationType;
+    delete formattedItems.associationTypeFrom;
+    delete formattedItems.associationTypeCurrent;
+    delete formattedItems.clientFromId;
+    delete formattedItems.clientCurrentId;
+    delete formattedItems.machineFromId;
+    delete formattedItems.machineCurrentId;
+    delete formattedItems.trailerFromId;
+    delete formattedItems.trailerCurrentId;
+    delete formattedItems.associationFrom;
+    delete formattedItems.associationCurrent;
+    LEGACY_ITEM_ASSOCIATION_FIELDS.forEach((field) => {
+      delete formattedItems[field];
+    });
 
     const fromDetails = buildLocalLocObject(newLocalFrom);
     const currentDetails = buildLocalLocObject(newLocalCurrent);
@@ -2203,16 +3001,44 @@ const handleSendToInflow = async () => {
       formattedItems.newLocalCurrent = {};
     }
 
-    if (selectedMachine && selectedMachine.id) {
+    const effectiveAt =
+      formattedItems.movementDate || savedAt.toISOString();
+    const effectiveAtSource = formattedItems.movementDate
+      ? `item.${formattedItems.movementDateType || "arrival"}_date`
+      : "item-save";
+    const fromAssociation = preserveStoredAssociationSnapshot(
+      buildItemAssociationSnapshot({
+        type: associationTypeFrom,
+        client: selectedClientFrom,
+        machine: selectedMachine,
+        trailer: selectedTrailerFrom,
+        effectiveAt,
+        effectiveAtSource,
+      }),
+      items?.associationFrom
+    );
+    const currentAssociation = preserveStoredAssociationSnapshot(
+      buildItemAssociationSnapshot({
+        type: associationTypeCurrent,
+        client: selectedClientCurrent,
+        machine: selectedCurrentMachine,
+        trailer: selectedTrailerCurrent,
+        effectiveAt,
+        effectiveAtSource,
+      }),
+      items?.associationCurrent
+    );
+
+    if (fromAssociation?.machineId) {
       formattedItems.MachineFrom = db
         .collection("Machine")
-        .doc(selectedMachine.id);
+        .doc(fromAssociation.machineId);
     }
 
-    if (selectedCurrentMachine && selectedCurrentMachine.id) {
+    if (currentAssociation?.machineId) {
       formattedItems.MachineCurrent = db
         .collection("Machine")
-        .doc(selectedCurrentMachine.id);
+        .doc(currentAssociation.machineId);
     }
 
     if (selectedParent && selectedParent.id) {
@@ -2226,29 +3052,50 @@ const handleSendToInflow = async () => {
       formattedItems.visible = true;
     }
 
-    // A trailer owns its items. Its client is derived from the trailer's live
-    // link and is intentionally not persisted on the item.
-    if (selectedClientFrom?.id && !selectedTrailerFrom?.id) {
+    // Client/site is an immutable branch snapshot. It remains stored even when
+    // a trailer is selected, so later trailer moves cannot rewrite history.
+    if (fromAssociation?.clientId) {
       formattedItems.ClientFrom = db
         .collection("Client")
-        .doc(selectedClientFrom.id);
+        .doc(fromAssociation.clientId);
     }
-    if (selectedClientCurrent?.id && !selectedTrailerCurrent?.id) {
+    if (currentAssociation?.clientId) {
       formattedItems.ClientCurrent = db
         .collection("Client")
-        .doc(selectedClientCurrent.id);
+        .doc(currentAssociation.clientId);
     }
-    formattedItems.trailerFromId = selectedTrailerFrom?.id || "";
-    formattedItems.trailerCurrentId = selectedTrailerCurrent?.id || "";
-    if (selectedTrailerFrom?.id) {
+    if (fromAssociation) {
+      formattedItems.fromAssociationType = fromAssociation.associationType;
+      formattedItems.clientFromId = fromAssociation.clientId;
+      if (fromAssociation.machineId) {
+        formattedItems.machineFromId = fromAssociation.machineId;
+      }
+      if (fromAssociation.trailerId) {
+        formattedItems.trailerFromId = fromAssociation.trailerId;
+      }
+      formattedItems.associationFrom = fromAssociation;
+    }
+    if (currentAssociation) {
+      formattedItems.currentAssociationType =
+        currentAssociation.associationType;
+      formattedItems.clientCurrentId = currentAssociation.clientId;
+      if (currentAssociation.machineId) {
+        formattedItems.machineCurrentId = currentAssociation.machineId;
+      }
+      if (currentAssociation.trailerId) {
+        formattedItems.trailerCurrentId = currentAssociation.trailerId;
+      }
+      formattedItems.associationCurrent = currentAssociation;
+    }
+    if (fromAssociation?.trailerId) {
       formattedItems.TrailerFrom = db
         .collection("Trailers")
-        .doc(selectedTrailerFrom.id);
+        .doc(fromAssociation.trailerId);
     }
-    if (selectedTrailerCurrent?.id) {
+    if (currentAssociation?.trailerId) {
       formattedItems.TrailerCurrent = db
         .collection("Trailers")
-        .doc(selectedTrailerCurrent.id);
+        .doc(currentAssociation.trailerId);
     }
 
     // Only attach the richer “newLocal” map when the user actually filled something in
@@ -2325,28 +3172,6 @@ const handleSendToInflow = async () => {
       return Boolean(existingItem);
     };
 
-    const createItemDocumentIfAvailable = async (
-      localSn,
-      payload,
-      ignoreDocId = ""
-    ) => {
-      const existingItem = await findExistingItemByAis(db, localSn, {
-        ignoreDocId,
-      });
-      if (existingItem) {
-        throw new Error("duplicate-local-sn");
-      }
-
-      const targetRef = db.collection("Test").doc(localSn);
-      await db.runTransaction(async (transaction) => {
-        const existingDoc = await transaction.get(targetRef);
-        if (existingDoc.exists) {
-          throw new Error("duplicate-local-sn");
-        }
-        transaction.set(targetRef, payload);
-      });
-    };
-
     const generateAvailableDocId = async () => {
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const generatedId = generateCustomID();
@@ -2358,33 +3183,12 @@ const handleSendToInflow = async () => {
     };
 
     const nextMachineIds = [
-      selectedMachine?.id,
-      selectedCurrentMachine?.id,
+      fromAssociation?.machineId,
+      currentAssociation?.machineId,
     ].filter(Boolean);
-    const nextMachineDataById = {};
-    if (selectedMachine?.id) nextMachineDataById[selectedMachine.id] = selectedMachine;
-    if (selectedCurrentMachine?.id) {
-      nextMachineDataById[selectedCurrentMachine.id] = selectedCurrentMachine;
-    }
-    const syncMachineAssociations = (targetPartId, previousPartId, previousItemData) =>
-      syncAssociatedPartsForItem({
-        db,
-        firebase,
-        partId: targetPartId,
-        previousPartId,
-        previousItemData,
-        nextMachineIds,
-        nextMachineDataById,
-      });
 
-    let docId = id;
+    let docId = committedItemIdRef.current || id;
     try {
-      let previousItemData = null;
-      if (docId) {
-        const previousDoc = await db.collection("Test").doc(docId).get();
-        previousItemData = previousDoc.exists ? previousDoc.data() || {} : null;
-      }
-
       if (docId) {
         // Check if a localSN is provided and if it differs from the current docId.
         const newDocId =
@@ -2393,52 +3197,92 @@ const handleSendToInflow = async () => {
             : docId;
         const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
-          try {
-            await createItemDocumentIfAvailable(
-              newDocId,
-              payloadWithLocalSn,
-              docId
-            );
-          } catch (error) {
-            if (error?.message !== "duplicate-local-sn") {
-              throw error;
-            }
+          if (await itemAisExists(newDocId, docId)) {
             showDuplicateLocalSnError(newDocId);
-            return;
+            return null;
           }
-
-          await syncMachineAssociations(newDocId, docId, previousItemData);
-          // Delete the old document.
-          await db.collection("Test").doc(docId).delete();
-          // Set docId to the new document ID.
+          await commitItemWithMachineBacklinks({
+            db,
+            partId: newDocId,
+            previousPartId: docId,
+            itemData: payloadWithLocalSn,
+            nextMachineIds,
+            renameFieldsToReplace: ITEM_RENAME_FIELDS_TO_REPLACE,
+          });
           docId = newDocId;
         } else {
           // Deep-clean the formattedItems to remove any undefined nested values.
           const cleanFormattedItems = shallowClean(payloadWithLocalSn);
-          cleanFormattedItems.Machine = firebase.firestore.FieldValue.delete();
-          cleanFormattedItems.CurrentMachine = firebase.firestore.FieldValue.delete();
-          if (!selectedMachine?.id) {
+          LEGACY_ITEM_ASSOCIATION_FIELDS.forEach((field) => {
+            cleanFormattedItems[field] =
+              firebase.firestore.FieldValue.delete();
+          });
+          if (!fromAssociation?.machineId) {
             cleanFormattedItems.MachineFrom =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedCurrentMachine?.id) {
+          if (!currentAssociation?.machineId) {
             cleanFormattedItems.MachineCurrent =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientFrom?.id || selectedTrailerFrom?.id) {
+          if (!fromAssociation?.clientId) {
             cleanFormattedItems.ClientFrom =
               firebase.firestore.FieldValue.delete();
           }
-          if (!selectedClientCurrent?.id || selectedTrailerCurrent?.id) {
+          if (!currentAssociation?.clientId) {
             cleanFormattedItems.ClientCurrent =
               firebase.firestore.FieldValue.delete();
           }
+          if (!fromAssociation?.trailerId) {
+            cleanFormattedItems.TrailerFrom =
+              firebase.firestore.FieldValue.delete();
+          }
+          if (!currentAssociation?.trailerId) {
+            cleanFormattedItems.TrailerCurrent =
+              firebase.firestore.FieldValue.delete();
+          }
+          const clearMissingAssociationFields = (association, suffix) => {
+            const typeField =
+              suffix === "From"
+                ? "fromAssociationType"
+                : "currentAssociationType";
+            const mapField = suffix === "From" ? "associationFrom" : "associationCurrent";
+            const clientIdField = `client${suffix}Id`;
+            const machineIdField = `machine${suffix}Id`;
+            const trailerIdField = `trailer${suffix}Id`;
+            if (!association) {
+              cleanFormattedItems[typeField] =
+                firebase.firestore.FieldValue.delete();
+              cleanFormattedItems[mapField] =
+                firebase.firestore.FieldValue.delete();
+              cleanFormattedItems[clientIdField] =
+                firebase.firestore.FieldValue.delete();
+            }
+            if (!association?.machineId) {
+              cleanFormattedItems[machineIdField] =
+                firebase.firestore.FieldValue.delete();
+            }
+            if (!association?.trailerId) {
+              cleanFormattedItems[trailerIdField] =
+                firebase.firestore.FieldValue.delete();
+            }
+          };
+          clearMissingAssociationFields(fromAssociation, "From");
+          clearMissingAssociationFields(currentAssociation, "Current");
+          cleanFormattedItems.associationTypeFrom =
+            firebase.firestore.FieldValue.delete();
+          cleanFormattedItems.associationTypeCurrent =
+            firebase.firestore.FieldValue.delete();
           if (!selectedParent || !selectedParent.id) {
             cleanFormattedItems.Parent = firebase.firestore.FieldValue.delete();
           }
-          await db.collection("Test").doc(docId).update(cleanFormattedItems);
-
-          await syncMachineAssociations(docId, docId, previousItemData);
+          await commitItemWithMachineBacklinks({
+            db,
+            partId: docId,
+            previousPartId: docId,
+            itemData: cleanFormattedItems,
+            nextMachineIds,
+          });
         }
       } else {
         // For a new item, if localSN is provided, use it; otherwise, generate a custom ID.
@@ -2450,18 +3294,30 @@ const handleSendToInflow = async () => {
           return;
         }
         const payloadWithLocalSn = withLocalSn(formattedItems, docId);
-        try {
-          await createItemDocumentIfAvailable(docId, payloadWithLocalSn);
-        } catch (error) {
-          if (error?.message !== "duplicate-local-sn") {
-            throw error;
-          }
-          showDuplicateLocalSnError(docId);
-          return;
-        }
-
-        await syncMachineAssociations(docId, null, null);
+        await commitItemWithMachineBacklinks({
+          db,
+          partId: docId,
+          itemData: payloadWithLocalSn,
+          nextMachineIds,
+        });
       }
+      setItems((prev) => ({
+        ...prev,
+        localSN: docId,
+        associationFrom: fromAssociation || null,
+        associationCurrent: currentAssociation || null,
+        fromAssociationType: fromAssociation?.associationType || "",
+        currentAssociationType: currentAssociation?.associationType || "",
+        clientFromId: fromAssociation?.clientId || "",
+        clientCurrentId: currentAssociation?.clientId || "",
+        machineFromId: fromAssociation?.machineId || "",
+        machineCurrentId: currentAssociation?.machineId || "",
+        trailerFromId: fromAssociation?.trailerId || "",
+        trailerCurrentId: currentAssociation?.trailerId || "",
+      }));
+      committedItemIdRef.current = docId;
+      setSelectionHistory(nextSelectionHistory);
+      setSaveHistory(nextSaveHistory);
       await syncChildrenForItem(docId);
       if (selectedShippingGroupId) {
         await addItemToShippingGroup({
@@ -2472,7 +3328,6 @@ const handleSendToInflow = async () => {
           previousItemId: id || "",
         });
       }
-      setItems((prev) => ({ ...prev, localSN: docId }));
       // Update Tracker only on Save.
       try {
         const selections = {
@@ -2496,8 +3351,6 @@ const handleSendToInflow = async () => {
       console.log("Item saved and associatedParts updated!");
 
       setSavedName(items.name || "");
-      setSelectionHistory(nextSelectionHistory);
-      setSaveHistory(nextSaveHistory);
 
       // Redirect to the new URL using the new document id.
       if (redirect) {
@@ -2515,6 +3368,12 @@ const handleSendToInflow = async () => {
         saveHistory: nextSaveHistory,
       };
     } catch (error) {
+      if (error?.code === "warehouse-associations/target-exists") {
+        showDuplicateLocalSnError(
+          String(items.localSN || docId || "").trim()
+        );
+        return null;
+      }
       console.error("Error saving data:", error);
       setErr(error?.message || "Save failed.");
       setShowErr(true);
@@ -2537,12 +3396,17 @@ const handleSendToInflow = async () => {
   });
 
   const handleSwapFromCurrent = () => {
+    beginBranchAssociationSelection(true);
+    beginBranchAssociationSelection(false);
+    swapMachineDetailHydrationBranches();
     const nextFromClient = selectedClientCurrent;
     const nextCurrentClient = selectedClientFrom;
     const nextFromMachine = selectedCurrentMachine;
     const nextCurrentMachine = selectedMachine;
     const nextFromTrailer = selectedTrailerCurrent;
     const nextCurrentTrailer = selectedTrailerFrom;
+    const nextAssociationTypeFrom = associationTypeCurrent;
+    const nextAssociationTypeCurrent = associationTypeFrom;
     const nextNewLocalFrom = cloneLocalLocation(newLocalCurrent);
     const nextNewLocalCurrent = cloneLocalLocation(newLocalFrom);
     const nextLocalLocFrom = localLocCurrent;
@@ -2554,6 +3418,8 @@ const handleSendToInflow = async () => {
     setSelectedCurrentMachine(nextCurrentMachine);
     setSelectedTrailerFrom(nextFromTrailer);
     setSelectedTrailerCurrent(nextCurrentTrailer);
+    setAssociationTypeFrom(nextAssociationTypeFrom);
+    setAssociationTypeCurrent(nextAssociationTypeCurrent);
     setNewLocalFrom(nextNewLocalFrom);
     setNewLocalCurrent(nextNewLocalCurrent);
     setLocalLocFrom(nextLocalLocFrom);
@@ -2570,28 +3436,105 @@ const handleSendToInflow = async () => {
     );
   };
 
+  const handleAssociationTypeChange = (isFromBranch, nextType) => {
+    beginBranchAssociationSelection(isFromBranch);
+    if (isFromBranch) {
+      setAssociationTypeFrom(nextType);
+      if (nextType === ITEM_ASSOCIATION_SITE) {
+        setSelectedTrailerFrom(null);
+        setSelectedMachine(null);
+        cancelMachineDetailHydration(true);
+      } else if (nextType === ITEM_ASSOCIATION_MACHINE) {
+        setSelectedTrailerFrom(null);
+      } else if (!selectedTrailerFrom) {
+        setSelectedMachine(null);
+        cancelMachineDetailHydration(true);
+      }
+    } else {
+      setAssociationTypeCurrent(nextType);
+      if (nextType === ITEM_ASSOCIATION_SITE) {
+        setSelectedTrailerCurrent(null);
+        setSelectedCurrentMachine(null);
+        cancelMachineDetailHydration(false);
+      } else if (nextType === ITEM_ASSOCIATION_MACHINE) {
+        setSelectedTrailerCurrent(null);
+      } else if (!selectedTrailerCurrent) {
+        setSelectedCurrentMachine(null);
+        cancelMachineDetailHydration(false);
+      }
+    }
+  };
+
   // When a machine is selected from the modal.
   const handleSetSelectedMachine = (machine) => {
     if (!machine?.id) return;
     const isFromBranch = machinePick;
+    beginBranchAssociationSelection(isFromBranch);
+    const requestId = machineDetailRequestRef.current + 1;
+    machineDetailRequestRef.current = requestId;
+    const requestBranch = isFromBranch ? "from" : "current";
+    updateMachineDetailHydrationForBranch(requestBranch, {
+      requestId,
+      machineId: machine.id,
+      pending: true,
+      error: "",
+      machineData: null,
+    });
+    latestMachineDetailOwnerRef.current = {
+      branch: requestBranch,
+      requestId,
+    };
     // const condition = (name) => name && name.toLowerCase() === "interior socal";
     const isSocalInterior = ["interior socal", "interior norcal"].includes(
       machine.name?.toLowerCase()
     );
+    const selectedMachineData = {
+      ...stripAssociatedPartsFromMachineSnapshot(machine),
+      id: machine.id,
+      name: machine.name || machine.Model || machine.model || machine.id,
+    };
 
     if (isFromBranch) {
-      setSelectedMachine({ id: machine.id, name: machine.name });
+      setSelectedMachine(selectedMachineData);
+      setSelectedTrailerFrom(null);
+      setAssociationTypeFrom(ITEM_ASSOCIATION_MACHINE);
       setShowLocalLocFrom(
         isSocalInterior || isSocalWarehouseClient(selectedClientFrom)
       );
     } else {
-      setSelectedCurrentMachine({ id: machine.id, name: machine.name });
+      setSelectedCurrentMachine(selectedMachineData);
+      setSelectedTrailerCurrent(null);
+      setAssociationTypeCurrent(ITEM_ASSOCIATION_MACHINE);
       setShowLocalLocCurrent(
         isSocalInterior || isSocalWarehouseClient(selectedClientCurrent)
       );
     }
-    fetchMachine(machine.id);
     handleCloseMachineModal();
+    fetchMachine(machine.id, requestId)
+      .then((machineData) => {
+        if (!machineData) return;
+        updateMachineDetailHydrationForRequest(requestId, {
+          pending: false,
+          error: "",
+          machineData,
+        });
+      })
+      .catch((error) => {
+        if (
+          !findMachineDetailRequestBranch(
+            machineDetailHydrationRef.current,
+            requestId
+          )
+        ) return;
+        const message =
+          error?.message || "Failed to load the selected machine details.";
+        updateMachineDetailHydrationForRequest(requestId, {
+          pending: false,
+          error: message,
+        });
+        setErr(`${message} Reselect the machine before saving.`);
+        setShowErr(true);
+      });
   };
 
   const uploadPhotos = async (docID) => {
@@ -3034,6 +3977,8 @@ const handleSendToInflow = async () => {
 
   const handleClearMachineSelection = () => {
     const isFromBranch = machinePick;
+    beginBranchAssociationSelection(isFromBranch);
+    cancelMachineDetailHydration(isFromBranch);
     if (isFromBranch) {
       setSelectedMachine(null);
       setShowLocalLocFrom(false);
@@ -3048,9 +3993,16 @@ const handleSendToInflow = async () => {
     handleCloseMachineModal();
   };
 
-  const openMachineModalForBranch = (isFromBranch) => {
+  const openMachineModalForBranch = async (isFromBranch) => {
     setMachinePick(isFromBranch);
     handleShowMachineModal();
+    try {
+      await loadMachineOptionsForBranch(isFromBranch);
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      setErr(error?.message || "Failed to load machines for this client.");
+      setShowErr(true);
+    }
   };
 
   const handleBluefolderButton = async () => {
@@ -3400,9 +4352,13 @@ const handleAddToSlack = async (which = "shipping") => {
               <thead>
                 <tr>
                   <th>Saved At</th>
+                  <th>From Type</th>
                   <th>From Client</th>
+                  <th>From Trailer</th>
                   <th>From Machine</th>
+                  <th>Current Type</th>
                   <th>Current Client</th>
+                  <th>Current Trailer</th>
                   <th>Current Machine</th>
                   <th>Work Order</th>
                   <th>Date Type</th>
@@ -3413,7 +4369,7 @@ const handleAddToSlack = async (which = "shipping") => {
               <tbody>
                 {(selectionHistory || []).length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center text-muted">
+                    <td colSpan={13} className="text-center text-muted">
                       No history yet. A row will be added on Save when From/Current/Machine/WO/date changes.
                     </td>
                   </tr>
@@ -3425,9 +4381,13 @@ const handleAddToSlack = async (which = "shipping") => {
                           ? new Date(entry.savedAt).toLocaleString()
                           : "-"}
                       </td>
+                      <td>{entry?.fromAssociationType || (entry?.fromTrailerId ? "trailer" : entry?.fromMachineId ? "machine" : "site")}</td>
                       <td>{entry?.fromClientName || "-"}</td>
+                      <td>{entry?.fromTrailerName || entry?.fromTrailerId || "-"}</td>
                       <td>{entry?.fromMachineName || "-"}</td>
+                      <td>{entry?.currentAssociationType || (entry?.currentTrailerId ? "trailer" : entry?.currentMachineId ? "machine" : "site")}</td>
                       <td>{entry?.currentClientName || "-"}</td>
+                      <td>{entry?.currentTrailerName || entry?.currentTrailerId || "-"}</td>
                       <td>{entry?.currentMachineName || "-"}</td>
                       <td>{entry?.workOrder || "-"}</td>
                       <td>{getHistoryMovementDateLabel(entry)}</td>
@@ -3542,6 +4502,13 @@ const handleAddToSlack = async (which = "shipping") => {
                     </div>
                   </td>
                 </tr>
+                {machineOptionsLoading && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted">
+                      Loading machines…
+                    </td>
+                  </tr>
+                )}
                 {machineOptions
                   .filter((machine) =>
                     (machine.name || "")
@@ -3551,7 +4518,7 @@ const handleAddToSlack = async (which = "shipping") => {
                   .map((machine) => (
                     <tr key={machine.id}>
                       <td>{machine.name}</td>
-                      <td>{machine.local}</td>
+                      <td>{machine.local || machine.location || ""}</td>
                       <td>
                         <Button
                           variant="primary"
@@ -3563,11 +4530,12 @@ const handleAddToSlack = async (which = "shipping") => {
                       </td>
                     </tr>
                   ))}
-                {machineOptions.filter((machine) =>
-                  (machine.name || "")
-                    .toLowerCase()
-                    .includes(machineSearch.toLowerCase())
-                ).length === 0 && (
+                {!machineOptionsLoading &&
+                  machineOptions.filter((machine) =>
+                    (machine.name || "")
+                      .toLowerCase()
+                      .includes(machineSearch.toLowerCase())
+                  ).length === 0 && (
                   <tr>
                     <td colSpan={3} className="text-center text-muted">
                       No machines found.
@@ -4236,16 +5204,26 @@ const handleAddToSlack = async (which = "shipping") => {
                           >
                             {selectedClientFrom && (
                               <p>
-                                <strong>
-                                  {selectedTrailerFrom
-                                    ? "Linked client/site (via trailer):"
-                                    : "Selected Client (From):"}
-                                </strong>{" "}
+                                <strong>Selected Client/Site (From):</strong>{" "}
                                 {selectedClientFrom.name}
+                                {selectedClientFrom.derivedFromTrailer && (
+                                  <span className="text-warning ms-2">
+                                    Legacy live-derived value — verify before saving
+                                  </span>
+                                )}
                               </p>
                             )}
+                            <ItemAssociationTypeControl
+                              value={associationTypeFrom}
+                              onChange={(nextType) =>
+                                handleAssociationTypeChange(true, nextType)
+                              }
+                              hasTrailerOptions={allTrailerOptions.length > 0}
+                              branchLabel="From"
+                            />
+                            {associationTypeFrom === ITEM_ASSOCIATION_TRAILER && (
                             <Form.Group className="mb-2">
-                              <Form.Label>Trailer at this client</Form.Label>
+                              <Form.Label>Trailer</Form.Label>
                               <Form.Select
                                 value={selectedTrailerFrom?.id || ""}
                                 onFocus={loadClients}
@@ -4254,31 +5232,31 @@ const handleAddToSlack = async (which = "shipping") => {
                                 }
                               >
                                 <option value="">
-                                  {trailerOptionsFrom.length > 1
-                                    ? "Choose the correct trailer"
-                                    : "No trailer selected"}
+                                  Choose a trailer
                                 </option>
-                                {trailerOptionsFrom.map((trailer) => (
+                                {allTrailerOptions.map((trailer) => (
                                   <option value={trailer.id} key={trailer.id}>
                                     {trailer.name}
+                                    {trailer.clientId === selectedClientFrom?.id
+                                      ? " — at selected site"
+                                      : ""}
                                   </option>
                                 ))}
                               </Form.Select>
                               <Form.Text muted>
-                                {trailerOptionsFrom.length === 1
-                                  ? "This client has a linked trailer; client selection asks before connecting it."
-                                  : trailerOptionsFrom.length > 1
-                                  ? "This client has multiple trailers; client selection asks which one to connect."
-                                  : "No current trailer is linked to this client."}
+                                Selecting a trailer fills its current client and linked
+                                machine. You can change the client/site separately afterward.
                               </Form.Text>
                             </Form.Group>
+                            )}
                             {selectedTrailerFrom && (
                               <p className="text-muted small mb-2">
-                                The item is linked to this trailer. The client/site is
-                                derived from the trailer&apos;s current link and is not
-                                stored on the item.
+                                <strong>Selected Trailer (From):</strong>{" "}
+                                {selectedTrailerFrom.name}. The client/site above is saved
+                                on this item as its historical source.
                               </p>
                             )}
+                            {associationTypeFrom === ITEM_ASSOCIATION_MACHINE && (
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
@@ -4358,6 +5336,14 @@ const handleAddToSlack = async (which = "shipping") => {
                                 </>
                               )}
                             </div>
+                            )}
+                            {associationTypeFrom === ITEM_ASSOCIATION_TRAILER &&
+                              selectedMachine && (
+                                <p className="mb-0">
+                                  <strong>Linked machine inside trailer:</strong>{" "}
+                                  {selectedMachine.name}
+                                </p>
+                              )}
                           </div>
                       )}
                         <LocationControls
@@ -4430,16 +5416,26 @@ const handleAddToSlack = async (which = "shipping") => {
                           >
                             {selectedClientCurrent && (
                               <p>
-                                <strong>
-                                  {selectedTrailerCurrent
-                                    ? "Linked client/site (via trailer):"
-                                    : "Selected Client (Current):"}
-                                </strong>{" "}
+                                <strong>Selected Client/Site (Current):</strong>{" "}
                                 {selectedClientCurrent.name}
+                                {selectedClientCurrent.derivedFromTrailer && (
+                                  <span className="text-warning ms-2">
+                                    Legacy live-derived value — verify before saving
+                                  </span>
+                                )}
                               </p>
                             )}
+                            <ItemAssociationTypeControl
+                              value={associationTypeCurrent}
+                              onChange={(nextType) =>
+                                handleAssociationTypeChange(false, nextType)
+                              }
+                              hasTrailerOptions={allTrailerOptions.length > 0}
+                              branchLabel="Current"
+                            />
+                            {associationTypeCurrent === ITEM_ASSOCIATION_TRAILER && (
                             <Form.Group className="mb-2">
-                              <Form.Label>Trailer at this client</Form.Label>
+                              <Form.Label>Trailer</Form.Label>
                               <Form.Select
                                 value={selectedTrailerCurrent?.id || ""}
                                 onFocus={loadClients}
@@ -4448,31 +5444,31 @@ const handleAddToSlack = async (which = "shipping") => {
                                 }
                               >
                                 <option value="">
-                                  {trailerOptionsCurrent.length > 1
-                                    ? "Choose the correct trailer"
-                                    : "No trailer selected"}
+                                  Choose a trailer
                                 </option>
-                                {trailerOptionsCurrent.map((trailer) => (
+                                {allTrailerOptions.map((trailer) => (
                                   <option value={trailer.id} key={trailer.id}>
                                     {trailer.name}
+                                    {trailer.clientId === selectedClientCurrent?.id
+                                      ? " — at selected site"
+                                      : ""}
                                   </option>
                                 ))}
                               </Form.Select>
                               <Form.Text muted>
-                                {trailerOptionsCurrent.length === 1
-                                  ? "This client has a linked trailer; client selection asks before connecting it."
-                                  : trailerOptionsCurrent.length > 1
-                                  ? "This client has multiple trailers; client selection asks which one to connect."
-                                  : "No current trailer is linked to this client."}
+                                Selecting a trailer fills its current client and linked
+                                machine. You can change the client/site separately afterward.
                               </Form.Text>
                             </Form.Group>
+                            )}
                             {selectedTrailerCurrent && (
                               <p className="text-muted small mb-2">
-                                The item is linked to this trailer. The client/site is
-                                derived from the trailer&apos;s current link and is not
-                                stored on the item.
+                                <strong>Selected Trailer (Current):</strong>{" "}
+                                {selectedTrailerCurrent.name}. The client/site above is
+                                stored separately on this item.
                               </p>
                             )}
+                            {associationTypeCurrent === ITEM_ASSOCIATION_MACHINE && (
                             <div style={{ marginTop: "0.5rem" }}>
                               <Button
                                 variant="outline-secondary"
@@ -4556,6 +5552,14 @@ const handleAddToSlack = async (which = "shipping") => {
                                 </>
                               )}
                             </div>
+                            )}
+                            {associationTypeCurrent === ITEM_ASSOCIATION_TRAILER &&
+                              selectedCurrentMachine && (
+                                <p className="mb-0">
+                                  <strong>Linked machine inside trailer:</strong>{" "}
+                                  {selectedCurrentMachine.name}
+                                </p>
+                              )}
                           </div>
                         )}
                         <LocationControls
@@ -4711,6 +5715,14 @@ const handleAddToSlack = async (which = "shipping") => {
                     <Button
                       variant="primary"
                       type="submit"
+                      disabled={
+                        isLoading ||
+                        Boolean(associationLoadError) ||
+                        associationSelectionPending ||
+                        Boolean(associationSelectionError) ||
+                        machineDetailHydrationSummary.pending ||
+                        Boolean(machineDetailHydrationSummary.error)
+                      }
                       style={{ marginRight: "1rem" }}
                     >
                       Save
@@ -4718,6 +5730,14 @@ const handleAddToSlack = async (which = "shipping") => {
                     <Button
                       variant="secondary"
                       onClick={handleCloneToNewItem}
+                      disabled={
+                        isLoading ||
+                        Boolean(associationLoadError) ||
+                        associationSelectionPending ||
+                        Boolean(associationSelectionError) ||
+                        machineDetailHydrationSummary.pending ||
+                        Boolean(machineDetailHydrationSummary.error)
+                      }
                       style={{ marginRight: "1rem" }}
                     >
                       Clone

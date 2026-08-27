@@ -1,8 +1,25 @@
 import React from 'react'
 import firebase from "../context/Firebase";
 import { stripEmbeddedMachineAssociations } from "./warehouseAssociations";
+import associatedPartRoles from "../lib/associatedPartRoles.cjs";
 
-const MACHINE_LIST_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
+const {
+  getEntityRoleIds,
+  getStoredClientId: resolveStoredClientId,
+} = associatedPartRoles;
+
+const MACHINE_LIST_FIELDS = [
+  "OEM",
+  "oem",
+  "Modality",
+  "modality",
+  "Model",
+  "model",
+  "client",
+  "name",
+  "local",
+  "location",
+];
 const CLIENT_MACHINE_IDS_CACHE_TTL_MS = 5 * 60 * 1000;
 const clientMachineIdsCache = new Map();
 
@@ -15,6 +32,25 @@ function sanitizeMachineDataForList(data) {
   return sanitized;
 }
 
+function getDocumentId(value) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const segments = value.split("/").filter(Boolean);
+    return segments[segments.length - 1] || null;
+  }
+  if (value.id) return value.id;
+  if (value.path) return getDocumentId(value.path);
+  return null;
+}
+
+function getStoredMachineId(item, type) {
+  return getEntityRoleIds(item, "machine", type)[0] || null;
+}
+
+export function getStoredClientId(item, type) {
+  return resolveStoredClientId(item, type) || null;
+}
+
 export async function fetchPartsWithMachineData() {
   const db = firebase.firestore();
   const partsSnapshot = await db.collection("Test").get();
@@ -23,16 +59,10 @@ export async function fetchPartsWithMachineData() {
       const partData = stripEmbeddedMachineAssociations(partDoc.data() || {});
       partData.id = partDoc.id; // Add document ID here
       const getRefId = (ref) => {
-        if (!ref) return null;
-        if (typeof ref === "string") return ref;
-        if (ref instanceof firebase.firestore.DocumentReference) return ref.id;
-        if (ref.id) return ref.id;
-        return null;
+        return getDocumentId(ref);
       };
-      partData.clientFromId =
-        getRefId(partData?.ClientFrom) ?? partData?.clientFromId ?? null;
-      partData.clientCurrentId =
-        getRefId(partData?.ClientCurrent) ?? partData?.clientCurrentId ?? null;
+      partData.clientFromId = getStoredClientId(partData, "from");
+      partData.clientCurrentId = getStoredClientId(partData, "current");
       // console.log(partData);
       const fetchMachineData = async (ref) => {
         if (!ref) return null;
@@ -57,12 +87,12 @@ export async function fetchPartsWithMachineData() {
         return null;
       };
 
-      const machineRef = partData.Machine || partData.MachineFrom;
-      const currentMachineRef =
-        partData.CurrentMachine || partData.MachineCurrent;
+      const machineRef = getStoredMachineId(partData, "from");
+      const currentMachineRef = getStoredMachineId(partData, "current");
 
-      partData.machineFromId = getRefId(machineRef);
-      partData.currentMachineId = getRefId(currentMachineRef);
+      partData.machineFromId = machineRef;
+      partData.machineCurrentId = currentMachineRef;
+      partData.currentMachineId = currentMachineRef;
 
       const machineData = await fetchMachineData(machineRef);
       partData.machineData = machineData || {};
@@ -154,11 +184,7 @@ export async function fetchPartsWithMachineDataPage({
   const clientMachineQueryBudget = 12;
 
   const getRefId = (ref) => {
-    if (!ref) return null;
-    if (typeof ref === "string") return ref;
-    if (ref instanceof firebase.firestore.DocumentReference) return ref.id;
-    if (ref.id) return ref.id;
-    return null;
+    return getDocumentId(ref);
   };
 
   const MACHINE_SELECT_FIELDS = ["OEM", "Modality", "Model", "client", "name"];
@@ -280,18 +306,12 @@ export async function fetchPartsWithMachineDataPage({
       type === "from" ? selectedClientFrom : selectedClientCurrent;
     if (!selectedClient) return true;
 
-    const directClientRef =
-      type === "from"
-        ? raw?.ClientFrom ?? raw?.clientFromId
-        : raw?.ClientCurrent ?? raw?.clientCurrentId;
-    const directClientId = getRefId(directClientRef);
-    if (directClientId === selectedClient) return true;
+    const directClientId = getStoredClientId(raw, type);
+    // An explicit item-level client is the historical/current snapshot for
+    // this branch. Never let the machine's newer client override a mismatch.
+    if (directClientId) return directClientId === selectedClient;
 
-    const machineRef =
-      type === "from"
-        ? raw?.Machine || raw?.MachineFrom
-        : raw?.CurrentMachine || raw?.MachineCurrent;
-    const machineId = getRefId(machineRef);
+    const machineId = getStoredMachineId(raw, type);
     const machineIds =
       type === "from" ? clientFromMachineIds : clientCurrentMachineIds;
     return Boolean(machineId && machineIds?.has(machineId));
@@ -382,19 +402,14 @@ export async function fetchPartsWithMachineDataPage({
     const rawPartData = partDoc.data() || {};
     const partData = stripEmbeddedMachineAssociations(rawPartData);
     partData.id = partDoc.id; // Add document ID here
-    partData.clientFromId =
-      getRefId(partData?.ClientFrom) ?? partData?.clientFromId ?? null;
-    partData.clientCurrentId =
-      getRefId(partData?.ClientCurrent) ?? partData?.clientCurrentId ?? null;
+    partData.clientFromId = getStoredClientId(partData, "from");
+    partData.clientCurrentId = getStoredClientId(partData, "current");
 
-    const machineRef = partData.Machine || partData.MachineFrom;
-    const currentMachineRef =
-      partData.CurrentMachine || partData.MachineCurrent;
-
-    const machineId = getRefId(machineRef);
-    const currentMachineId = getRefId(currentMachineRef);
+    const machineId = getStoredMachineId(partData, "from");
+    const currentMachineId = getStoredMachineId(partData, "current");
 
     partData.machineFromId = machineId;
+    partData.machineCurrentId = currentMachineId;
     partData.currentMachineId = currentMachineId;
 
     const machineData = machineId ? machineMap[machineId] : null;
@@ -641,10 +656,8 @@ export async function fetchPartsWithMachineDataPage({
         try {
           const raw = docSnap.data() || {};
           if (visibleOnly && raw.visible === false) return;
-          const machineId = getRefId(raw.Machine || raw.MachineFrom);
-          const currentMachineId = getRefId(
-            raw.CurrentMachine || raw.MachineCurrent
-          );
+          const machineId = getStoredMachineId(raw, "from");
+          const currentMachineId = getStoredMachineId(raw, "current");
           if (machineId) machineIds.add(machineId);
           if (currentMachineId) currentMachineIds.add(currentMachineId);
         } catch (error) {
@@ -946,10 +959,8 @@ export async function fetchPartsWithMachineDataPage({
       const currentMachineIds = new Set();
       for (const docSnap of docs) {
         const raw = docSnap.data();
-        const machineId = getRefId(raw.Machine || raw.MachineFrom);
-        const currentMachineId = getRefId(
-          raw.CurrentMachine || raw.MachineCurrent
-        );
+        const machineId = getStoredMachineId(raw, "from");
+        const currentMachineId = getStoredMachineId(raw, "current");
         if (machineId) machineIds.add(machineId);
         if (currentMachineId) currentMachineIds.add(currentMachineId);
       }
@@ -1084,10 +1095,8 @@ export async function fetchPartsWithMachineDataPage({
           clientPrefilterRejected += 1;
           continue;
         }
-        const machineId = getRefId(raw.Machine || raw.MachineFrom);
-        const currentMachineId = getRefId(
-          raw.CurrentMachine || raw.MachineCurrent
-        );
+        const machineId = getStoredMachineId(raw, "from");
+        const currentMachineId = getStoredMachineId(raw, "current");
         if (machineId) machineIds.add(machineId);
         if (currentMachineId) currentMachineIds.add(currentMachineId);
       }
@@ -1222,7 +1231,10 @@ export async function fetchClients(selectedOEM, selectedModality) {
   if (selectedOEM || selectedModality) {
     const filtered = await Promise.all(
       clients.map(async (client) => {
-        const machineRefs = Array.isArray(client.machines) ? client.machines : [];
+        const machineRefs = [
+          ...(Array.isArray(client.machines) ? client.machines : []),
+          ...(Array.isArray(client.Machines) ? client.Machines : []),
+        ];
         if (!machineRefs.length) return null;
 
         const machineDocs = await Promise.all(
@@ -1280,6 +1292,15 @@ export async function fetchMachinesForClient(clientId) {
       db.collection("Machine").where("client", "==", clientId).get(),
     ]);
 
+  const primaryFailure = [
+    clientResult,
+    referenceQueryResult,
+    idQueryResult,
+  ].find((result) => result.status === "rejected");
+  if (primaryFailure) {
+    throw primaryFailure.reason || new Error("Machine lookup failed.");
+  }
+
   if (referenceQueryResult.status === "fulfilled") {
     addSnapshot(referenceQueryResult.value);
   }
@@ -1289,19 +1310,44 @@ export async function fetchMachinesForClient(clientId) {
 
   if (clientResult.status === "fulfilled" && clientResult.value.exists) {
     const clientData = clientResult.value.data() || {};
-    const machineRefs = Array.isArray(clientData.machines)
-      ? clientData.machines
-      : [];
+    const machineRefs = Array.from(
+      new Map(
+        [
+          ...(Array.isArray(clientData.machines) ? clientData.machines : []),
+          ...(Array.isArray(clientData.Machines) ? clientData.Machines : []),
+        ].map((machineRef) => {
+          const rawId =
+            typeof machineRef === "string"
+              ? machineRef
+              : machineRef?.id || machineRef?.path || "";
+          const segments = String(rawId).split("/").filter(Boolean);
+          return [segments[segments.length - 1] || rawId, machineRef];
+        })
+      ).values()
+    );
     const linkedMachineResults = await Promise.allSettled(
       machineRefs.map((machineRef) => {
         if (typeof machineRef?.get === "function") return machineRef.get();
-        const linkedMachineId =
-          typeof machineRef === "string" ? machineRef : machineRef?.id;
+        const rawLinkedMachineId =
+          typeof machineRef === "string"
+            ? machineRef
+            : machineRef?.id || machineRef?.path;
+        const linkedMachineId = String(rawLinkedMachineId || "")
+          .split("/")
+          .filter(Boolean)
+          .pop();
         return linkedMachineId
           ? db.collection("Machine").doc(linkedMachineId).get()
           : Promise.resolve(null);
       })
     );
+
+    const linkedFailure = linkedMachineResults.find(
+      (result) => result.status === "rejected"
+    );
+    if (linkedFailure) {
+      throw linkedFailure.reason || new Error("Linked machine lookup failed.");
+    }
 
     linkedMachineResults.forEach((result) => {
       if (

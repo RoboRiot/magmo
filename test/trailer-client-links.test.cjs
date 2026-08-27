@@ -39,14 +39,19 @@ test("auto-selects a trailer only when one current trailer belongs to the client
   assert.equal(autoTrailerForClient(trailers, "CLIENT_B"), null);
 });
 
-test("selecting a client preserves a valid trailer and auto-fills its machine", () => {
+test("selecting a client preserves independently selected trailer and machine", () => {
   assert.deepEqual(
     connectionSelectionForClient({
       clientId: "CLIENT_A",
       trailers,
-      currentTrailerId: "AIS14",
+      currentTrailerId: "AIS16",
+      currentMachineId: "MACHINE_CUSTOM",
     }),
-    { clientId: "CLIENT_A", trailerId: "AIS14", machineId: "MACHINE_A" }
+    {
+      clientId: "CLIENT_A",
+      trailerId: "AIS16",
+      machineId: "MACHINE_CUSTOM",
+    }
   );
 });
 

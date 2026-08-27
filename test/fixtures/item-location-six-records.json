@@ -1,0 +1,289 @@
+{
+  "clients": [
+    {
+      "id": "AIS62854",
+      "name": "AIS TRAILERS",
+      "location": "Legacy pseudo-client"
+    },
+    {
+      "id": "AIS17182",
+      "name": "SoCalWarehouse - Lake Forest",
+      "location": "Lake Forest, CA"
+    },
+    {
+      "id": "AIS38562",
+      "name": "Simonmed Imaging - Reno Eureka",
+      "location": "590 Eureka Ave, Reno, NV 89512"
+    }
+  ],
+  "machines": [
+    {
+      "id": "AIS15216",
+      "name": "Trailer AIS23 - GE PET",
+      "client": { "path": "Client/AIS62854" },
+      "associatedParts": [
+        { "path": "Test/AIS17704" },
+        { "path": "Test/AIS29317" },
+        { "path": "Test/AIS37398" },
+        { "path": "Test/AIS75587" },
+        { "path": "Test/AIS86861" }
+      ]
+    },
+    {
+      "id": "AIS42516",
+      "name": "Interior SoCal",
+      "client": { "path": "Client/AIS17182" },
+      "associatedParts": [
+        { "path": "Test/AIS17704" },
+        { "path": "Test/AIS37398" },
+        { "path": "Test/AIS75587" },
+        { "path": "Test/AIS86861" },
+        { "path": "Test/AIS63114" }
+      ]
+    },
+    {
+      "id": "AIS77830",
+      "name": "Trailer AIS24 - GE PET",
+      "client": { "path": "Client/AIS62854" },
+      "associatedParts": [{ "path": "Test/AIS63114" }]
+    }
+  ],
+  "trailers": [
+    {
+      "id": "AIS23",
+      "name": "AIS23 - GE PET",
+      "associatedMachine": { "path": "Machine/AIS15216" },
+      "associatedMachineId": "AIS15216",
+      "locationHistory": [
+        {
+          "clientId": "AIS17182",
+          "client": { "path": "Client/AIS17182" },
+          "clientNameSnapshot": "Lake Forest Satellite Lot 1 (Ice Rink)",
+          "clientLocationSnapshot": "Lake Forest, CA",
+          "arrivalDate": "2026-03-30",
+          "departureDate": "2026-08-20"
+        }
+      ],
+      "currentClient": { "path": "Client/AIS17182" },
+      "currentClientId": "AIS17182",
+      "locationCurrentId": "AIS17182",
+      "locationCurrentName": "SoCalWarehouse - Lake Forest",
+      "locationCurrentClientLocation": "Lake Forest, CA",
+      "locationCurrentArrivalDate": "2026-08-20",
+      "locationCurrentDepartureDate": ""
+    },
+    {
+      "id": "AIS24",
+      "name": "AIS24 - GE PET",
+      "associatedMachine": { "path": "Machine/AIS77830" },
+      "associatedMachineId": "AIS77830",
+      "locationHistory": [
+        {
+          "clientId": "AIS17182",
+          "clientName": "SoCalWarehouse - Lake Forest",
+          "clientLocation": "Lake Forest, CA",
+          "arrivalDate": "2026-02-03",
+          "departureDate": "2026-08-20"
+        }
+      ],
+      "trailerMovementHistory": [
+        {
+          "movementType": "arrived",
+          "fromClientId": "AIS17182",
+          "toClientId": "AIS38562",
+          "departureDate": "2026-08-20",
+          "arrivalDate": "2026-08-21"
+        }
+      ],
+      "currentClient": { "path": "Client/AIS38562" },
+      "currentClientId": "AIS38562",
+      "locationCurrentId": "AIS38562",
+      "locationCurrentName": "Simonmed Imaging - Reno Eureka",
+      "locationCurrentClientLocation": "590 Eureka Ave, Reno, NV 89512",
+      "locationCurrentArrivalDate": "2026-08-21",
+      "locationCurrentDepartureDate": ""
+    }
+  ],
+  "items": [
+    {
+      "id": "AIS17704",
+      "createTime": "2026-08-26T17:16:00.000Z",
+      "updateTime": "2026-08-26T21:29:40.564Z",
+      "data": {
+        "name": "GE PET Discovery ST - PDU Cabinet and Accessories",
+        "ClientFrom": { "path": "Client/AIS62854" },
+        "ClientCurrent": { "path": "Client/AIS17182" },
+        "MachineFrom": { "path": "Machine/AIS15216" },
+        "MachineCurrent": { "path": "Machine/AIS42516" },
+        "arrival_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS62854",
+            "fromClientName": "AIS TRAILERS",
+            "fromMachineId": "AIS15216",
+            "fromMachineName": "Trailer AIS23 - GE PET",
+            "currentClientId": "AIS17182",
+            "currentClientName": "SoCalWarehouse - Lake Forest",
+            "currentMachineId": "AIS42516",
+            "currentMachineName": "Interior SoCal",
+            "movementDateType": "arrival",
+            "movementDate": "2026-08-26",
+            "arrivalDate": "2026-08-26",
+            "savedAt": "2026-08-26T17:16:01.336Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 17704 }
+      }
+    },
+    {
+      "id": "AIS29317",
+      "createTime": "2026-08-26T17:08:15.000Z",
+      "updateTime": "2026-08-26T17:08:19.923Z",
+      "data": {
+        "name": "GE PET Discovery ST - PET Gantry",
+        "ClientFrom": { "path": "Client/AIS62854" },
+        "ClientCurrent": { "path": "Client/AIS17182" },
+        "MachineFrom": { "path": "Machine/AIS15216" },
+        "arrival_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS62854",
+            "fromClientName": "AIS TRAILERS",
+            "fromMachineId": "AIS15216",
+            "fromMachineName": "Trailer AIS23 - GE PET",
+            "currentClientId": "AIS17182",
+            "currentClientName": "SoCalWarehouse - Lake Forest",
+            "movementDateType": "arrival",
+            "movementDate": "2026-08-26",
+            "arrivalDate": "2026-08-26",
+            "savedAt": "2026-08-26T17:08:16.886Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 29317 }
+      }
+    },
+    {
+      "id": "AIS37398",
+      "createTime": "2026-08-26T17:18:36.000Z",
+      "updateTime": "2026-08-26T17:18:40.438Z",
+      "data": {
+        "name": "GE PET Discovery ST - Console and Cables",
+        "ClientFrom": { "path": "Client/AIS62854" },
+        "ClientCurrent": { "path": "Client/AIS17182" },
+        "MachineFrom": { "path": "Machine/AIS15216" },
+        "MachineCurrent": { "path": "Machine/AIS42516" },
+        "arrival_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS62854",
+            "fromClientName": "AIS TRAILERS",
+            "fromMachineId": "AIS15216",
+            "fromMachineName": "Trailer AIS23 - GE PET",
+            "currentClientId": "AIS17182",
+            "currentMachineId": "AIS42516",
+            "currentMachineName": "Interior SoCal",
+            "movementDateType": "arrival",
+            "movementDate": "2026-08-26",
+            "arrivalDate": "2026-08-26",
+            "savedAt": "2026-08-26T17:18:37.623Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 37398 }
+      }
+    },
+    {
+      "id": "AIS75587",
+      "createTime": "2026-08-26T16:50:25.000Z",
+      "updateTime": "2026-08-26T16:50:28.372Z",
+      "data": {
+        "name": "GE PET Discovery ST - CT Gantry",
+        "ClientFrom": { "path": "Client/AIS62854" },
+        "ClientCurrent": { "path": "Client/AIS17182" },
+        "MachineFrom": { "path": "Machine/AIS15216" },
+        "MachineCurrent": { "path": "Machine/AIS42516" },
+        "arrival_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS62854",
+            "fromClientName": "AIS TRAILERS",
+            "fromMachineId": "AIS15216",
+            "fromMachineName": "Trailer AIS23 - GE PET",
+            "currentClientId": "AIS17182",
+            "currentMachineId": "AIS42516",
+            "currentMachineName": "Interior SoCal",
+            "movementDateType": "arrival",
+            "movementDate": "2026-08-26",
+            "arrivalDate": "2026-08-26",
+            "savedAt": "2026-08-26T16:50:26.765Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 75587 }
+      }
+    },
+    {
+      "id": "AIS86861",
+      "createTime": "2026-08-26T17:14:00.000Z",
+      "updateTime": "2026-08-26T17:14:04.351Z",
+      "data": {
+        "name": "GE PET Discovery ST - Table",
+        "ClientFrom": { "path": "Client/AIS62854" },
+        "ClientCurrent": { "path": "Client/AIS17182" },
+        "MachineFrom": { "path": "Machine/AIS15216" },
+        "MachineCurrent": { "path": "Machine/AIS42516" },
+        "arrival_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS62854",
+            "fromClientName": "AIS TRAILERS",
+            "fromMachineId": "AIS15216",
+            "fromMachineName": "Trailer AIS23 - GE PET",
+            "currentClientId": "AIS17182",
+            "currentMachineId": "AIS42516",
+            "currentMachineName": "Interior SoCal",
+            "movementDateType": "arrival",
+            "movementDate": "2026-08-26",
+            "arrivalDate": "2026-08-26",
+            "savedAt": "2026-08-26T17:14:01.341Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 86861 }
+      }
+    },
+    {
+      "id": "AIS63114",
+      "createTime": "2026-08-26T18:07:45.000Z",
+      "updateTime": "2026-08-26T20:34:39.281Z",
+      "data": {
+        "name": "PET Pin Source Germanium-68 for Trailer 24 (CASING ONLY)",
+        "ClientFrom": { "path": "Client/AIS17182" },
+        "ClientCurrent": { "path": "Client/AIS62854" },
+        "MachineFrom": { "path": "Machine/AIS42516" },
+        "MachineCurrent": { "path": "Machine/AIS77830" },
+        "departure_date": "2026-08-26",
+        "date": "2026-08-26",
+        "selectionHistory": [
+          {
+            "fromClientId": "AIS17182",
+            "fromClientName": "SoCalWarehouse - Lake Forest",
+            "fromMachineId": "AIS42516",
+            "fromMachineName": "Interior SoCal",
+            "currentClientId": "AIS62854",
+            "currentClientName": "AIS TRAILERS",
+            "currentMachineId": "AIS77830",
+            "currentMachineName": "Trailer AIS24 - GE PET",
+            "movementDateType": "departure",
+            "movementDate": "2026-08-26",
+            "departureDate": "2026-08-26",
+            "savedAt": "2026-08-26T18:07:46.902Z"
+          }
+        ],
+        "nonAssociationSentinel": { "keep": true, "value": 63114 }
+      }
+    }
+  ]
+}

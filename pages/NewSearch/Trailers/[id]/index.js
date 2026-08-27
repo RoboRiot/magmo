@@ -7,9 +7,9 @@ import firebase from "../../../../context/Firebase";
 import LoggedIn from "../../../LoggedIn";
 import { fetchClients } from "../../../../utils/fetchAssociations";
 import {
-  fetchAssociatedPartsForMachine,
-  formatPartDate,
-} from "../../../../utils/fetchAssociatedPartsForMachine";
+  fetchAssociatedPartsByEntity,
+  formatAssociatedPartDate,
+} from "../../../../utils/fetchAssociatedPartsByEntity";
 import { resolveAssociatedPartForPrint } from "../../../../utils/resolveAssociatedPartForPrint";
 import {
   HELIUM_REFRESH_MS,
@@ -101,11 +101,15 @@ export default function TrailerDetailPage() {
   const [saveSuccess, setSaveSuccess] = useState("");
   const [machineOptions, setMachineOptions] = useState([]);
   const [clientOptions, setClientOptions] = useState([]);
-  const [associatedParts, setAssociatedParts] = useState([]);
+  const [associatedPartsByRole, setAssociatedPartsByRole] = useState({
+    from: [],
+    current: [],
+  });
+  const [associatedPartsGroup, setAssociatedPartsGroup] = useState("current");
   const [partsLoading, setPartsLoading] = useState(false);
   const [partsError, setPartsError] = useState("");
   const [printError, setPrintError] = useState("");
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState("");
   const [showPrintSuccess, setShowPrintSuccess] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -135,6 +139,12 @@ export default function TrailerDetailPage() {
     vin: "",
     associatedMachineId: "",
   });
+  const associatedPartsForView =
+    associatedPartsByRole[associatedPartsGroup] || [];
+  const associatedPartCounts = {
+    from: associatedPartsByRole.from.length,
+    current: associatedPartsByRole.current.length,
+  };
 
   const handleBack = useCallback(() => {
     router.push(returnTo || DEFAULT_RETURN_TO);
@@ -849,9 +859,8 @@ export default function TrailerDetailPage() {
   };
 
   useEffect(() => {
-    const machineId = String(form.associatedMachineId || "").trim();
-    if (!machineId) {
-      setAssociatedParts([]);
+    if (!trailerId) {
+      setAssociatedPartsByRole({ from: [], current: [] });
       setPartsError("");
       setPartsLoading(false);
       return undefined;
@@ -861,18 +870,22 @@ export default function TrailerDetailPage() {
     const loadAssociatedParts = async () => {
       setPartsLoading(true);
       setPartsError("");
+      setAssociatedPartsByRole({ from: [], current: [] });
       try {
-        const parts = await fetchAssociatedPartsForMachine(machineId, {
-          role: "current",
+        const groups = await fetchAssociatedPartsByEntity(firebase.firestore(), {
+          entityType: "trailer",
+          entityId: trailerId,
         });
         if (!cancelled) {
-          setAssociatedParts(parts);
+          setAssociatedPartsByRole(groups);
         }
       } catch (error) {
-        console.error("Failed to load associated machine items", error);
+        console.error("Failed to load directly associated trailer items", error);
         if (!cancelled) {
-          setPartsError("Failed to load associated machine items.");
-          setAssociatedParts([]);
+          setPartsError(
+            "The complete associated-parts list could not be verified. Print All is disabled until the list reloads successfully."
+          );
+          setAssociatedPartsByRole({ from: [], current: [] });
         }
       } finally {
         if (!cancelled) {
@@ -885,7 +898,7 @@ export default function TrailerDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [form.associatedMachineId]);
+  }, [trailerId]);
 
   const handleSelectPart = useCallback(
     (itemId) => {
@@ -895,13 +908,22 @@ export default function TrailerDetailPage() {
     [router]
   );
 
-  const handlePrintAllItems = async () => {
-    setIsPrinting(true);
+  const handlePrintAllItems = async (role) => {
+    if (partsError) {
+      setPrintError(
+        "Print All is unavailable because the complete associated-parts list could not be verified."
+      );
+      return;
+    }
+    const parts = associatedPartsByRole[role] || [];
+    setIsPrinting(role);
     setPrintError("");
     try {
       const db = firebase.firestore();
       const resolvedItems = await Promise.all(
-        associatedParts.map((part) => resolveAssociatedPartForPrint(db, part))
+        parts.map((part) =>
+          resolveAssociatedPartForPrint(db, part, { role })
+        )
       );
       const payload = {
         items: resolvedItems.filter(Boolean),
@@ -948,7 +970,7 @@ export default function TrailerDetailPage() {
       console.error("Error printing trailer items:", error);
       setPrintError(error?.message || "Error printing trailer items.");
     } finally {
-      setIsPrinting(false);
+      setIsPrinting("");
     }
   };
 
@@ -961,7 +983,7 @@ export default function TrailerDetailPage() {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(
       "text/plain",
-      associatedParts[index]?.id || String(index)
+      associatedPartsForView[index]?.id || String(index)
     );
   };
 
@@ -978,11 +1000,11 @@ export default function TrailerDetailPage() {
       setDragOverIndex(null);
       return;
     }
-    setAssociatedParts((prev) => {
-      const next = [...prev];
+    setAssociatedPartsByRole((prev) => {
+      const next = [...(prev[associatedPartsGroup] || [])];
       const [moved] = next.splice(dragIndex, 1);
       next.splice(index, 0, moved);
-      return next;
+      return { ...prev, [associatedPartsGroup]: next };
     });
     setDragIndex(null);
     setDragOverIndex(null);
@@ -1326,9 +1348,46 @@ export default function TrailerDetailPage() {
 
                 <div className={styles.tableCard}>
                   <div className={styles.tableHeader}>
-                    Associated Parts
-                    <span className={styles.tableHint}>Click + hold to move</span>
+                    <div>
+                      Associated Parts
+                      <span className={styles.tableHint}>
+                        Direct trailer records · click + hold to move
+                      </span>
+                    </div>
+                    <div
+                      className={styles.partToggle}
+                      role="group"
+                      aria-label="Associated parts group"
+                    >
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "current"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("current")}
+                      >
+                        Current ({associatedPartCounts.current})
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "from"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("from")}
+                      >
+                        From ({associatedPartCounts.from})
+                      </button>
+                    </div>
                   </div>
+                  {partsError && (
+                    <Alert variant="danger" className={styles.printAlert}>
+                      {partsError}
+                    </Alert>
+                  )}
                   <div className={styles.tableWrap}>
                     <Table striped bordered hover size="sm" className={styles.table}>
                       <thead>
@@ -1342,41 +1401,32 @@ export default function TrailerDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {!form.associatedMachineId && (
-                          <tr>
-                            <td colSpan={6} className={styles.emptyState}>
-                              Select an associated machine to view its items.
-                            </td>
-                          </tr>
-                        )}
-                        {form.associatedMachineId && partsLoading && (
+                        {partsLoading && associatedPartsForView.length === 0 && (
                           <tr>
                             <td colSpan={6} className={styles.emptyState}>
                               Loading associated parts...
                             </td>
                           </tr>
                         )}
-                        {form.associatedMachineId && !partsLoading && partsError && (
+                        {!partsLoading &&
+                          partsError &&
+                          associatedPartsForView.length === 0 && (
                           <tr>
                             <td colSpan={6} className={styles.emptyState}>
                               {partsError}
                             </td>
                           </tr>
-                        )}
-                        {form.associatedMachineId &&
-                          !partsLoading &&
+                          )}
+                        {!partsLoading &&
                           !partsError &&
-                          associatedParts.length === 0 && (
+                          associatedPartsForView.length === 0 && (
                             <tr>
                               <td colSpan={6} className={styles.emptyState}>
                                 No associated parts found.
                               </td>
                             </tr>
                           )}
-                        {form.associatedMachineId &&
-                          !partsLoading &&
-                          !partsError &&
-                          associatedParts.map((part, index) => (
+                        {associatedPartsForView.map((part, index) => (
                             <tr
                               key={part.id}
                               draggable
@@ -1396,7 +1446,7 @@ export default function TrailerDetailPage() {
                               <td>{part.id}</td>
                               <td>{part.pn}</td>
                               <td>{part.sn}</td>
-                              <td>{formatPartDate(part.date)}</td>
+                              <td>{formatAssociatedPartDate(part.date)}</td>
                               <td>
                                 <Button
                                   variant="primary"
@@ -1421,12 +1471,33 @@ export default function TrailerDetailPage() {
                       type="button"
                       variant="secondary"
                       className={styles.printButton}
-                      onClick={handlePrintAllItems}
+                      onClick={() => handlePrintAllItems("from")}
                       disabled={
-                        isPrinting || partsLoading || associatedParts.length === 0
+                        Boolean(isPrinting) ||
+                        partsLoading ||
+                        Boolean(partsError) ||
+                        !associatedPartCounts.from
                       }
                     >
-                      {isPrinting ? "Printing..." : "Print All Items"}
+                      {isPrinting === "from"
+                        ? "Printing From..."
+                        : `Print All From (${associatedPartCounts.from})`}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className={styles.printButton}
+                      onClick={() => handlePrintAllItems("current")}
+                      disabled={
+                        Boolean(isPrinting) ||
+                        partsLoading ||
+                        Boolean(partsError) ||
+                        !associatedPartCounts.current
+                      }
+                    >
+                      {isPrinting === "current"
+                        ? "Printing Current..."
+                        : `Print All Current (${associatedPartCounts.current})`}
                     </Button>
                   </div>
                 </div>

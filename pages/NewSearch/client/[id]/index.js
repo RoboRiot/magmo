@@ -14,6 +14,11 @@ import { useAuth } from "../../../../context/AuthUserContext";
 import ClientInfoModal from "../../ClientInfoModal";
 import MachineCreationModal from "../../MachineCreationModal";
 import MachineEditModal from "../../MachineEditModal";
+import {
+  fetchAssociatedPartsByEntity,
+  formatAssociatedPartDate,
+} from "../../../../utils/fetchAssociatedPartsByEntity";
+import { resolveAssociatedPartForPrint } from "../../../../utils/resolveAssociatedPartForPrint";
 import styles from "../Client.module.css";
 import clientMachineHelpers from "../../../../lib/clientMachines.cjs";
 import trailerDirectoryHelpers from "../../../../lib/ops/trailerDirectory.cjs";
@@ -45,6 +50,16 @@ const Client = ({
     !initialClient && !initialError
   );
   const [machinesLoading, setMachinesLoading] = useState(false);
+  const [associatedPartsByRole, setAssociatedPartsByRole] = useState({
+    from: [],
+    current: [],
+  });
+  const [associatedPartsGroup, setAssociatedPartsGroup] = useState("current");
+  const [associatedPartsLoading, setAssociatedPartsLoading] = useState(false);
+  const [associatedPartsError, setAssociatedPartsError] = useState("");
+  const [printError, setPrintError] = useState("");
+  const [isPrinting, setIsPrinting] = useState("");
+  const [showPrintSuccess, setShowPrintSuccess] = useState(false);
 
   // State for machine addition modals
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
@@ -68,6 +83,12 @@ const Client = ({
   const canDeleteMachines =
     authUser?.isAdmin === true ||
     String(authUser?.role || "").toLowerCase() === "admin";
+  const associatedPartsForView =
+    associatedPartsByRole[associatedPartsGroup] || [];
+  const associatedPartCounts = {
+    from: associatedPartsByRole.from.length,
+    current: associatedPartsByRole.current.length,
+  };
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -99,6 +120,40 @@ const Client = ({
     initialTrailers,
     initialError,
   ]);
+
+  useEffect(() => {
+    const clientId = String(selectedClient?.id || "").trim();
+    if (!clientId) return undefined;
+    let cancelled = false;
+
+    const loadAssociatedParts = async () => {
+      setAssociatedPartsLoading(true);
+      setAssociatedPartsError("");
+      setAssociatedPartsByRole({ from: [], current: [] });
+      try {
+        const groups = await fetchAssociatedPartsByEntity(firebase.firestore(), {
+          entityType: "client",
+          entityId: clientId,
+        });
+        if (!cancelled) setAssociatedPartsByRole(groups);
+      } catch (partsError) {
+        console.error("Failed to load associated client parts:", partsError);
+        if (!cancelled) {
+          setAssociatedPartsByRole({ from: [], current: [] });
+          setAssociatedPartsError(
+            "The complete associated-parts list could not be verified. Print All is disabled until the list reloads successfully."
+          );
+        }
+      } finally {
+        if (!cancelled) setAssociatedPartsLoading(false);
+      }
+    };
+
+    loadAssociatedParts();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClient?.id]);
 
   const fetchMachineRefs = async (machineRefs = []) => {
     const validRefs = machineRefs.filter(
@@ -183,6 +238,72 @@ const Client = ({
   const handleSelectMachine = (id, name) => {
     // Navigate to the machine details page if needed
     router.push("../machine/" + id);
+  };
+
+  const handleSelectPart = (itemId) => {
+    if (!itemId) return;
+    router.push(`/NewSearch/item/${itemId}`);
+  };
+
+  const handlePrintAssociatedParts = async (role) => {
+    if (associatedPartsError) {
+      setPrintError(
+        "Print All is unavailable because the complete associated-parts list could not be verified."
+      );
+      return;
+    }
+    const parts = associatedPartsByRole[role] || [];
+    setIsPrinting(role);
+    setPrintError("");
+    try {
+      const db = firebase.firestore();
+      const resolvedItems = await Promise.all(
+        parts.map((part) =>
+          resolveAssociatedPartForPrint(db, part, { role })
+        )
+      );
+      const payload = {
+        items: resolvedItems.filter(Boolean),
+        test_print: true,
+        index: 1,
+      };
+      if (!payload.items.length) {
+        throw new Error("No items available to print.");
+      }
+
+      const idToken = await firebase.auth().currentUser?.getIdToken();
+      const response = await fetch("/api/print/multi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok || result?.ok === false || result?.status === "error") {
+        const detail =
+          result?.details ||
+          (Array.isArray(result?.attempts)
+            ? result.attempts
+                .map(
+                  (entry) => `${entry.url} => ${entry.status ?? entry.error}`
+                )
+                .join(" | ")
+            : "");
+        throw new Error(
+          `${result?.error || result?.message || `Print proxy failed (${response.status})`}${
+            detail ? ` | ${detail}` : ""
+          }`
+        );
+      }
+      setShowPrintSuccess(true);
+    } catch (printFailure) {
+      console.error("Error printing client items:", printFailure);
+      setPrintError(printFailure?.message || "Error printing client items.");
+    } finally {
+      setIsPrinting("");
+    }
   };
 
   const handleEditMachineClick = (machine) => {
@@ -486,6 +607,35 @@ const Client = ({
 
   return (
     <div className={styles.page}>
+      {isPrinting && (
+        <div className={styles.loadingOverlay} role="status" aria-live="polite">
+          <img
+            src="/magmo-logo.png"
+            alt="Printing"
+            className={styles.loadingLogo}
+          />
+          <span className={styles.visuallyHidden}>
+            Printing associated client parts
+          </span>
+        </div>
+      )}
+      <Modal
+        show={showPrintSuccess}
+        onHide={() => setShowPrintSuccess(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Print Complete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          All selected client items were sent to the printer successfully.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={() => setShowPrintSuccess(false)}>
+            Ok
+          </Button>
+        </Modal.Footer>
+      </Modal>
       <Modal show={Boolean(machineToDelete)} onHide={handleCloseDeleteMachineModal}>
         <Modal.Header closeButton={!deletingMachineId}>
           <Modal.Title>Delete Machine</Modal.Title>
@@ -790,6 +940,151 @@ const Client = ({
                       </tbody>
                     </Table>
                     )}
+                  </div>
+                </div>
+
+                <div
+                  className={`${styles.tableCard} ${styles.associatedPartsCard}`}
+                >
+                  <div className={styles.tableHeader}>
+                    <div>
+                      <span>Associated Parts</span>
+                      <span className={styles.tableHint}>
+                        Direct item location records for this client.
+                      </span>
+                    </div>
+                    <div
+                      className={styles.partToggle}
+                      role="group"
+                      aria-label="Associated parts group"
+                    >
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "current"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("current")}
+                      >
+                        Current ({associatedPartCounts.current})
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.partToggleButton} ${
+                          associatedPartsGroup === "from"
+                            ? styles.partToggleActive
+                            : ""
+                        }`}
+                        onClick={() => setAssociatedPartsGroup("from")}
+                      >
+                        From ({associatedPartCounts.from})
+                      </button>
+                    </div>
+                  </div>
+                  {associatedPartsError && (
+                    <Alert variant="danger" className={styles.printAlert}>
+                      {associatedPartsError}
+                    </Alert>
+                  )}
+                  <div className={styles.tableWrap}>
+                    <Table striped bordered hover size="sm" className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>ID</th>
+                          <th>Part Number</th>
+                          <th>Serial Number</th>
+                          <th>Date</th>
+                          <th>Select</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {associatedPartsLoading &&
+                          associatedPartsForView.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className={styles.emptyState}>
+                                Loading associated parts...
+                              </td>
+                            </tr>
+                          )}
+                        {!associatedPartsLoading &&
+                          associatedPartsError &&
+                          associatedPartsForView.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className={styles.emptyState}>
+                                {associatedPartsError}
+                              </td>
+                            </tr>
+                          )}
+                        {!associatedPartsLoading &&
+                          !associatedPartsError &&
+                          associatedPartsForView.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className={styles.emptyState}>
+                                No associated parts found.
+                              </td>
+                            </tr>
+                          )}
+                        {associatedPartsForView.map((part) => (
+                          <tr key={part.id}>
+                            <td>{part.name}</td>
+                            <td>{part.id}</td>
+                            <td>{part.pn}</td>
+                            <td>{part.sn}</td>
+                            <td>{formatAssociatedPartDate(part.date)}</td>
+                            <td>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleSelectPart(part.id)}
+                              >
+                                Select
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                  {printError && (
+                    <Alert variant="danger" className={styles.printAlert}>
+                      {printError}
+                    </Alert>
+                  )}
+                  <div className={styles.tableActions}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className={styles.printButton}
+                      onClick={() => handlePrintAssociatedParts("from")}
+                      disabled={
+                        Boolean(isPrinting) ||
+                        associatedPartsLoading ||
+                        Boolean(associatedPartsError) ||
+                        !associatedPartCounts.from
+                      }
+                    >
+                      {isPrinting === "from"
+                        ? "Printing From..."
+                        : `Print All From (${associatedPartCounts.from})`}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className={styles.printButton}
+                      onClick={() => handlePrintAssociatedParts("current")}
+                      disabled={
+                        Boolean(isPrinting) ||
+                        associatedPartsLoading ||
+                        Boolean(associatedPartsError) ||
+                        !associatedPartCounts.current
+                      }
+                    >
+                      {isPrinting === "current"
+                        ? "Printing Current..."
+                        : `Print All Current (${associatedPartCounts.current})`}
+                    </Button>
                   </div>
                 </div>
               </>

@@ -36,13 +36,7 @@ const outputPath = outputArgument
     );
 const backupManifestPath = backupArgument
   ? path.resolve(repoRoot, backupArgument.slice("--backup-manifest=".length))
-  : path.join(
-      repoRoot,
-      "outputs",
-      "firestore-backups",
-      "2026-08-20T00-11-32-679Z-magmo-firestore",
-      "manifest.json"
-    );
+  : "";
 
 if (args.includes("--help")) {
   console.log(`Usage: node scripts/audit-trailer-item-ownership.mjs [options]
@@ -56,6 +50,12 @@ Options:
   --help                    Show this help.
 `);
   process.exit(0);
+}
+
+if (!backupManifestPath) {
+  throw new Error(
+    "--backup-manifest is required; never infer a stale backup for an ownership audit."
+  );
 }
 
 function loadEnvFile(filename) {
@@ -259,7 +259,7 @@ const report = {
   readOnly: true,
   rule: {
     activeOwnership:
-      "A trailer-owned branch stores the trailer and associated machine, but no client. The client/site is derived from the trailer link so the item follows the trailer when it is re-linked.",
+      "A trailer-owned branch stores the trailer, its linked machine, and an item-level client/site snapshot. The client must never be deleted when the trailer later moves.",
     explicitText:
       "From Trailer AIS[number] assigns the from branch; For/To Trailer AIS[number] assigns the current branch.",
     ambiguity:

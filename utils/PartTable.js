@@ -58,29 +58,84 @@ function getPreviewDescription(item) {
 
 function getPreviewLocation(item, side) {
   const isFrom = side === "from";
+  const associationSnapshot = isFrom
+    ? item?.associationFrom
+    : item?.associationCurrent;
   const machineData = isFrom ? item?.machineData : item?.currentMachineData;
   const machineId =
-    (isFrom ? item?.machineFromId : item?.currentMachineId) ||
+    (isFrom
+      ? item?.machineFromId
+      : item?.machineCurrentId || item?.currentMachineId) ||
     getReferenceLabel(
       isFrom
         ? item?.MachineFrom || item?.Machine
         : item?.MachineCurrent || item?.CurrentMachine
-    );
+    ) ||
+    String(associationSnapshot?.machineId || "").trim();
   const clientId =
     (isFrom ? item?.clientFromId : item?.clientCurrentId) ||
     getReferenceLabel(isFrom ? item?.ClientFrom : item?.ClientCurrent) ||
+    String(associationSnapshot?.clientId || "").trim() ||
     getReferenceLabel(machineData?.client);
+  const snapshotClientName =
+    String(associationSnapshot?.clientId || "").trim() === clientId
+      ? String(associationSnapshot?.clientNameSnapshot || "").trim()
+      : "";
   const clientName =
+    snapshotClientName ||
     (isFrom ? item?.clientFromName : item?.clientCurrentName) ||
     machineData?.Client ||
     clientId;
-  const machineName = getMachinePreviewLabel(machineData, machineId);
+  const snapshotMachineName =
+    String(associationSnapshot?.machineId || "").trim() === machineId
+      ? String(associationSnapshot?.machineNameSnapshot || "").trim()
+      : "";
+  const machineName =
+    snapshotMachineName || getMachinePreviewLabel(machineData, machineId);
+  const trailerId =
+    (isFrom ? item?.trailerFromId : item?.trailerCurrentId) ||
+    getReferenceLabel(isFrom ? item?.TrailerFrom : item?.TrailerCurrent) ||
+    String(associationSnapshot?.trailerId || "").trim();
+  const snapshotTrailerName =
+    String(associationSnapshot?.trailerId || "").trim() === trailerId
+      ? String(associationSnapshot?.trailerNameSnapshot || "").trim()
+      : "";
+  const storedAssociationType = String(
+    (isFrom
+      ? item?.fromAssociationType || item?.associationTypeFrom
+      : item?.currentAssociationType || item?.associationTypeCurrent) ||
+      associationSnapshot?.associationType ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+  const associationType =
+    ["site", "machine", "trailer"].includes(storedAssociationType)
+      ? storedAssociationType
+      : trailerId
+        ? "trailer"
+        : machineId
+          ? "machine"
+          : "site";
+  const assetLabel =
+    associationType === "trailer"
+      ? [
+          trailerId
+            ? `Trailer: ${snapshotTrailerName || trailerId}`
+            : "Trailer",
+          machineName ? `Linked machine: ${machineName}` : "",
+        ]
+          .filter(Boolean)
+          .join(" • ")
+      : associationType === "machine" && machineName
+      ? `Machine: ${machineName}`
+      : "";
   const localLocation =
     (isFrom ? item?.localLocFrom : item?.localLocCurrent) ||
     formatLoc(isFrom ? item?.newLocalFrom : item?.newLocalCurrent);
 
   const parts = Array.from(
-    new Set([clientName, machineName, localLocation].filter(Boolean))
+    new Set([clientName, assetLabel, localLocation].filter(Boolean))
   );
   return parts.length ? parts.join(" • ") : "—";
 }

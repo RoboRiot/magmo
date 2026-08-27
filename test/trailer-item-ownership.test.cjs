@@ -59,7 +59,7 @@ test("uses the closest direction before a trailer mention", () => {
   );
 });
 
-test("trailer-owned branch deletes client and stores trailer plus machine", () => {
+test("trailer-owned branch preserves client and stores trailer plus machine", () => {
   const plan = planItemTrailerOwnership({
     id: "ITEM1",
     currentRecord: {
@@ -75,7 +75,7 @@ test("trailer-owned branch deletes client and stores trailer plus machine", () =
     MachineCurrent: "Machine/M14",
   });
   assert.deepEqual(plan.patch.setValues, { trailerCurrentId: "AIS14" });
-  assert.deepEqual(plan.patch.deleteFields, ["ClientCurrent"]);
+  assert.deepEqual(plan.patch.deleteFields, []);
 });
 
 test("preserves an existing legacy system machine while adding trailer ownership", () => {
@@ -104,8 +104,7 @@ test("existing client is retained on the non-trailer branch", () => {
     originalRecord: { name: "Part from Trailer AIS14" },
     ...indexes(),
   });
-  assert.ok(plan.patch.deleteFields.includes("ClientFrom"));
-  assert.ok(!plan.patch.deleteFields.includes("ClientCurrent"));
+  assert.deepEqual(plan.patch.deleteFields, []);
 });
 
 test("conflicting text and stored trailer evidence is held for review", () => {
@@ -134,7 +133,7 @@ test("unique trailer machine is sufficient ownership evidence", () => {
   });
   assert.equal(plan.status, "change");
   assert.equal(plan.patch.setValues.trailerFromId, "AIS14");
-  assert.deepEqual(plan.patch.deleteFields, ["ClientFrom"]);
+  assert.deepEqual(plan.patch.deleteFields, []);
 });
 
 test("generic trailer mention is review-only when no branch is stated", () => {

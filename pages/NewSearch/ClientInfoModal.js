@@ -7,6 +7,7 @@ const ClientInfoModal = ({
   handleClose,
   selectedClient,
   machineOptions = [],
+  loading = false,
   setSelectedMachine,
 }) => {
   // Add warehouse options here
@@ -30,10 +31,17 @@ const ClientInfoModal = ({
             </tr>
           </thead>
           <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={3} className="text-center text-muted">
+                  Loading machines…
+                </td>
+              </tr>
+            )}
             {machineOptions.map((machine) => (
               <tr key={machine.id}>
                 <td>{machine.name}</td>
-                <td>{machine.local}</td>
+                <td>{machine.local || machine.location || ""}</td>
                 <td>
                   <Button
                     variant="primary"
@@ -44,6 +52,13 @@ const ClientInfoModal = ({
                 </td>
               </tr>
             ))}
+            {!loading && machineOptions.length === 0 && (
+              <tr>
+                <td colSpan={3} className="text-center text-muted">
+                  No machines found for this client/site.
+                </td>
+              </tr>
+            )}
             {/* {warehouseOptions.map((warehouse) => (
               <tr key={warehouse.id}>
                 <td>{warehouse.name}</td>

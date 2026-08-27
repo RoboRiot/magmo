@@ -10,61 +10,20 @@ import {
 } from "react-bootstrap";
 import firebase from "../../../../context/Firebase";
 import { useAuth } from "../../../../context/AuthUserContext";
+import { fetchAssociatedPartsByEntity } from "../../../../utils/fetchAssociatedPartsByEntity";
+import { resolveAssociatedPartForPrint } from "../../../../utils/resolveAssociatedPartForPrint";
 import styles from "../Machine.module.css";
 
 // Import for SSR
 import { adminDb } from "../../../../context/FirebaseAdmin";
+const {
+  firstEntityRoleValue,
+  groupAssociatedParts,
+  referenceId,
+} = require("../../../../lib/associatedPartRoles.cjs");
 
 const getRefId = (ref) => {
-  if (!ref) return null;
-  if (typeof ref === "string") return ref.split("/").filter(Boolean).pop() || ref;
-  if (ref.id) return ref.id;
-  return null;
-};
-
-const getPartRoleMachineIds = (data, role) => {
-  const fields =
-    role === "from"
-      ? ["MachineFrom", "Machine", "machineFromId", "machineId"]
-      : [
-          "MachineCurrent",
-          "CurrentMachine",
-          "machineCurrentId",
-          "currentMachineId",
-        ];
-  return Array.from(
-    new Set(fields.map((field) => getRefId(data?.[field])).filter(Boolean))
-  );
-};
-
-const getPartMachineIds = (data) => {
-  const modernIds = [
-    data?.MachineFrom,
-    data?.MachineCurrent,
-    data?.machineFromId,
-    data?.machineCurrentId,
-  ]
-    .map(getRefId)
-    .filter(Boolean);
-  if (modernIds.length) return modernIds;
-
-  return [data?.Machine, data?.CurrentMachine, data?.machineId, data?.currentMachineId]
-    .map(getRefId)
-    .filter(Boolean);
-};
-
-const partBelongsToMachine = (data, machineId) => {
-  const machineIds = getPartMachineIds(data);
-  return machineIds.length === 0 || machineIds.includes(machineId);
-};
-
-const partMatchesMachineRole = (data, machineId, role) => {
-  const roleMachineIds = getPartRoleMachineIds(data, role);
-  if (roleMachineIds.includes(machineId)) return true;
-
-  const allMachineIds = getPartMachineIds(data);
-  if (!allMachineIds.length) return role === "current";
-  return false;
+  return referenceId(ref) || null;
 };
 
 const formatDateInput = (input) => {
@@ -91,233 +50,27 @@ const buildEditForm = (machine = {}) => ({
   nextPM: formatDateInput(machine.nextPM),
 });
 
-const resolveDocData = async (db, collection, refOrId) => {
-  if (!refOrId) return null;
-  try {
-    if (typeof refOrId.get === "function") {
-      const doc = await refOrId.get();
-      return doc.exists ? { id: doc.id, ...doc.data() } : null;
-    }
-    const id = getRefId(refOrId);
-    if (!id) return null;
-    const doc = await db.collection(collection).doc(id).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : null;
-  } catch (error) {
-    console.error(`Error fetching ${collection} doc:`, error);
-    return null;
-  }
-};
-
-const formatDateForPrint = (input) => {
-  if (!input) return "";
-  if (input.seconds) {
-    const date = new Date(input.seconds * 1000);
-    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
-  }
-  if (typeof input.toDate === "function") {
-    const date = input.toDate();
-    return date instanceof Date && !isNaN(date.getTime())
-      ? date.toLocaleDateString()
-      : "";
-  }
-  if (input instanceof Date) {
-    return isNaN(input.getTime()) ? "" : input.toLocaleDateString();
-  }
-  if (typeof input === "number") {
-    const date = new Date(input);
-    return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
-  }
-  if (typeof input === "string") {
-    const trimmed = input.trim();
-    if (!trimmed) return "";
-    const date = new Date(trimmed);
-    return isNaN(date.getTime()) ? trimmed : date.toLocaleDateString();
-  }
-  return "";
-};
-
-const pickLatestDescription = (data) => {
-  const descs = Array.isArray(data?.descriptions) ? data.descriptions : [];
-  if (!descs.length) return data?.description || "";
-  let latest = descs[0];
-  for (const entry of descs) {
-    if (!entry) continue;
-    if (!latest) {
-      latest = entry;
-      continue;
-    }
-    const entryDate = new Date(entry.date || 0);
-    const latestDate = new Date(latest.date || 0);
-    if (!isNaN(entryDate.getTime()) && entryDate > latestDate) {
-      latest = entry;
-    }
-  }
-  return latest?.description || data?.description || "";
-};
-
-const getMachineField = (data, key) => {
-  const lower = key.toLowerCase();
-  return (
-    data?.machineData?.[key] ??
-    data?.machineData?.[lower] ??
-    data?.currentMachineData?.[key] ??
-    data?.currentMachineData?.[lower] ??
-    data?.TheMachine?.[key] ??
-    data?.TheMachine?.[lower] ??
-    data?.theMachineData?.[key] ??
-    data?.theMachineData?.[lower] ??
-    data?.[key] ??
-    data?.[lower] ??
-    ""
-  );
-};
-
-const resolveClientName = async (db, data, machineData) => {
-  if (data?.clientName) return data.clientName;
-  if (typeof data?.client === "string") return data.client;
-
-  const directClient =
-    (await resolveDocData(db, "Client", data?.client)) ||
-    (await resolveDocData(db, "Client", data?.ClientFrom)) ||
-    (await resolveDocData(db, "Client", data?.clientFromId)) ||
-    (await resolveDocData(db, "Client", data?.ClientCurrent)) ||
-    (await resolveDocData(db, "Client", data?.clientCurrentId));
-  if (directClient?.name) return directClient.name;
-
-  const machineClientName =
-    data?.machineData?.Client ||
-    data?.currentMachineData?.Client ||
-    machineData?.Client ||
-    "";
-  if (machineClientName) return machineClientName;
-
-  const machineClient =
-    (await resolveDocData(db, "Client", machineData?.client)) ||
-    (await resolveDocData(db, "Client", data?.machineData?.client));
-  if (machineClient?.name) return machineClient.name;
-
-  return "";
-};
-
-const resolvePartForPrint = async (db, part) => {
-  if (!part) return null;
-  let data = part;
-
-  try {
-    const hasArrival = Boolean(
-      data?.arrival_date || data?.arrivalDate || data?.date
-    );
-    const hasPo = Boolean(data?.poNumber || data?.po_number || data?.po);
-    const hasDescriptions = Boolean(
-      data?.description ||
-        (Array.isArray(data?.descriptions) && data.descriptions.length)
-    );
-    const hasMachineSource = Boolean(
-      data?.TheMachine ||
-        data?.machineData ||
-        data?.Machine ||
-        data?.MachineFrom ||
-        data?.CurrentMachine ||
-        data?.MachineCurrent
-    );
-    const hasClientSource = Boolean(
-      data?.clientName || data?.client || data?.ClientFrom || data?.clientFromId
-    );
-
-    const needsPartDoc =
-      data?.id &&
-      (!hasArrival ||
-        !hasPo ||
-        !hasDescriptions ||
-        !hasMachineSource ||
-        !hasClientSource);
-
-    if (needsPartDoc) {
-      const partDoc = await resolveDocData(db, "Test", data.id);
-      if (partDoc) {
-        data = { ...data, ...partDoc };
-      }
-    }
-
-    const machineRef =
-      data?.MachineFrom ||
-      data?.Machine ||
-      data?.CurrentMachine ||
-      data?.MachineCurrent;
-    let machineData = data?.TheMachine || data?.machineData || null;
-    const needsMachineData = !(
-      getMachineField({ ...data, machineData }, "OEM") ||
-      getMachineField({ ...data, machineData }, "Modality") ||
-      getMachineField({ ...data, machineData }, "Model")
-    );
-
-    if (needsMachineData && machineRef) {
-      const machineDoc = await resolveDocData(db, "Machine", machineRef);
-      if (machineDoc) {
-        machineData = machineDoc;
-        data = { ...data, machineData: machineDoc };
-      }
-    }
-
-    const arrivalRaw =
-      data?.arrival_date ||
-      data?.arrivalDate ||
-      data?.date ||
-      data?.arrival ||
-      "";
-    const arrivalDate = formatDateForPrint(arrivalRaw);
-
-    const description = pickLatestDescription(data);
-    const poNumber = data?.poNumber || data?.po_number || data?.po || "";
-    const localSn =
-      data?.local_sn || data?.localSN || data?.localsn || data?.id || "";
-
-    const OEM = getMachineField(data, "OEM");
-    const modality = getMachineField(data, "Modality");
-    const model = getMachineField(data, "Model");
-    const client = await resolveClientName(db, data, machineData);
-
-    return {
-      name: data?.name || data?.itemName || "",
-      arrival_date: arrivalDate,
-      poNumber: poNumber || "",
-      OEM: OEM || "",
-      modality: modality || "",
-      model: model || "",
-      local_sn: localSn || "",
-      client: client || "",
-      description: description || "",
-    };
-  } catch (error) {
-    console.error("Error preparing item for print:", error);
-    return {
-      name: data?.name || data?.itemName || "",
-      arrival_date: formatDateForPrint(data?.arrival_date || data?.date || ""),
-      poNumber: data?.poNumber || "",
-      OEM: "",
-      modality: "",
-      model: "",
-      local_sn: data?.local_sn || data?.localSN || data?.id || "",
-      client: data?.clientName || "",
-      description: data?.description || "",
-    };
-  }
-};
-
 const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }) => {
   const router = useRouter();
   const { authUser } = useAuth();
   const [selectedMachine, setSelectedMachine] = useState(
     initialMachine || null
   );
-  const [associatedParts, setAssociatedParts] = useState(
-    Array.isArray(initialAssociatedParts) ? initialAssociatedParts : []
+  const [associatedPartsByRole, setAssociatedPartsByRole] = useState(() =>
+    groupAssociatedParts(
+      Array.isArray(initialAssociatedParts) ? initialAssociatedParts : [],
+      "machine",
+      initialMachine?.id
+    )
   );
   const [associatedPartsGroup, setAssociatedPartsGroup] = useState("current");
+  const [associatedPartsLoading, setAssociatedPartsLoading] = useState(false);
+  const [associatedPartsError, setAssociatedPartsError] = useState("");
+  const [printError, setPrintError] = useState("");
   const [error, setError] = useState(initialError || null);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState("");
   const [showPrintSuccess, setShowPrintSuccess] = useState(false);
   const [isEditingMachine, setIsEditingMachine] = useState(false);
   const [isSavingMachine, setIsSavingMachine] = useState(false);
@@ -326,130 +79,131 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
   const isAdminUser =
     authUser?.isAdmin === true ||
     String(authUser?.role || "").toLowerCase() === "admin";
-  const activeMachineId = String(
-    router.query.id || selectedMachine?.id || router.asPath.split("/").pop() || ""
+  const queryMachineId = Array.isArray(router.query.id)
+    ? router.query.id[0]
+    : router.query.id;
+  const pathMachineId = router.asPath
+    .split(/[?#]/, 1)[0]
+    .split("/")
+    .filter(Boolean)
+    .pop();
+  const routeMachineId = String(
+    queryMachineId || (router.isReady ? pathMachineId : "") || ""
   ).trim();
-  const associatedPartsForView = associatedParts.filter((part) =>
-    partMatchesMachineRole(part, activeMachineId, associatedPartsGroup)
-  );
+  const activeMachineId = routeMachineId || selectedMachine?.id || "";
+  const associatedPartsForView =
+    associatedPartsByRole[associatedPartsGroup] || [];
   const associatedPartCounts = {
-    from: associatedParts.filter((part) =>
-      partMatchesMachineRole(part, activeMachineId, "from")
-    ).length,
-    current: associatedParts.filter((part) =>
-      partMatchesMachineRole(part, activeMachineId, "current")
-    ).length,
+    from: associatedPartsByRole.from.length,
+    current: associatedPartsByRole.current.length,
   };
+  const associatedPartTotal = new Set(
+    [...associatedPartsByRole.from, ...associatedPartsByRole.current].map(
+      (part) => part.id
+    )
+  ).size;
 
   useEffect(() => {
-    if (router.isReady) {
-      const { id } = router.query;
-      if (!id) {
-        const pathSegments = router.asPath.split("/");
-        const machineIdFromPath = pathSegments[pathSegments.length - 1];
-        console.log(`Machine ID extracted from URL path: ${machineIdFromPath}`);
-        fetchMachineData(machineIdFromPath);
-      } else {
-        console.log(`Machine ID from router query: ${id}`);
-        // If SSR already hydrated, avoid re-fetching unless we truly need to.
-        if (!selectedMachine) {
-          fetchMachineData(id);
-        }
-      }
+    if (!router.isReady || !routeMachineId) return undefined;
+
+    const selectedMachineId = referenceId(selectedMachine?.id);
+    if (selectedMachineId && selectedMachineId !== routeMachineId) {
+      setSelectedMachine(null);
+      setAssociatedPartsByRole({ from: [], current: [] });
+      setAssociatedPartsError("");
+      setPrintError("");
+      setError(null);
+      setIsEditingMachine(false);
+      return undefined;
     }
-  }, [router.isReady, selectedMachine]);
+    if (selectedMachineId === routeMachineId) return undefined;
+
+    let cancelled = false;
+    const loadMachine = async () => {
+      try {
+        const machineDoc = await firebase
+          .firestore()
+          .collection("Machine")
+          .doc(routeMachineId)
+          .get();
+        if (cancelled) return;
+        if (machineDoc.exists) {
+          setSelectedMachine({ id: machineDoc.id, ...machineDoc.data() });
+          setError(null);
+        } else {
+          setError("Machine not found");
+        }
+      } catch (loadError) {
+        console.error("Error fetching machine data:", loadError);
+        if (!cancelled) setError("Error fetching machine data");
+      }
+    };
+
+    loadMachine();
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, routeMachineId, selectedMachine?.id]);
 
   useEffect(() => {
     if (!selectedMachine || isEditingMachine) return;
     setEditForm(buildEditForm(selectedMachine));
   }, [selectedMachine, isEditingMachine]);
 
-  const fetchMachineData = async (machineId) => {
-    try {
-      console.log(`Attempting to fetch machine data for ID: ${machineId}`);
-      const db = firebase.firestore();
-      const machineDoc = await db.collection("Machine").doc(machineId).get();
-      if (machineDoc.exists) {
-        const machineData = machineDoc.data();
-        setSelectedMachine({ id: machineDoc.id, ...machineData });
-        setError(null);
-        console.log("Machine data:", machineData);
+  useEffect(() => {
+    if (!activeMachineId) return undefined;
+    let cancelled = false;
 
-        // Fetch associated parts
-        if (machineData.associatedParts) {
-          fetchAssociatedParts(machineData.associatedParts);
-        } else {
-          setAssociatedParts([]);
+    const loadAssociatedParts = async () => {
+      setAssociatedPartsLoading(true);
+      setAssociatedPartsError("");
+      try {
+        const groups = await fetchAssociatedPartsByEntity(firebase.firestore(), {
+          entityType: "machine",
+          entityId: activeMachineId,
+        });
+        if (!cancelled) setAssociatedPartsByRole(groups);
+      } catch (partsError) {
+        console.error("Error fetching associated machine parts:", partsError);
+        if (!cancelled) {
+          setAssociatedPartsError(
+            "The complete associated-parts list could not be verified. Print All is disabled until the list reloads successfully."
+          );
         }
-      } else {
-        console.error("Machine not found");
-        setError("Machine not found");
+      } finally {
+        if (!cancelled) setAssociatedPartsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching machine data:", error);
-      setError("Error fetching machine data");
-    }
-  };
-
-  const fetchAssociatedParts = async (associatedPartsRefs) => {
-    try {
-      const db = firebase.firestore();
-      const partsDocs = await Promise.all(
-        associatedPartsRefs.map((ref) => ref.get())
-      );
-
-      const partsData = await Promise.all(
-        partsDocs.map(async (doc) => {
-          if (!doc.exists) {
-            // skip or return an empty object
-            return null;
-          }
-          const data = doc.data() || {};
-          if (!partBelongsToMachine(data, activeMachineId)) return null;
-          let clientName = "";
-          if (data.clientName) {
-            clientName = data.clientName;
-          } else if (data.ClientFrom?.get) {
-            const clientDoc = await data.ClientFrom.get();
-            clientName = clientDoc.exists ? clientDoc.data().name : "";
-          } else if (typeof data.clientFromId === "string") {
-            const clientDoc = await db
-              .collection("Client")
-              .doc(data.clientFromId)
-              .get();
-            clientName = clientDoc.exists ? clientDoc.data().name : "";
-          } else if (typeof data.client === "string") {
-            clientName = data.client;
-          } else if (data.client?.get) {
-            const clientDoc = await data.client.get();
-            clientName = clientDoc.exists ? clientDoc.data().name : "";
-          }
-          return { id: doc.id, ...data, clientName };
-        })
-      );
-
-      setAssociatedParts(partsData.filter((p) => p));
-      setError(null);
-      console.log("Associated parts data:", partsData);
-    } catch (error) {
-      console.error("Error fetching associated parts:", error);
-      setError("Error fetching associated parts");
-    }
-  };
-
-  const handlePrintMulti = async () => {
-    setIsPrinting(true);
-    const db = firebase.firestore();
-    const resolvedItems = await Promise.all(
-      associatedPartsForView.map((part) => resolvePartForPrint(db, part))
-    );
-    const payload = {
-      items: resolvedItems.filter(Boolean),
-      test_print: true, // Hard-coded here if you want to test printing one item
-      index: 1, // Hard-coded index (1-based)
     };
 
+    loadAssociatedParts();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMachineId]);
+
+  const handlePrintMulti = async (role) => {
+    if (associatedPartsError) {
+      setPrintError(
+        "Print All is unavailable because the complete associated-parts list could not be verified."
+      );
+      return;
+    }
+    const parts = associatedPartsByRole[role] || [];
+    setIsPrinting(role);
+    setPrintError("");
     try {
+      const db = firebase.firestore();
+      const resolvedItems = await Promise.all(
+        parts.map((part) =>
+          resolveAssociatedPartForPrint(db, part, { role })
+        )
+      );
+      const payload = {
+        items: resolvedItems.filter(Boolean),
+        test_print: true,
+        index: 1,
+      };
+
       if (!payload.items.length) {
         throw new Error("No items available to print.");
       }
@@ -484,9 +238,9 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       setShowPrintSuccess(true);
     } catch (error) {
       console.error("Error printing multiple labels:", error);
-      setError(error?.message || "Error printing multiple labels");
+      setPrintError(error?.message || "Error printing multiple labels");
     } finally {
-      setIsPrinting(false);
+      setIsPrinting("");
     }
   };
 
@@ -598,14 +352,14 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
       setDragOverIndex(null);
       return;
     }
-    setAssociatedParts((prev) => {
-      const next = [...prev];
+    setAssociatedPartsByRole((prev) => {
+      const next = [...(prev[associatedPartsGroup] || [])];
       const fromIndex = next.findIndex((part) => part.id === dragIndex);
       const toIndex = next.findIndex((part) => part.id === partId);
       if (fromIndex < 0 || toIndex < 0) return prev;
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
-      return next;
+      return { ...prev, [associatedPartsGroup]: next };
     });
     setDragIndex(null);
     setDragOverIndex(null);
@@ -710,7 +464,7 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                 </Button>
               )}
               <div className={styles.cardMeta}>
-                {associatedPartsForView.length} of {associatedParts.length} parts
+                {associatedPartsForView.length} of {associatedPartTotal} parts
               </div>
             </div>
           </div>
@@ -855,6 +609,11 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                       </button>
                     </div>
                   </div>
+                  {associatedPartsError && (
+                    <Alert variant="danger" className={styles.printAlert}>
+                      {associatedPartsError}
+                    </Alert>
+                  )}
                   <div className={styles.tableWrap}>
                     <Table
                       striped
@@ -874,13 +633,32 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                         </tr>
                       </thead>
                       <tbody>
-                        {associatedPartsForView.length === 0 && (
+                        {associatedPartsLoading &&
+                          associatedPartsForView.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className={styles.emptyState}>
+                                Loading associated parts...
+                              </td>
+                            </tr>
+                          )}
+                        {!associatedPartsLoading &&
+                          associatedPartsError &&
+                          associatedPartsForView.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className={styles.emptyState}>
+                                {associatedPartsError}
+                              </td>
+                            </tr>
+                          )}
+                        {!associatedPartsLoading &&
+                          !associatedPartsError &&
+                          associatedPartsForView.length === 0 && (
                           <tr>
                             <td colSpan={6} className={styles.emptyState}>
                               No associated parts found.
                             </td>
                           </tr>
-                        )}
+                          )}
                         {associatedPartsForView.map((part) => (
                           <tr
                             key={part.id}
@@ -918,14 +696,41 @@ const Machine = ({ initialMachine, initialAssociatedParts, error: initialError }
                       </tbody>
                     </Table>
                   </div>
+                  {printError && (
+                    <Alert variant="danger" className={styles.printAlert}>
+                      {printError}
+                    </Alert>
+                  )}
                   <div className={styles.tableActions}>
                     <Button
                       variant="secondary"
                       className={styles.actionButton}
-                      onClick={handlePrintMulti}
-                      disabled={!associatedPartsForView.length}
+                      onClick={() => handlePrintMulti("from")}
+                      disabled={
+                        Boolean(isPrinting) ||
+                        associatedPartsLoading ||
+                        Boolean(associatedPartsError) ||
+                        !associatedPartCounts.from
+                      }
                     >
-                      Print Shown Items
+                      {isPrinting === "from"
+                        ? "Printing From..."
+                        : `Print All From (${associatedPartCounts.from})`}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className={styles.actionButton}
+                      onClick={() => handlePrintMulti("current")}
+                      disabled={
+                        Boolean(isPrinting) ||
+                        associatedPartsLoading ||
+                        Boolean(associatedPartsError) ||
+                        !associatedPartCounts.current
+                      }
+                    >
+                      {isPrinting === "current"
+                        ? "Printing Current..."
+                        : `Print All Current (${associatedPartCounts.current})`}
                     </Button>
                   </div>
                 </div>
@@ -974,10 +779,10 @@ export async function getServerSideProps(context) {
       try {
         const partsPromises = machineData.associatedParts
           .map((partRef) => {
-            if (partRef.path) {
-              return adminDb.doc(partRef.path).get();
-            }
-            return null;
+            const partId = getRefId(partRef);
+            return partId
+              ? adminDb.collection("Test").doc(partId).get()
+              : null;
           })
           .filter(Boolean);
 
@@ -995,7 +800,6 @@ export async function getServerSideProps(context) {
               return null;
             }
             const data = doc.data() || {};
-            if (!partBelongsToMachine(data, id)) return null;
             let clientName = "";
 
             // Fetch client name if ClientFrom reference exists
@@ -1015,16 +819,29 @@ export async function getServerSideProps(context) {
               sn: toDisplayValue(data.sn),
               date: data.date || data.arrival_date || "",
               clientName,
-              machineFromId: getRefId(data.MachineFrom || data.Machine),
+              machineFromId: getRefId(
+                firstEntityRoleValue(data, "machine", "from")
+              ),
               machineCurrentId: getRefId(
-                data.MachineCurrent || data.CurrentMachine
+                firstEntityRoleValue(data, "machine", "current")
               ),
             };
           })
         );
 
-        // Filter out null values
-        associatedParts = associatedParts.filter((part) => part !== null);
+        const groupedParts = groupAssociatedParts(
+          associatedParts.filter(Boolean),
+          "machine",
+          id
+        );
+        associatedParts = Array.from(
+          new Map(
+            [...groupedParts.from, ...groupedParts.current].map((part) => [
+              part.id,
+              part,
+            ])
+          ).values()
+        );
       } catch (error) {
         console.error("Error fetching associated parts:", error);
       }
@@ -1039,6 +856,9 @@ export async function getServerSideProps(context) {
       Modality: machineData.Modality || "",
       lastPM: machineData.lastPM || null,
       nextPM: machineData.nextPM || null,
+      associatedParts: Array.isArray(machineData.associatedParts)
+        ? machineData.associatedParts.map(getRefId).filter(Boolean)
+        : [],
       // Add other machine fields as needed, but ensure they're serializable
     };
 

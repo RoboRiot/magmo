@@ -146,6 +146,19 @@ if (report.summary?.reviewRequiredCount !== 0) {
 }
 
 const changes = (report.items || []).filter((item) => item.status === "change");
+const unsafeClientDeletes = changes.flatMap((item) =>
+  (item.patch?.deleteFields || [])
+    .filter((field) => /^client(from|current)?$/i.test(String(field || "")))
+    .map((field) => ({ itemId: item.id, field }))
+);
+if (unsafeClientDeletes.length) {
+  throw new Error(
+    `Refusing legacy plan that deletes client/site snapshots: ${unsafeClientDeletes
+      .slice(0, 10)
+      .map((entry) => `${entry.itemId}:${entry.field}`)
+      .join(", ")}`
+  );
+}
 const checksumPayload = changes.map((item) => ({
   id: item.id,
   beforeFingerprint: item.beforeFingerprint,

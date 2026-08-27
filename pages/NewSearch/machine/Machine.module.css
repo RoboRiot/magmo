@@ -272,11 +272,17 @@
   padding: 14px 18px 18px;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .actionButton {
   border-radius: 12px;
   font-weight: 600;
+}
+
+.printAlert {
+  margin: 14px 18px 0;
 }
 
 .emptyState {
@@ -368,6 +374,8 @@
   }
 
   .tableActions {
+    align-items: stretch;
+    flex-direction: column;
     justify-content: stretch;
   }
 

@@ -194,9 +194,41 @@
 }
 
 .tableHint {
+  display: block;
+  margin-top: 2px;
   font-weight: 600;
   color: #64748b;
   font-size: 0.85rem;
+}
+
+.partToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.partToggleButton {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9px;
+  color: #475569;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.partToggleButton:hover {
+  background: #f1f5f9;
+}
+
+.partToggleActive {
+  color: #ffffff;
+  background: #0f172a;
 }
 
 .tableWrap {
@@ -208,6 +240,8 @@
   padding: 14px 18px 18px;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .printButton {
@@ -310,7 +344,23 @@
   }
 
   .tableActions {
+    align-items: stretch;
+    flex-direction: column;
     justify-content: stretch;
+  }
+
+  .tableHeader {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .partToggle {
+    width: 100%;
+  }
+
+  .partToggleButton {
+    flex: 1;
   }
 
   .printButton {
