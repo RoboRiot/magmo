@@ -74,6 +74,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Scanner sessions are short-lived server-side staging records. They can
+    // contain callback-token hashes and unconfirmed scans, so browser clients
+    // must use the authenticated API instead of reading or changing them
+    // directly. Firebase Admin callers bypass these rules.
+    match /StorageUnitScanSessions/{document=**} {
+      allow read, write: if false;
+    }
+    match /StorageUnitScanControls/{document=**} {
+      allow read, write: if false;
+    }
+
     // Service-request approvals and lifecycle changes are written only through
     // the authenticated Ops/AIS APIs. Admin SDK callers bypass these rules;
     // browser clients must not be able to forge an overseer approval or status.
@@ -91,9 +102,13 @@ service cloud.firestore {
     }
 
     match /{collection}/{document=**} {
-      allow read: if approvedUser();
+      allow read: if approvedUser()
+        && collection != "StorageUnitScanSessions"
+        && collection != "StorageUnitScanControls";
       allow create, update, delete: if internalUser()
-        && collection != "ServiceRequests";
+        && collection != "ServiceRequests"
+        && collection != "StorageUnitScanSessions"
+        && collection != "StorageUnitScanControls";
     }
   }
 }

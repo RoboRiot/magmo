@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import LoggedIn from "../../../LoggedIn";
 import firebase from "../../../../context/Firebase";
+import StorageUnitScanInModal from "../../../../components/StorageUnitScanInModal";
 import WarehouseMapModal from "../../../../components/WarehouseMapModal";
 import storageUnitDetail from "../../../../lib/inventory/storageUnitDetail.cjs";
 import styles from "../../../../styles/StorageUnitDetail.module.css";
@@ -202,6 +203,8 @@ export default function StorageUnitDetailPage() {
   const [labelPreview, setLabelPreview] = useState(null);
   const [labelPreviewError, setLabelPreviewError] = useState("");
   const [labelPreviewLoading, setLabelPreviewLoading] = useState(false);
+  const [showScanIn, setShowScanIn] = useState(false);
+  const [contentRevision, setContentRevision] = useState(0);
   const [showMap, setShowMap] = useState(false);
   const [mapSelection, setMapSelection] = useState(null);
 
@@ -314,7 +317,7 @@ export default function StorageUnitDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [router.isReady, unitId, unitType]);
+  }, [contentRevision, router.isReady, unitId, unitType]);
 
   const locationSummary = useMemo(
     () => getStorageLocationSummary(unit || {}, items),
@@ -576,6 +579,13 @@ export default function StorageUnitDetailPage() {
               </p>
             </div>
             <div className={styles.headerActions}>
+              <Button
+                variant="success"
+                onClick={() => setShowScanIn(true)}
+                disabled={!unit}
+              >
+                Scan In
+              </Button>
               <Button
                 variant="outline-primary"
                 onClick={previewLabel}
@@ -969,6 +979,17 @@ export default function StorageUnitDetailPage() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <StorageUnitScanInModal
+        show={showScanIn}
+        unitId={unitId}
+        unitType={unitType}
+        onHide={() => setShowScanIn(false)}
+        onConfirmed={() => {
+          setShowScanIn(false);
+          setContentRevision((value) => value + 1);
+        }}
+      />
 
       <WarehouseMapModal
         show={showMap}

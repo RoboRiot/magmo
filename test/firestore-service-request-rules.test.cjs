@@ -15,6 +15,6 @@ test("browser clients cannot forge service-request approvals or lifecycle state"
   );
   assert.match(
     rules,
-    /match \/\{collection\}\/\{document=\*\*\}\s*\{[\s\S]*?collection != "ServiceRequests";/
+    /match \/\{collection\}\/\{document=\*\*\}\s*\{[\s\S]*?collection != "ServiceRequests"[\s\S]*?;/
   );
 });

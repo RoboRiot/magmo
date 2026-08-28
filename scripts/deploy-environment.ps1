@@ -83,6 +83,14 @@ $keysToSync = @(
   "FIREBASE_DATABASE_URL",
   "OPENAI_SERVICE_REPORT_MODEL",
   "GOOGLE_MAPS_ROUTES_API_KEY",
+  "NGROK_BASE_URL",
+  "STORAGE_SCAN_START_URL",
+  "STORAGE_SCAN_STOP_URL",
+  "STORAGE_SCAN_LOCAL_BASE_URL",
+  "STORAGE_SCAN_CALLBACK_BASE_URL",
+  "STORAGE_SCAN_SESSION_TTL_SECONDS",
+  "STORAGE_SCAN_BRIDGE_TOKEN",
+  "STORAGE_SCAN_ENABLED",
   "OPS_INGEST_SECRET",
   "OPS_ENVIRONMENT",
   "OPS_INGEST_MODE",
@@ -135,6 +143,7 @@ $testIsolatedKeys = @(
   $keysToSync |
     Where-Object {
       $_ -like "SLACK_*" -or
+      $_ -like "STORAGE_SCAN_*" -or
       $_ -eq "OPS_INGEST_SECRET" -or
       $_ -eq "OPS_TESTING_CHANNEL_ID" -or
       $_ -eq "OPS_DISPATCH_CHANNEL_ID" -or
@@ -253,6 +262,22 @@ $effectiveEnv["OPS_ENVIRONMENT"] = if ($isTest) { "staging" } else { "production
 $effectiveEnv["OPS_INGEST_MODE"] = if ($isTest) { "read_only" } else { "read_write" }
 $effectiveEnv["OPS_INGEST_WRITE_ENABLED"] = if ($isTest) { "false" } else { "true" }
 $effectiveEnv["OPS_DEPLOY_VERSION"] = "local-" + (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+$effectiveEnv["STORAGE_SCAN_ENABLED"] = if ($isTest) {
+  if ($testEnv.ContainsKey("STORAGE_SCAN_ENABLED")) {
+    ConvertFrom-EnvValue -Value $testEnv["STORAGE_SCAN_ENABLED"]
+  } else {
+    "false"
+  }
+} else {
+  "true"
+}
+if (-not $effectiveEnv.ContainsKey("STORAGE_SCAN_CALLBACK_BASE_URL")) {
+  $effectiveEnv["STORAGE_SCAN_CALLBACK_BASE_URL"] = if ($isTest) {
+    "https://magmo-test.web.app"
+  } else {
+    "https://magmo.cloud"
+  }
+}
 
 Push-Location $repoRoot
 try {
@@ -295,7 +320,7 @@ try {
   $deployOnly = if ($isTest) {
     "functions:$functionName,hosting:$hostingTarget,database"
   } else {
-    "functions:$functionName,functions:trailerSlackMonitorSchedule,hosting:$hostingTarget,database"
+    "functions:$functionName,functions:trailerSlackMonitorSchedule,hosting:$hostingTarget,database,firestore:rules"
   }
   $firebaseArguments = @(
     "deploy",
