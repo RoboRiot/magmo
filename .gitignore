@@ -31,6 +31,11 @@ scripts/__pycache__/
 *.pyc
 tmp-askmagmo-test-logs/
 
+# Local warehouse-scanner deployment copies/backups can contain legacy private
+# configuration and must never be committed.
+outputs/scanner-runtime-staging/
+outputs/scanner-backups/
+
 # Local Windows-agent build mirror. Its installer payload embeds device
 # bootstrap credentials and must not be committed with the web application.
 magmonitor_agent_updates/

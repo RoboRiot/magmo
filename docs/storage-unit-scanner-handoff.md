@@ -242,26 +242,108 @@ event ID for its Firestore document path and transactionally stores it once.
 The per-session bearer is stored only as SHA-256 in Firestore and is verified
 with a timing-safe comparison on every callback.
 
-## Warehouse process requirements
+## Current warehouse-server implementation
 
-The existing `warehouse_scanner.py` is a continuous global keyboard hook that
-opens URLs and has no session API. Do not run it alongside the session-aware
-bridge. The replacement process must be the only owner of the keyboard/scanner
-hook and must:
+The session-aware bridge is implemented. Its canonical, version-controlled
+source is:
 
-1. Start capture only after an authenticated start signal.
-2. Disable arbitrary URL launching while a Scan In session is active.
-3. Enforce the session expiry locally and clear the callback token on stop.
-4. Cap scan length/rate and avoid logging raw codes or callback bodies.
-5. Generate stable, unique event IDs and retry callbacks with the same ID.
-6. Reject a second session while one is active.
-7. Apply stop only when `sessionId` matches the active session.
-8. Run without Firebase Admin credentials or service-account key files.
+- `C:\Users\mack2\Desktop\code\scanner-server`
+- Package: `C:\Users\mack2\Desktop\code\scanner-server\warehouse_scanner`
+- Offline tests: `C:\Users\mack2\Desktop\code\scanner-server\tests`
+- Operator runbook: `C:\Users\mack2\Desktop\code\scanner-server\README.md`
 
-The warehouse bridge is not implemented by the Magmo API routes. The Magmo
-route is enabled in this release so it will work as soon as the session-aware
-warehouse endpoints are installed; until then, the legacy bridge will reject
-the new paths and Magmo will fail safely. Do not expose `/storage-scan/start` or
-`/storage-scan/stop` publicly until their Bearer validation, single-session
-locking, and callback handling are installed. `STORAGE_SCAN_ENABLED=false` is
-the emergency server-side kill switch.
+An operational copy has been installed under:
+
+- `C:\Users\mack2\Desktop\magmo-api\warehouse_scanner`
+- Combined port-5000 process:
+  `C:\Users\mack2\Desktop\magmo-api\print_bluefolder_combo.py`
+
+Before that external installation was changed, the prior scanner files were
+backed up at:
+
+`C:\Users\mack2\Desktop\code\outputs\scanner-backups\2026-08-27_21-05-09-warehouse-scanner`
+
+Treat `scanner-server` as canonical. Make and test future changes there first,
+create a dated backup, and then deliberately synchronize the operational copy.
+Do not develop solely against the unversioned external copy.
+
+The external `warehouse_scanner\scanner.env` has not yet been created. Copying
+the existing private `STORAGE_SCAN_BRIDGE_TOKEN` from Magmo into that separate
+server folder requires explicit credential-transfer authorization; the token
+value is intentionally omitted here. This PC also does not currently expose a
+safely identifiable physical barcode scanner, so no `SCANNER_DEVICE_MATCH` was
+guessed or added. The combined bridge remains unavailable for Scan In until the
+private token is installed and calibration is performed on the actual warehouse
+scanner PC.
+
+The installed implementation provides these safeguards:
+
+1. HID input is accepted only from an exact learned device identity, or from an
+   explicitly configured serial port. Fast human typing is not used as a device
+   identification heuristic.
+2. Authenticated start/stop routes share the one existing port-5000 Flask
+   process. When scanner input is unavailable, authenticated starts fail safely
+   with HTTP 503 rather than silently falling through to a route-level 404.
+3. While a Scan In session is active, physical scans are sent only to the
+   session callback. They never open a browser, including when callback delivery
+   fails and is being retried.
+4. While no Scan In session is active, physical scanner input may open only
+   canonical Magmo item, bin, or pallet pages. Arbitrary scanned URLs are not
+   opened.
+5. Session expiry, singleton ownership, idempotent event IDs and retries, stale
+   stop rejection, input limits, and in-memory capability scrubbing are enforced
+   locally.
+6. The scanner process uses no Firebase Admin credential or service-account key.
+
+## Required one-time warehouse-PC calibration and restart
+
+Complete these steps on the Windows PC that is physically connected to the
+warehouse scanner. Do not perform calibration on a different PC and do not copy
+a device identity from another keyboard or scanner.
+
+1. Make sure the scanner is connected. Stop any old standalone
+   `warehouse_scanner.py` global-hook process. The legacy listener must never run
+   in parallel with the combined server.
+2. Open PowerShell in the installed server directory:
+
+   ```powershell
+   cd C:\Users\mack2\Desktop\magmo-api
+   ```
+
+3. Choose a physical barcode or QR label whose exact decoded value is known,
+   then start local-only learning:
+
+   ```powershell
+   py -3.14 -m warehouse_scanner.warehouse_scanner --learn-device
+   ```
+
+   Enter the known label value at the prompt and scan that same label twice with
+   the warehouse scanner. Learning does not open Magmo or send network traffic.
+   It rejects a single sample, mismatched values, and the same expected value
+   arriving from different input devices.
+4. Copy only the emitted `SCANNER_DEVICE_MATCH=...` line into this private file:
+
+   `C:\Users\mack2\Desktop\magmo-api\warehouse_scanner\scanner.env`
+
+   Keep the private bridge-token line intact once it has been installed. Do not
+   paste either line into documentation, chat, source control, screenshots, or
+   service logs. Do not add both a HID match and `SCANNER_SERIAL_PORT`.
+5. Restart the one combined `print_bluefolder_combo.py` process so it loads the
+   calibrated device, and restart the fixed-domain ngrok tunnel to that same
+   port-5000 process. Stop ngrok before stopping the app; start the app and
+   confirm local readiness before starting ngrok again. Do not launch the old
+   standalone global keyboard listener afterward.
+6. Verify that fast typing on the ordinary keyboard opens nothing. Verify one
+   idle scanner read opens exactly one canonical Magmo page. Then open a bin or
+   pallet Scan In modal and verify that scanner reads appear only in its staged
+   list and do not open browser windows. Cancel the first controlled test before
+   performing a separate known-item confirmation test.
+
+The public scanner endpoint remains operationally **unverified** until the
+actual warehouse PC has completed exact-device learning, saved the emitted
+match, restarted the combined process and ngrok, and passed the controlled tests
+above. The code and local installation are present, but that does not by itself
+prove the physical scanner-to-public-callback path. Until verification is
+complete, Magmo must continue to treat scanner-unavailable/bridge failures as a
+safe failure and make no inventory change. `STORAGE_SCAN_ENABLED=false` remains
+the emergency Magmo-side kill switch.
