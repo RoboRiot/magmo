@@ -93,6 +93,10 @@ const {
   trailerName,
   trailersForClient,
 } = require("../../../../lib/ops/trailerClientLinks.cjs");
+const {
+  buildStorageUnitRoute,
+  isReservedStorageUnitId,
+} = require("../../../../lib/inventory/storageUnitContract.cjs");
 const { firstEntityRoleValue } = associatedPartRoles;
 
 const LEGACY_TRAILER_CLIENT_ID = "AIS62854";
@@ -3165,6 +3169,14 @@ const handleSendToInflow = async () => {
       setShowErr(true);
     };
 
+    const assertRegularItemId = (localSn) => {
+      if (isReservedStorageUnitId(localSn)) {
+        throw new Error(
+          `${String(localSn).trim().toUpperCase()} is reserved for a bin or pallet label. Open Inventory Management to create or view that storage unit.`
+        );
+      }
+    };
+
     const itemAisExists = async (localSn, ignoreDocId = "") => {
       const existingItem = await findExistingItemByAis(db, localSn, {
         ignoreDocId,
@@ -3195,6 +3207,7 @@ const handleSendToInflow = async () => {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : docId;
+        assertRegularItemId(newDocId);
         const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
           if (await itemAisExists(newDocId, docId)) {
@@ -3289,6 +3302,7 @@ const handleSendToInflow = async () => {
         const requestedDocId =
           items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
         docId = requestedDocId || (await generateAvailableDocId());
+        assertRegularItemId(docId);
         if (requestedDocId && (await itemAisExists(docId))) {
           showDuplicateLocalSnError(docId);
           return;
@@ -5922,6 +5936,15 @@ export default function DisplayItemPage(props) {
 // Server-side rendering function
 export async function getServerSideProps(context) {
   const { id } = context.params;
+  const storageUnitRoute = buildStorageUnitRoute(id);
+  if (storageUnitRoute) {
+    return {
+      redirect: {
+        destination: storageUnitRoute,
+        permanent: false,
+      },
+    };
+  }
 
   try {
     if (!adminDb) {

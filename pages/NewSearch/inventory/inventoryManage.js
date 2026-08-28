@@ -21,6 +21,10 @@ import {
 } from "../../../utils/warehouseAssociations";
 import styles from "../../../styles/InventoryManage.module.css";
 
+const {
+  parseStorageUnitId,
+} = require("../../../lib/inventory/storageUnitContract.cjs");
+
 const KEEP_VALUE = "__KEEP__";
 const CLEAR_VALUE = "__CLEAR__";
 const PAGE_SIZE = 25;
@@ -216,6 +220,82 @@ function normalizeInventoryItem(rawItem = {}) {
         rawItem.currentMachineId
     ),
   };
+}
+
+function normalizeStorageUnitDocument(document) {
+  const data = document.data() || {};
+  const documentId = String(document.id || "").trim();
+  const parsedUnit = parseStorageUnitId(documentId);
+  if (!parsedUnit || documentId !== parsedUnit.id) return null;
+
+  const { id: code, type: kind, number: parsedNumber } = parsedUnit;
+  const storedCode = String(data.code || "").trim();
+  const storedCodeUnit = storedCode ? parseStorageUnitId(storedCode) : null;
+  const storedNumber = Number(data.number);
+  const metadataMismatch =
+    (storedCode && storedCodeUnit?.id !== code) ||
+    (data.kind && data.kind !== kind) ||
+    (data.number !== undefined &&
+      data.number !== null &&
+      (!Number.isSafeInteger(storedNumber) || storedNumber !== parsedNumber));
+  const rawLocation = data.warehouseLocation || data.location || {};
+  const location = normalizeLocation(rawLocation);
+  const locationCandidates = Array.isArray(data.locationCandidates)
+    ? data.locationCandidates
+    : [];
+
+  return {
+    id: document.id,
+    code,
+    kind,
+    number: parsedNumber,
+    displayNumber: String(parsedNumber),
+    name: data.name || `${kind === "bin" ? "Bin" : "Pallet"} ${parsedNumber}`,
+    active: data.active !== false,
+    region: location.region,
+    sectionLetter: location.sectionLetter,
+    sectionNumber: location.sectionNumber,
+    locationStatus: String(data.locationStatus || "unknown").toLowerCase(),
+    locationCandidates,
+    parentPalletId: String(data.parentPalletId || "").trim().toUpperCase(),
+    parentStatus: String(data.parentStatus || "none").toLowerCase(),
+    reviewRequired:
+      metadataMismatch ||
+      data.reviewRequired === true ||
+      String(data.locationStatus || "").toLowerCase() === "review_required" ||
+      String(data.parentStatus || "").toLowerCase() === "review_required",
+  };
+}
+
+function storageUnitLocationLabel(unit) {
+  if (unit.region && unit.sectionLetter && unit.sectionNumber) {
+    return `${unit.region} - ${unit.sectionLetter}${unit.sectionNumber}`;
+  }
+  if (unit.reviewRequired && unit.locationCandidates.length > 0) {
+    return `${unit.locationCandidates.length} locations need review`;
+  }
+  return "Unknown";
+}
+
+function storageUnitMatchesSearch(unit, searchValue) {
+  const search = String(searchValue || "").trim().toLowerCase();
+  if (!search) return true;
+  const compactSearch = search.replace(/[\s_-]+/g, "");
+  const location = storageUnitLocationLabel(unit);
+  const values = [
+    unit.code,
+    unit.displayNumber,
+    unit.name,
+    unit.kind,
+    `${unit.kind} ${unit.displayNumber}`,
+    location,
+    unit.parentPalletId,
+  ].map((value) => String(value || "").toLowerCase());
+  return values.some(
+    (value) =>
+      value.includes(search) ||
+      value.replace(/[\s_-]+/g, "").includes(compactSearch)
+  );
 }
 
 function locationValueMatches(item, value, scope, currentField, fromField) {
@@ -622,6 +702,11 @@ function SearchableExteriorPicker({
 export default function InventoryManage() {
   const router = useRouter();
 
+  const [viewMode, setViewMode] = useState("items");
+  const [storageUnits, setStorageUnits] = useState([]);
+  const [storageUnitsLoading, setStorageUnitsLoading] = useState(true);
+  const [storageUnitError, setStorageUnitError] = useState("");
+  const [storageSearch, setStorageSearch] = useState("");
   const [items, setItems] = useState([]);
   const [itemsFullyLoaded, setItemsFullyLoaded] = useState(false);
   const [loadingMoreItems, setLoadingMoreItems] = useState(false);
@@ -758,8 +843,43 @@ export default function InventoryManage() {
       }
     };
 
+    const loadStorageUnits = async () => {
+      setStorageUnitsLoading(true);
+      try {
+        const storageSnapshot = await timedFirestoreGet(
+          "storage units",
+          db.collection("StorageUnits").get(),
+          AUXILIARY_LOAD_TIMEOUT_MS,
+          startedAt
+        );
+        if (cancelled) return;
+        const units = storageSnapshot.docs
+          .map(normalizeStorageUnitDocument)
+          .filter(
+            (unit) =>
+              unit &&
+              unit.number > 0 &&
+              (unit.kind === "bin" || unit.kind === "pallet")
+          )
+          .sort((left, right) => naturalCollator.compare(left.code, right.code));
+        setStorageUnits(units);
+        setStorageUnitError("");
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("Storage units could not be loaded", error);
+          setStorageUnits([]);
+          setStorageUnitError(
+            error?.message || "Bins and pallets could not be loaded."
+          );
+        }
+      } finally {
+        if (!cancelled) setStorageUnitsLoading(false);
+      }
+    };
+
     loadDirectory();
     loadGroups();
+    loadStorageUnits();
 
     return () => {
       cancelled = true;
@@ -933,6 +1053,12 @@ export default function InventoryManage() {
       const value = getParam(key);
       return value === "current" || value === "from" ? value : "both";
     };
+    const requestedView = String(getParam("view") || "items").toLowerCase();
+    setViewMode(
+      ["items", "bins", "pallets"].includes(requestedView)
+        ? requestedView
+        : "items"
+    );
 
     setFilters((current) => {
       const next = {
@@ -950,6 +1076,16 @@ export default function InventoryManage() {
       return inventoryFiltersEqual(current, next) ? current : next;
     });
   }, [router.isReady, router.query]);
+
+  const visibleStorageUnits = useMemo(
+    () =>
+      storageUnits.filter(
+        (unit) =>
+          (viewMode === "bins" ? unit.kind === "bin" : unit.kind === "pallet") &&
+          storageUnitMatchesSearch(unit, storageSearch)
+      ),
+    [storageSearch, storageUnits, viewMode]
+  );
 
   const regionOptions = useMemo(
     () =>
@@ -2040,6 +2176,18 @@ export default function InventoryManage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [photoViewerItem]);
 
+  const changeInventoryView = (nextView) => {
+    if (!["items", "bins", "pallets"].includes(nextView)) return;
+    setViewMode(nextView);
+    setStorageSearch("");
+  };
+
+  const openStorageUnit = (code) => {
+    router.push(
+      `/NewSearch/inventory/storage/${encodeURIComponent(String(code || ""))}`
+    );
+  };
+
   const clearFilters = () => {
     setFilters({
       region: "",
@@ -2085,8 +2233,8 @@ export default function InventoryManage() {
               <div className={styles.eyebrow}>Warehouse tools</div>
               <h1 className={styles.title}>Inventory Management</h1>
               <p className={styles.subtitle}>
-                Review warehouse placement, open item records, and update
-                selected locations.
+                Search items, bins, and pallets without losing historical
+                container or warehouse-location data.
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -2099,7 +2247,37 @@ export default function InventoryManage() {
             </div>
           </header>
 
-          {saveError && !showLocationModal && (
+          <nav className={styles.inventoryTabs} aria-label="Inventory type">
+            {[
+              ["items", "Items"],
+              ["bins", "Bins"],
+              ["pallets", "Pallets"],
+            ].map(([value, label]) => (
+              <button
+                type="button"
+                key={value}
+                className={`${styles.inventoryTab} ${
+                  viewMode === value ? styles.inventoryTabActive : ""
+                }`}
+                onClick={() => changeInventoryView(value)}
+                aria-current={viewMode === value ? "page" : undefined}
+              >
+                <span>{label}</span>
+                {value !== "items" && (
+                  <strong>
+                    {
+                      storageUnits.filter(
+                        (unit) =>
+                          unit.kind === (value === "bins" ? "bin" : "pallet")
+                      ).length
+                    }
+                  </strong>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          {viewMode === "items" && saveError && !showLocationModal && (
             <Alert variant="danger">
               <div className={styles.alertRow}>
                 <span>{saveError}</span>
@@ -2113,18 +2291,36 @@ export default function InventoryManage() {
               </div>
             </Alert>
           )}
-          {groupLoadError && (
+          {viewMode === "items" && groupLoadError && (
             <Alert variant="warning">{groupLoadError}</Alert>
           )}
-          {loadingMoreItems && (
+          {viewMode === "items" && loadingMoreItems && (
             <Alert variant="info">{loadingStatus}</Alert>
           )}
-          {!itemsFullyLoaded && !loadingMoreItems && items.length > 0 && (
+          {viewMode === "items" &&
+            !itemsFullyLoaded &&
+            !loadingMoreItems &&
+            items.length > 0 && (
             <Alert variant="warning">
               Inventory is only partially loaded. {loadingStatus}
             </Alert>
           )}
+          {viewMode !== "items" && storageUnitError && (
+            <Alert variant="danger">
+              <div className={styles.alertRow}>
+                <span>{storageUnitError}</span>
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => setLoadAttempt((current) => current + 1)}
+                >
+                  Retry Load
+                </Button>
+              </div>
+            </Alert>
+          )}
 
+          <div className={viewMode === "items" ? "" : "d-none"}>
           <section className={styles.filterCard}>
             <div className={styles.sectionHeading}>
               <div>
@@ -2546,6 +2742,152 @@ export default function InventoryManage() {
               </Button>
             </div>
           </section>
+          </div>
+
+          {viewMode !== "items" && (
+            <>
+              <section className={styles.filterCard}>
+                <div className={styles.sectionHeading}>
+                  <div>
+                    <h2>
+                      Search {viewMode === "bins" ? "bins" : "pallets"}
+                    </h2>
+                    <p>
+                      Search by number, canonical ID, warehouse position, or
+                      parent pallet.
+                    </p>
+                  </div>
+                  <Button variant="link" onClick={() => setStorageSearch("")}>
+                    Clear search
+                  </Button>
+                </div>
+                <Form.Group className={styles.storageSearch}>
+                  <Form.Label>
+                    {viewMode === "bins" ? "Bin" : "Pallet"} search
+                  </Form.Label>
+                  <Form.Control
+                    type="search"
+                    value={storageSearch}
+                    placeholder={
+                      viewMode === "bins"
+                        ? "Try 47, B47, or bin 47"
+                        : "Try 65, P65, or pallet 65"
+                    }
+                    onChange={(event) => setStorageSearch(event.target.value)}
+                    autoComplete="off"
+                  />
+                </Form.Group>
+              </section>
+
+              <section className={styles.inventoryCard}>
+                <div className={styles.inventoryToolbar}>
+                  <div>
+                    <h2>{viewMode === "bins" ? "Bins" : "Pallets"}</h2>
+                    <p>
+                      {storageUnitsLoading
+                        ? "Loading storage records..."
+                        : `${visibleStorageUnits.length} ${
+                            viewMode === "bins" ? "bin" : "pallet"
+                          }${visibleStorageUnits.length === 1 ? "" : "s"}`}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => setLoadAttempt((current) => current + 1)}
+                    disabled={storageUnitsLoading}
+                  >
+                    Reload
+                  </Button>
+                </div>
+
+                <div className={styles.tableWrap}>
+                  <Table bordered hover responsive className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Warehouse Position</th>
+                        {viewMode === "bins" && <th>Parent Pallet</th>}
+                        <th>Status</th>
+                        <th aria-label="Open"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleStorageUnits.map((unit) => (
+                        <tr
+                          key={unit.code}
+                          className={styles.clickableRow}
+                          onClick={() => openStorageUnit(unit.code)}
+                        >
+                          <td>
+                            <strong className={styles.storageUnitCode}>
+                              {unit.code}
+                            </strong>
+                          </td>
+                          <td>{unit.kind === "bin" ? "Bin" : "Pallet"}</td>
+                          <td>{storageUnitLocationLabel(unit)}</td>
+                          {viewMode === "bins" && (
+                            <td>{unit.parentPalletId || "-"}</td>
+                          )}
+                          <td>
+                            <span
+                              className={`${styles.storageStatus} ${
+                                unit.reviewRequired
+                                  ? styles.storageStatusReview
+                                  : unit.locationStatus === "confirmed"
+                                  ? styles.storageStatusConfirmed
+                                  : styles.storageStatusUnknown
+                              }`}
+                            >
+                              {unit.reviewRequired
+                                ? "Review needed"
+                                : unit.locationStatus === "confirmed"
+                                ? "Mapped"
+                                : "Location unknown"}
+                            </span>
+                          </td>
+                          <td>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openStorageUnit(unit.code);
+                              }}
+                            >
+                              Open
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!storageUnitsLoading && visibleStorageUnits.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={viewMode === "bins" ? 6 : 5}
+                            className={styles.emptyState}
+                          >
+                            No {viewMode === "bins" ? "bins" : "pallets"}
+                            match this search.
+                          </td>
+                        </tr>
+                      )}
+                      {storageUnitsLoading && (
+                        <tr>
+                          <td
+                            colSpan={viewMode === "bins" ? 6 : 5}
+                            className={styles.emptyState}
+                          >
+                            <Spinner animation="border" size="sm" /> Loading...
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+                </div>
+              </section>
+            </>
+          )}
         </Container>
       </div>
 

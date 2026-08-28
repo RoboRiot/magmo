@@ -87,6 +87,9 @@ const {
   trailerName,
   trailersForClient,
 } = require("../../../lib/ops/trailerClientLinks.cjs");
+const {
+  isReservedStorageUnitId,
+} = require("../../../lib/inventory/storageUnitContract.cjs");
 const { firstEntityRoleValue } = associatedPartRoles;
 
 const LEGACY_TRAILER_CLIENT_ID = "AIS62854";
@@ -2461,6 +2464,14 @@ export default function NewItem() {
     const duplicateAisMessage = (localSn) =>
       `There is already an item with AIS "${localSn}". Please use a different AIS.`;
 
+    const assertRegularItemId = (localSn) => {
+      if (isReservedStorageUnitId(localSn)) {
+        throw new Error(
+          `${String(localSn).trim().toUpperCase()} is reserved for a bin or pallet label. Open Inventory Management to create or view that storage unit.`
+        );
+      }
+    };
+
     const itemAisExists = async (localSn, ignoreDocId = "") => {
       const existingItem = await findExistingItemByAis(db, localSn, {
         ignoreDocId,
@@ -2486,6 +2497,7 @@ export default function NewItem() {
           items.localSN && items.localSN.trim() !== ""
             ? items.localSN.trim()
             : docId;
+        assertRegularItemId(newDocId);
         const payloadWithLocalSn = withLocalSn(formattedItems, newDocId);
         if (docId !== newDocId) {
           if (await itemAisExists(newDocId, docId)) {
@@ -2575,6 +2587,7 @@ export default function NewItem() {
         const requestedDocId =
           items.localSN && items.localSN.trim() !== "" ? items.localSN.trim() : "";
         docId = requestedDocId || (await generateAvailableDocId());
+        assertRegularItemId(docId);
         if (requestedDocId && (await itemAisExists(docId))) {
           throw new Error(duplicateAisMessage(docId));
         }

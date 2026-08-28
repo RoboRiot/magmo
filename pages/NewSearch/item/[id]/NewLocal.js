@@ -1,6 +1,6 @@
 // NewLocal.js
 import React, { useState, useEffect } from "react";
-import { Form, Row, Col, Button, Stack, Modal } from "react-bootstrap";
+import { Alert, Form, Row, Col, Button, Stack, Modal } from "react-bootstrap";
 import { useRouter } from "next/router";
 import firebase from "../../../../context/Firebase";
 import WarehouseMapModal from "../../../../components/WarehouseMapModal";
@@ -30,6 +30,8 @@ export default function NewLocal({
   const [binSelected, setBinSelected]     = useState("");
   const [palletSelected, setPalletSelected] = useState("");
   const [showMap, setShowMap] = useState(false);
+  const [creatingUnit, setCreatingUnit] = useState("");
+  const [containerError, setContainerError] = useState("");
   const showWarehouseFields = mode !== "container";
   const showContainerFields = mode !== "warehouse";
   const clientSelected = Boolean(selectedClient?.id);
@@ -76,25 +78,109 @@ export default function NewLocal({
     setSectionNumber("");
   };
 
-  // bump and persist bin count
-  const handleAddBin = async () => {
-    const next = binCount + 1;
-    await firebase.firestore()
-      .collection("Warehouse").doc("directory")
-      .update({ Bin: next });
-    setBinCount(next);
-    setBinSelected(next.toString());
+  const createStorageUnit = async (kind) => {
+    const isBin = kind === "bin";
+    const counterField = isBin ? "Bin" : "Pallet";
+    const prefix = isBin ? "B" : "P";
+    const db = firebase.firestore();
+    const directoryRef = db.collection("Warehouse").doc("directory");
+    let createdNumber = 0;
+
+    setCreatingUnit(kind);
+    setContainerError("");
+    try {
+      await db.runTransaction(async (transaction) => {
+        const directorySnapshot = await transaction.get(directoryRef);
+        if (!directorySnapshot.exists) {
+          throw new Error("The warehouse directory does not exist.");
+        }
+        const currentCount = Number(directorySnapshot.data()?.[counterField]);
+        if (!Number.isSafeInteger(currentCount) || currentCount < 0) {
+          throw new Error(`${counterField} count is invalid.`);
+        }
+
+        createdNumber = currentCount + 1;
+        const code = `${prefix}${createdNumber}`;
+        const unitRef = db.collection("StorageUnits").doc(code);
+        const unitSnapshot = await transaction.get(unitRef);
+        if (unitSnapshot.exists) {
+          throw new Error(
+            `${code} already exists. Reload the warehouse directory and try again.`
+          );
+        }
+
+        const hasWarehouseLocation = Boolean(
+          region && sectionLetter && sectionNumber
+        );
+        const warehouseLocation = hasWarehouseLocation
+          ? {
+              region,
+              section: {
+                letter: sectionLetter,
+                number: String(sectionNumber),
+              },
+            }
+          : null;
+        const selectedParentNumber = Number(palletSelected);
+        const parentPalletId =
+          isBin &&
+          Number.isSafeInteger(selectedParentNumber) &&
+          selectedParentNumber > 0
+            ? `P${selectedParentNumber}`
+            : null;
+        const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+        transaction.set(
+          directoryRef,
+          { [counterField]: createdNumber },
+          { merge: true }
+        );
+        transaction.set(unitRef, {
+          schemaVersion: 1,
+          code,
+          kind,
+          number: createdNumber,
+          displayNumber: String(createdNumber),
+          name: `${isBin ? "Bin" : "Pallet"} ${createdNumber}`,
+          active: true,
+          warehouseLocation,
+          locationStatus: hasWarehouseLocation ? "confirmed" : "unknown",
+          locationCandidates: warehouseLocation ? [warehouseLocation] : [],
+          parentPalletId,
+          parentStatus: isBin
+            ? parentPalletId
+              ? "confirmed"
+              : "none"
+            : "not_applicable",
+          parentCandidates: parentPalletId ? [parentPalletId] : [],
+          photoStoragePrefix: `StorageUnits/${code}`,
+          reviewRequired: false,
+          reviewReasons: [],
+          createdSource: "warehouse-location-picker",
+          createdAt: serverTimestamp,
+          updatedAt: serverTimestamp,
+        });
+      });
+
+      if (isBin) {
+        setBinCount(createdNumber);
+        setBinSelected(String(createdNumber));
+      } else {
+        setPalletCount(createdNumber);
+        setPalletSelected(String(createdNumber));
+      }
+    } catch (error) {
+      console.error(`Could not create ${kind}`, error);
+      setContainerError(
+        error?.message || `The ${kind} could not be created. Please try again.`
+      );
+    } finally {
+      setCreatingUnit("");
+    }
   };
 
-  // bump and persist pallet count
-  const handleAddPallet = async () => {
-    const next = palletCount + 1;
-    await firebase.firestore()
-      .collection("Warehouse").doc("directory")
-      .update({ Pallet: next });
-    setPalletCount(next);
-    setPalletSelected(next.toString());
-  };
+  const handleAddBin = () => createStorageUnit("bin");
+  const handleAddPallet = () => createStorageUnit("pallet");
 
   // only fire parent when they click OK
   const handleOk = () => {
@@ -148,8 +234,14 @@ export default function NewLocal({
     if (regionValue) params.set("region", regionValue);
     if (letterValue) params.set("sectionLetter", letterValue);
     if (numberValue) params.set("sectionNumber", numberValue);
-    if (palletValue) params.set("pallet", palletValue);
-    if (binValue) params.set("bin", binValue);
+    if (palletValue) {
+      params.set("pallet", palletValue);
+      params.set("palletLocationScope", "current");
+    }
+    if (binValue) {
+      params.set("bin", binValue);
+      params.set("binLocationScope", "current");
+    }
 
     const query = params.toString();
     router.push(
@@ -216,8 +308,12 @@ export default function NewLocal({
                 <option value="">Select bin</option>
                 {binOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </Form.Select>
-              <Button variant="outline-secondary" onClick={handleAddBin} disabled={!clientSelected}>
-                + Bin
+               <Button
+                 variant="outline-secondary"
+                 onClick={handleAddBin}
+                 disabled={!clientSelected || Boolean(creatingUnit)}
+               >
+                 {creatingUnit === "bin" ? "Creating..." : "+ Bin"}
               </Button>
             </Stack>
           </Form.Group>
@@ -234,13 +330,22 @@ export default function NewLocal({
               <option value="">Select pallet</option>
                 {palletOptions.map(p => <option key={p} value={p}>{p}</option>)}
               </Form.Select>
-              <Button variant="outline-secondary" onClick={handleAddPallet} disabled={!clientSelected}>
-                + Pallet
+               <Button
+                 variant="outline-secondary"
+                 onClick={handleAddPallet}
+                 disabled={!clientSelected || Boolean(creatingUnit)}
+               >
+                 {creatingUnit === "pallet" ? "Creating..." : "+ Pallet"}
               </Button>
             </Stack>
           </Form.Group>
         </Col>
       </Row>
+      {showContainerFields && containerError && (
+        <Alert variant="danger" className="mt-3 mb-0">
+          {containerError}
+        </Alert>
+      )}
       {/* OK / Cancel footer */}
       <div className={styles.actionRow}>
         <Button variant="outline-primary" onClick={openMap} className={!showWarehouseFields ? "d-none" : ""}>
@@ -250,7 +355,11 @@ export default function NewLocal({
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={handleOk} disabled={!clientSelected}>
+        <Button
+          variant="primary"
+          onClick={handleOk}
+          disabled={!clientSelected || Boolean(creatingUnit)}
+        >
           OK
         </Button>
       </div>

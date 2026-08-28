@@ -1063,3 +1063,142 @@
   color: #bfdbfe !important;
   background: #1e3a5f !important;
 }
+
+.inventoryTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.inventoryTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 9px 16px;
+  color: #334155;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.inventoryTab:hover {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.inventoryTab strong {
+  min-width: 28px;
+  padding: 2px 7px;
+  color: #475569;
+  font-size: 0.78rem;
+  text-align: center;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.inventoryTabActive {
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.inventoryTabActive:hover {
+  color: #ffffff;
+  background: #1d4ed8;
+}
+
+.inventoryTabActive strong {
+  color: #1e3a8a;
+  background: #dbeafe;
+}
+
+.storageSearch {
+  max-width: 560px;
+}
+
+.storageUnitCode {
+  display: inline-block;
+  min-width: 72px;
+  color: #0f172a;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+}
+
+.storageStatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.storageStatusConfirmed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.storageStatusUnknown {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.storageStatusReview {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+:global(html[data-theme="dark"]) .inventoryTabs {
+  border-color: #29364a;
+  background: #111827;
+}
+
+:global(html[data-theme="dark"]) .inventoryTab {
+  color: #cbd5e1;
+}
+
+:global(html[data-theme="dark"]) .inventoryTab:hover {
+  color: #dbeafe;
+  background: #1e293b;
+}
+
+:global(html[data-theme="dark"]) .inventoryTabActive,
+:global(html[data-theme="dark"]) .inventoryTabActive:hover {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+:global(html[data-theme="dark"]) .storageUnitCode {
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .storageStatusConfirmed {
+  color: #bbf7d0;
+  background: #14532d;
+}
+
+:global(html[data-theme="dark"]) .storageStatusUnknown {
+  color: #cbd5e1;
+  background: #334155;
+}
+
+:global(html[data-theme="dark"]) .storageStatusReview {
+  color: #fed7aa;
+  background: #7c2d12;
+}
+
+@media (max-width: 700px) {
+  .inventoryTabs {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,742 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap");
+
+.page {
+  min-height: 100vh;
+  color: #0f172a;
+  background:
+    radial-gradient(900px circle at 8% -8%, rgba(14, 165, 233, 0.17), transparent 58%),
+    radial-gradient(800px circle at 96% 0%, rgba(20, 184, 166, 0.14), transparent 55%),
+    #f4f7fb;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+.container {
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+
+.loadingPage {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: #475569;
+  background: #f4f7fb;
+  font-weight: 700;
+}
+
+.loadingPage img {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 22px;
+  padding: 22px 24px;
+  overflow: hidden;
+  border: 1px solid #dbe5ef;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.identity {
+  min-width: 0;
+}
+
+.typeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.bigNumber {
+  margin: -4px 0 -12px;
+  color: #0f172a;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(5rem, 14vw, 10rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.08em;
+}
+
+.identity p {
+  margin: 12px 0 0;
+  color: #64748b;
+}
+
+.headerActions,
+.photoActions,
+.candidateList {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  justify-content: flex-end;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.summaryCard,
+.sectionCard,
+.reviewCard {
+  border: 1px solid #dbe5ef !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.065);
+}
+
+.summaryCard :global(.card-body) {
+  padding: 20px;
+}
+
+.cardLabel {
+  margin-bottom: 7px;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.cardValue,
+.cardValueLink,
+.reviewValue {
+  display: inline-block;
+  color: #0f172a;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(1.35rem, 3vw, 2.05rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cardValueLink {
+  color: #0369a1;
+  text-decoration: none;
+}
+
+.cardValueLink:hover {
+  text-decoration: underline;
+}
+
+.reviewValue {
+  color: #a16207;
+}
+
+.cardHint {
+  margin: 7px 0 12px;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.metricRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metricRow span {
+  min-width: 110px;
+  display: flex;
+  flex: 1 1 120px;
+  flex-direction: column;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  color: #475569;
+  background: #f0f9ff;
+  font-size: 0.8rem;
+}
+
+.metricRow strong {
+  color: #0c4a6e;
+  font-size: 1.45rem;
+}
+
+.reviewCard {
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border-color: #f5d48a !important;
+  background: #fffbeb !important;
+}
+
+.reviewCard h2,
+.sectionHeader h2 {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.12rem;
+}
+
+.reviewCard p,
+.sectionHeader p {
+  margin: 4px 0 12px;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.candidateLink {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid #d6a72e;
+  border-radius: 8px;
+  color: #854d0e;
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sectionCard {
+  margin-bottom: 18px;
+  padding: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sectionHeader p {
+  margin-bottom: 0;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.table {
+  min-width: 720px;
+  margin: 0 !important;
+  color: #1e293b !important;
+  vertical-align: middle;
+}
+
+.table thead th {
+  border-color: #dbe5ef !important;
+  color: #334155;
+  background: #f8fafc;
+  font-size: 0.76rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.table td {
+  border-color: #e2e8f0 !important;
+}
+
+.itemName {
+  min-width: 220px;
+  font-weight: 700;
+}
+
+.openLink {
+  color: #0369a1;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.emptyState,
+.emptyPictures {
+  padding: 28px !important;
+  color: #64748b;
+  text-align: center;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.photoTile {
+  aspect-ratio: 1;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #dbe5ef;
+  border-radius: 13px;
+  background: #eef2f7;
+}
+
+.photoButton {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.photoButton img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.deletePhoto {
+  width: 29px;
+  height: 29px;
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.25);
+  font-size: 1rem !important;
+  line-height: 1 !important;
+}
+
+.emptyPictures,
+.uploadingTile {
+  min-height: 130px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.uploadingTile {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.binGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.binCard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  color: #0c4a6e;
+  background: #f0f9ff;
+  text-decoration: none;
+}
+
+.binCard:hover {
+  border-color: #38bdf8;
+  color: #075985;
+  background: #e0f2fe;
+}
+
+.binCard strong {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.4rem;
+}
+
+.binCard span {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.photoViewerBody {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 0 !important;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.photoViewerBody img {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+}
+
+.labelPreviewDialog {
+  width: min(760px, calc(100vw - 24px));
+  max-width: 760px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.labelPreviewModal :global(.modal-content) {
+  overflow: hidden;
+  border: 1px solid #dbe5ef;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.25);
+}
+
+.labelPreviewHeader,
+.labelPreviewFooter {
+  border-color: #e2e8f0 !important;
+}
+
+.labelPreviewHeader :global(.modal-title) {
+  color: #0f172a;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-weight: 700;
+}
+
+.labelPreviewBody {
+  display: flex;
+  min-height: 290px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px !important;
+  background: #eef2f7;
+}
+
+.labelPreviewBody > :global(.alert) {
+  width: 100%;
+  margin: 0;
+}
+
+.labelPreviewLoading {
+  min-height: 192px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #475569;
+  font-weight: 700;
+}
+
+.storageLabelSheet {
+  width: 4in;
+  max-width: 100%;
+  aspect-ratio: 2 / 1;
+  position: relative;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #0f172a;
+  border-radius: 2px;
+  color: #000;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.storageLabelType {
+  position: absolute;
+  z-index: 2;
+  top: 0.1in;
+  left: 0.13in;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.13in;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.035in;
+}
+
+.storageLabelNumber {
+  position: absolute;
+  z-index: 1;
+  inset: 0.12in 0.12in 0.52in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #000;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 1.03in;
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+
+.storageLabelSymbols {
+  height: 0.44in;
+  position: absolute;
+  z-index: 2;
+  right: 0.12in;
+  bottom: 0.07in;
+  left: 0.12in;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.08in;
+}
+
+.storageLabelQr {
+  width: 0.44in;
+  height: 0.44in;
+  flex: 0 0 0.44in;
+  overflow: hidden;
+}
+
+.storageLabelQr svg,
+.storageLabelBarcode svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.storageLabelBarcodeBlock {
+  width: 1.18in;
+  height: 0.44in;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: end;
+  color: #000;
+  text-align: center;
+}
+
+.storageLabelBarcode {
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.storageLabelBarcodeBlock strong {
+  display: block;
+  margin-top: 0.015in;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.105in;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.018in;
+}
+
+.labelPreviewHint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.labelPreviewFooter {
+  justify-content: space-between !important;
+}
+
+@media (max-width: 767px) {
+  .container {
+    padding-top: 14px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .header {
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionCard,
+  .reviewCard {
+    padding: 15px;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+  }
+
+  .labelPreviewBody {
+    min-height: 240px;
+    padding: 16px 10px !important;
+  }
+}
+
+:global(html[data-theme="dark"]) .page,
+:global(html[data-theme="dark"]) .loadingPage {
+  color: #e5edf8;
+  background:
+    radial-gradient(900px circle at 8% -8%, rgba(14, 165, 233, 0.12), transparent 58%),
+    radial-gradient(800px circle at 96% 0%, rgba(20, 184, 166, 0.1), transparent 55%),
+    #0b1220;
+}
+
+:global(html[data-theme="dark"]) .header,
+:global(html[data-theme="dark"]) .summaryCard,
+:global(html[data-theme="dark"]) .sectionCard {
+  color: #e5edf8;
+  border-color: #334155 !important;
+  background: rgba(15, 23, 42, 0.98) !important;
+}
+
+:global(html[data-theme="dark"]) .reviewCard {
+  color: #fde68a;
+  border-color: #854d0e !important;
+  background: #291d0b !important;
+}
+
+:global(html[data-theme="dark"]) .bigNumber,
+:global(html[data-theme="dark"]) .cardValue,
+:global(html[data-theme="dark"]) .sectionHeader h2,
+:global(html[data-theme="dark"]) .reviewCard h2 {
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .identity p,
+:global(html[data-theme="dark"]) .typeRow,
+:global(html[data-theme="dark"]) .cardLabel,
+:global(html[data-theme="dark"]) .cardHint,
+:global(html[data-theme="dark"]) .sectionHeader p,
+:global(html[data-theme="dark"]) .reviewCard p,
+:global(html[data-theme="dark"]) .emptyState,
+:global(html[data-theme="dark"]) .emptyPictures,
+:global(html[data-theme="dark"]) .binCard span {
+  color: #94a3b8;
+}
+
+:global(html[data-theme="dark"]) .metricRow span,
+:global(html[data-theme="dark"]) .binCard {
+  border-color: #1e4f6e;
+  color: #bae6fd;
+  background: #102a3d;
+}
+
+:global(html[data-theme="dark"]) .tableWrap,
+:global(html[data-theme="dark"]) .table td,
+:global(html[data-theme="dark"]) .table th,
+:global(html[data-theme="dark"]) .photoTile,
+:global(html[data-theme="dark"]) .emptyPictures,
+:global(html[data-theme="dark"]) .uploadingTile {
+  border-color: #334155 !important;
+}
+
+:global(html[data-theme="dark"]) .table,
+:global(html[data-theme="dark"]) .table td {
+  color: #e2e8f0 !important;
+  background: #0f172a !important;
+}
+
+:global(html[data-theme="dark"]) .table thead th,
+:global(html[data-theme="dark"]) .emptyPictures,
+:global(html[data-theme="dark"]) .uploadingTile {
+  color: #cbd5e1 !important;
+  background: #172033 !important;
+}
+
+:global(html[data-theme="dark"]) .labelPreviewModal :global(.modal-content),
+:global(html[data-theme="dark"]) .labelPreviewHeader,
+:global(html[data-theme="dark"]) .labelPreviewFooter {
+  color: #e5edf8;
+  border-color: #334155 !important;
+  background: #0f172a;
+}
+
+:global(html[data-theme="dark"]) .labelPreviewHeader :global(.modal-title) {
+  color: #f8fafc;
+}
+
+:global(html[data-theme="dark"]) .labelPreviewHeader :global(.btn-close) {
+  filter: invert(1) grayscale(1) brightness(2);
+}
+
+:global(html[data-theme="dark"]) .labelPreviewBody {
+  background: #172033;
+}
+
+:global(html[data-theme="dark"]) .labelPreviewLoading,
+:global(html[data-theme="dark"]) .labelPreviewHint {
+  color: #cbd5e1;
+}
+
+@page {
+  size: 4in 2in;
+  margin: 0;
+}
+
+@media print {
+  .page {
+    display: none !important;
+  }
+
+  .labelPreviewModal {
+    width: 4in !important;
+    height: 2in !important;
+    position: fixed !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 0 !important;
+    z-index: 2147483647 !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .labelPreviewDialog,
+  .labelPreviewModal :global(.modal-content),
+  .labelPreviewBody {
+    width: 4in !important;
+    max-width: none !important;
+    height: 2in !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .labelPreviewHeader,
+  .labelPreviewFooter,
+  .labelPreviewHint,
+  .labelPreviewLoading,
+  .labelPreviewBody > :global(.alert) {
+    display: none !important;
+  }
+
+  .storageLabelSheet {
+    width: 4in !important;
+    max-width: none !important;
+    height: 2in !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}

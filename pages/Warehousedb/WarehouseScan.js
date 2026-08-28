@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -16,6 +16,9 @@ const BarcodeScannerComponent = dynamic(
 
 import { useAuth } from "../../context/AuthUserContext";
 import LoggedIn from "../LoggedIn";
+import storageUnitContract from "../../lib/inventory/storageUnitContract.cjs";
+
+const { resolveScanDestination } = storageUnitContract;
 
 function simulateNetworkRequest() {
   return new Promise((resolve) => setTimeout(resolve, 2000));
@@ -50,14 +53,44 @@ function LoadingButton({ type, name, route }) {
 export default function dashboard() {
   const { signOut } = useAuth();
   const [data, setData] = useState("No result");
+  const [scanError, setScanError] = useState("");
   const [cameraFacing, setCameraFacing] = useState("environment"); // default to back camera
   const [scanning, setScanning] = useState(true);
+  const scanLockedRef = useRef(false);
   const router = useRouter();
 
-  const readQR = (qrData) => {
-    console.log("this is the qr data: " + qrData);
-    router.push("../NewSearch/item/" + qrData);
-    return qrData;
+  const resetScanner = () => {
+    scanLockedRef.current = false;
+    setData("No result");
+    setScanError("");
+    setScanning(true);
+  };
+
+  const handleScanUpdate = async (_error, result) => {
+    if (!scanning || scanLockedRef.current || !result) return;
+
+    const scannedValue =
+      typeof result.getText === "function" ? result.getText() : result.text;
+    const resolved = resolveScanDestination(scannedValue);
+    if (!resolved) return;
+
+    scanLockedRef.current = true;
+    setScanning(false);
+    setData(resolved.id);
+    setScanError("");
+
+    try {
+      const navigated = await router.push(resolved.destination);
+      if (navigated === false) {
+        throw new Error("Navigation was cancelled.");
+      }
+    } catch (navigationError) {
+      console.error("Unable to open the scanned record:", navigationError);
+      scanLockedRef.current = false;
+      setData("No result");
+      setScanning(true);
+      setScanError("The scanned record could not be opened. Please try again.");
+    }
   };
 
   return (
@@ -74,28 +107,38 @@ export default function dashboard() {
                 <BarcodeScannerComponent
                   width="100%"
                   height={300}
-                  onUpdate={(err, result) => {
-                    if (result && result.text !== "Not%20Found") {
-                      setData(result.text);
-                      setScanning(false); // Stop scanning once a valid barcode is found
-                    }
+                  onUpdate={handleScanUpdate}
+                  onError={(error) => {
+                    console.error("Camera scanner error:", error);
+                    setScanError(
+                      "Camera access failed. Check browser permissions and try again."
+                    );
                   }}
                   facingMode={cameraFacing}  // Add this to control the camera
+                  stopStream={!scanning}
                 />
                 <Button
                   variant={data === "No result" ? "danger" : "success"}
-                  disabled={data === "No result"}
+                  disabled
                 >
                   {data === "No result"
                     ? "No code located"
-                    : "Code located! " + readQR(data)}
+                    : `Code located! ${data}`}
                 </Button>
+                {scanError && <div className="text-danger">{scanError}</div>}
+                {!scanning && (
+                  <Button variant="outline-primary" onClick={resetScanner}>
+                    Scan again
+                  </Button>
+                )}
                 <button
+                  type="button"
                   onClick={() =>
                     setCameraFacing((prev) =>
                       prev === "environment" ? "user" : "environment"
                     )
                   }
+                  disabled={!scanning}
                 >
                   Flip Camera
                 </button>
