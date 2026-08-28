@@ -6,7 +6,11 @@ import {
 import scanSessions from "../../../../../lib/inventory/storageUnitScanSessions.cjs";
 import storageUnitPlacement from "../../../../../lib/inventory/storageUnitPlacement.cjs";
 
-const { bearerTokenFromRequest, ingestStorageScanEvent } = scanSessions;
+const {
+  bearerTokenFromRequest,
+  cleanCallbackToken,
+  ingestStorageScanEvent,
+} = scanSessions;
 const { resolveStorageScanCode } = storageUnitPlacement;
 
 export const config = {
@@ -32,10 +36,18 @@ export default async function handler(req, res) {
     });
   }
   try {
+    const callbackToken = cleanCallbackToken(bearerTokenFromRequest(req));
+    if (!callbackToken) {
+      return res.status(401).json({
+        ok: false,
+        code: "invalid_callback_token",
+        error: "The scan callback credential is invalid.",
+      });
+    }
     const result = await ingestStorageScanEvent({
       db: adminDb,
       sessionId: req.query?.id,
-      callbackToken: bearerTokenFromRequest(req),
+      callbackToken,
       body: req.body,
       resolveStorageScanCode,
     });

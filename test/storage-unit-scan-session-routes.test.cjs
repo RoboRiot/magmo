@@ -196,6 +196,7 @@ test("callback route uses only the per-session bearer and read-only resolver bou
       },
       "../../../../../lib/inventory/storageUnitScanSessions.cjs": {
         bearerTokenFromRequest: () => "per-session-secret",
+        cleanCallbackToken: (value) => value,
         ingestStorageScanEvent: async (options) => {
           calls.push(options);
           return {
@@ -219,6 +220,42 @@ test("callback route uses only the per-session bearer and read-only resolver bou
   assert.equal(calls[0].callbackToken, "per-session-secret");
   assert.equal(calls[0].sessionId, "abcdefghijklmnopqrstuvwx");
   assert.equal(calls[0].resolveStorageScanCode, resolver);
+});
+
+test("callback route rejects a missing bearer before event ingestion", async () => {
+  let ingestCalls = 0;
+  const route = loadProjectModule(
+    "pages/api/storage-units/scan-sessions/[id]/events.js",
+    {
+      "../../../../../context/FirebaseAdmin": { adminDb: { kind: "fake-db" } },
+      "../../../../../lib/inventory/storageUnitScanApi": {
+        setStorageScanResponseHeaders: (response) =>
+          response.setHeader("Cache-Control", "no-store"),
+        sendStorageScanError: (response, error) =>
+          response.status(error.statusCode || 500).json({ error: error.message }),
+      },
+      "../../../../../lib/inventory/storageUnitScanSessions.cjs": {
+        bearerTokenFromRequest: () => "",
+        cleanCallbackToken: () => "",
+        ingestStorageScanEvent: async () => {
+          ingestCalls += 1;
+          throw new Error("must not ingest");
+        },
+      },
+      "../../../../../lib/inventory/storageUnitPlacement.cjs": {
+        resolveStorageScanCode: async () => ({ status: "resolved" }),
+      },
+    }
+  ).default;
+  const result = await invoke(route, {
+    method: "POST",
+    headers: {},
+    query: { id: "abcdefghijklmnopqrstuvwx" },
+    body: { eventId: "scanner-1:47", code: "AIS17704" },
+  });
+  assert.equal(result.status, 401);
+  assert.equal(result.body.code, "invalid_callback_token");
+  assert.equal(ingestCalls, 0);
 });
 
 test("shared browser auth requires verified, non-revoked internal AIS users", async () => {

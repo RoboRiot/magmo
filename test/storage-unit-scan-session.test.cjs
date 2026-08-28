@@ -145,6 +145,41 @@ test("callback tokens are random, stored as hashes, and compared safely", () => 
     scanSessions.callbackTokenMatches(second.callbackToken, first.callbackTokenHash),
     false
   );
+  assert.equal(scanSessions.cleanCallbackToken(first.callbackToken), first.callbackToken);
+  assert.equal(scanSessions.cleanCallbackToken("short"), "");
+});
+
+test("callback authentication fails before lookup and hides nonexistent sessions", async () => {
+  let collectionCalls = 0;
+  const noLookupDb = {
+    collection() {
+      collectionCalls += 1;
+      throw new Error("Firestore must not be queried without a callback credential.");
+    },
+  };
+  const baseRequest = {
+    db: noLookupDb,
+    sessionId: scanSessions.generateSessionCredentials().sessionId,
+    callbackToken: "",
+    body: { eventId: "scanner-1:47", code: "AIS17704" },
+    resolveStorageScanCode: async () => ({ status: "resolved" }),
+    nowMs: Date.parse("2026-08-27T18:01:00.000Z"),
+  };
+  await assert.rejects(
+    scanSessions.ingestStorageScanEvent(baseRequest),
+    (error) => error.code === "invalid_callback_token" && error.statusCode === 401
+  );
+  assert.equal(collectionCalls, 0);
+
+  const missingDb = new FakeDb();
+  await assert.rejects(
+    scanSessions.ingestStorageScanEvent({
+      ...baseRequest,
+      db: missingDb,
+      callbackToken: scanSessions.generateSessionCredentials().callbackToken,
+    }),
+    (error) => error.code === "invalid_callback_token" && error.statusCode === 401
+  );
 });
 
 test("public bridge controls fail closed without enablement, HTTPS, and a long secret", () => {
