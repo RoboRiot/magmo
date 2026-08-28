@@ -267,13 +267,13 @@ Treat `scanner-server` as canonical. Make and test future changes there first,
 create a dated backup, and then deliberately synchronize the operational copy.
 Do not develop solely against the unversioned external copy.
 
-The external `warehouse_scanner\scanner.env` has not yet been created. Copying
-the existing private `STORAGE_SCAN_BRIDGE_TOKEN` from Magmo into that separate
-server folder requires explicit credential-transfer authorization; the token
-value is intentionally omitted here. This PC also does not currently expose a
-safely identifiable physical barcode scanner, so no `SCANNER_DEVICE_MATCH` was
-guessed or added. The combined bridge remains unavailable for Scan In until the
-private token is installed and calibration is performed on the actual warehouse
+The external `warehouse_scanner\scanner.env` has now been created with the
+explicitly authorized `STORAGE_SCAN_BRIDGE_TOKEN` transfer and the non-secret
+idle-flush setting. Source/target equality and minimum token length were verified
+without printing the value, and no unrelated secret was copied. This PC does not
+currently expose a safely identifiable physical barcode scanner, so no
+`SCANNER_DEVICE_MATCH` was guessed or added. The combined bridge remains
+unavailable for Scan In until calibration is performed on the actual warehouse
 scanner PC.
 
 The installed implementation provides these safeguards:
