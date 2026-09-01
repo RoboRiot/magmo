@@ -20,6 +20,18 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 
 
+def _uses_keyboard_wedge_input(environ: Mapping[str, str]) -> bool:
+    """Return true only for the explicit Raw Input/HID configuration.
+
+    Serial scanners do not type into a focused browser field, so they cannot
+    safely use the callback-free Work Order Add capture lease.
+    """
+
+    device_match = str(environ.get("SCANNER_DEVICE_MATCH") or "").strip()
+    serial_port = str(environ.get("SCANNER_SERIAL_PORT") or "").strip()
+    return bool(device_match and not serial_port)
+
+
 @dataclass
 class ScannerRuntime:
     """Own the scanner input and bridge for exactly one Flask process."""
@@ -101,7 +113,12 @@ def build_runtime(
     bridge_kwargs: dict[str, Any] = {}
     if browser_opener is not None:
         bridge_kwargs["browser_opener"] = browser_opener
-    bridge = StorageScanBridge(settings, scanner_ready=False, **bridge_kwargs)
+    bridge = StorageScanBridge(
+        settings,
+        scanner_ready=False,
+        work_order_wedge_enabled=_uses_keyboard_wedge_input(selected_env),
+        **bridge_kwargs,
+    )
 
     try:
         scanner_input = create_scanner_input(
@@ -149,7 +166,12 @@ def build_embedded_runtime(
     bridge_kwargs: dict[str, Any] = {}
     if browser_opener is not None:
         bridge_kwargs["browser_opener"] = browser_opener
-    bridge = StorageScanBridge(settings, scanner_ready=False, **bridge_kwargs)
+    bridge = StorageScanBridge(
+        settings,
+        scanner_ready=False,
+        work_order_wedge_enabled=_uses_keyboard_wedge_input(selected_env),
+        **bridge_kwargs,
+    )
     scanner_input: Any | None = None
 
     try:

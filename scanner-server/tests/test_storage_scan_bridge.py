@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import io
+import itertools
 import json
 import sys
 import threading
@@ -32,6 +33,7 @@ from warehouse_scanner.storage_scan_bridge import (
 
 BRIDGE_TOKEN = "b" * 43
 CALLBACK_TOKEN = "c" * 43
+WORK_ORDER_CALLBACK_TOKEN = "w" * 43
 SESSION_A = "A" * 24
 SESSION_B = "B" * 24
 
@@ -156,6 +158,48 @@ def stop_payload(
     }
 
 
+def work_order_start_payload(
+    clock: FakeClock,
+    *,
+    session_id: str = SESSION_A,
+    work_order_id: str = "WO-10047",
+    callback_token: str = WORK_ORDER_CALLBACK_TOKEN,
+    callback_origin: str = "https://magmo.cloud",
+    callback_session_id: str | None = None,
+    expires_delta: timedelta = timedelta(minutes=3),
+) -> dict:
+    callback_id = callback_session_id or session_id
+    return {
+        "schemaVersion": 1,
+        "sessionId": session_id,
+        "target": {"type": "work-order-add", "workOrderId": work_order_id},
+        "callback": {
+            "url": (
+                f"{callback_origin}/api/items/work-order-add/scan-sessions/"
+                f"{callback_id}/events"
+            ),
+            "bearerToken": callback_token,
+            "expiresAt": (clock() + expires_delta)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z"),
+        },
+    }
+
+
+def work_order_stop_payload(
+    *,
+    session_id: str = SESSION_A,
+    work_order_id: str = "WO-10047",
+    reason: str = "cancelled",
+) -> dict:
+    return {
+        "schemaVersion": 1,
+        "sessionId": session_id,
+        "workOrderId": work_order_id,
+        "reason": reason,
+    }
+
+
 def auth_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {BRIDGE_TOKEN}"}
 
@@ -178,15 +222,17 @@ class StorageScanBridgeTests(unittest.TestCase):
         browser_calls: list[str] = []
         sleeps: list[float] = []
         scheduler = FakeScheduler()
+        event_sequence = itertools.count(1)
         bridge = StorageScanBridge(
             bridge_settings(attempts=attempts),
             callback_sender=sender,
             browser_opener=lambda url: browser_calls.append(url) is None,
             clock=self.clock,
-            event_id_factory=lambda: "fixed-event-0001",
+            event_id_factory=lambda: f"fixed-event-{next(event_sequence):04d}",
             sleeper=sleeps.append,
             schedule_expiry=scheduler,
             scanner_ready=True,
+            work_order_wedge_enabled=True,
         )
         return BridgeFixture(bridge, sender, browser_calls, sleeps, scheduler)
 
@@ -280,6 +326,51 @@ class StorageScanBridgeTests(unittest.TestCase):
         self.assertEqual(stopped.status_code, 200)
         self.assertTrue(stopped.json["alreadyStopped"])
 
+    def test_work_order_capture_supports_serial_and_non_keyboard_scanners(self) -> None:
+        sender = ScriptedSender([202])
+        browser_calls: list[str] = []
+        bridge = StorageScanBridge(
+            bridge_settings(),
+            callback_sender=sender,
+            browser_opener=lambda url: browser_calls.append(url) is None,
+            clock=self.clock,
+            event_id_factory=lambda: "work-order-serial-event-0001",
+            schedule_expiry=FakeScheduler(),
+            worker_launcher=lambda target: target(),
+            scanner_ready=True,
+            work_order_wedge_enabled=False,
+        )
+        app = Flask(f"{__name__}.serial-only")
+        app.config.update(TESTING=True)
+        register_storage_scan_routes(app, bridge)
+        client = app.test_client()
+
+        started = client.post(
+            "/work-order-scan/start",
+            json=work_order_start_payload(self.clock),
+            headers=auth_headers(),
+        )
+        frame = SimpleNamespace(
+            code="AIS17704",
+            source="serial",
+            device_id="COM7",
+            received_at=self.clock(),
+        )
+        result = bridge.handle_scan_frame(frame)
+
+        self.assertEqual(started.status_code, 201)
+        self.assertEqual(started.json["captureMode"], "remote-callback")
+        self.assertEqual(result.mode, "callback")
+        self.assertTrue(result.accepted)
+        self.assertEqual(browser_calls, [])
+        self.assertEqual(len(sender.calls), 1)
+        self.assertEqual(sender.calls[0]["bearer_token"], WORK_ORDER_CALLBACK_TOKEN)
+        self.assertEqual(sender.calls[0]["payload"]["code"], "AIS17704")
+        self.assertEqual(
+            sender.calls[0]["url"],
+            f"https://magmo.cloud/api/items/work-order-add/scan-sessions/{SESSION_A}/events",
+        )
+
     def test_start_route_rejects_non_json_malformed_json_and_large_body(self) -> None:
         fixture = self.make_bridge()
         client = self.make_client(fixture)
@@ -358,6 +449,232 @@ class StorageScanBridgeTests(unittest.TestCase):
         self.assertNotIn(BRIDGE_TOKEN, serialized)
         self.assertNotIn(CALLBACK_TOKEN, serialized)
         self.assertEqual(len(fixture.scheduler.entries), 1)
+
+    def test_work_order_routes_require_auth_validate_exactly_and_start_idempotently(self) -> None:
+        fixture = self.make_bridge()
+        client = self.make_client(fixture)
+        payload = work_order_start_payload(self.clock)
+
+        unauthorized = client.post("/work-order-scan/start", json=payload)
+        first = client.post("/work-order-scan/start", json=payload, headers=auth_headers())
+        duplicate = client.post(
+            "/work-order-scan/start", json=payload, headers=auth_headers()
+        )
+        changed = client.post(
+            "/work-order-scan/start",
+            json=work_order_start_payload(
+                self.clock,
+                callback_token="z" * 43,
+            ),
+            headers=auth_headers(),
+        )
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertEqual(changed.status_code, 409)
+        self.assertEqual(changed.json["code"], "session_id_conflict")
+        self.assertFalse(first.json["idempotent"])
+        self.assertTrue(duplicate.json["idempotent"])
+        self.assertEqual(first.json["bridgeSessionId"], duplicate.json["bridgeSessionId"])
+        self.assertEqual(first.json["expiresAt"], duplicate.json["expiresAt"])
+        self.assertEqual(first.json["workOrderId"], "WO-10047")
+        self.assertEqual(first.json["captureMode"], "remote-callback")
+        self.assertEqual(len(fixture.scheduler.entries), 1)
+        serialized = first.get_data(as_text=True) + duplicate.get_data(as_text=True)
+        self.assertNotIn(WORK_ORDER_CALLBACK_TOKEN, serialized)
+
+        stopped = client.post(
+            "/work-order-scan/stop",
+            json=work_order_stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        self.assertEqual(stopped.status_code, 200)
+        self.assertFalse(stopped.json["alreadyStopped"])
+
+        invalid_payloads = []
+        extra = work_order_start_payload(self.clock)
+        extra["expiresAt"] = extra["callback"]["expiresAt"]
+        invalid_payloads.append((extra, "invalid_work_order_start_request"))
+        missing_callback_fields = work_order_start_payload(self.clock)
+        missing_callback_fields["callback"] = {}
+        invalid_payloads.append((missing_callback_fields, "invalid_callback"))
+        wrong_type = work_order_start_payload(self.clock)
+        wrong_type["target"]["type"] = "storage"
+        invalid_payloads.append((wrong_type, "invalid_work_order_target"))
+        bad_work_order = work_order_start_payload(self.clock, work_order_id="bad/id")
+        invalid_payloads.append((bad_work_order, "invalid_work_order_target"))
+        bad_origin = work_order_start_payload(
+            self.clock, callback_origin="https://attacker.example"
+        )
+        invalid_payloads.append((bad_origin, "invalid_callback"))
+        bad_path = work_order_start_payload(
+            self.clock, callback_session_id=SESSION_B
+        )
+        invalid_payloads.append((bad_path, "invalid_callback"))
+        storage_callback_path = work_order_start_payload(self.clock)
+        storage_callback_path["callback"]["url"] = (
+            f"https://magmo.cloud/api/storage-units/scan-sessions/{SESSION_A}/events"
+        )
+        invalid_payloads.append((storage_callback_path, "invalid_callback"))
+        bad_expiry = work_order_start_payload(
+            self.clock, expires_delta=timedelta(seconds=901)
+        )
+        invalid_payloads.append((bad_expiry, "invalid_expiry"))
+        for invalid, expected_code in invalid_payloads:
+            with self.subTest(expected_code=expected_code):
+                response = client.post(
+                    "/work-order-scan/start", json=invalid, headers=auth_headers()
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json["code"], expected_code)
+
+    def test_work_order_capture_routes_every_scan_to_callback_without_page_open(self) -> None:
+        fixture = self.make_bridge()
+        fixture.bridge.start_work_order_session(work_order_start_payload(self.clock))
+
+        direct = fixture.bridge.route_scan("AIS17704")
+        frame = SimpleNamespace(
+            code="AIS17705",
+            source="raw-input",
+            device_id="scanner-device-1",
+            received_at=self.clock(),
+        )
+        device = fixture.bridge.handle_scan_frame(frame)
+
+        self.assertEqual(direct.mode, "callback")
+        self.assertTrue(direct.accepted)
+        self.assertTrue(direct.delivered)
+        self.assertEqual(device.mode, "callback")
+        self.assertTrue(device.accepted)
+        self.assertEqual(fixture.browser_calls, [])
+        deadline = time.monotonic() + 1.0
+        while len(fixture.sender.calls) < 2 and time.monotonic() < deadline:
+            time.sleep(0.005)
+        self.assertEqual(len(fixture.sender.calls), 2)
+        self.assertTrue(
+            all(
+                call["url"]
+                == f"https://magmo.cloud/api/items/work-order-add/scan-sessions/{SESSION_A}/events"
+                for call in fixture.sender.calls
+            )
+        )
+        self.assertTrue(
+            all(call["bearer_token"] == WORK_ORDER_CALLBACK_TOKEN for call in fixture.sender.calls)
+        )
+        self.assertEqual(
+            {call["payload"]["code"] for call in fixture.sender.calls},
+            {"AIS17704", "AIS17705"},
+        )
+        self.assertEqual(fixture.bridge.status_snapshot()["captureMode"], "remote-callback")
+        self.assertEqual(fixture.bridge.status_snapshot()["pendingEventCount"], 0)
+
+    def test_work_order_callback_failure_never_falls_through_to_idle_page_open(self) -> None:
+        fixture = self.make_bridge(outcomes=[500], attempts=1)
+        fixture.bridge.start_work_order_session(work_order_start_payload(self.clock))
+
+        failed = fixture.bridge.route_scan("AIS17704")
+        next_scan = fixture.bridge.route_scan("AIS17705")
+
+        self.assertEqual(failed.mode, "callback")
+        self.assertEqual(failed.error_code, "callback_retry_pending")
+        self.assertEqual(next_scan.mode, "callback")
+        self.assertEqual(fixture.browser_calls, [])
+        self.assertTrue(fixture.bridge.status_snapshot()["active"])
+
+    def test_storage_and_work_order_sessions_share_one_exclusive_lease(self) -> None:
+        fixture = self.make_bridge()
+        fixture.bridge.start_session(start_payload(self.clock))
+        with self.assertRaises(BridgeError) as work_order_busy:
+            fixture.bridge.start_work_order_session(
+                work_order_start_payload(self.clock, session_id=SESSION_B)
+            )
+        self.assertEqual(work_order_busy.exception.code, "scanner_busy")
+        self.assertEqual(fixture.bridge.status_snapshot()["unitId"], "B47")
+
+        fixture.bridge.stop_session(stop_payload())
+        fixture.bridge.start_work_order_session(work_order_start_payload(self.clock))
+        with self.assertRaises(BridgeError) as storage_busy:
+            fixture.bridge.start_session(
+                start_payload(
+                    self.clock,
+                    session_id=SESSION_B,
+                    unit_id="P65",
+                    unit_type="pallet",
+                    unit_number=65,
+                )
+            )
+        self.assertEqual(storage_busy.exception.code, "scanner_busy")
+        self.assertEqual(fixture.bridge.status_snapshot()["workOrderId"], "WO-10047")
+
+        with self.assertRaises(BridgeError) as wrong_stop_kind:
+            fixture.bridge.stop_session(stop_payload())
+        self.assertEqual(wrong_stop_kind.exception.code, "session_target_conflict")
+        self.assertTrue(fixture.bridge.status_snapshot()["active"])
+
+    def test_work_order_stop_is_idempotent_and_resumes_idle_page_opening(self) -> None:
+        fixture = self.make_bridge()
+        fixture.bridge.start_work_order_session(work_order_start_payload(self.clock))
+        secret = fixture.bridge._active.callback_token
+        self.assertEqual(fixture.bridge.route_scan("AIS17704").mode, "callback")
+
+        stopped = fixture.bridge.stop_work_order_session(
+            work_order_stop_payload(reason="cancelled")
+        )
+        repeated = fixture.bridge.stop_work_order_session(
+            work_order_stop_payload(reason="cancelled")
+        )
+        idle = fixture.bridge.route_scan("AIS17705")
+
+        self.assertFalse(stopped["alreadyStopped"])
+        self.assertTrue(repeated["alreadyStopped"])
+        self.assertTrue(secret.scrubbed)
+        self.assertEqual(idle.mode, "browser")
+        self.assertEqual(
+            fixture.browser_calls,
+            ["https://magmo.cloud/NewSearch/item/AIS17705"],
+        )
+        self.assertEqual(len(fixture.sender.calls), 1)
+        self.assertEqual(
+            fixture.sender.calls[0]["url"],
+            f"https://magmo.cloud/api/items/work-order-add/scan-sessions/{SESSION_A}/events",
+        )
+
+    def test_work_order_expiry_automatically_resumes_idle_page_opening(self) -> None:
+        fixture = self.make_bridge()
+        fixture.bridge.start_work_order_session(
+            work_order_start_payload(self.clock, expires_delta=timedelta(seconds=30))
+        )
+        secret = fixture.bridge._active.callback_token
+        self.assertEqual(fixture.bridge.route_scan("AIS17704").mode, "callback")
+        self.clock.advance(seconds=31)
+
+        after_expiry = fixture.bridge.route_scan("AIS17705")
+        self.assertEqual(after_expiry.mode, "browser")
+        self.assertFalse(fixture.bridge.status_snapshot()["active"])
+        self.assertTrue(secret.scrubbed)
+        self.assertEqual(
+            fixture.browser_calls,
+            ["https://magmo.cloud/NewSearch/item/AIS17705"],
+        )
+
+    def test_stale_work_order_stop_cannot_release_storage_or_newer_capture(self) -> None:
+        fixture = self.make_bridge()
+        fixture.bridge.start_session(start_payload(self.clock, session_id=SESSION_B))
+        with self.assertRaises(BridgeError) as storage_stale:
+            fixture.bridge.stop_work_order_session(work_order_stop_payload())
+        self.assertEqual(storage_stale.exception.code, "stale_stop")
+        self.assertEqual(fixture.bridge.status_snapshot()["unitId"], "B47")
+
+        fixture.bridge.stop_session(stop_payload(session_id=SESSION_B))
+        fixture.bridge.start_work_order_session(
+            work_order_start_payload(
+                self.clock, session_id=SESSION_B, work_order_id="WO-NEW"
+            )
+        )
+        with self.assertRaises(BridgeError) as work_order_stale:
+            fixture.bridge.stop_work_order_session(work_order_stop_payload())
+        self.assertEqual(work_order_stale.exception.code, "stale_stop")
+        self.assertEqual(fixture.bridge.status_snapshot()["workOrderId"], "WO-NEW")
 
     def test_stop_is_idempotent_and_stale_stop_cannot_kill_newer_session(self) -> None:
         fixture = self.make_bridge()

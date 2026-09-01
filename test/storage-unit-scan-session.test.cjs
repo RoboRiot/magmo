@@ -263,6 +263,7 @@ test("start stores only the callback hash and sends the raw capability only to t
   assert.equal("callbackToken" in session, false);
   assert.equal("callbackTokenHash" in session, false);
   assert.equal(bridgeRequests.length, 1);
+  assert.equal(bridgeRequests[0].options.redirect, "error");
   const bridgePayload = JSON.parse(bridgeRequests[0].options.body);
   assert.match(bridgePayload.callback.bearerToken, scanSessions.SESSION_ID_PATTERN);
   assert.equal(

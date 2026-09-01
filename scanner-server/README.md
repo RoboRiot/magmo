@@ -2,8 +2,8 @@
 
 This package replaces the legacy global keyboard listener with a device-bound
 scanner bridge. It supports the normal Magmo item lookup behavior and the new
-staged Scan In workflow for bins and pallets without treating fast human typing
-as scanner input.
+staged Scan In workflow for bins and pallets, plus callback-based capture during
+Work Order Add, without treating fast human typing as scanner input.
 
 The bridge is intentionally fail-closed:
 
@@ -14,7 +14,8 @@ The bridge is intentionally fail-closed:
   reports the authenticated scanner controls as unavailable (HTTP 503).
 - Learning mode never creates a browser opener, Flask bridge, or network client.
 - Only one process may own the scanner. Never run the legacy
-  `warehouse_scanner.py` global hook beside this service.
+  `warehouse_scanner.py` global hook or any separate global scan-to-page opener
+  beside this service. Idle page opening is part of this unified bridge.
 - Scan In events are staged in Magmo. Inventory is not changed until the user
   presses **Confirm** in Magmo.
 
@@ -167,17 +168,42 @@ Magmo calls these routes through the configured fixed ngrok origin:
 
 - `POST /storage-scan/start`
 - `POST /storage-scan/stop`
+- `POST /work-order-scan/start`
+- `POST /work-order-scan/stop`
 
-While no Scan In session is active, a scan from the calibrated physical device
+While no capture session is active, a scan from the calibrated physical device
 may open only a canonical `https://magmo.cloud` item, bin, or pallet page. The
 bridge rejects arbitrary scanned URLs. While a session is active, scans never
 open a browser—even when a callback fails. They are delivered to the per-session
 Magmo callback and retried idempotently with the same event ID.
 
-Start is idempotent for the same session and rejects a different active session.
-Stop applies only to its matching active session. Expiry clears the callback
-capability locally. Neither the bridge token nor callback token is sent to the
-browser or written to Firestore in plaintext.
+A Work Order Add session shares that same exclusive lease and callback queue as
+storage Scan In. Magmo's authenticated start signal must include the exact
+Work Order callback URL, its one-time bearer capability, and its expiry:
+
+```json
+{
+  "schemaVersion": 1,
+  "sessionId": "work_order_capture_2cY7Hm_Iw0O",
+  "target": { "type": "work-order-add", "workOrderId": "10490" },
+  "callback": {
+    "url": "https://magmo.cloud/api/items/work-order-add/scan-sessions/work_order_capture_2cY7Hm_Iw0O/events",
+    "bearerToken": "one-time-per-session-capability",
+    "expiresAt": "2026-09-01T17:05:00.000Z"
+  }
+}
+```
+
+Every completed frame from the configured HID **or serial/COM** scanner is sent
+to that callback. Work Order capture does not depend on the scanner typing into
+a focused browser field. Confirm, cancel, failure, or local expiry stops the
+lease, scrubs the callback capability, and restores normal idle page opening.
+
+Start is idempotent only when the session ID, target, callback URL/capability,
+and expiry match the active lease; changed settings or another active session
+are rejected. Stop applies only to its matching active session. Expiry clears
+the callback capability locally. Neither the bridge token nor callback token is
+sent to the browser or written to Firestore in plaintext.
 
 ## Start, restart, and Windows service setup
 
@@ -214,7 +240,11 @@ Perform these checks after installation, device replacement, or restart:
    destination show the same placement and history in Magmo.
 8. For a pallet, verify an item and a bin are distinguished; previewing a bin
    shows its contents before confirmation.
-9. Restart the service and ngrok, then repeat fast typing and one controlled
+9. Open Work Order Add and explicitly enable scanner capture. Verify each HID or
+   serial scanner read appears once in the Work Order staged list and opens no
+   item page. Cancel/stop capture, then verify the next idle scanner read opens
+   its one canonical Magmo page again.
+10. Restart the service and ngrok, then repeat fast typing and one controlled
    Scan In cycle to verify persistence and single ownership.
 
 Use a disposable/test inventory record for the confirmation check. Never test
@@ -233,5 +263,6 @@ confirmation with an unknown production item.
   running or `register_storage_scan_routes(app, bridge)` was not called.
 - **Duplicate scans:** verify only one scanner process exists and the Flask
   debug reloader is disabled. Do not change event IDs during callback retries.
-- **Browser opens during Scan In:** stop the service and investigate; active
-  sessions must never invoke the browser opener, even after callback errors.
+- **Browser opens during an active capture:** stop the service and investigate;
+  storage and Work Order sessions must never invoke the browser opener, even
+  after callback errors.

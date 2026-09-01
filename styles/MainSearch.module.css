@@ -529,6 +529,19 @@
   filter: brightness(0.98);
 }
 
+.workOrderAddActionButton {
+  border: 0 !important;
+  background: linear-gradient(135deg, #147d68, #20a37f) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(20, 125, 104, 0.22);
+}
+
+.workOrderAddActionButton:hover,
+.workOrderAddActionButton:focus {
+  color: #ffffff !important;
+  filter: brightness(1.04);
+}
+
 .trailerActionButton {
   background: linear-gradient(135deg, #f97316, #ef4444) !important;
   border: none !important;

@@ -85,6 +85,36 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Work Order scanner sessions contain callback-token hashes and staged
+    // scans. Browser clients must use the authenticated server routes; Admin
+    // SDK callers bypass these client rules.
+    match /WorkOrderAddScanSessions/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Work-order-add operation receipts enforce idempotency, and each item's
+    // WorkOrderAddHistory is an immutable server audit. Browser clients may
+    // keep editing ordinary inventory data, but these records are owned by the
+    // authenticated API (Admin SDK callers bypass client rules).
+    match /InventoryWorkOrderAddOperations/{document=**} {
+      allow read, write: if false;
+    }
+    match /Test/{itemId} {
+      allow read: if approvedUser();
+      allow create, update, delete: if internalUser();
+
+      match /WorkOrderAddHistory/{operationId} {
+        allow read: if approvedUser();
+        allow create, update, delete: if false;
+      }
+
+      match /{subcollection}/{document=**} {
+        allow read: if approvedUser();
+        allow create, update, delete: if internalUser()
+          && subcollection != "WorkOrderAddHistory";
+      }
+    }
+
     // Service-request approvals and lifecycle changes are written only through
     // the authenticated Ops/AIS APIs. Admin SDK callers bypass these rules;
     // browser clients must not be able to forge an overseer approval or status.
@@ -103,11 +133,17 @@ service cloud.firestore {
 
     match /{collection}/{document=**} {
       allow read: if approvedUser()
+        && collection != "Test"
+        && collection != "InventoryWorkOrderAddOperations"
         && collection != "StorageUnitScanSessions"
+        && collection != "WorkOrderAddScanSessions"
         && collection != "StorageUnitScanControls";
       allow create, update, delete: if internalUser()
+        && collection != "Test"
+        && collection != "InventoryWorkOrderAddOperations"
         && collection != "ServiceRequests"
         && collection != "StorageUnitScanSessions"
+        && collection != "WorkOrderAddScanSessions"
         && collection != "StorageUnitScanControls";
     }
   }

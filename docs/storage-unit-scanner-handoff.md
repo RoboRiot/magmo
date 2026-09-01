@@ -1,4 +1,4 @@
-# Storage-unit scanner session handoff
+# Warehouse scanner session handoff
 
 This document is the HTTP and security contract between Magmo and the single
 warehouse scanner process. The browser never receives either scanner secret.
@@ -19,6 +19,7 @@ Server-only variables:
 | `NGROK_BASE_URL` | Existing production bridge base. When exact URLs are absent, Magmo derives `/storage-scan/start` and `/storage-scan/stop`. Never inherited by test/staging scanner controls. |
 | `STORAGE_SCAN_LOCAL_BASE_URL` | Development-only loopback base. Defaults to `http://127.0.0.1:5000`; it is never tried in production. |
 | `STORAGE_SCAN_SESSION_TTL_SECONDS` | Optional session TTL; clamped to 60–900 seconds, default 300. |
+| `WORK_ORDER_SCAN_TTL_SECONDS` | Optional Work Order capture TTL; clamped to 60–900 seconds, default 300. |
 | `OPS_ENVIRONMENT` | `test`, `testing`, or `staging` forces isolated exact start/stop URLs and a bridge token; shared `NGROK_BASE_URL` is ignored. |
 
 Do not put either token in a URL, browser response, Firestore client-readable
@@ -153,6 +154,101 @@ await signalStorageScanStop({
 A stop failure must be reported and remain retryable, but must not roll back an
 already committed placement transaction.
 
+## Work Order Add callback-capture API
+
+Work Order Add uses the same server-owned scanner lease and remote callback
+model as storage Scan In. It creates short-lived scan-event documents and the
+browser polls the authenticated session status for its staged list. It does not
+depend on keyboard-wedge input reaching a focused browser field, so the same
+flow supports an exact learned HID device or an explicitly configured
+serial/COM scanner. Browser calls require the same verified internal Firebase
+Bearer authentication and return `Cache-Control: no-store`.
+
+The browser creates one high-entropy session ID matching
+`[A-Za-z0-9_-]{20,80}` and reuses it for retries.
+
+### Start Work Order capture
+
+`POST /api/items/work-order-add/scan-sessions`
+
+```json
+{ "sessionId": "work_order_capture_2cY7Hm_Iw0O", "workOrderId": "10490" }
+```
+
+No other keys are accepted. Success is HTTP 201 and returns the authoritative
+expiry and callback capture mode:
+
+```json
+{
+  "ok": true,
+  "session": {
+    "id": "work_order_capture_2cY7Hm_Iw0O",
+    "sessionId": "work_order_capture_2cY7Hm_Iw0O",
+    "workOrderId": "10490",
+    "status": "active",
+    "captureMode": "remote-callback",
+    "expiresAt": "2026-09-01T17:03:00.000Z",
+    "eventCount": 0,
+    "pollAfterMs": 1000,
+    "bridgeStartStatus": "delivered",
+    "bridgeStopStatus": "not_requested",
+    "events": []
+  }
+}
+```
+
+Acquire only after a work order and movement direction are selected. A retry
+uses the same session ID and work order. Magmo retains the original callback
+capability and expiry for an existing active session; the bridge accepts only
+an otherwise exact idempotent retry and does not extend the original lease.
+
+### Poll Work Order capture
+
+`GET /api/items/work-order-add/scan-sessions/{sessionId}`
+
+The response has the same public session shape as start and includes completed
+events in scan order:
+
+```json
+{
+  "ok": true,
+  "session": {
+    "sessionId": "work_order_capture_2cY7Hm_Iw0O",
+    "workOrderId": "10490",
+    "status": "active",
+    "captureMode": "remote-callback",
+    "eventCount": 1,
+    "pollAfterMs": 1000,
+    "events": [
+      {
+        "eventId": "warehouse-reader-1:000047",
+        "code": "AIS17704",
+        "scannedAt": "2026-09-01T17:01:12.000Z",
+        "receivedAt": "2026-09-01T17:01:12.181Z"
+      }
+    ]
+  },
+  "events": ["same event objects as session.events"]
+}
+```
+
+The browser uses these callback-backed events to populate the Work Order scan
+list. The callback token hash and all bridge credentials remain server-only.
+
+### Stop Work Order capture
+
+`POST /api/items/work-order-add/scan-sessions/{sessionId}/stop`
+
+```json
+{ "workOrderId": "10490", "reason": "cancelled" }
+```
+
+`reason` is `confirmed`, `cancelled`, `expired`, or `failed`. Stop before the
+first confirm request, and on explicit cancel, work-order change, hide/unmount,
+or terminal failure. Stop is idempotent; the local TTL is the fail-safe for
+browser shutdown or lost cleanup requests. A valid stop or local expiry releases
+the lease so the next idle scan can open its canonical Magmo page.
+
 ## Warehouse bridge API
 
 The public bridge must reject start/stop unless this header matches its locally
@@ -186,8 +282,10 @@ The bridge may return:
 { "ok": true, "sessionId": "local-scanner-session-42" }
 ```
 
-Start must be idempotent for the same Magmo `sessionId`. If another session owns
-the one global keyboard/scanner hook, return HTTP 409 without changing it. Never
+Start is idempotent only when the Magmo `sessionId`, target, callback URL,
+callback capability, and expiry all match the active lease. Reusing the session
+ID with different settings, or starting while another session owns the one
+global scanner input, returns HTTP 409 without changing the active lease. Never
 log the body because it contains the callback capability.
 
 ### Stop signal
@@ -207,12 +305,54 @@ log the body because it contains the callback capability.
 idempotent when the same session is already stopped. A late stop for session A
 must never stop a newer active session B; return HTTP 409 and leave B running.
 
+### Work Order capture signals
+
+`POST /work-order-scan/start`
+
+```json
+{
+  "schemaVersion": 1,
+  "sessionId": "work_order_capture_2cY7Hm_Iw0O",
+  "target": { "type": "work-order-add", "workOrderId": "10490" },
+  "callback": {
+    "url": "https://magmo.cloud/api/items/work-order-add/scan-sessions/work_order_capture_2cY7Hm_Iw0O/events",
+    "bearerToken": "one-time-per-session-capability",
+    "expiresAt": "2026-09-01T17:03:00.000Z"
+  }
+}
+```
+
+`POST /work-order-scan/stop`
+
+```json
+{
+  "schemaVersion": 1,
+  "sessionId": "work_order_capture_2cY7Hm_Iw0O",
+  "workOrderId": "10490",
+  "reason": "cancelled"
+}
+```
+
+These routes use the same bridge Bearer credential and the same single active
+lease as storage sessions. Start requires the exact callback object shown above;
+top-level expiry or missing callback credentials are rejected. The bridge
+allow-lists the Magmo origin and the exact Work Order callback path for the
+session ID before retaining the capability in memory.
+
+While a Work Order lease is active, every completed frame from the configured
+HID or serial/COM scanner is delivered to the Work Order callback. No active
+frame reaches the idle page opener, including when callback delivery fails and
+is waiting for retry. Expiry and valid stop scrub the capability, release the
+lease, and restore idle page opening.
+
 ## Bridge-to-Magmo event callback
 
-The bridge posts every completed scan to the callback URL supplied by start:
+The bridge posts every completed scan to the callback URL supplied by start.
+The only accepted callback route families are:
 
 ```http
 POST /api/storage-units/scan-sessions/{sessionId}/events
+POST /api/items/work-order-add/scan-sessions/{sessionId}/events
 Authorization: Bearer <per-session callback bearerToken>
 Content-Type: application/json
 ```
@@ -237,10 +377,11 @@ provided it must be within the preceding 24 hours or next five minutes.
 - HTTP 410: token/session TTL expired.
 - HTTP 401: wrong callback capability.
 
-Retries must retain exactly the same `eventId` and `code`. Magmo hashes the
-event ID for its Firestore document path and transactionally stores it once.
-The per-session bearer is stored only as SHA-256 in Firestore and is verified
-with a timing-safe comparison on every callback.
+Retries must retain exactly the same `eventId`, `code`, and `scannedAt`. Magmo
+hashes the event ID for its Firestore document path and transactionally stores
+it once in the matching storage or Work Order session. The per-session bearer
+is stored only as SHA-256 in Firestore and is verified with a timing-safe
+comparison on every callback.
 
 ## Current warehouse-server implementation
 
@@ -284,16 +425,20 @@ The installed implementation provides these safeguards:
 2. Authenticated start/stop routes share the one existing port-5000 Flask
    process. When scanner input is unavailable, authenticated starts fail safely
    with HTTP 503 rather than silently falling through to a route-level 404.
-3. While a Scan In session is active, physical scans are sent only to the
-   session callback. They never open a browser, including when callback delivery
-   fails and is being retried.
-4. While no Scan In session is active, physical scanner input may open only
+3. While any storage or Work Order capture session is active, physical scans are
+   sent only to that session's allow-listed callback. They never open a browser,
+   including when callback delivery fails and is being retried.
+4. While no capture session is active, physical scanner input may open only
    canonical Magmo item, bin, or pallet pages. Arbitrary scanned URLs are not
    opened.
 5. Session expiry, singleton ownership, idempotent event IDs and retries, stale
    stop rejection, input limits, and in-memory capability scrubbing are enforced
    locally.
 6. The scanner process uses no Firebase Admin credential or service-account key.
+7. Work Order Add uses the same exclusive lease and remote event queue. Both an
+   exact learned HID scanner and an explicitly selected serial/COM scanner send
+   every completed frame to the Work Order callback; neither relies on browser
+   keystrokes.
 
 ## Required one-time warehouse-PC calibration and restart
 
@@ -302,8 +447,9 @@ warehouse scanner. Do not perform calibration on a different PC and do not copy
 a device identity from another keyboard or scanner.
 
 1. Make sure the scanner is connected. Stop any old standalone
-   `warehouse_scanner.py` global-hook process. The legacy listener must never run
-   in parallel with the combined server.
+   `warehouse_scanner.py` global-hook process. The legacy listener and any
+   separate global scan-to-page opener must never run in parallel with the
+   combined server; the unified bridge owns idle page opening.
 2. Open PowerShell in the installed server directory:
 
    ```powershell
@@ -336,8 +482,11 @@ a device identity from another keyboard or scanner.
 6. Verify that fast typing on the ordinary keyboard opens nothing. Verify one
    idle scanner read opens exactly one canonical Magmo page. Then open a bin or
    pallet Scan In modal and verify that scanner reads appear only in its staged
-   list and do not open browser windows. Cancel the first controlled test before
-   performing a separate known-item confirmation test.
+   list and do not open browser windows. Open Work Order Add, enable scanner
+   capture, and verify each read appears once in its staged list with no page
+   opening. Stop or let a controlled session expire, then verify the next idle
+   scanner read resumes opening its one canonical page. Cancel the first
+   controlled test before performing a separate known-item confirmation test.
 
 The public scanner endpoint remains operationally **unverified** until the
 actual warehouse PC has completed exact-device learning, saved the emitted

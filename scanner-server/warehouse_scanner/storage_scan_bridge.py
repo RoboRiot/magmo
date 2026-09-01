@@ -44,7 +44,8 @@ MAX_SCAN_CHARACTERS = 180
 MAX_SCAN_UTF8_BYTES = 360
 MAX_SESSION_EVENTS = 250
 MAX_SESSION_TTL_SECONDS = 900
-CALLBACK_ROUTE_PREFIX = "/api/storage-units/scan-sessions/"
+STORAGE_CALLBACK_ROUTE_PREFIX = "/api/storage-units/scan-sessions/"
+WORK_ORDER_CALLBACK_ROUTE_PREFIX = "/api/items/work-order-add/scan-sessions/"
 CALLBACK_ROUTE_SUFFIX = "/events"
 DEFAULT_MAGMO_ORIGIN = "https://magmo.cloud"
 DEFAULT_CALLBACK_ATTEMPTS = 3
@@ -258,6 +259,12 @@ class TargetUnit:
     number: int
 
 
+@dataclass(frozen=True)
+class WorkOrderTarget:
+    work_order_id: str
+    session_type: str = "work-order-add"
+
+
 @dataclass(frozen=True, repr=False)
 class StartRequest:
     session_id: str
@@ -271,6 +278,22 @@ class StartRequest:
 class StopRequest:
     session_id: str
     unit_id: str
+    reason: str
+
+
+@dataclass(frozen=True, repr=False)
+class WorkOrderStartRequest:
+    session_id: str
+    target: WorkOrderTarget
+    callback_url: str
+    callback_token: str = field(repr=False)
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class WorkOrderStopRequest:
+    session_id: str
+    work_order_id: str
     reason: str
 
 
@@ -297,7 +320,7 @@ class _PendingEvent:
 class _ActiveSession:
     session_id: str
     bridge_session_id: str
-    target: TargetUnit
+    target: TargetUnit | WorkOrderTarget
     callback_url: str
     callback_token: _SecretBuffer = field(repr=False)
     expires_at: datetime
@@ -455,6 +478,7 @@ def _validate_callback_url(
     *,
     session_id: str,
     allowed_origins: tuple[str, ...],
+    route_prefix: str,
 ) -> str:
     candidate = str(value if value is not None else "").strip()
     if not candidate or len(candidate) > 1_500 or CONTROL_CHARACTER_PATTERN.search(candidate):
@@ -463,7 +487,7 @@ def _validate_callback_url(
         parsed = urllib.parse.urlsplit(candidate)
     except ValueError:
         _raise(400, "invalid_callback", "The Magmo callback URL is invalid.")
-    expected_path = f"{CALLBACK_ROUTE_PREFIX}{session_id}{CALLBACK_ROUTE_SUFFIX}"
+    expected_path = f"{route_prefix}{session_id}{CALLBACK_ROUTE_SUFFIX}"
     if (
         parsed.username
         or parsed.password
@@ -501,7 +525,10 @@ def _parse_start_request(
     if not CALLBACK_TOKEN_PATTERN.fullmatch(token):
         _raise(400, "invalid_callback", "The Magmo callback credential is invalid.")
     callback_url = _validate_callback_url(
-        callback.get("url"), session_id=session_id, allowed_origins=allowed_origins
+        callback.get("url"),
+        session_id=session_id,
+        allowed_origins=allowed_origins,
+        route_prefix=STORAGE_CALLBACK_ROUTE_PREFIX,
     )
     expires_at = _parse_expiry(callback.get("expiresAt"), now)
     return StartRequest(
@@ -533,6 +560,90 @@ def _parse_stop_request(payload: Any) -> StopRequest:
     if reason not in {"cancelled", "confirmed", "expired", "failed"}:
         _raise(400, "invalid_stop_request", "The scanner stop reason is invalid.")
     return StopRequest(session_id=session_id, unit_id=unit_id, reason=reason)
+
+
+def _parse_work_order_id(value: Any) -> str:
+    candidate = str(value if value is not None else "").strip()
+    if (
+        not candidate
+        or len(candidate) > 180
+        or CONTROL_CHARACTER_PATTERN.search(candidate)
+        or "/" in candidate
+        or "\\" in candidate
+    ):
+        _raise(400, "invalid_work_order_target", "The work order scan target is invalid.")
+    return candidate
+
+
+def _parse_work_order_start_request(
+    payload: Any,
+    *,
+    now: datetime,
+    allowed_origins: tuple[str, ...],
+) -> WorkOrderStartRequest:
+    data = _ensure_exact_keys(
+        payload,
+        {"schemaVersion", "sessionId", "target", "callback"},
+        code="invalid_work_order_start_request",
+        message="The work order scanner start request is invalid.",
+    )
+    _parse_schema_version(data.get("schemaVersion"))
+    session_id = _parse_session_id(data.get("sessionId"))
+    target_data = _ensure_exact_keys(
+        data.get("target"),
+        {"type", "workOrderId"},
+        code="invalid_work_order_target",
+        message="The work order scan target is invalid.",
+    )
+    if target_data.get("type") != "work-order-add":
+        _raise(400, "invalid_work_order_target", "The work order scan target is invalid.")
+    target = WorkOrderTarget(work_order_id=_parse_work_order_id(target_data.get("workOrderId")))
+    callback = _ensure_exact_keys(
+        data.get("callback"),
+        {"url", "bearerToken", "expiresAt"},
+        code="invalid_callback",
+        message="The Magmo callback configuration is invalid.",
+    )
+    token = str(
+        callback.get("bearerToken")
+        if callback.get("bearerToken") is not None
+        else ""
+    ).strip()
+    if not CALLBACK_TOKEN_PATTERN.fullmatch(token):
+        _raise(400, "invalid_callback", "The Magmo callback credential is invalid.")
+    callback_url = _validate_callback_url(
+        callback.get("url"),
+        session_id=session_id,
+        allowed_origins=allowed_origins,
+        route_prefix=WORK_ORDER_CALLBACK_ROUTE_PREFIX,
+    )
+    return WorkOrderStartRequest(
+        session_id=session_id,
+        target=target,
+        callback_url=callback_url,
+        callback_token=token,
+        expires_at=_parse_expiry(callback.get("expiresAt"), now),
+    )
+
+
+def _parse_work_order_stop_request(payload: Any) -> WorkOrderStopRequest:
+    data = _ensure_exact_keys(
+        payload,
+        {"schemaVersion", "sessionId", "workOrderId", "reason"},
+        code="invalid_work_order_stop_request",
+        message="The work order scanner stop request is invalid.",
+    )
+    _parse_schema_version(data.get("schemaVersion"))
+    session_id = _parse_session_id(data.get("sessionId"))
+    work_order_id = _parse_work_order_id(data.get("workOrderId"))
+    reason = str(data.get("reason") if data.get("reason") is not None else "").strip().lower()
+    if reason not in {"cancelled", "confirmed", "expired", "failed"}:
+        _raise(400, "invalid_work_order_stop_request", "The scanner stop reason is invalid.")
+    return WorkOrderStopRequest(
+        session_id=session_id,
+        work_order_id=work_order_id,
+        reason=reason,
+    )
 
 
 def _normalize_scan_code(raw_value: Any) -> str:
@@ -630,6 +741,7 @@ class StorageScanBridge:
         schedule_expiry: Callable[[float, Callable[[], None]], Callable[[], None]] | None = None,
         worker_launcher: Callable[[Callable[[], None]], Any] | None = None,
         scanner_ready: bool = False,
+        work_order_wedge_enabled: bool = False,
     ) -> None:
         if not isinstance(settings, BridgeSettings):
             raise TypeError("settings must be a BridgeSettings instance")
@@ -646,6 +758,10 @@ class StorageScanBridge:
         self._delivery_worker: Any = None
         self._delivery_worker_running = False
         self._scanner_ready = bool(scanner_ready)
+        # Retained as a constructor compatibility argument for installed runtime
+        # glue. Work Order scans now use the callback channel for every explicit
+        # HID or serial input source, so keyboard-wedge capability is irrelevant.
+        _ = work_order_wedge_enabled
         self._closed = False
 
     def _now(self) -> datetime:
@@ -722,12 +838,38 @@ class StorageScanBridge:
     @staticmethod
     def _same_start(active: _ActiveSession, incoming: StartRequest) -> bool:
         return (
-            active.session_id == incoming.session_id
+            isinstance(active.target, TargetUnit)
+            and active.session_id == incoming.session_id
             and active.target == incoming.target
             and active.callback_url == incoming.callback_url
             and active.expires_at == incoming.expires_at
             and active.callback_token.matches(incoming.callback_token)
         )
+
+    @staticmethod
+    def _same_work_order_start(
+        active: _ActiveSession, incoming: WorkOrderStartRequest
+    ) -> bool:
+        return (
+            isinstance(active.target, WorkOrderTarget)
+            and active.session_id == incoming.session_id
+            and active.target == incoming.target
+            and active.callback_url == incoming.callback_url
+            and active.expires_at == incoming.expires_at
+            and active.callback_token.matches(incoming.callback_token)
+        )
+
+    def _activate_locked(self, active: _ActiveSession, *, now: datetime) -> None:
+        self._active = active
+        delay = max(0.0, (active.expires_at - now).total_seconds())
+        try:
+            active.cancel_expiry = self._schedule_expiry(
+                delay,
+                lambda: self._expire_if_current(active.session_id, active.bridge_session_id),
+            )
+        except Exception:
+            self._clear_active_locked()
+            _raise(503, "expiry_scheduler_unavailable", "The scanner session could not be scheduled safely.")
 
     def start_session(self, payload: Any) -> tuple[dict[str, Any], bool]:
         now = self._now()
@@ -769,29 +911,79 @@ class StorageScanBridge:
                 callback_token=_SecretBuffer(incoming.callback_token),
                 expires_at=incoming.expires_at,
             )
-            self._active = active
-            delay = max(0.0, (active.expires_at - now).total_seconds())
-            try:
-                active.cancel_expiry = self._schedule_expiry(
-                    delay,
-                    lambda: self._expire_if_current(active.session_id, active.bridge_session_id),
+            self._activate_locked(active, now=now)
+            return self._public_start_response(active, idempotent=False), True
+
+    def start_work_order_session(self, payload: Any) -> tuple[dict[str, Any], bool]:
+        """Acquire the scanner and route every frame to the Work Order callback."""
+
+        now = self._now()
+        with self._lock:
+            if self._closed:
+                _raise(503, "bridge_closed", "The scanner bridge is shutting down.")
+            if not self._scanner_ready:
+                _raise(
+                    503,
+                    "scanner_input_unavailable",
+                    "The physical warehouse scanner is unavailable.",
                 )
-            except Exception:
-                self._clear_active_locked()
-                _raise(503, "expiry_scheduler_unavailable", "The scanner session could not be scheduled safely.")
+        incoming = _parse_work_order_start_request(
+            payload,
+            now=now,
+            allowed_origins=self.settings.allowed_callback_origins,
+        )
+        with self._lock:
+            if self._closed:
+                _raise(503, "bridge_closed", "The scanner bridge is shutting down.")
+            if not self._scanner_ready:
+                _raise(
+                    503,
+                    "scanner_input_unavailable",
+                    "The physical warehouse scanner is unavailable.",
+                )
+            self._expire_locked(now)
+            if self._active is not None:
+                if self._same_work_order_start(self._active, incoming):
+                    return self._public_start_response(self._active, idempotent=True), False
+                if self._active.session_id == incoming.session_id:
+                    _raise(
+                        409,
+                        "session_id_conflict",
+                        "This scanner session ID is already active with different settings.",
+                    )
+                _raise(
+                    409,
+                    "scanner_busy",
+                    "The warehouse scanner is already assigned to another session.",
+                )
+
+            active = _ActiveSession(
+                session_id=incoming.session_id,
+                bridge_session_id=f"warehouse-reader:{uuid.uuid4().hex}",
+                target=incoming.target,
+                callback_url=incoming.callback_url,
+                callback_token=_SecretBuffer(incoming.callback_token),
+                expires_at=incoming.expires_at,
+            )
+            self._activate_locked(active, now=now)
             return self._public_start_response(active, idempotent=False), True
 
     @staticmethod
     def _public_start_response(active: _ActiveSession, *, idempotent: bool) -> dict[str, Any]:
-        return {
+        response = {
             "ok": True,
             "sessionId": active.bridge_session_id,
             "bridgeSessionId": active.bridge_session_id,
             "magmoSessionId": active.session_id,
-            "unitId": active.target.unit_id,
             "expiresAt": active.expires_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
             "idempotent": idempotent,
         }
+        if isinstance(active.target, TargetUnit):
+            response["unitId"] = active.target.unit_id
+        else:
+            response["workOrderId"] = active.target.work_order_id
+            response["captureMode"] = "remote-callback"
+        return response
 
     def stop_session(self, payload: Any) -> dict[str, Any]:
         incoming = _parse_stop_request(payload)
@@ -809,7 +1001,7 @@ class StorageScanBridge:
                 }
             if active.session_id != incoming.session_id:
                 _raise(409, "stale_stop", "This stop signal does not own the active scanner session.")
-            if active.target.unit_id != incoming.unit_id:
+            if not isinstance(active.target, TargetUnit) or active.target.unit_id != incoming.unit_id:
                 _raise(409, "session_target_conflict", "This stop signal does not match the active target.")
             bridge_session_id = active.bridge_session_id
             self._clear_active_locked()
@@ -820,6 +1012,40 @@ class StorageScanBridge:
                 "sessionId": bridge_session_id,
                 "bridgeSessionId": bridge_session_id,
                 "magmoSessionId": incoming.session_id,
+                "reason": incoming.reason,
+            }
+
+    def stop_work_order_session(self, payload: Any) -> dict[str, Any]:
+        incoming = _parse_work_order_stop_request(payload)
+        with self._lock:
+            if self._closed:
+                return {"ok": True, "stopped": True, "alreadyStopped": True}
+            self._expire_locked(self._now())
+            active = self._active
+            if active is None:
+                return {
+                    "ok": True,
+                    "stopped": True,
+                    "alreadyStopped": True,
+                    "magmoSessionId": incoming.session_id,
+                }
+            if active.session_id != incoming.session_id:
+                _raise(409, "stale_stop", "This stop signal does not own the active scanner session.")
+            if (
+                not isinstance(active.target, WorkOrderTarget)
+                or active.target.work_order_id != incoming.work_order_id
+            ):
+                _raise(409, "session_target_conflict", "This stop signal does not match the active target.")
+            bridge_session_id = active.bridge_session_id
+            self._clear_active_locked()
+            return {
+                "ok": True,
+                "stopped": True,
+                "alreadyStopped": False,
+                "sessionId": bridge_session_id,
+                "bridgeSessionId": bridge_session_id,
+                "magmoSessionId": incoming.session_id,
+                "workOrderId": incoming.work_order_id,
                 "reason": incoming.reason,
             }
 
@@ -1095,13 +1321,19 @@ class StorageScanBridge:
             active = self._active
             if active is None:
                 return {"active": False, "pendingEventCount": 0}
-            return {
+            snapshot = {
                 "active": True,
                 "magmoSessionId": active.session_id,
-                "unitId": active.target.unit_id,
                 "expiresAt": active.expires_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                 "pendingEventCount": len(active.pending_events),
             }
+            if isinstance(active.target, TargetUnit):
+                snapshot["unitId"] = active.target.unit_id
+                snapshot["captureMode"] = "storage-scan"
+            else:
+                snapshot["workOrderId"] = active.target.work_order_id
+                snapshot["captureMode"] = "remote-callback"
+            return snapshot
 
     def close(self) -> None:
         with self._lock:
@@ -1159,6 +1391,19 @@ def register_storage_scan_routes(
         bridge.authorize(request.headers.get("Authorization"))
         payload = _read_json_request(bridge.settings.max_request_bytes)
         return jsonify(bridge.stop_session(payload)), 200
+
+    @blueprint.route("/work-order-scan/start", methods=["POST"], strict_slashes=True)
+    def _work_order_start() -> tuple[Response, int]:
+        bridge.authorize(request.headers.get("Authorization"))
+        payload = _read_json_request(bridge.settings.max_request_bytes)
+        response_payload, created = bridge.start_work_order_session(payload)
+        return jsonify(response_payload), 201 if created else 200
+
+    @blueprint.route("/work-order-scan/stop", methods=["POST"], strict_slashes=True)
+    def _work_order_stop() -> tuple[Response, int]:
+        bridge.authorize(request.headers.get("Authorization"))
+        payload = _read_json_request(bridge.settings.max_request_bytes)
+        return jsonify(bridge.stop_work_order_session(payload)), 200
 
     app.register_blueprint(blueprint, url_prefix=prefix)
     return bridge

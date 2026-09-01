@@ -36,6 +36,7 @@ import {
 } from "../../utils/itemFormShared";
 import WarehouseMapModal from "../../components/WarehouseMapModal";
 import TrailerMapModal from "../../components/TrailerMapModal";
+import WorkOrderAddModal from "../../components/WorkOrderAddModal";
 
 // Predefined warehouse client IDs and display names
 const SOCAL_CLIENT_ID = "AIS17182";
@@ -299,6 +300,7 @@ export default function MainSearch() {
   const [clientSelectionType, setClientSelectionType] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [showTrailerMap, setShowTrailerMap] = useState(false);
+  const [showWorkOrderAdd, setShowWorkOrderAdd] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
 
   const router = useRouter();
@@ -2614,6 +2616,13 @@ export default function MainSearch() {
                             className={`${styles.actionButton} ${styles.scanActionButton}`}
                           />
                           <Button
+                            variant="success"
+                            className={`${styles.actionButton} ${styles.workOrderAddActionButton}`}
+                            onClick={() => setShowWorkOrderAdd(true)}
+                          >
+                            Work order add
+                          </Button>
+                          <Button
                             variant="info"
                             className={`${styles.actionButton} ${styles.trailerActionButton}`}
                             onClick={openTrailerMap}
@@ -2663,6 +2672,14 @@ export default function MainSearch() {
           <Offcanvas.Body>{renderFilters("drawer")}</Offcanvas.Body>
         </Offcanvas>
 
+        <WorkOrderAddModal
+          show={showWorkOrderAdd}
+          onHide={() => setShowWorkOrderAdd(false)}
+          onConfirmed={() => {
+            resetPagination();
+            setQueryEpoch((value) => value + 1);
+          }}
+        />
         <WarehouseMapModal
           show={showMap}
           onHide={() => setShowMap(false)}
