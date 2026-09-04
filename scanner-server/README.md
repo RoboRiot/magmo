@@ -249,7 +249,8 @@ uses the existing ZD621 203-dpi 4×6-inch envelope (`^PW820`, `^LL1180`).
   to ten scale down, and larger bins continue on additional labels (ten rows
   per label) without dropping contents.
 - Pallets print the largest practical `P[number]` heading and a smaller grid of
-  their linked bins. More than 20 bins continue on another label.
+  their linked bins. Up to 25 bins use one centered adaptive grid; larger
+  pallets continue on additional labels.
 - Every page prints the storage serial (`AIS-B#####` or `AIS-P#####`) as a Code
   128 barcode at bottom left and a phone-scannable QR for the Magmo storage page
   at bottom right.
