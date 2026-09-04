@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MAX_ITEM_LABEL_CODE_CHARACTERS,
   MAX_LABEL_ITEMS,
   buildItemLabelEntry,
   loadStorageUnitLabelPayload,
@@ -78,6 +79,39 @@ test("item label entries preserve the display name and prefer a recorded serial"
     barcode_value: "X7",
     ais_number: "X7",
   });
+});
+
+test("item label entries keep every barcode physically scannable", () => {
+  const oversizedSerial = "S".repeat(MAX_ITEM_LABEL_CODE_CHARACTERS + 1);
+  assert.deepEqual(
+    buildItemLabelEntry({
+      id: "AIS17704",
+      name: "Pellet",
+      localSN: oversizedSerial,
+    }),
+    {
+      item_id: "AIS17704",
+      name: "Pellet",
+      barcode_value: "AIS17704",
+      ais_number: "AIS17704",
+    }
+  );
+  assert.equal(
+    buildItemLabelEntry({ id: "AIS17705", localSN: "SÉRIAL-17705" })
+      .barcode_value,
+    "AIS17705"
+  );
+
+  assert.throws(
+    () =>
+      buildItemLabelEntry({
+        id: "I".repeat(MAX_ITEM_LABEL_CODE_CHARACTERS + 1),
+        localSN: oversizedSerial,
+      }),
+    (error) =>
+      error.code === "storage_label_item_code_too_long" &&
+      error.statusCode === 409
+  );
 });
 
 test("storage ID lists canonicalize, de-duplicate, filter by type, and sort naturally", () => {

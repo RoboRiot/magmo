@@ -37,7 +37,7 @@ const naturalCollator = new Intl.Collator(undefined, {
 });
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 const BIN_LABEL_ITEMS_PER_PAGE = 10;
-const PALLET_LABEL_BINS_PER_PAGE = 20;
+const PALLET_LABEL_BINS_PER_PAGE = 25;
 
 function firstQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -107,16 +107,28 @@ function palletLabelLayout(binCount) {
   if (binCount <= 0) {
     return { columns: 3, rows: 1, gridTop: "2.22in", headerSize: "2.1in" };
   }
+  let layout;
   if (binCount <= 4) {
-    return { columns: 2, rows: 2, gridTop: "2.12in", headerSize: "1.77in" };
+    layout = { columns: 2, gridTop: "2.12in", headerSize: "1.77in" };
+  } else if (binCount <= 9) {
+    layout = { columns: 3, gridTop: "1.8in", headerSize: "1.48in" };
+  } else if (binCount <= 16) {
+    layout = { columns: 4, gridTop: "1.55in", headerSize: "1.23in" };
+  } else {
+    layout = { columns: 5, gridTop: "1.4in", headerSize: "1.08in" };
   }
-  if (binCount <= 9) {
-    return { columns: 3, rows: 3, gridTop: "1.8in", headerSize: "1.48in" };
-  }
-  if (binCount <= 16) {
-    return { columns: 4, rows: 4, gridTop: "1.55in", headerSize: "1.23in" };
-  }
-  return { columns: 5, rows: 4, gridTop: "1.4in", headerSize: "1.08in" };
+  return {
+    ...layout,
+    rows: Math.ceil(binCount / layout.columns),
+  };
+}
+
+function centeredPalletBinStyle(index, binCount, columns) {
+  const remainder = binCount % columns;
+  if (!remainder || index < binCount - remainder) return undefined;
+  return {
+    transform: `translateX(${((columns - remainder) * 100) / 2}%)`,
+  };
 }
 
 function mapSelectionFromLocation(location, unitId, parentPalletId = "") {
@@ -519,7 +531,12 @@ export default function StorageUnitDetailPage() {
       if (!response.ok || result?.ok === false) {
         throw new Error(result?.error || "The storage label could not be printed.");
       }
-      setPrintSuccess(`${unitId} was sent to the label printer.`);
+      const pageCount = Math.max(1, Number(result?.pageCount) || 1);
+      setPrintSuccess(
+        `${unitId} was sent to the label printer as ${pageCount} label${
+          pageCount === 1 ? "" : "s"
+        }.`
+      );
     } catch (error) {
       console.error("Failed to print storage-unit label", error);
       setPrintError(error?.message || "The storage label could not be printed.");
@@ -1008,7 +1025,11 @@ export default function StorageUnitDetailPage() {
                         {page.items.length ? (
                           page.items.map((item) => (
                             <div
-                              className={styles.storageLabelItemRow}
+                              className={`${styles.storageLabelItemRow} ${
+                                String(item.barcode_value || "").length > 12
+                                  ? styles.storageLabelItemRowWideBarcode
+                                  : ""
+                              }`}
                               key={item.item_id}
                             >
                               <strong>{item.name}</strong>
@@ -1050,8 +1071,17 @@ export default function StorageUnitDetailPage() {
                           gridTemplateRows: `repeat(${palletLayout.rows}, minmax(0, 1fr))`,
                         }}
                       >
-                        {page.bins.map((bin) => (
-                          <strong key={bin.unit_id}>{bin.display_id}</strong>
+                        {page.bins.map((bin, index) => (
+                          <strong
+                            key={bin.unit_id}
+                            style={centeredPalletBinStyle(
+                              index,
+                              page.bins.length,
+                              palletLayout.columns
+                            )}
+                          >
+                            {bin.display_id}
+                          </strong>
                         ))}
                       </div>
                     </>

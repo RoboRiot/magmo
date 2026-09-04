@@ -15,6 +15,8 @@ from flask import Flask
 from warehouse_scanner.storage_label_print import (
     LABEL_LENGTH_DOTS,
     LABEL_WIDTH_DOTS,
+    MAX_ITEM_CODE_CHARACTERS,
+    MAX_PALLET_BINS_PER_PAGE,
     StorageLabelError,
     build_storage_label_pages,
     parse_storage_label_payload,
@@ -133,7 +135,7 @@ class StorageLabelZplTests(unittest.TestCase):
         zpl = pages[0]
         self.assertIn(f"^PW{LABEL_WIDTH_DOTS}", zpl)
         self.assertIn(f"^LL{LABEL_LENGTH_DOTS}", zpl)
-        self.assertIn("BIN 47", zpl)
+        self.assertIn("Bin 47", zpl)
         self.assertIn("Infusion pump", zpl)
         self.assertIn("^A0N,36,33", zpl)
         self.assertIn("CODE00001", zpl)
@@ -142,6 +144,33 @@ class StorageLabelZplTests(unittest.TestCase):
         self.assertIn("LA,https://magmo.cloud/NewSearch/inventory/storage/B47", zpl)
         self.assertEqual(zpl.count("^XA"), 1)
         self.assertEqual(zpl.count("^XZ"), 1)
+
+    def test_short_bin_lists_use_available_third_name_line(self) -> None:
+        pages = build_storage_label_pages(
+            label_payload(items=[item(1, name="MRI Gradient Amplifier Assembly")])
+        )
+
+        self.assertIn("^FDMRI Gradient^FS", pages[0])
+        self.assertIn("^FDAmplifier^FS", pages[0])
+        self.assertIn("^FDAssembly^FS", pages[0])
+
+    def test_twenty_character_barcode_gets_wide_two_dot_column(self) -> None:
+        long_code = "ABCDEFGHIJKLMNOPQRST"
+        long_item = item(1)
+        long_item["barcode_value"] = long_code
+        pages = build_storage_label_pages(label_payload(items=[long_item]))
+
+        self.assertEqual(len(long_code), MAX_ITEM_CODE_CHARACTERS)
+        self.assertIn("^FO220,467^GB2,134,2^FS", pages[0])
+        self.assertIn(
+            f"^FO250,490^BY2,2,58^BCN,58,N,N,N^FH\\^FD{long_code}^FS",
+            pages[0],
+        )
+
+        too_long = item(2)
+        too_long["barcode_value"] = "X" * (MAX_ITEM_CODE_CHARACTERS + 1)
+        with self.assertRaises(StorageLabelError):
+            build_storage_label_pages(label_payload(items=[too_long]))
 
     def test_bin_scales_six_to_ten_and_paginates_above_ten(self) -> None:
         compressed = build_storage_label_pages(
@@ -188,19 +217,29 @@ class StorageLabelZplTests(unittest.TestCase):
         self.assertIn("^A0N,250,250", zpl)
         for index in range(1, 14):
             self.assertIn(f"^FDB{index}^FS", zpl)
+        self.assertIn("^FO312,747^GB195,145,2^FS", zpl)
         self.assertIn("AIS-P00065", zpl)
         self.assertIn("LA,https://magmo.cloud/NewSearch/inventory/storage/P65", zpl)
 
-    def test_pallet_paginates_more_than_twenty_bins(self) -> None:
-        pages = build_storage_label_pages(
+    def test_pallet_uses_five_by_five_page_then_paginates(self) -> None:
+        twenty_one = build_storage_label_pages(
             label_payload("P9", bins=[bin_entry(index) for index in range(1, 22)])
         )
+        paged = build_storage_label_pages(
+            label_payload(
+                "P9",
+                bins=[bin_entry(index) for index in range(1, MAX_PALLET_BINS_PER_PAGE + 2)],
+            )
+        )
 
-        self.assertEqual(len(pages), 2)
-        self.assertIn("1/2", pages[0])
-        self.assertIn("2/2", pages[1])
-        combined = "\n".join(pages)
-        for index in range(1, 22):
+        self.assertEqual(len(twenty_one), 1)
+        self.assertIn("^FO332,769^GB156,123,2^FS", twenty_one[0])
+        self.assertEqual(len(paged), 2)
+        self.assertIn("1/2", paged[0])
+        self.assertIn("2/2", paged[1])
+        self.assertIn("^FO215,430^GB390,462,2^FS", paged[1])
+        combined = "\n".join(paged)
+        for index in range(1, MAX_PALLET_BINS_PER_PAGE + 2):
             self.assertEqual(combined.count(f"^FDB{index}^FS"), 1)
 
 

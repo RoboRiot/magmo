@@ -33,10 +33,13 @@ MAX_REQUEST_BYTES = 65_536
 MAX_ITEMS = 250
 MAX_BINS = 250
 MAX_BIN_ITEMS_PER_PAGE = 10
-MAX_PALLET_BINS_PER_PAGE = 20
+MAX_PALLET_BINS_PER_PAGE = 25
+MAX_ITEM_CODE_CHARACTERS = 20
 
 UNIT_ID_PATTERN = re.compile(r"^([BP])([1-9]\d{0,4})$")
-ITEM_BARCODE_PATTERN = re.compile(r"^[\x20-\x7e]{1,48}$")
+ITEM_BARCODE_PATTERN = re.compile(
+    rf"^[\x20-\x7e]{{1,{MAX_ITEM_CODE_CHARACTERS}}}$"
+)
 ITEM_ID_PATTERN = re.compile(r"^[\x20-\x7e]{1,120}$")
 CONTROL_CHARACTER_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -164,14 +167,14 @@ def _parse_item(value: Any) -> StorageLabelItem:
     )
     barcode_value = _clean_text(
         data.get("barcode_value"),
-        maximum=48,
+        maximum=MAX_ITEM_CODE_CHARACTERS,
         code="invalid_item",
         message="A storage-label item barcode is invalid.",
         printable_ascii=True,
     )
     ais_number = _clean_text(
         data.get("ais_number"),
-        maximum=48,
+        maximum=MAX_ITEM_CODE_CHARACTERS,
         code="invalid_item",
         message="A storage-label item AIS number is invalid.",
         printable_ascii=True,
@@ -397,7 +400,7 @@ def _bin_page(
     page_number: int,
     page_count: int,
 ) -> str:
-    header = f"BIN {payload.display_number}"
+    header = f"Bin {payload.display_number}"
     header_font = min(100, max(70, int(760 / max(1.0, len(header) * 0.62))))
     body = [
         _text_field(20, 12, header, height=header_font, field_width=780, alignment="C"),
@@ -439,13 +442,29 @@ def _bin_page(
         barcode_height = max(34, min(54, row_height - 30))
         ais_font = max(18, min(22, row_height - barcode_height - 8))
 
-    body.append(f"^FO390,{block_top}^GB2,{row_height * row_count},2^FS")
+    wide_barcode_column = max(len(item.barcode_value) for item in items) > 12
+    divider_x = 220 if wide_barcode_column else 390
+    name_field_width = divider_x - 48
+    barcode_x = divider_x + 30
+    ais_x = divider_x + 8
+    ais_field_width = LABEL_WIDTH_DOTS - ais_x - 20
+    if wide_barcode_column and row_count <= 5:
+        name_font = min(name_font, 24)
+    elif wide_barcode_column:
+        name_font = min(name_font, 20)
+
+    body.append(f"^FO{divider_x},{block_top}^GB2,{row_height * row_count},2^FS")
     for index, item in enumerate(items):
         y = block_top + index * row_height
         if index:
             body.append(f"^FO20,{y}^GB780,1,1^FS")
-        characters = max(8, int(340 / max(1.0, name_font * 0.58)))
-        name_lines = _fit_lines(item.name, characters=characters, maximum_lines=2)
+        characters = max(6, int(name_field_width / max(1.0, name_font * 0.58)))
+        maximum_name_lines = 3 if row_count <= 5 else 2
+        name_lines = _fit_lines(
+            item.name,
+            characters=characters,
+            maximum_lines=maximum_name_lines,
+        )
         name_line_height = name_font + 2
         names_height = len(name_lines) * name_line_height
         name_y = y + max(3, (row_height - names_height) // 2)
@@ -457,31 +476,28 @@ def _bin_page(
                     line,
                     height=name_font,
                     width=max(18, name_font - 3),
-                    field_width=342,
+                    field_width=name_field_width,
                 )
             )
 
         barcode_y = y + max(3, (row_height - barcode_height - ais_font - 6) // 2)
-        # At 203 dpi a Code 128 value longer than roughly 12 characters
-        # exceeds this 400-dot column at a two-dot narrow bar.
-        module_width = 2 if len(item.barcode_value) <= 12 else 1
         body.append(
             _barcode_field(
-                420,
+                barcode_x,
                 barcode_y,
                 item.barcode_value,
                 height=barcode_height,
-                module_width=module_width,
+                module_width=2,
             )
         )
         body.append(
             _text_field(
-                398,
+                ais_x,
                 barcode_y + barcode_height + 4,
                 item.ais_number,
                 height=ais_font,
                 width=max(15, ais_font - 2),
-                field_width=392,
+                field_width=ais_field_width,
                 alignment="C",
             )
         )
@@ -551,9 +567,11 @@ def _pallet_page(
     )
     for index, bin_value in enumerate(bins):
         row, column = divmod(index, columns)
-        x = grid_left + column * cell_width
+        values_in_row = min(columns, len(bins) - row * columns)
+        row_offset = (grid_width - values_in_row * cell_width) // 2
+        x = grid_left + row_offset + column * cell_width
         y = grid_top + row * cell_height
-        width = cell_width if column < columns - 1 else grid_left + grid_width - x
+        width = cell_width
         height = cell_height if row < rows - 1 else grid_bottom - y
         body.append(f"^FO{x},{y}^GB{width},{height},2^FS")
         text_y = y + max(2, (height - cell_font) // 2)
@@ -710,6 +728,7 @@ __all__ = [
     "LABEL_WIDTH_DOTS",
     "MAGMO_STORAGE_ROUTE",
     "MAX_BIN_ITEMS_PER_PAGE",
+    "MAX_ITEM_CODE_CHARACTERS",
     "MAX_PALLET_BINS_PER_PAGE",
     "StorageLabelError",
     "StorageLabelPayload",

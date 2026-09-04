@@ -486,7 +486,7 @@
 .storageLabelItemRow {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1.42in;
+  grid-template-columns: minmax(0, 1fr) 1.85in;
   align-items: center;
   gap: 0.09in;
   border-bottom: 1px solid #111;
@@ -534,7 +534,7 @@
 }
 
 .storageLabelItemListCompact .storageLabelItemRow {
-  grid-template-columns: minmax(0, 1fr) 1.25in;
+  grid-template-columns: minmax(0, 1fr) 1.85in;
   gap: 0.06in;
 }
 
@@ -549,6 +549,20 @@
 
 .storageLabelItemListCompact .storageLabelItemSerial span {
   font-size: 0.105in;
+}
+
+.storageLabelItemRow.storageLabelItemRowWideBarcode {
+  grid-template-columns: minmax(0, 0.84in) minmax(0, 2.7in);
+}
+
+.storageLabelItemRowWideBarcode > strong {
+  max-height: 0.55in;
+  font-size: 0.13in;
+}
+
+.storageLabelItemListCompact .storageLabelItemRowWideBarcode > strong {
+  max-height: 0.34in;
+  font-size: 0.11in;
 }
 
 .storageLabelEmpty {
@@ -602,7 +616,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
   align-content: center;
-  gap: 0.12in;
+  gap: 0;
 }
 
 .storageLabelBinGrid strong {
