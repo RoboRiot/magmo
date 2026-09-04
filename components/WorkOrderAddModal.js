@@ -16,7 +16,10 @@ import {
   isWorkOrderAddMovementModeLocked,
   workOrderDestinationLabel,
 } from "../lib/inventory/workOrderAddUiContract";
+import scanQueueLib from "../lib/inventory/scanResolutionQueue.cjs";
 import styles from "./WorkOrderAddModal.module.css";
+
+const { createScanResolutionQueue } = scanQueueLib;
 
 const BarcodeScannerComponent = dynamic(
   () => import("react-qr-barcode-scanner"),
@@ -25,6 +28,25 @@ const BarcodeScannerComponent = dynamic(
 
 const WORK_ORDER_MENU_ID = "work-order-add-options";
 const MAX_VISIBLE_WORK_ORDERS = 10;
+const WORK_ORDER_DRAIN_DEADLINE_MS = 30000;
+const WORK_ORDER_DRAIN_POLL_MS = 150;
+const LEGACY_DRAIN_SETTLE_POLLS = 3;
+
+function waitFor(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function drainIsUnsupported(error) {
+  return (
+    Number(error?.status) === 404 &&
+    cleanText(error?.code).toLowerCase() === "scanner_drain_unsupported"
+  );
+}
+
+function drainErrorIsTransient(error) {
+  const status = Number(error?.status) || 0;
+  return !status || status === 408 || status === 429 || status >= 500;
+}
 
 class WorkOrderAddRequestError extends Error {
   constructor(message, { status = 0, code = "request_failed", payload = null } = {}) {
@@ -352,6 +374,12 @@ export default function WorkOrderAddModal({
   const [scannerCapturePhase, setScannerCapturePhase] = useState("idle");
   const [scannerCaptureMeta, setScannerCaptureMeta] = useState(null);
   const [scannerPollWarning, setScannerPollWarning] = useState("");
+  const [scannerQueueStats, setScannerQueueStats] = useState({
+    queued: 0,
+    active: 0,
+    retrying: 0,
+    outstanding: 0,
+  });
   const rowsRef = useRef([]);
   const pendingCodesRef = useRef(new Set());
   const requestRunRef = useRef(0);
@@ -363,13 +391,14 @@ export default function WorkOrderAddModal({
   const scannerPollNowRef = useRef(null);
   const scannerSeenEventIdsRef = useRef(new Set());
   const scannerLifecycleGenerationRef = useRef(0);
+  const scannerResolutionQueueRef = useRef(null);
   const scannerMountedRef = useRef(true);
   const scannerShowRef = useRef(show);
   const stageCodeRef = useRef(null);
   scannerShowRef.current = show;
 
   const busy = phase === "submitting";
-  const scannerCaptureBusy = ["starting", "stopping"].includes(
+  const scannerCaptureBusy = ["starting", "draining", "stopping"].includes(
     scannerCapturePhase
   );
   const scannerTargetLocked = Boolean(scannerCaptureRef.current);
@@ -393,6 +422,12 @@ export default function WorkOrderAddModal({
   const clearScannerPollTimer = useCallback(() => {
     clearTimeout(scannerPollTimerRef.current);
     scannerPollTimerRef.current = null;
+  }, []);
+
+  const closeScannerResolutionQueue = useCallback(() => {
+    scannerResolutionQueueRef.current?.close();
+    scannerResolutionQueueRef.current = null;
+    setScannerQueueStats({ queued: 0, active: 0, retrying: 0, outstanding: 0 });
   }, []);
 
   const resetWorkflow = useCallback(() => {
@@ -420,6 +455,7 @@ export default function WorkOrderAddModal({
     clearTimeout(scannerExpiryTimerRef.current);
     scannerExpiryTimerRef.current = null;
     clearScannerPollTimer();
+    closeScannerResolutionQueue();
     scannerSeenEventIdsRef.current = new Set();
     setScannerPollWarning("");
     setScannerCaptureMeta(null);
@@ -436,7 +472,7 @@ export default function WorkOrderAddModal({
     } else {
       setScannerCapturePhase("idle");
     }
-  }, [clearScannerPollTimer]);
+  }, [clearScannerPollTimer, closeScannerResolutionQueue]);
 
   const loadOptions = useCallback(async (signal, query = "") => {
     setOptionsLoading(true);
@@ -528,6 +564,9 @@ export default function WorkOrderAddModal({
         scannerExpiryTimerRef.current = null;
         clearScannerPollTimer();
         scannerCaptureRef.current = null;
+        scannerResolutionQueueRef.current?.close();
+        scannerResolutionQueueRef.current = null;
+        setScannerQueueStats({ queued: 0, active: 0, retrying: 0, outstanding: 0 });
       }
       if (
         ownsCurrentStop &&
@@ -575,18 +614,90 @@ export default function WorkOrderAddModal({
     }, delayMs <= 0 ? 0 : safeDelay);
   }, [clearScannerPollTimer]);
 
-  const pollScannerCapture = useCallback(async (capture) => {
+  const ensureScannerResolutionQueue = useCallback((capture) => {
+    if (scannerResolutionQueueRef.current) {
+      return scannerResolutionQueueRef.current;
+    }
+    const queue = createScanResolutionQueue({
+      concurrency: 3,
+      keyOf: (event) => event.eventId,
+      worker: async (event) => {
+        const consumed = await stageCodeRef.current?.(event.code, {
+          source: "scanner-server",
+          eventId: event.eventId,
+          retryTransient: true,
+        });
+        if (!consumed) {
+          throw new WorkOrderAddRequestError(
+            "This scan is waiting for the Work Order list to become ready.",
+            { status: 503, code: "scan_not_consumed" }
+          );
+        }
+        return true;
+      },
+      onFailed: (event, requestError) => {
+        if (!sameScannerCapture(scannerCaptureRef.current, capture)) return;
+        scannerCaptureRef.current = {
+          ...scannerCaptureRef.current,
+          resolutionFailure: {
+            eventId: event.eventId,
+            code: event.code,
+            message:
+              requestError?.message || "inventory lookup failed after retries",
+          },
+        };
+        setScannerPollWarning(
+          `${event.code} could not be loaded after retries: ${
+            requestError?.message || "inventory lookup failed"
+          }`
+        );
+      },
+      onStats: (stats) => {
+        if (sameScannerCapture(scannerCaptureRef.current, capture)) {
+          setScannerQueueStats(stats);
+        }
+      },
+    });
+    scannerResolutionQueueRef.current = queue;
+    return queue;
+  }, []);
+
+  const pollScannerCapture = useCallback(async (
+    capture,
+    {
+      forceAfterCurrent = false,
+      scheduleNext = true,
+      propagateErrors = false,
+    } = {}
+  ) => {
     const currentAtStart = scannerCaptureRef.current;
     if (
       !capture?.sessionId ||
       !scannerMountedRef.current ||
       !scannerShowRef.current ||
-      !sameScannerCapture(currentAtStart, capture) ||
-      currentAtStart?.startPromise ||
-      currentAtStart?.stopPromise ||
-      currentAtStart?.pollPromise
+      !sameScannerCapture(currentAtStart, capture)
     ) {
-      return;
+      return null;
+    }
+    if (currentAtStart?.pollPromise) {
+      try {
+        await currentAtStart.pollPromise;
+      } catch {
+        // The owner of the in-flight poll handles its UI state. A forced drain
+        // refresh below starts one clean read after that owner has settled.
+      }
+      await waitFor(0);
+      if (forceAfterCurrent) {
+        return scannerPollNowRef.current?.(capture, {
+          forceAfterCurrent: false,
+          scheduleNext,
+          propagateErrors,
+        });
+      }
+      return null;
+    }
+    if (currentAtStart?.startPromise || currentAtStart?.stopPromise) {
+      return null;
     }
 
     const pollPromise = authenticatedRequest(
@@ -611,7 +722,7 @@ export default function WorkOrderAddModal({
         !scannerShowRef.current ||
         currentCapture?.stopPromise
       ) {
-        return;
+        return null;
       }
 
       const session = payload?.session || {};
@@ -630,6 +741,9 @@ export default function WorkOrderAddModal({
         scannerExpiryTimerRef.current = null;
         clearScannerPollTimer();
         scannerCaptureRef.current = null;
+        scannerResolutionQueueRef.current?.close();
+        scannerResolutionQueueRef.current = null;
+        setScannerQueueStats({ queued: 0, active: 0, retrying: 0, outstanding: 0 });
         setScannerCapturePhase(status === "failed" ? "start_error" : "expired");
         setMessage(
           status === "expired"
@@ -642,24 +756,15 @@ export default function WorkOrderAddModal({
       }
 
       const events = Array.isArray(session.events) ? session.events : [];
+      const resolutionQueue = ensureScannerResolutionQueue(capture);
       for (const event of events) {
         const eventId = cleanText(event?.eventId, 300);
         const code = cleanText(event?.code, 200);
         if (!eventId || !code || scannerSeenEventIdsRef.current.has(eventId)) {
           continue;
         }
-        const consumed = await stageCodeRef.current?.(code, {
-          source: "scanner-server",
-          eventId,
-        });
-        if (consumed) scannerSeenEventIdsRef.current.add(eventId);
-        if (
-          !sameScannerCapture(scannerCaptureRef.current, capture) ||
-          scannerCaptureRef.current?.stopPromise ||
-          !scannerMountedRef.current ||
-          !scannerShowRef.current
-        ) {
-          return;
+        if (resolutionQueue.enqueue({ eventId, code })) {
+          scannerSeenEventIdsRef.current.add(eventId);
         }
       }
 
@@ -667,23 +772,28 @@ export default function WorkOrderAddModal({
         sameScannerCapture(scannerCaptureRef.current, capture) &&
         !scannerCaptureRef.current?.stopPromise
       ) {
-        setScannerCapturePhase("active");
-        scheduleScannerPoll(
-          scannerCaptureRef.current,
-          Number(session.pollAfterMs) || 1000
+        setScannerCapturePhase(
+          scannerCaptureRef.current?.draining ? "draining" : "active"
         );
+        if (scheduleNext && !scannerCaptureRef.current?.draining) {
+          scheduleScannerPoll(
+            scannerCaptureRef.current,
+            Number(session.pollAfterMs) || 1000
+          );
+        }
       }
+      return session;
     } catch (requestError) {
       const currentCapture = scannerCaptureRef.current;
       const ownsPoll =
         sameScannerCapture(currentCapture, capture) &&
         currentCapture?.pollPromise === pollPromise;
-      if (!ownsPoll) return;
+      if (!ownsPoll) return null;
       scannerCaptureRef.current = {
         ...currentCapture,
         pollPromise: null,
       };
-      if (currentCapture?.stopPromise) return;
+      if (currentCapture?.stopPromise) return null;
       const status = Number(requestError?.status);
       if ([404, 410].includes(status)) {
         clearTimeout(scannerExpiryTimerRef.current);
@@ -694,19 +804,177 @@ export default function WorkOrderAddModal({
         setScannerCapturePhase("expired");
         setScannerPollWarning("");
         setMessage("Scanner relay expired or could not be found. Enable it again to continue.");
-        return;
+        if (propagateErrors) throw requestError;
+        return null;
       }
       if (scannerMountedRef.current && scannerShowRef.current) {
-        setScannerCapturePhase("poll_error");
-        setScannerPollWarning(
-          "The scanner relay is temporarily unreachable. Magmo will keep retrying without losing server scans."
-        );
-        scheduleScannerPoll(scannerCaptureRef.current, 2000);
+        if (!scannerCaptureRef.current?.draining) {
+          setScannerCapturePhase("poll_error");
+          setScannerPollWarning(
+            "The scanner relay is temporarily unreachable. Magmo will keep retrying without losing server scans."
+          );
+          if (scheduleNext) {
+            scheduleScannerPoll(scannerCaptureRef.current, 2000);
+          }
+        }
       }
+      if (propagateErrors) throw requestError;
+      return null;
     }
-  }, [clearScannerPollTimer, scheduleScannerPoll]);
+  }, [clearScannerPollTimer, ensureScannerResolutionQueue, scheduleScannerPoll]);
 
   scannerPollNowRef.current = pollScannerCapture;
+
+  const drainScannerCapture = useCallback(async (
+    capture,
+    reason = "confirmed"
+  ) => {
+    if (
+      !capture?.sessionId ||
+      !capture?.workOrderId ||
+      !sameScannerCapture(scannerCaptureRef.current, capture)
+    ) {
+      return { drainComplete: false, supported: false };
+    }
+
+    clearScannerPollTimer();
+    clearTimeout(scannerExpiryTimerRef.current);
+    scannerExpiryTimerRef.current = null;
+    scannerCaptureRef.current = {
+      ...scannerCaptureRef.current,
+      draining: true,
+    };
+    if (scannerMountedRef.current && scannerShowRef.current) {
+      setScannerCapturePhase("draining");
+      setScannerPollWarning("Finishing scanner deliveries before saving...");
+    }
+
+    const deadline = Date.now() + WORK_ORDER_DRAIN_DEADLINE_MS;
+    let current = scannerCaptureRef.current;
+    let drainComplete = current?.drainComplete === true;
+    let supported = current?.drainSupported !== false;
+    let drainAttempts = 0;
+
+    while (!drainComplete && supported) {
+      drainAttempts += 1;
+      let payload;
+      try {
+        payload = await authenticatedRequest(
+          `/api/items/work-order-add/scan-sessions/${encodeURIComponent(
+            capture.sessionId
+          )}/drain`,
+          {
+            method: "POST",
+            body: {
+              workOrderId: capture.workOrderId,
+              reason,
+            },
+          }
+        );
+      } catch (requestError) {
+        if (drainIsUnsupported(requestError)) {
+          supported = false;
+          break;
+        }
+        if (drainErrorIsTransient(requestError) && Date.now() < deadline) {
+          await waitFor(WORK_ORDER_DRAIN_POLL_MS);
+          continue;
+        }
+        throw requestError;
+      }
+
+      await pollScannerCapture(capture, {
+        forceAfterCurrent: true,
+        scheduleNext: false,
+        propagateErrors: true,
+      });
+      await scannerResolutionQueueRef.current?.whenIdle();
+
+      const drain = payload?.drain || payload || {};
+      drainComplete = drain.drained === true;
+      current = scannerCaptureRef.current;
+      if (sameScannerCapture(current, capture)) {
+        scannerCaptureRef.current = {
+          ...current,
+          drainComplete,
+          drainSupported: true,
+          draining: true,
+        };
+      }
+      if (drainComplete) break;
+      if (Date.now() >= deadline) {
+        throw new WorkOrderAddRequestError(
+          "The scanner is still delivering recent scans. Nothing was saved; try again.",
+          { status: 408, code: "scanner_drain_timeout" }
+        );
+      }
+      const pending = Math.max(0, Number(drain.pendingEventCount) || 0);
+      if (scannerMountedRef.current && scannerShowRef.current) {
+        setScannerPollWarning(
+          pending
+            ? `Finishing ${pending} scanner deliver${pending === 1 ? "y" : "ies"} before saving...`
+            : `Finishing scanner deliveries before saving (check ${drainAttempts})...`
+        );
+      }
+      await waitFor(WORK_ORDER_DRAIN_POLL_MS);
+    }
+
+    if (!drainComplete) {
+      current = scannerCaptureRef.current;
+      if (sameScannerCapture(current, capture)) {
+        scannerCaptureRef.current = {
+          ...current,
+          drainSupported: false,
+          draining: true,
+        };
+      }
+      if (scannerMountedRef.current && scannerShowRef.current) {
+        setScannerPollWarning(
+          "The scanner server is using compatibility mode. Checking recent scans before saving..."
+        );
+      }
+      for (let index = 0; index < LEGACY_DRAIN_SETTLE_POLLS; index += 1) {
+        await pollScannerCapture(capture, {
+          forceAfterCurrent: true,
+          scheduleNext: false,
+          propagateErrors: true,
+        });
+        await scannerResolutionQueueRef.current?.whenIdle();
+        if (index + 1 < LEGACY_DRAIN_SETTLE_POLLS) await waitFor(300);
+      }
+    }
+
+    await pollScannerCapture(capture, {
+      forceAfterCurrent: true,
+      scheduleNext: false,
+      propagateErrors: true,
+    });
+    await scannerResolutionQueueRef.current?.whenIdle();
+
+    current = scannerCaptureRef.current;
+    if (!sameScannerCapture(current, capture)) {
+      throw new WorkOrderAddRequestError(
+        "The scanner session ended before its final scans could be reviewed.",
+        { status: 409, code: "scanner_session_changed" }
+      );
+    }
+    if (current?.resolutionFailure) {
+      const failed = current.resolutionFailure;
+      throw new WorkOrderAddRequestError(
+        `${failed.code || "A scanner entry"} could not be loaded: ${
+          failed.message || "inventory lookup failed"
+        }. Release the relay and add that code manually before confirming.`,
+        { status: 409, code: "scanner_resolution_failed" }
+      );
+    }
+    scannerCaptureRef.current = {
+      ...current,
+      drainComplete,
+      drainSupported: supported,
+      draining: true,
+    };
+    return { drainComplete, supported };
+  }, [clearScannerPollTimer, pollScannerCapture]);
 
   const startScannerCapture = useCallback(async () => {
     const selectedId = workOrderId(selectedWorkOrder);
@@ -719,6 +987,9 @@ export default function WorkOrderAddModal({
     }
     if (capture?.startPromise || capture?.stopPromise) return;
     if (!capture) {
+      scannerResolutionQueueRef.current?.close();
+      scannerResolutionQueueRef.current = null;
+      setScannerQueueStats({ queued: 0, active: 0, retrying: 0, outstanding: 0 });
       capture = {
         sessionId: createScannerSessionId(),
         workOrderId: selectedId,
@@ -1051,15 +1322,30 @@ export default function WorkOrderAddModal({
     }
   };
 
-  const stageCode = useCallback(async (rawCode) => {
+  const stageCode = useCallback(async (rawCode, options = {}) => {
     const code = cleanText(rawCode);
     const normalizedCode = code.toUpperCase();
+    const fromScannerServer = options.source === "scanner-server";
+    const finishingScannerQueue =
+      fromScannerServer && scannerCaptureRef.current?.draining === true;
+    const markScannerResolutionFailure = (failureMessage) => {
+      const capture = scannerCaptureRef.current;
+      if (!fromScannerServer || !capture?.sessionId) return;
+      scannerCaptureRef.current = {
+        ...capture,
+        resolutionFailure: {
+          eventId: cleanText(options.eventId),
+          code,
+          message: failureMessage,
+        },
+      };
+    };
     if (
       !selectedWorkOrder ||
       !movementMode ||
       !code ||
-      editingLocked ||
-      scannerCaptureBusy
+      (editingLocked && !finishingScannerQueue) ||
+      (scannerCaptureBusy && !finishingScannerQueue)
     ) return false;
     setError("");
     setMessage("");
@@ -1081,7 +1367,9 @@ export default function WorkOrderAddModal({
       if (run !== requestRunRef.current) return;
       const resolution = payload?.resolution || {};
       if (cleanText(resolution.status).toLowerCase() !== "ready") {
-        setError(describeResolutionError(resolution));
+        const resolutionError = describeResolutionError(resolution);
+        setError(resolutionError);
+        markScannerResolutionFailure(resolutionError);
         return true;
       }
       const canonicalKey = resolutionKey(resolution, code);
@@ -1109,8 +1397,17 @@ export default function WorkOrderAddModal({
       return true;
     } catch (requestError) {
       if (run !== requestRunRef.current) return;
-      setError(requestError?.message || "That scan could not be resolved.");
+      const resolutionError =
+        requestError?.message || "That scan could not be resolved.";
+      setError(resolutionError);
       const status = Number(requestError?.status);
+      if (
+        options.retryTransient === true &&
+        (!status || status === 408 || status === 429 || status >= 500)
+      ) {
+        throw requestError;
+      }
+      markScannerResolutionFailure(resolutionError);
       return Boolean(status && status !== 408 && status !== 429 && status < 500);
     } finally {
       pendingCodesRef.current.delete(normalizedCode);
@@ -1169,6 +1466,7 @@ export default function WorkOrderAddModal({
       !movementMode ||
       !rowsRef.current.length ||
       pendingCodesRef.current.size ||
+      scannerQueueStats.outstanding > 0 ||
       busy
     ) return;
     const confirmationMovementMode = submittedMovementMode || movementMode;
@@ -1176,14 +1474,27 @@ export default function WorkOrderAddModal({
     setPhase("submitting");
     setError("");
     setMessage("");
-    if (
-      scannerCaptureRef.current &&
-      !(await stopScannerCapture("confirmed"))
-    ) {
-      setSubmittedMovementMode("");
-      setReadyPrompt(false);
-      setPhase("scanning");
-      return;
+    const capture = scannerCaptureRef.current;
+    if (capture) {
+      try {
+        await drainScannerCapture(capture, "confirmed");
+      } catch (requestError) {
+        setSubmittedMovementMode("");
+        setReadyPrompt(false);
+        setPhase("scanning");
+        setScannerCapturePhase("drain_error");
+        setError(
+          requestError?.message ||
+            "Recent scanner deliveries could not be finished. Nothing was saved."
+        );
+        return;
+      }
+      if (!(await stopScannerCapture("confirmed", { capture }))) {
+        setSubmittedMovementMode("");
+        setReadyPrompt(false);
+        setPhase("scanning");
+        return;
+      }
     }
     try {
       const payload = await authenticatedRequest("/api/items/work-order-add/confirm", {
@@ -1245,6 +1556,8 @@ export default function WorkOrderAddModal({
     }
   }, [
     busy,
+    drainScannerCapture,
+    scannerQueueStats.outstanding,
     movementMode,
     onConfirmed,
     operationId,
@@ -1267,7 +1580,7 @@ export default function WorkOrderAddModal({
   };
 
   const selectedNumber = selectedWorkOrder ? workOrderNumber(selectedWorkOrder) : "";
-  const scannerRelayActive = ["active", "poll_error"].includes(
+  const scannerRelayActive = ["active", "poll_error", "draining", "drain_error"].includes(
     scannerCapturePhase
   );
   const selectedDestination = selectedWorkOrder
@@ -1527,6 +1840,10 @@ export default function WorkOrderAddModal({
                     ? "Scanner relay reconnecting"
                   : scannerCapturePhase === "starting"
                     ? "Connecting to scanner server…"
+                    : scannerCapturePhase === "draining"
+                      ? "Finishing recent scanner deliveries…"
+                      : scannerCapturePhase === "drain_error"
+                        ? "Scanner delivery queue needs attention"
                     : scannerCapturePhase === "stopping"
                       ? "Stopping scanner relay…"
                       : scannerCapturePhase === "stop_error"
@@ -1561,14 +1878,14 @@ export default function WorkOrderAddModal({
                     (!selectedWorkOrder || !movementMode || editingLocked))
                 }
                 onClick={() => {
-                  if (["active", "poll_error", "stop_error"].includes(scannerCapturePhase)) {
+                  if (["active", "poll_error", "drain_error", "stop_error"].includes(scannerCapturePhase)) {
                     void stopScannerCapture("cancelled");
                   } else {
                     void startScannerCapture();
                   }
                 }}
               >
-                {scannerCapturePhase === "starting" || scannerCapturePhase === "stopping" ? (
+                {["starting", "draining", "stopping"].includes(scannerCapturePhase) ? (
                   <Spinner animation="border" size="sm" />
                 ) : scannerRelayActive ? (
                   "Stop relay"
@@ -1682,8 +1999,8 @@ export default function WorkOrderAddModal({
                 {stagedItemCount ? ` · ${stagedItemCount} inventory ${stagedItemCount === 1 ? "item" : "items"}` : ""}
               </span>
             </div>
-            {resolvingCount ? (
-              <span className={styles.resolving}><Spinner animation="border" size="sm" /> Checking scan…</span>
+            {resolvingCount || scannerQueueStats.outstanding ? (
+              <span className={styles.resolving}><Spinner animation="border" size="sm" /> {scannerQueueStats.outstanding ? `${scannerQueueStats.outstanding} queued/loading` : "Checking scan…"}</span>
             ) : null}
           </div>
 
@@ -1722,7 +2039,7 @@ export default function WorkOrderAddModal({
               <Button
                 variant="success"
                 onClick={() => submitConfirmation()}
-                disabled={busy || scannerCaptureBusy || resolvingCount > 0}
+                disabled={busy || scannerCaptureBusy || resolvingCount > 0 || scannerQueueStats.outstanding > 0}
               >
                 Yes, send the list
               </Button>
@@ -1772,6 +2089,7 @@ export default function WorkOrderAddModal({
                 !movementMode ||
                 !rows.length ||
                 resolvingCount > 0 ||
+                scannerQueueStats.outstanding > 0 ||
                 busy ||
                 scannerCaptureBusy
               }

@@ -102,7 +102,7 @@ test("repeated resolved targets remain visible but only the earliest is confirma
   assert.equal(scanIn.markRepeatedResolvedTargets([repeated])[0].status, "ready");
 });
 
-test("scan client uses the isolated authenticated start/read/cancel/confirm contract", async () => {
+test("scan client uses the isolated authenticated start/read/drain/cancel/confirm contract", async () => {
   const requests = [];
   const client = scanIn.createStorageUnitScanInClient({
     getIdToken: async () => "firebase-token",
@@ -114,6 +114,7 @@ test("scan client uses the isolated authenticated start/read/cancel/confirm cont
 
   await client.start("b-0047");
   await client.read(VALID_SESSION_ID);
+  await client.drain(VALID_SESSION_ID);
   await client.cancel(VALID_SESSION_ID);
   await client.confirm(VALID_SESSION_ID, ["event-1", "event-2", "event-1"]);
 
@@ -122,6 +123,7 @@ test("scan client uses the isolated authenticated start/read/cancel/confirm cont
     [
       ["/api/storage-units/scan-sessions", "POST"],
       [`/api/storage-units/scan-sessions/${VALID_SESSION_ID}`, "GET"],
+      [`/api/storage-units/scan-sessions/${VALID_SESSION_ID}/drain`, "POST"],
       [`/api/storage-units/scan-sessions/${VALID_SESSION_ID}/cancel`, "POST"],
       [`/api/storage-units/scan-sessions/${VALID_SESSION_ID}/confirm`, "POST"],
     ]
@@ -130,8 +132,9 @@ test("scan client uses the isolated authenticated start/read/cancel/confirm cont
     assert.equal(request.options.headers.Authorization, "Bearer firebase-token");
   });
   assert.deepEqual(JSON.parse(requests[0].options.body), { unitId: "B47" });
-  assert.deepEqual(JSON.parse(requests[2].options.body), {});
-  assert.deepEqual(JSON.parse(requests[3].options.body), {
+  assert.deepEqual(JSON.parse(requests[2].options.body), { reason: "confirmed" });
+  assert.deepEqual(JSON.parse(requests[3].options.body), {});
+  assert.deepEqual(JSON.parse(requests[4].options.body), {
     eventIds: ["event-1", "event-2"],
   });
 });
@@ -174,7 +177,10 @@ test("modal stages read-only previews and confirms immutable event IDs once", ()
 
   assert.match(componentSource, /setRows\(\[\]\)/);
   assert.match(componentSource, /excludedEventIdsRef/);
-  assert.match(componentSource, /client\.confirm\(run\.sessionId, eventIds\)/);
+  assert.match(componentSource, /client\.drain\(run\.sessionId, "confirmed"\)/);
+  assert.match(componentSource, /run\.resolutionQueue\?\.whenIdle\(\)/);
+  assert.match(componentSource, /client\.confirm\(run\.sessionId, freshEventIds\)/);
+  assert.match(componentSource, /rowsRef\.current/);
   assert.match(componentSource, /confirmingRef\.current/);
   assert.doesNotMatch(componentSource, /\.set\s*\(/);
   assert.doesNotMatch(componentSource, /\.update\s*\(/);

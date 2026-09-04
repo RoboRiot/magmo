@@ -382,8 +382,8 @@
 }
 
 .labelPreviewDialog {
-  width: min(760px, calc(100vw - 24px));
-  max-width: 760px !important;
+  width: min(620px, calc(100vw - 24px));
+  max-width: 620px !important;
   margin-left: auto !important;
   margin-right: auto !important;
 }
@@ -433,10 +433,16 @@
   font-weight: 700;
 }
 
+.storageLabelPages {
+  display: grid;
+  gap: 20px;
+  justify-items: center;
+}
+
 .storageLabelSheet {
   width: 4in;
   max-width: 100%;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 2 / 3;
   position: relative;
   flex: 0 0 auto;
   box-sizing: border-box;
@@ -450,53 +456,181 @@
   -webkit-print-color-adjust: exact;
 }
 
-.storageLabelType {
+.storageLabelBinHeading {
   position: absolute;
   z-index: 2;
-  top: 0.1in;
-  left: 0.13in;
+  top: 0.14in;
+  right: 0.16in;
+  left: 0.16in;
   color: #111;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 0.52in;
+  font-weight: 900;
+  line-height: 0.95;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.storageLabelItemList {
+  position: absolute;
+  top: 0.83in;
+  right: 0.18in;
+  bottom: 0.92in;
+  left: 0.18in;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  align-content: center;
+  overflow: hidden;
+}
+
+.storageLabelItemRow {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.42in;
+  align-items: center;
+  gap: 0.09in;
+  border-bottom: 1px solid #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.storageLabelItemRow:last-child {
+  border-bottom: 0;
+}
+
+.storageLabelItemRow > strong {
+  max-height: 0.72in;
+  overflow: hidden;
+  font-size: 0.2in;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.storageLabelItemSerial {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 0.42in) auto;
+  align-items: end;
+  text-align: center;
+}
+
+.storageLabelItemSerial div {
+  min-height: 0;
+}
+
+.storageLabelItemSerial svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.storageLabelItemSerial span {
+  overflow: hidden;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.13in;
   font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.035in;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.storageLabelNumber {
+.storageLabelItemListCompact .storageLabelItemRow {
+  grid-template-columns: minmax(0, 1fr) 1.25in;
+  gap: 0.06in;
+}
+
+.storageLabelItemListCompact .storageLabelItemRow > strong {
+  max-height: 0.36in;
+  font-size: 0.145in;
+}
+
+.storageLabelItemListCompact .storageLabelItemSerial {
+  grid-template-rows: minmax(0, 0.24in) auto;
+}
+
+.storageLabelItemListCompact .storageLabelItemSerial span {
+  font-size: 0.105in;
+}
+
+.storageLabelEmpty {
+  align-self: center;
+  color: #222;
+  font: 700 0.22in/1 Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+.storageLabelPageNumber {
   position: absolute;
-  z-index: 1;
-  inset: 0.12in 0.12in 0.52in;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  right: 0.16in;
+  bottom: 0.78in;
+  font: 700 0.11in/1 Arial, Helvetica, sans-serif;
+}
+
+.storageLabelPalletPageNumber {
+  position: absolute;
+  z-index: 3;
+  top: 1.23in;
+  right: 0.16in;
+  font: 700 0.11in/1 Arial, Helvetica, sans-serif;
+}
+
+.storageLabelPalletNumber {
+  position: absolute;
+  top: 0.28in;
+  right: 0.12in;
+  left: 0.12in;
   overflow: hidden;
-  color: #000;
   font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
-  font-size: 1.03in;
+  font-size: 2.1in;
   font-weight: 900;
-  line-height: 0.88;
-  letter-spacing: -0.06em;
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.storageLabelPalletNumberWithBins {
+  font-size: 1.65in;
+}
+
+.storageLabelBinGrid {
+  position: absolute;
+  top: 2.22in;
+  right: 0.22in;
+  bottom: 0.98in;
+  left: 0.22in;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  align-content: center;
+  gap: 0.12in;
+}
+
+.storageLabelBinGrid strong {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #000;
+  font: 900 0.27in/1 "Arial Black", Arial, sans-serif;
   white-space: nowrap;
 }
 
 .storageLabelSymbols {
-  height: 0.44in;
+  height: 0.68in;
   position: absolute;
   z-index: 2;
-  right: 0.12in;
-  bottom: 0.07in;
-  left: 0.12in;
+  right: 0.16in;
+  bottom: 0.1in;
+  left: 0.16in;
   display: flex;
   align-items: flex-end;
-  justify-content: flex-end;
-  gap: 0.08in;
+  justify-content: space-between;
+  gap: 0.12in;
 }
 
 .storageLabelQr {
-  width: 0.44in;
-  height: 0.44in;
-  flex: 0 0 0.44in;
+  width: 0.68in;
+  height: 0.68in;
+  flex: 0 0 0.68in;
   overflow: hidden;
 }
 
@@ -508,8 +642,8 @@
 }
 
 .storageLabelBarcodeBlock {
-  width: 1.18in;
-  height: 0.44in;
+  width: 2.75in;
+  height: 0.68in;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   align-items: end;
@@ -527,7 +661,7 @@
   display: block;
   margin-top: 0.015in;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.105in;
+  font-size: 0.13in;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.018in;
@@ -677,7 +811,7 @@
 }
 
 @page {
-  size: 4in 2in;
+  size: 4in 6in;
   margin: 0;
 }
 
@@ -688,17 +822,14 @@
 
   .labelPreviewModal {
     width: 4in !important;
-    height: 2in !important;
-    position: fixed !important;
-    top: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: 0 !important;
+    height: auto !important;
+    min-height: 6in !important;
+    position: absolute !important;
     z-index: 2147483647 !important;
     display: block !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     background: #fff !important;
   }
 
@@ -707,16 +838,20 @@
   .labelPreviewBody {
     width: 4in !important;
     max-width: none !important;
-    height: 2in !important;
+    height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     border: 0 !important;
     border-radius: 0 !important;
     background: #fff !important;
     box-shadow: none !important;
     transform: none !important;
+  }
+
+  .storageLabelPages {
+    display: block !important;
   }
 
   .labelPreviewHeader,
@@ -730,13 +865,18 @@
   .storageLabelSheet {
     width: 4in !important;
     max-width: none !important;
-    height: 2in !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
+    height: 6in !important;
+    position: relative !important;
     margin: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .storageLabelSheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

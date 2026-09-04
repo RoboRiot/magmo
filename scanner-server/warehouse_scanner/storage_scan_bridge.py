@@ -35,7 +35,10 @@ SCHEMA_VERSION = 1
 SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{20,80}$")
 EVENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 CALLBACK_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{40,120}$")
-STORAGE_UNIT_PATTERN = re.compile(r"^([BP])[\s_-]*(\d+)$", re.IGNORECASE)
+STORAGE_UNIT_PATTERN = re.compile(
+    r"^(?:AIS[\s_-]*)?([BP])[\s_-]*0*(\d{1,5})$",
+    re.IGNORECASE,
+)
 BEARER_PATTERN = re.compile(r"^Bearer\s+([^\s]+)$", re.IGNORECASE)
 CONTROL_CHARACTER_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -51,6 +54,7 @@ DEFAULT_MAGMO_ORIGIN = "https://magmo.cloud"
 DEFAULT_CALLBACK_ATTEMPTS = 3
 DEFAULT_CALLBACK_TIMEOUT_SECONDS = 8.0
 DEFAULT_RETRY_DELAYS_SECONDS = (0.0, 0.25, 0.75)
+MAX_CALLBACK_WORKERS = 2
 TERMINAL_CALLBACK_STATUSES = frozenset({400, 401, 403, 404, 409, 410, 413, 422})
 
 
@@ -303,6 +307,9 @@ class _PendingEvent:
     code: str
     scanned_at: str
     attempts: int = 0
+    in_flight: bool = False
+    retry_scheduled: bool = False
+    cancel_retry: Callable[[], None] | None = field(default=None, repr=False)
 
     def payload(self) -> dict[str, str]:
         return {
@@ -312,6 +319,14 @@ class _PendingEvent:
         }
 
     def scrub(self) -> None:
+        if self.cancel_retry is not None:
+            try:
+                self.cancel_retry()
+            except Exception:
+                pass
+            self.cancel_retry = None
+        self.in_flight = False
+        self.retry_scheduled = False
         self.code = ""
         self.scanned_at = ""
 
@@ -327,6 +342,7 @@ class _ActiveSession:
     cancel_expiry: Callable[[], None] | None = field(default=None, repr=False)
     pending_events: dict[str, _PendingEvent] = field(default_factory=dict, repr=False)
     events_created: int = 0
+    draining: bool = False
 
 
 @dataclass(frozen=True)
@@ -351,6 +367,13 @@ def _utc_now() -> datetime:
 
 
 def _default_schedule_expiry(delay_seconds: float, callback: Callable[[], None]) -> Callable[[], None]:
+    timer = threading.Timer(max(0.0, delay_seconds), callback)
+    timer.daemon = True
+    timer.start()
+    return timer.cancel
+
+
+def _default_schedule_retry(delay_seconds: float, callback: Callable[[], None]) -> Callable[[], None]:
     timer = threading.Timer(max(0.0, delay_seconds), callback)
     timer.daemon = True
     timer.start()
@@ -739,6 +762,7 @@ class StorageScanBridge:
         event_id_factory: Callable[[], str] | None = None,
         sleeper: Callable[[float], None] | None = None,
         schedule_expiry: Callable[[float, Callable[[], None]], Callable[[], None]] | None = None,
+        schedule_retry: Callable[[float, Callable[[], None]], Callable[[], None]] | None = None,
         worker_launcher: Callable[[Callable[[], None]], Any] | None = None,
         scanner_ready: bool = False,
         work_order_wedge_enabled: bool = False,
@@ -752,11 +776,11 @@ class StorageScanBridge:
         self._event_id_factory = event_id_factory or (lambda: uuid.uuid4().hex)
         self._sleeper = sleeper or __import__("time").sleep
         self._schedule_expiry = schedule_expiry or _default_schedule_expiry
+        self._schedule_retry = schedule_retry or _default_schedule_retry
         self._worker_launcher = worker_launcher or _default_worker_launcher
         self._lock = threading.RLock()
         self._active: _ActiveSession | None = None
-        self._delivery_worker: Any = None
-        self._delivery_worker_running = False
+        self._delivery_workers_running = 0
         self._scanner_ready = bool(scanner_ready)
         # Retained as a constructor compatibility argument for installed runtime
         # glue. Work Order scans now use the callback channel for every explicit
@@ -1049,6 +1073,141 @@ class StorageScanBridge:
                 "reason": incoming.reason,
             }
 
+    @staticmethod
+    def _already_drained_response(
+        session_id: str,
+        *,
+        unit_id: str = "",
+        work_order_id: str = "",
+        reason: str,
+    ) -> dict[str, Any]:
+        response: dict[str, Any] = {
+            "ok": True,
+            "draining": False,
+            "drained": True,
+            "alreadyStopped": True,
+            "pendingEventCount": 0,
+            "magmoSessionId": session_id,
+            "reason": reason,
+        }
+        if unit_id:
+            response["unitId"] = unit_id
+        if work_order_id:
+            response["workOrderId"] = work_order_id
+        return response
+
+    @staticmethod
+    def _make_pending_retries_ready_locked(active: _ActiveSession) -> None:
+        """Drain promptly without cancelling callbacks that are already in flight."""
+
+        for pending in active.pending_events.values():
+            if pending.cancel_retry is not None:
+                try:
+                    pending.cancel_retry()
+                except Exception:
+                    pass
+            pending.cancel_retry = None
+            pending.retry_scheduled = False
+
+    @staticmethod
+    def _drain_response(
+        active: _ActiveSession,
+        *,
+        reason: str,
+    ) -> dict[str, Any]:
+        pending_count = len(active.pending_events)
+        response: dict[str, Any] = {
+            "ok": True,
+            "draining": True,
+            "drained": pending_count == 0,
+            "alreadyStopped": False,
+            "pendingEventCount": pending_count,
+            "sessionId": active.bridge_session_id,
+            "bridgeSessionId": active.bridge_session_id,
+            "magmoSessionId": active.session_id,
+            "reason": reason,
+        }
+        if isinstance(active.target, TargetUnit):
+            response["unitId"] = active.target.unit_id
+        else:
+            response["workOrderId"] = active.target.work_order_id
+        return response
+
+    def drain_session(self, payload: Any) -> dict[str, Any]:
+        """Pause storage intake while allowing queued callbacks to finish."""
+
+        incoming = _parse_stop_request(payload)
+        with self._lock:
+            if self._closed:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    unit_id=incoming.unit_id,
+                    reason=incoming.reason,
+                )
+            self._expire_locked(self._now())
+            active = self._active
+            if active is None:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    unit_id=incoming.unit_id,
+                    reason=incoming.reason,
+                )
+            if active.session_id != incoming.session_id:
+                _raise(409, "stale_stop", "This drain signal does not own the active scanner session.")
+            if not isinstance(active.target, TargetUnit) or active.target.unit_id != incoming.unit_id:
+                _raise(409, "session_target_conflict", "This drain signal does not match the active target.")
+            active.draining = True
+            self._make_pending_retries_ready_locked(active)
+        self._ensure_delivery_workers()
+        with self._lock:
+            active = self._active
+            if active is None or active.session_id != incoming.session_id:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    unit_id=incoming.unit_id,
+                    reason=incoming.reason,
+                )
+            return self._drain_response(active, reason=incoming.reason)
+
+    def drain_work_order_session(self, payload: Any) -> dict[str, Any]:
+        """Pause Work Order intake while allowing queued callbacks to finish."""
+
+        incoming = _parse_work_order_stop_request(payload)
+        with self._lock:
+            if self._closed:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    work_order_id=incoming.work_order_id,
+                    reason=incoming.reason,
+                )
+            self._expire_locked(self._now())
+            active = self._active
+            if active is None:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    work_order_id=incoming.work_order_id,
+                    reason=incoming.reason,
+                )
+            if active.session_id != incoming.session_id:
+                _raise(409, "stale_stop", "This drain signal does not own the active scanner session.")
+            if (
+                not isinstance(active.target, WorkOrderTarget)
+                or active.target.work_order_id != incoming.work_order_id
+            ):
+                _raise(409, "session_target_conflict", "This drain signal does not match the active target.")
+            active.draining = True
+            self._make_pending_retries_ready_locked(active)
+        self._ensure_delivery_workers()
+        with self._lock:
+            active = self._active
+            if active is None or active.session_id != incoming.session_id:
+                return self._already_drained_response(
+                    incoming.session_id,
+                    work_order_id=incoming.work_order_id,
+                    reason=incoming.reason,
+                )
+            return self._drain_response(active, reason=incoming.reason)
+
     def _next_event_id(self) -> str:
         suffix = str(self._event_id_factory()).strip()
         candidate = f"warehouse-reader:{suffix}"
@@ -1093,8 +1252,13 @@ class StorageScanBridge:
             if active is None:
                 destination = self._idle_destination(code)
             else:
+                if active.draining:
+                    return ScanDispatchResult(
+                        mode="callback",
+                        accepted=False,
+                        error_code="session_draining",
+                    )
                 if active.events_created >= MAX_SESSION_EVENTS:
-                    self._clear_active_locked()
                     return ScanDispatchResult(
                         mode="callback", accepted=False, error_code="session_event_limit"
                     )
@@ -1126,7 +1290,7 @@ class StorageScanBridge:
         # never fall through to browser navigation. Physical-device callbacks
         # enqueue work so HTTP retry delays never block the input message loop.
         if asynchronous_callback:
-            self._ensure_delivery_worker()
+            self._ensure_delivery_workers()
             return ScanDispatchResult(
                 mode="callback",
                 accepted=True,
@@ -1160,47 +1324,153 @@ class StorageScanBridge:
             asynchronous_callback=True,
         )
 
-    def _ensure_delivery_worker(self) -> None:
-        with self._lock:
-            if self._closed or self._delivery_worker_running:
-                return
-            active = self._active
-            if active is None or not active.pending_events:
-                return
-            self._delivery_worker_running = True
-            try:
-                self._delivery_worker = self._worker_launcher(self._delivery_worker_loop)
-            except Exception:
-                self._delivery_worker_running = False
-                self._delivery_worker = None
+    def _next_ready_event_locked(self) -> str | None:
+        active = self._active
+        if active is None:
+            return None
+        for event_id, pending in active.pending_events.items():
+            if not pending.in_flight and not pending.retry_scheduled:
+                pending.in_flight = True
+                return event_id
+        return None
 
-    def _delivery_worker_loop(self) -> None:
-        try:
+    def _ensure_delivery_workers(self) -> None:
+        """Fill at most two callback slots without running network I/O inline."""
+
+        while True:
             with self._lock:
                 self._expire_locked(self._now())
-                active = self._active
-                event_ids = tuple(active.pending_events) if active is not None else ()
-            for event_id in event_ids:
-                result = self._deliver_pending_event(event_id)
-                if result.error_code in {"callback_rejected", "session_closed"}:
+                if (
+                    self._closed
+                    or self._active is None
+                    or self._delivery_workers_running >= MAX_CALLBACK_WORKERS
+                ):
                     return
-        finally:
-            should_restart = False
-            with self._lock:
-                self._delivery_worker_running = False
-                self._delivery_worker = None
-                active = self._active
-                should_restart = bool(
-                    not self._closed
-                    and active is not None
-                    and active.pending_events
-                    and any(event.attempts == 0 for event in active.pending_events.values())
+                event_id = self._next_ready_event_locked()
+                if event_id is None:
+                    return
+                self._delivery_workers_running += 1
+            try:
+                self._worker_launcher(
+                    lambda selected_event_id=event_id: self._delivery_worker_once(
+                        selected_event_id
+                    )
                 )
-            # A frame may have arrived while this worker was exiting. Restart
-            # only when every remaining event is new; exhausted events wait for
-            # an explicit retry rather than causing an offline busy loop.
-            if should_restart:
-                self._ensure_delivery_worker()
+            except Exception:
+                with self._lock:
+                    self._delivery_workers_running = max(
+                        0, self._delivery_workers_running - 1
+                    )
+                    active = self._active
+                    pending = (
+                        active.pending_events.get(event_id)
+                        if active is not None
+                        else None
+                    )
+                    if pending is not None:
+                        pending.in_flight = False
+                self._schedule_pending_retry(event_id, 0.25)
+                return
+
+    def _delivery_worker_once(self, event_id: str) -> None:
+        result: ScanDispatchResult | None = None
+        try:
+            result = self._deliver_single_attempt(event_id)
+            if result.error_code == "callback_retry_pending":
+                self._schedule_pending_retry(
+                    event_id,
+                    self._retry_delay_for_event(event_id),
+                )
+        except Exception:
+            # A worker failure must not drop the event or spin synchronously.
+            self._schedule_pending_retry(event_id, 0.25)
+        finally:
+            with self._lock:
+                self._delivery_workers_running = max(
+                    0, self._delivery_workers_running - 1
+                )
+                active = self._active
+                pending = (
+                    active.pending_events.get(event_id)
+                    if active is not None
+                    else None
+                )
+                if pending is not None:
+                    pending.in_flight = False
+            self._ensure_delivery_workers()
+
+    def _retry_delay_for_event(self, event_id: str) -> float:
+        with self._lock:
+            active = self._active
+            pending = (
+                active.pending_events.get(event_id) if active is not None else None
+            )
+            attempts = pending.attempts if pending is not None else 1
+        delay_index = min(
+            max(1, attempts), len(DEFAULT_RETRY_DELAYS_SECONDS) - 1
+        )
+        return DEFAULT_RETRY_DELAYS_SECONDS[delay_index]
+
+    def _schedule_pending_retry(self, event_id: str, delay_seconds: float) -> None:
+        with self._lock:
+            active = self._active
+            pending = (
+                active.pending_events.get(event_id) if active is not None else None
+            )
+            if (
+                self._closed
+                or active is None
+                or pending is None
+                or pending.retry_scheduled
+            ):
+                return
+            session_id = active.session_id
+            pending.retry_scheduled = True
+        try:
+            cancel_retry = self._schedule_retry(
+                max(0.0, float(delay_seconds)),
+                lambda: self._retry_event_if_current(session_id, event_id),
+            )
+        except Exception:
+            with self._lock:
+                active = self._active
+                pending = (
+                    active.pending_events.get(event_id)
+                    if active is not None and active.session_id == session_id
+                    else None
+                )
+                if pending is not None:
+                    pending.retry_scheduled = False
+            return
+        with self._lock:
+            active = self._active
+            pending = (
+                active.pending_events.get(event_id)
+                if active is not None and active.session_id == session_id
+                else None
+            )
+            if pending is not None and pending.retry_scheduled:
+                pending.cancel_retry = cancel_retry
+                return
+        try:
+            cancel_retry()
+        except Exception:
+            pass
+
+    def _retry_event_if_current(self, session_id: str, event_id: str) -> None:
+        with self._lock:
+            self._expire_locked(self._now())
+            active = self._active
+            pending = (
+                active.pending_events.get(event_id)
+                if active is not None and active.session_id == session_id
+                else None
+            )
+            if pending is None:
+                return
+            pending.retry_scheduled = False
+            pending.cancel_retry = None
+        self._ensure_delivery_workers()
 
     def _callback_snapshot(
         self, event_id: str
@@ -1239,56 +1509,73 @@ class StorageScanBridge:
             if self._active is not None and self._active.session_id == session_id:
                 self._clear_active_locked()
 
+    def _deliver_single_attempt(self, event_id: str) -> ScanDispatchResult:
+        snapshot = self._callback_snapshot(event_id)
+        if snapshot is None:
+            return ScanDispatchResult(
+                mode="callback",
+                accepted=False,
+                delivered=False,
+                event_id=event_id,
+                error_code="session_closed",
+            )
+        session_id, callback_url, callback_token, payload, total_attempts = snapshot
+        try:
+            response = self._callback_sender(
+                callback_url,
+                callback_token,
+                payload,
+                timeout_seconds=self.settings.callback_timeout_seconds,
+            )
+            status = _response_status(response)
+        except Exception:
+            status = 0
+        finally:
+            callback_token = ""
+        if status in (200, 202):
+            self._complete_event(session_id, event_id)
+            return ScanDispatchResult(
+                mode="callback",
+                accepted=True,
+                delivered=True,
+                event_id=event_id,
+                attempts=total_attempts,
+                http_status=status,
+            )
+        if status in TERMINAL_CALLBACK_STATUSES or 400 <= status < 500 and status != 429:
+            self._terminate_from_callback(session_id)
+            return ScanDispatchResult(
+                mode="callback",
+                accepted=False,
+                delivered=False,
+                event_id=event_id,
+                attempts=total_attempts,
+                http_status=status or None,
+                error_code="callback_rejected",
+            )
+        return ScanDispatchResult(
+            mode="callback",
+            accepted=True,
+            delivered=False,
+            event_id=event_id,
+            attempts=total_attempts,
+            http_status=status or None,
+            error_code="callback_retry_pending",
+        )
+
     def _deliver_pending_event(self, event_id: str) -> ScanDispatchResult:
         last_status: int | None = None
         delivered_attempts = 0
         for attempt_index in range(self.settings.callback_attempts):
-            snapshot = self._callback_snapshot(event_id)
-            if snapshot is None:
-                return ScanDispatchResult(
-                    mode="callback",
-                    accepted=False,
-                    delivered=False,
-                    event_id=event_id,
-                    attempts=delivered_attempts,
-                    http_status=last_status,
-                    error_code="session_closed",
-                )
-            session_id, callback_url, callback_token, payload, total_attempts = snapshot
+            result = self._deliver_single_attempt(event_id)
             delivered_attempts += 1
-            try:
-                response = self._callback_sender(
-                    callback_url,
-                    callback_token,
-                    payload,
-                    timeout_seconds=self.settings.callback_timeout_seconds,
-                )
-                status = _response_status(response)
-            except Exception:
-                status = 0
-            finally:
-                callback_token = ""
-            last_status = status or None
-            if status in (200, 202):
-                self._complete_event(session_id, event_id)
+            last_status = result.http_status
+            if result.delivered or result.error_code != "callback_retry_pending":
                 return ScanDispatchResult(
-                    mode="callback",
-                    accepted=True,
-                    delivered=True,
-                    event_id=event_id,
-                    attempts=delivered_attempts,
-                    http_status=status,
-                )
-            if status in TERMINAL_CALLBACK_STATUSES or 400 <= status < 500 and status != 429:
-                self._terminate_from_callback(session_id)
-                return ScanDispatchResult(
-                    mode="callback",
-                    accepted=False,
-                    delivered=False,
-                    event_id=event_id,
-                    attempts=delivered_attempts,
-                    http_status=status or None,
-                    error_code="callback_rejected",
+                    **{
+                        **result.__dict__,
+                        "attempts": delivered_attempts,
+                    }
                 )
             if attempt_index + 1 < self.settings.callback_attempts:
                 delay_index = min(attempt_index + 1, len(DEFAULT_RETRY_DELAYS_SECONDS) - 1)
@@ -1296,7 +1583,7 @@ class StorageScanBridge:
                 if delay > 0:
                     self._sleeper(delay)
 
-        return ScanDispatchResult(
+        result = ScanDispatchResult(
             mode="callback",
             accepted=True,
             delivered=False,
@@ -1305,14 +1592,27 @@ class StorageScanBridge:
             http_status=last_status,
             error_code="callback_retry_pending",
         )
+        self._schedule_pending_retry(event_id, self._retry_delay_for_event(event_id))
+        return result
 
     def retry_pending_events(self) -> tuple[ScanDispatchResult, ...]:
         with self._lock:
             self._expire_locked(self._now())
-            if self._delivery_worker_running:
+            if self._delivery_workers_running:
                 return ()
             active = self._active
             event_ids = tuple(active.pending_events) if active is not None else ()
+            for event_id in event_ids:
+                pending = active.pending_events.get(event_id) if active is not None else None
+                if pending is None:
+                    continue
+                if pending.cancel_retry is not None:
+                    try:
+                        pending.cancel_retry()
+                    except Exception:
+                        pass
+                pending.cancel_retry = None
+                pending.retry_scheduled = False
         return tuple(self._deliver_pending_event(event_id) for event_id in event_ids)
 
     def status_snapshot(self) -> dict[str, Any]:
@@ -1326,6 +1626,8 @@ class StorageScanBridge:
                 "magmoSessionId": active.session_id,
                 "expiresAt": active.expires_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                 "pendingEventCount": len(active.pending_events),
+                "draining": active.draining,
+                "drained": active.draining and not active.pending_events,
             }
             if isinstance(active.target, TargetUnit):
                 snapshot["unitId"] = active.target.unit_id
@@ -1392,6 +1694,12 @@ def register_storage_scan_routes(
         payload = _read_json_request(bridge.settings.max_request_bytes)
         return jsonify(bridge.stop_session(payload)), 200
 
+    @blueprint.route("/storage-scan/drain", methods=["POST"], strict_slashes=True)
+    def _drain() -> tuple[Response, int]:
+        bridge.authorize(request.headers.get("Authorization"))
+        payload = _read_json_request(bridge.settings.max_request_bytes)
+        return jsonify(bridge.drain_session(payload)), 200
+
     @blueprint.route("/work-order-scan/start", methods=["POST"], strict_slashes=True)
     def _work_order_start() -> tuple[Response, int]:
         bridge.authorize(request.headers.get("Authorization"))
@@ -1404,6 +1712,12 @@ def register_storage_scan_routes(
         bridge.authorize(request.headers.get("Authorization"))
         payload = _read_json_request(bridge.settings.max_request_bytes)
         return jsonify(bridge.stop_work_order_session(payload)), 200
+
+    @blueprint.route("/work-order-scan/drain", methods=["POST"], strict_slashes=True)
+    def _work_order_drain() -> tuple[Response, int]:
+        bridge.authorize(request.headers.get("Authorization"))
+        payload = _read_json_request(bridge.settings.max_request_bytes)
+        return jsonify(bridge.drain_work_order_session(payload)), 200
 
     app.register_blueprint(blueprint, url_prefix=prefix)
     return bridge

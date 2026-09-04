@@ -6,6 +6,7 @@ const test = require("node:test");
 const {
   buildStorageUnitLabelPayload,
   buildStorageUnitRoute,
+  buildStorageUnitSerialId,
   isReservedStorageUnitId,
   normalizeStorageUnitId,
   parseStorageUnitId,
@@ -16,8 +17,13 @@ test("storage unit IDs normalize to an uppercase unpadded canonical ID", () => {
   assert.equal(normalizeStorageUnitId("B47"), "B47");
   assert.equal(normalizeStorageUnitId(" b-0047 "), "B47");
   assert.equal(normalizeStorageUnitId("p_0065"), "P65");
+  assert.equal(normalizeStorageUnitId("AIS-B00047"), "B47");
+  assert.equal(normalizeStorageUnitId("ais_p-00065"), "P65");
+  assert.equal(buildStorageUnitSerialId("B47"), "AIS-B00047");
+  assert.equal(buildStorageUnitSerialId("AIS-P00065"), "AIS-P00065");
   assert.deepEqual(parseStorageUnitId("P65"), {
     id: "P65",
+    serialId: "AIS-P00065",
     prefix: "P",
     type: "pallet",
     number: 65,
@@ -26,8 +32,18 @@ test("storage unit IDs normalize to an uppercase unpadded canonical ID", () => {
   });
 });
 
-test("zero and malformed IDs cannot be created or printed", () => {
-  for (const value of ["", "P0", "B0", "P-", "P1.5", "X47", "B/47"]) {
+test("zero, out-of-range, and malformed IDs cannot be created or printed", () => {
+  for (const value of [
+    "",
+    "P0",
+    "B0",
+    "P-",
+    "P1.5",
+    "X47",
+    "B/47",
+    "B100000",
+    "AIS17704",
+  ]) {
     assert.equal(normalizeStorageUnitId(value), "", value);
   }
 
@@ -46,6 +62,7 @@ test("storage scans route to storage details while item scans keep the item rout
     id: "B47",
     storageUnit: {
       id: "B47",
+      serialId: "AIS-B00047",
       prefix: "B",
       type: "bin",
       number: 47,
@@ -58,6 +75,20 @@ test("storage scans route to storage details while item scans keep the item rout
     resolveScanDestination(" p-0065 ").destination,
     "/NewSearch/inventory/storage/P65"
   );
+  assert.deepEqual(resolveScanDestination("AIS-B00047"), {
+    kind: "storage-unit",
+    id: "B47",
+    storageUnit: {
+      id: "B47",
+      serialId: "AIS-B00047",
+      prefix: "B",
+      type: "bin",
+      number: 47,
+      displayNumber: "47",
+      canCreateOrPrint: true,
+    },
+    destination: "/NewSearch/inventory/storage/B47",
+  });
   assert.equal(
     resolveScanDestination("P0").destination,
     "/NewSearch/inventory/storage/P0"
@@ -81,27 +112,42 @@ test("storage scans route to storage details while item scans keep the item rout
 
 test("storage label payload is fully derived from the canonical unit ID", () => {
   assert.deepEqual(buildStorageUnitLabelPayload(" b-0047 "), {
-    template: "storage-unit-v1",
+    template: "storage-unit-v2",
     label_type: "storage_unit",
     storage_unit_type: "bin",
     unit_id: "B47",
     display_number: "47",
-    local_sn: "B47",
-    qr_value: "B47",
-    barcode_value: "B47",
+    local_sn: "AIS-B00047",
+    serial_id: "AIS-B00047",
+    qr_value: "https://magmo.cloud/NewSearch/inventory/storage/B47",
+    barcode_value: "AIS-B00047",
     barcode_format: "CODE128",
   });
   assert.deepEqual(buildStorageUnitLabelPayload("P65"), {
-    template: "storage-unit-v1",
+    template: "storage-unit-v2",
     label_type: "storage_unit",
     storage_unit_type: "pallet",
     unit_id: "P65",
     display_number: "65",
-    local_sn: "P65",
-    qr_value: "P65",
-    barcode_value: "P65",
+    local_sn: "AIS-P00065",
+    serial_id: "AIS-P00065",
+    qr_value: "https://magmo.cloud/NewSearch/inventory/storage/P65",
+    barcode_value: "AIS-P00065",
     barcode_format: "CODE128",
   });
+
+  assert.equal(
+    buildStorageUnitLabelPayload("B47", {
+      publicOrigin: "https://inventory.example/path-is-discarded",
+    }).qr_value,
+    "https://inventory.example/NewSearch/inventory/storage/B47"
+  );
+  assert.equal(
+    buildStorageUnitLabelPayload("B47", {
+      publicOrigin: "http://insecure.example",
+    }).qr_value,
+    "https://magmo.cloud/NewSearch/inventory/storage/B47"
+  );
 });
 
 test("storage label payload rejects zero, item IDs, and command-like input", () => {

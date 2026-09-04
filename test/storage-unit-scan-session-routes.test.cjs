@@ -181,9 +181,8 @@ test("cancel reports a committed cancellation even when bridge stop is not ackno
   assert.equal(result.body.stop.delivered, false);
 });
 
-test("callback route uses only the per-session bearer and read-only resolver boundary", async () => {
+test("callback route uses only the per-session bearer and queues without resolving", async () => {
   const calls = [];
-  const resolver = async () => ({ status: "resolved" });
   const route = loadProjectModule(
     "pages/api/storage-units/scan-sessions/[id]/events.js",
     {
@@ -205,9 +204,6 @@ test("callback route uses only the per-session bearer and read-only resolver bou
           };
         },
       },
-      "../../../../../lib/inventory/storageUnitPlacement.cjs": {
-        resolveStorageScanCode: resolver,
-      },
     }
   ).default;
   const result = await invoke(route, {
@@ -219,7 +215,7 @@ test("callback route uses only the per-session bearer and read-only resolver bou
   assert.equal(result.status, 202);
   assert.equal(calls[0].callbackToken, "per-session-secret");
   assert.equal(calls[0].sessionId, "abcdefghijklmnopqrstuvwx");
-  assert.equal(calls[0].resolveStorageScanCode, resolver);
+  assert.equal("resolveStorageScanCode" in calls[0], false);
 });
 
 test("callback route rejects a missing bearer before event ingestion", async () => {
@@ -256,6 +252,140 @@ test("callback route rejects a missing bearer before event ingestion", async () 
   assert.equal(result.status, 401);
   assert.equal(result.body.code, "invalid_callback_token");
   assert.equal(ingestCalls, 0);
+});
+
+test("owner resolve route accepts only an empty body and returns idempotency state", async () => {
+  const calls = [];
+  const resolver = async () => ({ status: "resolved", kind: "item" });
+  const route = loadProjectModule(
+    "pages/api/storage-units/scan-sessions/[id]/events/[eventId]/resolve.js",
+    {
+      "../../../../../../../context/FirebaseAdmin": {
+        adminDb: { kind: "fake-db" },
+      },
+      "../../../../../../../lib/inventory/storageUnitScanApi": apiMocks({
+        uid: "owner-9",
+      }),
+      "../../../../../../../lib/inventory/storageUnitScanSessions.cjs": {
+        resolveStorageScanEvent: async (options) => {
+          calls.push(options);
+          return {
+            duplicate: calls.length > 1,
+            event: {
+              eventId: "scanner-1:47",
+              code: "AIS17704",
+              status: "resolved",
+            },
+          };
+        },
+      },
+      "../../../../../../../lib/inventory/storageUnitPlacement.cjs": {
+        resolveStorageScanCode: resolver,
+      },
+    }
+  ).default;
+
+  const extra = await invoke(route, {
+    method: "POST",
+    query: { id: "abcdefghijklmnopqrstuvwx", eventId: "scanner-1:47" },
+    body: { code: "forged" },
+  });
+  assert.equal(extra.status, 400);
+  assert.equal(calls.length, 0);
+
+  const request = {
+    method: "POST",
+    query: { id: "abcdefghijklmnopqrstuvwx", eventId: "scanner-1:47" },
+    body: {},
+  };
+  const resolved = await invoke(route, request);
+  const replayed = await invoke(route, request);
+  assert.equal(resolved.status, 200);
+  assert.equal(resolved.body.duplicate, false);
+  assert.equal(replayed.status, 200);
+  assert.equal(replayed.body.duplicate, true);
+  assert.equal(calls[0].authUser.uid, "owner-9");
+  assert.equal(calls[0].sessionId, "abcdefghijklmnopqrstuvwx");
+  assert.equal(calls[0].eventId, "scanner-1:47");
+  assert.equal(calls[0].resolveStorageScanCode, resolver);
+});
+
+test("storage drain route authenticates the owner and forwards the canonical session target", async () => {
+  const getCalls = [];
+  const drainCalls = [];
+  const route = loadProjectModule(
+    "pages/api/storage-units/scan-sessions/[id]/drain.js",
+    {
+      "../../../../../context/FirebaseAdmin": { adminDb: { kind: "fake-db" } },
+      "../../../../../lib/inventory/storageUnitScanApi": apiMocks({ uid: "owner-2" }),
+      "../../../../../lib/inventory/storageUnitScanSessions.cjs": {
+        getStorageScanSession: async (options) => {
+          getCalls.push(options);
+          return {
+            sessionId: "abcdefghijklmnopqrstuvwx",
+            unitId: "B47",
+          };
+        },
+        signalStorageScanDrain: async (options) => {
+          drainCalls.push(options);
+          return { delivered: true, drained: true, pending: 0 };
+        },
+      },
+    }
+  ).default;
+
+  const result = await invoke(route, {
+    method: "POST",
+    query: { id: "abcdefghijklmnopqrstuvwx" },
+    body: { reason: "confirmed" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.drain.drained, true);
+  assert.equal(getCalls[0].authUser.uid, "owner-2");
+  assert.equal(getCalls[0].sessionId, "abcdefghijklmnopqrstuvwx");
+  assert.deepEqual(drainCalls[0], {
+    sessionId: "abcdefghijklmnopqrstuvwx",
+    unitId: "B47",
+    reason: "confirmed",
+  });
+});
+
+test("storage drain route distinguishes an unsupported bridge from delivery failure", async () => {
+  const run = async (drain) => {
+    const route = loadProjectModule(
+      "pages/api/storage-units/scan-sessions/[id]/drain.js",
+      {
+        "../../../../../context/FirebaseAdmin": { adminDb: { kind: "fake-db" } },
+        "../../../../../lib/inventory/storageUnitScanApi": apiMocks(),
+        "../../../../../lib/inventory/storageUnitScanSessions.cjs": {
+          getStorageScanSession: async () => ({
+            sessionId: "abcdefghijklmnopqrstuvwx",
+            unitId: "B47",
+          }),
+          signalStorageScanDrain: async () => drain,
+        },
+      }
+    ).default;
+    return invoke(route, {
+      method: "POST",
+      query: { id: "abcdefghijklmnopqrstuvwx" },
+      body: {},
+    });
+  };
+
+  const unsupported = await run({
+    delivered: false,
+    attempts: [{ status: 404 }, { status: 404 }],
+  });
+  assert.equal(unsupported.status, 404);
+  assert.equal(unsupported.body.code, "scanner_drain_unsupported");
+
+  const failed = await run({
+    delivered: false,
+    attempts: [{ status: 404 }, { status: 503 }],
+  });
+  assert.equal(failed.status, 502);
+  assert.equal(failed.body.code, "scanner_drain_failed");
 });
 
 test("shared browser auth requires verified, non-revoked internal AIS users", async () => {

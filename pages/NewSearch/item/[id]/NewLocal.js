@@ -8,7 +8,10 @@ import {
   formatBinPallet,
   formatWarehousePosition,
 } from "../../../../utils/itemFormShared";
+import storageUnitContract from "../../../../lib/inventory/storageUnitContract.cjs";
 import styles from "./NewLocal.module.css";
+
+const { buildStorageUnitSerialId } = storageUnitContract;
 
 export default function NewLocal({
   onSave = () => {},
@@ -101,6 +104,12 @@ export default function NewLocal({
 
         createdNumber = currentCount + 1;
         const code = `${prefix}${createdNumber}`;
+        const serialCode = buildStorageUnitSerialId(code);
+        if (!serialCode) {
+          throw new Error(
+            `${code} cannot be assigned a five-digit storage-unit serial.`
+          );
+        }
         const unitRef = db.collection("StorageUnits").doc(code);
         const unitSnapshot = await transaction.get(unitRef);
         if (unitSnapshot.exists) {
@@ -138,6 +147,8 @@ export default function NewLocal({
         transaction.set(unitRef, {
           schemaVersion: 1,
           code,
+          serialCode,
+          scannerAliases: [code, serialCode],
           kind,
           number: createdNumber,
           displayNumber: String(createdNumber),

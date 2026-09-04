@@ -21,6 +21,10 @@ from .storage_scan_bridge import (
     StorageScanBridge,
     register_storage_scan_routes,
 )
+from .storage_label_print import (
+    build_storage_label_pages,
+    register_storage_label_routes,
+)
 
 __all__ = [
     "BridgeSettings",
@@ -28,11 +32,13 @@ __all__ = [
     "ScanFrame",
     "StorageScanBridge",
     "create_scanner_input",
+    "build_storage_label_pages",
     "format_device_candidates",
     "learn_scanner_device",
     "list_raw_input_devices",
     "list_serial_devices",
     "register_storage_scan_routes",
+    "register_storage_label_routes",
     "suggest_device_match",
 ]
 

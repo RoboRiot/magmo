@@ -128,7 +128,16 @@ test("cleaning, operation IDs, origin choices, and scan codes are deterministic"
     MOVEMENT_CURRENT_AT_WORK_ORDER
   );
   assert.deepEqual(
-    normalizeScanCodes([" b-0047 ", "B47", "p_0065", "AIS123", "ais123", "Not Found"]),
+    normalizeScanCodes([
+      " b-0047 ",
+      "AIS-B00047",
+      "B47",
+      "p_0065",
+      "AIS-P00065",
+      "AIS123",
+      "ais123",
+      "Not Found",
+    ]),
     ["B47", "P65", "AIS123"]
   );
   assert.throws(

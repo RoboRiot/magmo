@@ -388,3 +388,105 @@ test("callback throttles syntactically valid random capabilities before database
   assert.match(limited.headers["retry-after"], /^\d+$/);
   assert.equal(ingestCalls, callbackRateLimit.PER_SOURCE_LIMIT);
 });
+
+test("work-order drain route authenticates the owner and forwards its exact target", async () => {
+  const getCalls = [];
+  const drainCalls = [];
+  const route = loadProjectModule(
+    "pages/api/items/work-order-add/scan-sessions/[id]/drain.js",
+    {
+      "../../../../../../context/FirebaseAdmin": { adminDb: fakeDb },
+      "../../../../../../lib/inventory/storageUnitScanApi": apiMocks(),
+      "../../../../../../lib/inventory/workOrderScannerCapture.cjs": {
+        getWorkOrderScannerCapture: async (options) => {
+          getCalls.push(options);
+          return { sessionId, workOrderId };
+        },
+        signalWorkOrderScannerDrain: async (options) => {
+          drainCalls.push(options);
+          return { delivered: true, drained: true, pending: 0 };
+        },
+      },
+    }
+  ).default;
+
+  const result = await invoke(route, {
+    method: "POST",
+    query: { id: sessionId },
+    body: { workOrderId, reason: "confirmed" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.drain.drained, true);
+  assert.equal(getCalls[0].db, fakeDb);
+  assert.equal(getCalls[0].authUser.uid, "owner-1");
+  assert.equal(getCalls[0].sessionId, sessionId);
+  assert.deepEqual(drainCalls[0], {
+    sessionId,
+    workOrderId,
+    reason: "confirmed",
+  });
+});
+
+test("work-order drain route rejects a mismatched target before signaling the bridge", async () => {
+  let drainCalls = 0;
+  const route = loadProjectModule(
+    "pages/api/items/work-order-add/scan-sessions/[id]/drain.js",
+    {
+      "../../../../../../context/FirebaseAdmin": { adminDb: fakeDb },
+      "../../../../../../lib/inventory/storageUnitScanApi": apiMocks(),
+      "../../../../../../lib/inventory/workOrderScannerCapture.cjs": {
+        getWorkOrderScannerCapture: async () => ({
+          sessionId,
+          workOrderId: "different-work-order",
+        }),
+        signalWorkOrderScannerDrain: async () => {
+          drainCalls += 1;
+        },
+      },
+    }
+  ).default;
+
+  const result = await invoke(route, {
+    method: "POST",
+    query: { id: sessionId },
+    body: { workOrderId, reason: "confirmed" },
+  });
+  assert.equal(result.status, 409);
+  assert.equal(result.body.code, "session_target_conflict");
+  assert.equal(drainCalls, 0);
+});
+
+test("work-order drain route distinguishes unsupported and failed bridge delivery", async () => {
+  const run = async (drain) => {
+    const route = loadProjectModule(
+      "pages/api/items/work-order-add/scan-sessions/[id]/drain.js",
+      {
+        "../../../../../../context/FirebaseAdmin": { adminDb: fakeDb },
+        "../../../../../../lib/inventory/storageUnitScanApi": apiMocks(),
+        "../../../../../../lib/inventory/workOrderScannerCapture.cjs": {
+          getWorkOrderScannerCapture: async () => ({ sessionId, workOrderId }),
+          signalWorkOrderScannerDrain: async () => drain,
+        },
+      }
+    ).default;
+    return invoke(route, {
+      method: "POST",
+      query: { id: sessionId },
+      body: { workOrderId, reason: "confirmed" },
+    });
+  };
+
+  const unsupported = await run({
+    delivered: false,
+    attempts: [{ status: 404 }, { status: 404 }],
+  });
+  assert.equal(unsupported.status, 404);
+  assert.equal(unsupported.body.code, "scanner_drain_unsupported");
+
+  const failed = await run({
+    delivered: false,
+    attempts: [{ status: 404 }, { status: 503 }],
+  });
+  assert.equal(failed.status, 502);
+  assert.equal(failed.body.code, "scanner_drain_failed");
+});

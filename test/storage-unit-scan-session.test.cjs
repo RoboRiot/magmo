@@ -286,7 +286,7 @@ test("start stores only the callback hash and sends the raw capability only to t
   );
 });
 
-test("event ingest authenticates, resolves read-only, and is idempotent by event ID", async () => {
+test("event ingest stays fast, then owner resolution is read-only and idempotent", async () => {
   const credentials = scanSessions.generateSessionCredentials();
   const sessionPath = `StorageUnitScanSessions/${credentials.sessionId}`;
   const db = new FakeDb({
@@ -296,6 +296,7 @@ test("event ingest authenticates, resolves read-only, and is idempotent by event
       callbackTokenHash: credentials.callbackTokenHash,
       expiresAt: new Date("2026-08-27T18:05:00.000Z"),
       eventCount: 0,
+      createdBy: { uid: "owner-1", email: "owner@example.com" },
     },
   });
   let resolverCalls = 0;
@@ -323,21 +324,42 @@ test("event ingest authenticates, resolves read-only, and is idempotent by event
     sessionId: credentials.sessionId,
     callbackToken: credentials.callbackToken,
     body: { eventId: "scanner-1:47", code: "AIS17704" },
-    resolveStorageScanCode,
     nowMs: Date.parse("2026-08-27T18:01:00.000Z"),
   };
   const first = await scanSessions.ingestStorageScanEvent(request);
   const duplicate = await scanSessions.ingestStorageScanEvent(request);
   assert.equal(first.duplicate, false);
   assert.equal(duplicate.duplicate, true);
-  assert.equal(first.event.itemId, "AIS17704");
-  assert.deepEqual(first.event.preview.pn, ["PN-1"]);
+  assert.equal(first.event.status, "received");
+  assert.equal(first.event.itemId, null);
+  assert.equal(resolverCalls, 0);
+
+  const resolved = await scanSessions.resolveStorageScanEvent({
+    db,
+    authUser: { uid: "owner-1", email: "owner@example.com" },
+    sessionId: credentials.sessionId,
+    eventId: "scanner-1:47",
+    resolveStorageScanCode,
+    nowMs: Date.parse("2026-08-27T18:01:01.000Z"),
+  });
+  const resolvedAgain = await scanSessions.resolveStorageScanEvent({
+    db,
+    authUser: { uid: "owner-1", email: "owner@example.com" },
+    sessionId: credentials.sessionId,
+    eventId: "scanner-1:47",
+    resolveStorageScanCode,
+    nowMs: Date.parse("2026-08-27T18:01:02.000Z"),
+  });
+  assert.equal(resolved.duplicate, false);
+  assert.equal(resolved.event.itemId, "AIS17704");
+  assert.deepEqual(resolved.event.preview.pn, ["PN-1"]);
+  assert.equal(resolvedAgain.duplicate, true);
   assert.equal(db.records.get(sessionPath).eventCount, 1);
   assert.equal(
     Array.from(db.records.keys()).filter((path) => path.includes("/Events/")).length,
     1
   );
-  assert.equal(resolverCalls, 2);
+  assert.equal(resolverCalls, 1);
   assert.equal(db.writes.some((path) => path.startsWith("Test/")), false);
   assert.equal(db.writes.some((path) => path.startsWith("StorageUnits/")), false);
 

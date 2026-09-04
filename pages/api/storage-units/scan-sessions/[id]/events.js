@@ -4,14 +4,14 @@ import {
   setStorageScanResponseHeaders,
 } from "../../../../../lib/inventory/storageUnitScanApi";
 import scanSessions from "../../../../../lib/inventory/storageUnitScanSessions.cjs";
-import storageUnitPlacement from "../../../../../lib/inventory/storageUnitPlacement.cjs";
+import callbackRateLimit from "../../../../../lib/inventory/scanCallbackRateLimit.cjs";
 
 const {
   bearerTokenFromRequest,
   cleanCallbackToken,
   ingestStorageScanEvent,
 } = scanSessions;
-const { resolveStorageScanCode } = storageUnitPlacement;
+const { scanCallbackRetryAfter } = callbackRateLimit;
 
 export const config = {
   api: { bodyParser: { sizeLimit: "4kb" } },
@@ -28,13 +28,6 @@ export default async function handler(req, res) {
       error: "Method not allowed.",
     });
   }
-  if (!adminDb) {
-    return res.status(503).json({
-      ok: false,
-      code: "scanner_unavailable",
-      error: "The warehouse scanner is unavailable.",
-    });
-  }
   try {
     const callbackToken = cleanCallbackToken(bearerTokenFromRequest(req));
     if (!callbackToken) {
@@ -44,12 +37,27 @@ export default async function handler(req, res) {
         error: "The scan callback credential is invalid.",
       });
     }
+    const retryAfter = scanCallbackRetryAfter(req, { namespace: "storage-unit" });
+    if (retryAfter) {
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        ok: false,
+        code: "callback_rate_limited",
+        error: "Too many scanner callback requests were received.",
+      });
+    }
+    if (!adminDb) {
+      return res.status(503).json({
+        ok: false,
+        code: "scanner_unavailable",
+        error: "The warehouse scanner is unavailable.",
+      });
+    }
     const result = await ingestStorageScanEvent({
       db: adminDb,
       sessionId: req.query?.id,
       callbackToken,
       body: req.body,
-      resolveStorageScanCode,
     });
     return res.status(result.duplicate ? 200 : 202).json({
       ok: true,

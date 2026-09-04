@@ -22,6 +22,7 @@ import {
 import styles from "../../../styles/InventoryManage.module.css";
 
 const {
+  buildStorageUnitSerialId,
   parseStorageUnitId,
 } = require("../../../lib/inventory/storageUnitContract.cjs");
 
@@ -231,9 +232,19 @@ function normalizeStorageUnitDocument(document) {
   const { id: code, type: kind, number: parsedNumber } = parsedUnit;
   const storedCode = String(data.code || "").trim();
   const storedCodeUnit = storedCode ? parseStorageUnitId(storedCode) : null;
+  const serialCode = buildStorageUnitSerialId(code);
+  const storedSerialCode = String(data.serialCode || "").trim();
+  const scannerAliases = Array.from(
+    new Set(
+      (Array.isArray(data.scannerAliases) ? data.scannerAliases : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    )
+  );
   const storedNumber = Number(data.number);
   const metadataMismatch =
     (storedCode && storedCodeUnit?.id !== code) ||
+    (storedSerialCode && storedSerialCode !== serialCode) ||
     (data.kind && data.kind !== kind) ||
     (data.number !== undefined &&
       data.number !== null &&
@@ -247,6 +258,8 @@ function normalizeStorageUnitDocument(document) {
   return {
     id: document.id,
     code,
+    serialCode,
+    scannerAliases,
     kind,
     number: parsedNumber,
     displayNumber: String(parsedNumber),
@@ -284,6 +297,8 @@ function storageUnitMatchesSearch(unit, searchValue) {
   const location = storageUnitLocationLabel(unit);
   const values = [
     unit.code,
+    unit.serialCode,
+    ...(unit.scannerAliases || []),
     unit.displayNumber,
     unit.name,
     unit.kind,
@@ -2770,8 +2785,8 @@ export default function InventoryManage() {
                     value={storageSearch}
                     placeholder={
                       viewMode === "bins"
-                        ? "Try 47, B47, or bin 47"
-                        : "Try 65, P65, or pallet 65"
+                        ? "Try 47, B47, AIS-B00047, or bin 47"
+                        : "Try 65, P65, AIS-P00065, or pallet 65"
                     }
                     onChange={(event) => setStorageSearch(event.target.value)}
                     autoComplete="off"
@@ -2822,8 +2837,11 @@ export default function InventoryManage() {
                         >
                           <td>
                             <strong className={styles.storageUnitCode}>
-                              {unit.code}
+                              {unit.serialCode}
                             </strong>
+                            <span className={styles.storageUnitShortCode}>
+                              {unit.code}
+                            </span>
                           </td>
                           <td>{unit.kind === "bin" ? "Bin" : "Pallet"}</td>
                           <td>{storageUnitLocationLabel(unit)}</td>

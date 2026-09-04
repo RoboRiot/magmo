@@ -119,6 +119,13 @@ test("bin parent pallets are normalized and conflicts remain review-only", () =>
   assert.equal(confirmed.status, "confirmed");
   assert.equal(confirmed.parentPalletId, "P65");
 
+  const serialAlias = getParentPalletSummary(
+    { parentPallet: { serialCode: "AIS-P00065" } },
+    []
+  );
+  assert.equal(serialAlias.status, "confirmed");
+  assert.equal(serialAlias.parentPalletId, "P65");
+
   const conflict = getParentPalletSummary({}, [
     { newLocalCurrent: { pallet: 45 } },
     { newLocalCurrent: { pallet: "54" } },

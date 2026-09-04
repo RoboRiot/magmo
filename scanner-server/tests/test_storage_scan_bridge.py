@@ -26,6 +26,7 @@ from warehouse_scanner.storage_scan_bridge import (
     BridgeSettings,
     CallbackHttpResponse,
     CallbackTransportError,
+    MAX_SESSION_EVENTS,
     StorageScanBridge,
     register_storage_scan_routes,
 )
@@ -102,6 +103,48 @@ class BlockingSender:
         self.entered.set()
         self.release.wait(timeout=2.0)
         self.completed.set()
+        return CallbackHttpResponse(status_code=202)
+
+
+class BurstBlockingSender:
+    def __init__(self, expected: int) -> None:
+        self.expected = expected
+        self.release = threading.Event()
+        self.two_entered = threading.Event()
+        self.all_completed = threading.Event()
+        self.calls: list[dict[str, object]] = []
+        self.in_flight = 0
+        self.max_in_flight = 0
+        self.completed = 0
+        self._lock = threading.Lock()
+
+    def __call__(self, url, bearer_token, payload, *, timeout_seconds):
+        with self._lock:
+            self.calls.append(copy.deepcopy(dict(payload)))
+            self.in_flight += 1
+            self.max_in_flight = max(self.max_in_flight, self.in_flight)
+            if self.in_flight >= 2:
+                self.two_entered.set()
+        self.release.wait(timeout=3.0)
+        with self._lock:
+            self.in_flight -= 1
+            self.completed += 1
+            if self.completed >= self.expected:
+                self.all_completed.set()
+        return CallbackHttpResponse(status_code=202)
+
+
+class RetryThenSuccessSender:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self.attempts: dict[str, int] = {}
+
+    def __call__(self, url, bearer_token, payload, *, timeout_seconds):
+        code = str(payload["code"])
+        self.calls.append(code)
+        self.attempts[code] = self.attempts.get(code, 0) + 1
+        if code == "AIS17704" and self.attempts[code] == 1:
+            return CallbackHttpResponse(status_code=500)
         return CallbackHttpResponse(status_code=202)
 
 
@@ -734,6 +777,7 @@ class StorageScanBridgeTests(unittest.TestCase):
     def test_idle_scans_open_only_canonical_allowlisted_magmo_pages(self) -> None:
         fixture = self.make_bridge()
         storage = fixture.bridge.route_scan("B_047")
+        storage_serial = fixture.bridge.route_scan("AIS-B00047")
         item = fixture.bridge.route_scan("AIS 17704")
         qr = fixture.bridge.route_scan("https://magmo.cloud/NewSearch/item/AIS%2017705")
         attacker = fixture.bridge.route_scan("https://attacker.example/AIS17704")
@@ -744,11 +788,15 @@ class StorageScanBridgeTests(unittest.TestCase):
             storage.destination,
             "https://magmo.cloud/NewSearch/inventory/storage/B47",
         )
+        self.assertEqual(
+            storage_serial.destination,
+            "https://magmo.cloud/NewSearch/inventory/storage/B47",
+        )
         self.assertEqual(item.destination, "https://magmo.cloud/NewSearch/item/AIS%2017704")
         self.assertEqual(qr.destination, "https://magmo.cloud/NewSearch/item/AIS%2017705")
         self.assertFalse(attacker.accepted)
         self.assertFalse(arbitrary_magmo.accepted)
-        self.assertEqual(len(fixture.browser_calls), 3)
+        self.assertEqual(len(fixture.browser_calls), 4)
         self.assertTrue(all(url.startswith("https://magmo.cloud/NewSearch/") for url in fixture.browser_calls))
 
     def test_active_scan_callbacks_only_and_never_opens_browser(self) -> None:
@@ -867,6 +915,224 @@ class StorageScanBridgeTests(unittest.TestCase):
         while bridge.status_snapshot()["pendingEventCount"] and time.monotonic() < deadline:
             time.sleep(0.005)
         self.assertEqual(bridge.status_snapshot()["pendingEventCount"], 0)
+
+    def test_rapid_burst_is_buffered_with_at_most_two_callbacks_in_flight(self) -> None:
+        event_count = 20
+        sender = BurstBlockingSender(event_count)
+        event_sequence = itertools.count(1)
+        bridge = StorageScanBridge(
+            bridge_settings(),
+            callback_sender=sender,
+            browser_opener=lambda _url: False,
+            clock=self.clock,
+            event_id_factory=lambda: f"burst-{next(event_sequence):04d}",
+            schedule_expiry=FakeScheduler(),
+            schedule_retry=FakeScheduler(),
+            scanner_ready=True,
+        )
+        bridge.start_session(start_payload(self.clock))
+
+        started = time.monotonic()
+        results = [
+            bridge.handle_scan_frame(
+                SimpleNamespace(
+                    code=f"AIS{17700 + index}",
+                    received_at=self.clock(),
+                )
+            )
+            for index in range(event_count)
+        ]
+        elapsed = time.monotonic() - started
+
+        self.assertLess(elapsed, 0.5)
+        self.assertTrue(all(result.accepted for result in results))
+        self.assertTrue(all(result.error_code == "callback_queued" for result in results))
+        self.assertTrue(sender.two_entered.wait(timeout=1.0))
+        self.assertEqual(bridge.status_snapshot()["pendingEventCount"], event_count)
+        self.assertLessEqual(sender.max_in_flight, 2)
+
+        sender.release.set()
+        self.assertTrue(sender.all_completed.wait(timeout=3.0))
+        deadline = time.monotonic() + 1.0
+        while bridge.status_snapshot()["pendingEventCount"] and time.monotonic() < deadline:
+            time.sleep(0.005)
+        self.assertEqual(bridge.status_snapshot()["pendingEventCount"], 0)
+        self.assertEqual(len(sender.calls), event_count)
+        self.assertLessEqual(sender.max_in_flight, 2)
+
+    def test_async_failure_requeues_without_sleep_or_new_scan(self) -> None:
+        sender = RetryThenSuccessSender()
+        retry_scheduler = FakeScheduler()
+        sleeps: list[float] = []
+        event_sequence = itertools.count(1)
+        bridge = StorageScanBridge(
+            bridge_settings(),
+            callback_sender=sender,
+            browser_opener=lambda _url: False,
+            clock=self.clock,
+            event_id_factory=lambda: f"retry-{next(event_sequence):04d}",
+            sleeper=sleeps.append,
+            schedule_expiry=FakeScheduler(),
+            schedule_retry=retry_scheduler,
+            worker_launcher=lambda target: target(),
+            scanner_ready=True,
+        )
+        bridge.start_session(start_payload(self.clock))
+
+        bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17704", received_at=self.clock())
+        )
+        bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17705", received_at=self.clock())
+        )
+
+        self.assertEqual(sender.calls, ["AIS17704", "AIS17705"])
+        self.assertEqual(sleeps, [])
+        self.assertEqual(bridge.status_snapshot()["pendingEventCount"], 1)
+        self.assertEqual(len(retry_scheduler.entries), 1)
+        self.assertGreater(float(retry_scheduler.entries[0]["delay"]), 0)
+
+        retry_scheduler.entries[0]["callback"]()
+
+        self.assertEqual(sender.calls, ["AIS17704", "AIS17705", "AIS17704"])
+        self.assertEqual(bridge.status_snapshot()["pendingEventCount"], 0)
+
+    def test_drain_pauses_storage_intake_until_callbacks_finish(self) -> None:
+        sender = BlockingSender()
+        browser_calls: list[str] = []
+        bridge = StorageScanBridge(
+            bridge_settings(),
+            callback_sender=sender,
+            browser_opener=lambda url: browser_calls.append(url) is None,
+            clock=self.clock,
+            event_id_factory=lambda: "drain-storage-0001",
+            schedule_expiry=FakeScheduler(),
+            schedule_retry=FakeScheduler(),
+            scanner_ready=True,
+        )
+        app = Flask(f"{__name__}.storage-drain")
+        app.config.update(TESTING=True)
+        register_storage_scan_routes(app, bridge)
+        client = app.test_client()
+        self.assertEqual(
+            client.post("/storage-scan/start", json=start_payload(self.clock), headers=auth_headers()).status_code,
+            201,
+        )
+        bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17704", received_at=self.clock())
+        )
+        self.assertTrue(sender.entered.wait(timeout=1.0))
+
+        unauthorized = client.post("/storage-scan/drain", json=stop_payload())
+        draining = client.post(
+            "/storage-scan/drain",
+            json=stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        rejected = bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17705", received_at=self.clock())
+        )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(draining.status_code, 200)
+        self.assertTrue(draining.json["draining"])
+        self.assertFalse(draining.json["drained"])
+        self.assertEqual(draining.json["pendingEventCount"], 1)
+        self.assertFalse(rejected.accepted)
+        self.assertEqual(rejected.error_code, "session_draining")
+        self.assertEqual(browser_calls, [])
+
+        sender.release.set()
+        self.assertTrue(sender.completed.wait(timeout=1.0))
+        deadline = time.monotonic() + 1.0
+        while bridge.status_snapshot()["pendingEventCount"] and time.monotonic() < deadline:
+            time.sleep(0.005)
+        drained = client.post(
+            "/storage-scan/drain",
+            json=stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        self.assertTrue(drained.json["drained"])
+        self.assertEqual(drained.json["pendingEventCount"], 0)
+        stopped = client.post(
+            "/storage-scan/stop",
+            json=stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        self.assertEqual(stopped.status_code, 200)
+        self.assertFalse(bridge.status_snapshot()["active"])
+
+    def test_work_order_drain_is_authenticated_and_suppresses_page_opening(self) -> None:
+        fixture = self.make_bridge()
+        client = self.make_client(fixture)
+        started = client.post(
+            "/work-order-scan/start",
+            json=work_order_start_payload(self.clock),
+            headers=auth_headers(),
+        )
+        self.assertEqual(started.status_code, 201)
+
+        unauthorized = client.post(
+            "/work-order-scan/drain", json=work_order_stop_payload()
+        )
+        drained = client.post(
+            "/work-order-scan/drain",
+            json=work_order_stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        rejected = fixture.bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17704", received_at=self.clock())
+        )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(drained.status_code, 200)
+        self.assertTrue(drained.json["draining"])
+        self.assertTrue(drained.json["drained"])
+        self.assertEqual(drained.json["pendingEventCount"], 0)
+        self.assertFalse(rejected.accepted)
+        self.assertEqual(rejected.error_code, "session_draining")
+        self.assertEqual(fixture.browser_calls, [])
+
+        stopped = client.post(
+            "/work-order-scan/stop",
+            json=work_order_stop_payload(reason="confirmed"),
+            headers=auth_headers(),
+        )
+        self.assertEqual(stopped.status_code, 200)
+        self.assertFalse(fixture.bridge.status_snapshot()["active"])
+
+    def test_event_limit_preserves_callbacks_already_queued(self) -> None:
+        sender = BlockingSender()
+        bridge = StorageScanBridge(
+            bridge_settings(),
+            callback_sender=sender,
+            browser_opener=lambda _url: False,
+            clock=self.clock,
+            event_id_factory=lambda: "capacity-event-0001",
+            schedule_expiry=FakeScheduler(),
+            schedule_retry=FakeScheduler(),
+            scanner_ready=True,
+        )
+        bridge.start_session(start_payload(self.clock))
+        bridge._active.events_created = MAX_SESSION_EVENTS - 1
+        queued = bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17704", received_at=self.clock())
+        )
+        self.assertTrue(sender.entered.wait(timeout=1.0))
+        rejected = bridge.handle_scan_frame(
+            SimpleNamespace(code="AIS17705", received_at=self.clock())
+        )
+
+        status = bridge.status_snapshot()
+        self.assertTrue(queued.accepted)
+        self.assertFalse(rejected.accepted)
+        self.assertEqual(rejected.error_code, "session_event_limit")
+        self.assertTrue(status["active"])
+        self.assertEqual(status["pendingEventCount"], 1)
+        self.assertFalse(bridge._active.callback_token.scrubbed)
+
+        sender.release.set()
+        self.assertTrue(sender.completed.wait(timeout=1.0))
 
     def test_invalid_scan_or_time_is_rejected_without_side_effects(self) -> None:
         fixture = self.make_bridge()

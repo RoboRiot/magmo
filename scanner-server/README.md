@@ -22,8 +22,10 @@ The bridge is intentionally fail-closed:
 ## Files and responsibilities
 
 - `warehouse_scanner/device_input.py` owns device-specific HID/serial capture.
-- `warehouse_scanner/storage_scan_bridge.py` owns authenticated start/stop
-  sessions, callback delivery, expiry, retry, and safe idle navigation.
+- `warehouse_scanner/storage_scan_bridge.py` owns authenticated start/drain/stop
+  sessions, callback buffering/draining, expiry, retry, and safe idle navigation.
+- `warehouse_scanner/storage_label_print.py` owns the dedicated 4×6 bin and
+  pallet ZPL format and the authenticated `/print-storage-label` route.
 - `warehouse_scanner/warehouse_scanner.py` provides discovery, calibration,
   runtime lifecycle, and a production Waitress entry point.
 
@@ -120,19 +122,32 @@ must never log start bodies, callback headers, raw scan codes, or tokens.
 ## Register routes in the one port-5000 process
 
 The print API and scanner bridge must share one Flask process. Do not start a
-second Flask development server on port 5000. In the combined server's startup
-code, register the scanner routes on its existing `app`:
+second Flask development server on port 5000. In a legacy combined entry point,
+reuse its existing embedded runtime; never call `build_embedded_runtime` a
+second time or register the scan routes twice. Insert only the storage-label
+route registration after the existing `print_label` function is defined and
+before Waitress starts serving. For the existing combo server, the insertion is:
 
 ```python
-import atexit
-import os
+from warehouse_scanner.storage_label_print import register_storage_label_routes
 
-from warehouse_scanner.warehouse_scanner import build_embedded_runtime
-
-scanner_runtime = build_embedded_runtime(app, environ=os.environ)
-scanner_runtime.start()
-atexit.register(scanner_runtime.close)
+register_storage_label_routes(
+    app,
+    authorize=STORAGE_SCAN_RUNTIME.bridge.authorize,
+    printer=print_label,
+)
 ```
+
+If the operational entry point uses a different runtime variable name, use that
+existing object. Only a server that has no embedded runtime at all should build
+one, exactly once, using `build_embedded_runtime`.
+
+Run `register_storage_label_routes` exactly once and only after the existing
+`print_label` function is defined. Its callback must raise an exception or
+return `False` if RAW printing fails; it must not swallow a printer error and
+report success. The dedicated
+storage-label route does not call the legacy item-label parser, so a bin or
+pallet print never asks for or requires an item `name`.
 
 Register exactly once. Do not enable Flask's debug reloader: it creates a second
 process and can duplicate the device hook. Serve the combined `app` with a
@@ -140,7 +155,7 @@ single Waitress process.
 
 `build_embedded_runtime` deliberately preserves the existing print service when
 scanner selection is missing or the selected device cannot be opened. It still
-registers the authenticated start/stop routes and keeps the bridge marked not
+registers the authenticated start/drain/stop routes and keeps the bridge marked not
 ready, so Magmo receives a sanitized `503 scanner_input_unavailable` response
 instead of a misleading route-level 404. Once the device issue is fixed,
 restart the combined service so the input starts before readiness is enabled.
@@ -159,7 +174,7 @@ of the complete port-5000 app:
 ```
 
 Binding loopback is sufficient when ngrok runs on the same Windows machine and
-avoids exposing an unauthenticated LAN socket. The public start/stop routes still
+avoids exposing an unauthenticated LAN socket. The public scanner-control routes still
 require the shared Bearer token using timing-safe comparison.
 
 ## Session behavior
@@ -167,15 +182,31 @@ require the shared Bearer token using timing-safe comparison.
 Magmo calls these routes through the configured fixed ngrok origin:
 
 - `POST /storage-scan/start`
+- `POST /storage-scan/drain`
 - `POST /storage-scan/stop`
 - `POST /work-order-scan/start`
+- `POST /work-order-scan/drain`
 - `POST /work-order-scan/stop`
+- `POST /print-storage-label`
 
 While no capture session is active, a scan from the calibrated physical device
 may open only a canonical `https://magmo.cloud` item, bin, or pallet page. The
 bridge rejects arbitrary scanned URLs. While a session is active, scans never
 open a browser—even when a callback fails. They are delivered to the per-session
-Magmo callback and retried idempotently with the same event ID.
+Magmo callback and retried idempotently with the same event ID. Device input
+only enqueues the callback; up to two callback deliveries run separately, so a
+fast burst is retained instead of blocking the scanner on HTTP or Firestore.
+
+Before Magmo confirms a storage or Work Order list, it calls the corresponding
+`/drain` route. Drain immediately stops accepting new frames for that session,
+keeps queued callbacks alive, and reports `pendingEventCount` until `drained` is
+true. Magmo then resolves its bounded lookup queue and saves only the fresh,
+complete list. Stop releases the scanner lease after that handoff.
+
+Magmo temporarily recognizes a 404 `scanner_drain_unsupported` response and
+performs three final settle polls for an older bridge. That compatibility path
+cannot guarantee burst completeness. Rapid scanning is not operationally ready
+until this server exposes both drain routes and returns `drained=true`.
 
 A Work Order Add session shares that same exclusive lease and callback queue as
 storage Scan In. Magmo's authenticated start signal must include the exact
@@ -196,14 +227,35 @@ Work Order callback URL, its one-time bearer capability, and its expiry:
 
 Every completed frame from the configured HID **or serial/COM** scanner is sent
 to that callback. Work Order capture does not depend on the scanner typing into
-a focused browser field. Confirm, cancel, failure, or local expiry stops the
-lease, scrubs the callback capability, and restores normal idle page opening.
+a focused browser field. Confirm drains the queue before stopping; cancel,
+failure, or local expiry stops immediately. Stop scrubs the callback capability
+and restores normal idle page opening.
 
 Start is idempotent only when the session ID, target, callback URL/capability,
 and expiry match the active lease; changed settings or another active session
 are rejected. Stop applies only to its matching active session. Expiry clears
 the callback capability locally. Neither the bridge token nor callback token is
 sent to the browser or written to Firestore in plaintext.
+
+## Dedicated storage labels
+
+`POST /print-storage-label` requires the same private bridge Bearer token and
+an exact `storage-unit-v2` JSON payload generated by Magmo. The printer module
+uses the existing ZD621 203-dpi 4×6-inch envelope (`^PW820`, `^LL1180`).
+
+- Bins print `Bin N` at the top, then current item names with each item's Code
+  128 serial barcode and AIS number. One to five rows use the normal size, six
+  to ten scale down, and larger bins continue on additional labels (ten rows
+  per label) without dropping contents.
+- Pallets print the largest practical `P[number]` heading and a smaller grid of
+  their linked bins. More than 20 bins continue on another label.
+- Every page prints the storage serial (`AIS-B#####` or `AIS-P#####`) as a Code
+  128 barcode at bottom left and a phone-scannable QR for the Magmo storage page
+  at bottom right.
+
+Magmo derives the item/bin list server-side from current Firestore membership;
+the browser sends only `{ "unitId": "B47" }` to Magmo and cannot substitute
+label contents.
 
 ## Start, restart, and Windows service setup
 
@@ -231,7 +283,8 @@ Perform these checks after installation, device replacement, or restart:
    keyboard. No Magmo window opens and no callback is sent.
 3. Scan a known item with the calibrated scanner. Its canonical Magmo page opens
    once; a scanned arbitrary URL does not open.
-4. An unauthenticated or wrong-token request to both start and stop receives
+4. An unauthenticated or wrong-token request to start, drain, stop, and storage
+   print receives
    `401`; never include the real token in a command saved to shell history.
 5. Open a bin's **Scan In** modal. Start succeeds, each physical scan appears
    once in the staged list, and no browser window opens.
@@ -245,7 +298,12 @@ Perform these checks after installation, device replacement, or restart:
    item page. Cancel/stop capture, then verify the next idle scanner read opens
    its one canonical Magmo page again.
 10. Restart the service and ngrok, then repeat fast typing and one controlled
-   Scan In cycle to verify persistence and single ownership.
+    Scan In cycle to verify persistence and single ownership.
+11. Scan a burst of at least ten disposable test labels faster than their
+    previews can load. Verify every row appears once, Confirm waits for drain,
+    and no read opens a browser tab during the active/draining session.
+12. Print one populated bin and one pallet. Verify no name prompt appears, all
+    expected pages print, and both footer barcodes and QRs open the right record.
 
 Use a disposable/test inventory record for the confirmation check. Never test
 confirmation with an unknown production item.
@@ -261,6 +319,9 @@ confirmation with an unknown production item.
   the fixed ngrok origin routes to this one port-5000 process.
 - **Print works but Scan In returns 404:** the legacy print-only process is still
   running or `register_storage_scan_routes(app, bridge)` was not called.
+- **Item labels print but storage labels return 404:** copy
+  `storage_label_print.py` and register `register_storage_label_routes` in the
+  same combined Flask process after `print_label` is defined.
 - **Duplicate scans:** verify only one scanner process exists and the Flask
   debug reloader is disabled. Do not change event IDs during callback retries.
 - **Browser opens during an active capture:** stop the service and investigate;

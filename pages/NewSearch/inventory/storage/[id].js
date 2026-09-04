@@ -36,6 +36,8 @@ const naturalCollator = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
+const BIN_LABEL_ITEMS_PER_PAGE = 10;
+const PALLET_LABEL_BINS_PER_PAGE = 20;
 
 function firstQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -74,6 +76,47 @@ function sortItems(items) {
     const byName = naturalCollator.compare(left.name, right.name);
     return byName || naturalCollator.compare(left.id, right.id);
   });
+}
+
+function labelPreviewPages(preview) {
+  if (!preview) return [];
+  const isBin = preview.unitType === "bin";
+  const values = isBin
+    ? Array.isArray(preview.items)
+      ? preview.items
+      : []
+    : Array.isArray(preview.bins)
+      ? preview.bins
+      : [];
+  const pageSize = isBin
+    ? BIN_LABEL_ITEMS_PER_PAGE
+    : PALLET_LABEL_BINS_PER_PAGE;
+  const pageCount = Math.max(1, Math.ceil(values.length / pageSize));
+  return Array.from({ length: pageCount }, (_, index) => ({
+    ...preview,
+    [isBin ? "items" : "bins"]: values.slice(
+      index * pageSize,
+      (index + 1) * pageSize
+    ),
+    page: index + 1,
+    pageCount,
+  }));
+}
+
+function palletLabelLayout(binCount) {
+  if (binCount <= 0) {
+    return { columns: 3, rows: 1, gridTop: "2.22in", headerSize: "2.1in" };
+  }
+  if (binCount <= 4) {
+    return { columns: 2, rows: 2, gridTop: "2.12in", headerSize: "1.77in" };
+  }
+  if (binCount <= 9) {
+    return { columns: 3, rows: 3, gridTop: "1.8in", headerSize: "1.48in" };
+  }
+  if (binCount <= 16) {
+    return { columns: 4, rows: 4, gridTop: "1.55in", headerSize: "1.23in" };
+  }
+  return { columns: 5, rows: 4, gridTop: "1.4in", headerSize: "1.08in" };
 }
 
 function mapSelectionFromLocation(location, unitId, parentPalletId = "") {
@@ -183,6 +226,9 @@ export default function StorageUnitDetailPage() {
   );
   const unitType = storageUnitType(unitId);
   const unitNumber = storageUnitNumber(unitId);
+  const unitSerialCode = unitNumber
+    ? `AIS-${unitType === "bin" ? "B" : "P"}${String(unitNumber).padStart(5, "0")}`
+    : unitId;
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -333,6 +379,10 @@ export default function StorageUnitDetailPage() {
             candidates: [],
           },
     [items, unit, unitType]
+  );
+  const renderedLabelPages = useMemo(
+    () => labelPreviewPages(labelPreview),
+    [labelPreview]
   );
   const palletContents = useMemo(
     () => groupPalletContents(items),
@@ -569,7 +619,7 @@ export default function StorageUnitDetailPage() {
                 <Badge bg={unitType === "bin" ? "info" : "primary"}>
                   {unitType === "bin" ? "BIN" : "PALLET"}
                 </Badge>
-                <span>{unitId}</span>
+                <span>{unit?.serialCode || unitSerialCode}</span>
               </div>
               <div className={styles.bigNumber}>{unitNumber || "-"}</div>
               <p>
@@ -937,30 +987,102 @@ export default function StorageUnitDetailPage() {
             </div>
           )}
           {labelPreview && (
-            <div className={styles.storageLabelSheet}>
-              <div className={styles.storageLabelType}>
-                {unitType === "bin" ? "BIN" : "PALLET"}
-              </div>
-              <div className={styles.storageLabelNumber}>{unitNumber}</div>
-              <div className={styles.storageLabelSymbols}>
-                <div
-                  className={styles.storageLabelQr}
-                  aria-label={`QR code containing ${unitId}`}
-                  dangerouslySetInnerHTML={{ __html: labelPreview.qrSvg }}
-                />
-                <div className={styles.storageLabelBarcodeBlock}>
+            <div className={styles.storageLabelPages}>
+              {renderedLabelPages.map((page) => {
+                const palletLayout = palletLabelLayout(page.bins?.length || 0);
+                return (
                   <div
-                    className={styles.storageLabelBarcode}
-                    aria-label={`Code 128 barcode containing ${unitId}`}
-                    dangerouslySetInnerHTML={{ __html: labelPreview.barcodeSvg }}
-                  />
-                  <strong>{unitId}</strong>
+                    className={styles.storageLabelSheet}
+                    key={`${page.unitId}-${page.page}`}
+                  >
+                  {page.unitType === "bin" ? (
+                    <>
+                      <div className={styles.storageLabelBinHeading}>
+                        Bin {page.displayNumber}
+                      </div>
+                      <div
+                        className={`${styles.storageLabelItemList} ${
+                          page.items.length > 5 ? styles.storageLabelItemListCompact : ""
+                        }`}
+                      >
+                        {page.items.length ? (
+                          page.items.map((item) => (
+                            <div
+                              className={styles.storageLabelItemRow}
+                              key={item.item_id}
+                            >
+                              <strong>{item.name}</strong>
+                              <div className={styles.storageLabelItemSerial}>
+                                <div
+                                  dangerouslySetInnerHTML={{
+                                    __html: item.barcodeSvg,
+                                  }}
+                                />
+                                <span>{item.ais_number}</span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className={styles.storageLabelEmpty}>No items</div>
+                        )}
+                      </div>
+                      {page.pageCount > 1 && (
+                        <div className={styles.storageLabelPageNumber}>
+                          {page.page}/{page.pageCount}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        className={`${styles.storageLabelPalletNumber} ${
+                          page.bins.length ? styles.storageLabelPalletNumberWithBins : ""
+                        }`}
+                        style={{ fontSize: palletLayout.headerSize }}
+                      >
+                        P{page.displayNumber}
+                      </div>
+                      <div
+                        className={styles.storageLabelBinGrid}
+                        style={{
+                          top: palletLayout.gridTop,
+                          gridTemplateColumns: `repeat(${palletLayout.columns}, minmax(0, 1fr))`,
+                          gridTemplateRows: `repeat(${palletLayout.rows}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {page.bins.map((bin) => (
+                          <strong key={bin.unit_id}>{bin.display_id}</strong>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <div className={styles.storageLabelSymbols}>
+                    <div className={styles.storageLabelBarcodeBlock}>
+                      <div
+                        className={styles.storageLabelBarcode}
+                        aria-label={`Code 128 barcode containing ${page.serialId}`}
+                        dangerouslySetInnerHTML={{ __html: page.barcodeSvg }}
+                      />
+                      <strong>{page.serialId}</strong>
+                    </div>
+                    <div
+                      className={styles.storageLabelQr}
+                      aria-label={`QR code linking to ${page.unitId}`}
+                      dangerouslySetInnerHTML={{ __html: page.qrSvg }}
+                    />
+                  </div>
+                  {page.pageCount > 1 && page.unitType === "pallet" && (
+                    <div className={styles.storageLabelPalletPageNumber}>
+                      {page.page}/{page.pageCount}
+                    </div>
+                  )}
                 </div>
-              </div>
+                );
+              })}
             </div>
           )}
           <p className={styles.labelPreviewHint}>
-            Preview size is 4 × 2 inches. Both symbols encode exactly {unitId}.
+            Each preview is a 4 × 6 inch Zebra label. The barcode encodes {labelPreview?.serialId || unitId}; the QR opens this storage page.
           </p>
         </Modal.Body>
         <Modal.Footer className={styles.labelPreviewFooter}>
@@ -987,6 +1109,7 @@ export default function StorageUnitDetailPage() {
         onHide={() => setShowScanIn(false)}
         onConfirmed={() => {
           setShowScanIn(false);
+          setLabelPreview(null);
           setContentRevision((value) => value + 1);
         }}
       />
