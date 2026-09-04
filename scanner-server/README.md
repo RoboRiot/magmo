@@ -133,14 +133,15 @@ from warehouse_scanner.storage_label_print import register_storage_label_routes
 
 register_storage_label_routes(
     app,
-    authorize=STORAGE_SCAN_RUNTIME.bridge.authorize,
+    authorize=storage_scan_bridge.authorize,
     printer=print_label,
 )
 ```
 
-If the operational entry point uses a different runtime variable name, use that
-existing object. Only a server that has no embedded runtime at all should build
-one, exactly once, using `build_embedded_runtime`.
+The warehouse combo entry point constructs `scanner_runtime` once and exposes
+its bridge as `storage_scan_bridge`. Reuse those existing objects. Only a server
+that has no embedded runtime at all should build one, exactly once, using
+`build_embedded_runtime`.
 
 Run `register_storage_label_routes` exactly once and only after the existing
 `print_label` function is defined. Its callback must raise an exception or
@@ -259,14 +260,27 @@ label contents.
 
 ## Start, restart, and Windows service setup
 
+Production on `AIS-Warehouse` uses
+`C:\Users\Owner\Desktop\warehouse`, commit
+`18424caf253f90c98883454f9bf824d0ace82983`, and rollback tag
+`storage-label-fast-scan-deploy-20260904-v2`. The dated pre-cutover backup is
+`C:\Users\Owner\Desktop\warehouse\maintenance_backups\20260904T111000-pre-storage-label-fast-scan`
+(manifest SHA-256
+`030AC3A9A6B4D1DDF65A80AFDB3BFE693DCE15A439C825370D4D41DB0BCC5ABC`).
+
 After integrating the scanner routes into the combined app:
 
 1. Stop the legacy global-hook listener and its Flask debug process.
 2. Confirm no second process owns the scanner or port 5000.
-3. Start the combined Waitress service with the private environment injected.
+3. Start the combined Waitress service in the logged-on warehouse user's
+   interactive Windows session with the private environment injected. Windows
+   Raw Input cannot acquire the scanner from an SSH/service session 0.
 4. Start the fixed-domain ngrok tunnel to `http://127.0.0.1:5000`.
-5. Configure both as one Windows service/supervised startup unit, with the app
-   starting before ngrok. Do not use an interactive Startup shortcut.
+5. Keep the existing hidden Startup-folder launcher/supervisor, with the app
+   starting before ngrok. For maintenance over SSH, use a temporary Task
+   Scheduler action with the logged-on user's `InteractiveToken`, confirm the
+   child process is in the console session, then remove that exact temporary
+   task. Do not leave a scanner-owning process in session 0.
 
 For a restart, stop ngrok first so new requests cannot reach a half-stopped app,
 stop the Waitress service, start Waitress and wait for local readiness, then
@@ -274,6 +288,12 @@ start ngrok. Do not kill only the device-input thread or launch a temporary
 legacy listener during maintenance.
 
 ## Verification checklist
+
+Deployment status (2026-09-04): the remote Python suite, combined-service health
+check, authentication guards, credential parity, and authenticated public
+storage and Work Order start/drain/stop controls passed. The physical ten-scan
+burst, ordinary-keyboard/idle-scanner behavior, and actual bin/pallet label
+prints remain operator acceptance checks.
 
 Perform these checks after installation, device replacement, or restart:
 

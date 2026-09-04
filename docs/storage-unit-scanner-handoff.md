@@ -31,9 +31,8 @@ document, or log. Production/test deploy configuration must keep all
 and writes for both `StorageUnitScanSessions` and `StorageUnitScanControls`,
 including exclusions in any overlapping catch-all rule.
 
-The production bridge token has already been generated under
-`STORAGE_SCAN_BRIDGE_TOKEN` in the ignored local file
-`C:\Users\mack2\Desktop\code\.env.local`. Configure the warehouse scanner
+The production bridge token is stored under `STORAGE_SCAN_BRIDGE_TOKEN` in the
+deployment workstation's ignored `.env.local`. Configure the warehouse scanner
 service with that exact value through its own private environment. Never commit
 the value, paste it into this document, or print it in bridge/Magmo logs.
 
@@ -504,36 +503,48 @@ comparison on every callback.
 
 ## Current warehouse-server implementation
 
-The session-aware bridge is implemented. Its canonical, version-controlled
-source is:
+`scanner-server` in this repository is canonical. Production is pinned to Git
+commit `18424caf253f90c98883454f9bf824d0ace82983` and immutable tag
+`storage-label-fast-scan-deploy-20260904-v2`.
 
-- `C:\Users\mack2\Desktop\code\scanner-server`
-- Package: `C:\Users\mack2\Desktop\code\scanner-server\warehouse_scanner`
-- Offline tests: `C:\Users\mack2\Desktop\code\scanner-server\tests`
-- Operator runbook: `C:\Users\mack2\Desktop\code\scanner-server\README.md`
+The 2026-09-04 production cutover installed that source on `AIS-Warehouse` at:
 
-This workstation also contains a reference/staging copy under:
+- Service root: `C:\Users\Owner\Desktop\warehouse`
+- Package: `C:\Users\Owner\Desktop\warehouse\scanner-server\warehouse_scanner`
+- Combined entry point:
+  `C:\Users\Owner\Desktop\warehouse\label_server\print_bluefolder_combo.py`
+- Service manager:
+  `C:\Users\Owner\Desktop\warehouse\warehouse_service_manager.py`
 
-- `C:\Users\mack2\Desktop\magmo-api\warehouse_scanner`
-- Combined port-5000 process:
-  `C:\Users\mack2\Desktop\magmo-api\print_bluefolder_combo.py`
+The pre-cutover server backup is retained at
+`C:\Users\Owner\Desktop\warehouse\maintenance_backups\20260904T111000-pre-storage-label-fast-scan`.
+Its `manifest.json` SHA-256 is
+`030AC3A9A6B4D1DDF65A80AFDB3BFE693DCE15A439C825370D4D41DB0BCC5ABC`.
+It includes the prior scanner package, combined entry point, service manager,
+and protected configuration. Keep it on the server; it contains private files.
 
-Before that local reference copy was changed, its prior scanner files were
-backed up at:
-
-`C:\Users\mack2\Desktop\code\outputs\scanner-backups\2026-08-27_21-05-09-warehouse-scanner`
-
-Treat `scanner-server` as canonical. The copy above is not the remote warehouse
-server and does not prove that the physical scanner process has been updated.
-Create a dated backup on the warehouse server, synchronize the canonical
-package there, test it, and restart that server deliberately. Do not develop
-solely against an unversioned operational copy.
+The active package passed all 78 Python tests. The staged combined entry point
+also passed 14 existing-service regression tests. Production has exactly one
+combined Waitress process in the logged-on console session, the exact-device
+Raw Input listener starts successfully, ngrok targets the same port 5000, and
+both local and public authenticated storage/Work Order start-drain-stop checks
+passed. The dedicated storage-label route accepted the shared credential and
+reached payload validation without sending a print job. Active source hashes
+match the staged release, the Magmo and scanner token values match, and the
+warehouse `.env` and private scanner configuration stayed byte-for-byte
+unchanged.
 
 Only `STORAGE_SCAN_BRIDGE_TOKEN` was authorized for secret transfer. Preserve
 the warehouse server's existing private token value and all unrelated server
 configuration; never copy `.env.local`, Firebase credentials, or other secrets.
-No claim is made here that the remote service, its ngrok tunnel, or its physical
-scanner has been updated or verified.
+
+Windows Raw Input must run in the logged-on user's interactive console session.
+A process started directly by OpenSSH in session 0 cannot acquire the scanner.
+For an SSH maintenance restart, stop ngrok and the app through the existing
+manager, then launch each manager `start` command with a temporary Task Scheduler
+principal using the logged-on user's `InteractiveToken`. Verify the child owns
+port 5000 in that console session and remove the exact temporary task. The
+normal hidden Startup-folder launcher already runs in the correct session.
 
 The canonical implementation provides these safeguards:
 
@@ -558,10 +569,11 @@ The canonical implementation provides these safeguards:
    every completed frame to the Work Order callback; neither relies on browser
    keystrokes.
 
-## Straight-text handoff for Codex on the warehouse server
+## Future cutover procedure for Codex on the warehouse server
 
-Paste the following request into Codex running on the physical scanner server.
-It is intentionally self-contained and does not include a secret:
+Use the following request for a later reinstall or upgrade. The 2026-09-04
+production cutover described above is already complete. This text is
+self-contained and does not include a secret:
 
 ```text
 Update the existing Magmo warehouse scanner/printer service from the canonical
@@ -589,13 +601,13 @@ print_label function. Reuse the embedded scanner runtime already constructed on
 the existing app; do not call build_embedded_runtime or register scanner routes
 a second time. Insert storage-label registration after print_label is defined
 and before Waitress starts serving. Import register_storage_label_routes from
-warehouse_scanner.storage_label_print and call it exactly once, using the actual
-existing runtime variable (the reference combo server calls it
-STORAGE_SCAN_RUNTIME):
+warehouse_scanner.storage_label_print and call it exactly once. The production
+combo server creates scanner_runtime once and aliases its bridge as
+storage_scan_bridge:
 
 register_storage_label_routes(
     app,
-    authorize=STORAGE_SCAN_RUNTIME.bridge.authorize,
+    authorize=storage_scan_bridge.authorize,
     printer=print_label,
 )
 
@@ -629,11 +641,10 @@ has changed; preserve a known-good existing binding during a routine code update
    `warehouse_scanner.py` global-hook process. The legacy listener and any
    separate global scan-to-page opener must never run in parallel with the
    combined server; the unified bridge owns idle page opening.
-2. Open PowerShell in the active warehouse scanner service directory. Use the
-   real path configured on that server, not a path copied from another PC:
+2. Open PowerShell in the active warehouse scanner service directory:
 
    ```powershell
-   cd <active warehouse scanner service directory>
+   cd C:\Users\Owner\Desktop\warehouse
    ```
 
 3. Choose a physical barcode or QR label whose exact decoded value is known,
@@ -656,8 +667,12 @@ has changed; preserve a known-good existing binding during a routine code update
 5. Restart the one combined `print_bluefolder_combo.py` process so it loads the
    calibrated device, and restart the fixed-domain ngrok tunnel to that same
    port-5000 process. Stop ngrok before stopping the app; start the app and
-   confirm local readiness before starting ngrok again. Do not launch the old
-   standalone global keyboard listener afterward.
+   confirm local readiness before starting ngrok again. When working through
+   SSH, launch both manager `start` commands through a temporary Task Scheduler
+   principal using the logged-on user's `InteractiveToken`, verify that the
+   scanner-owning process is in the console session, and remove the exact
+   temporary task. A process launched directly in SSH session 0 cannot acquire
+   Raw Input. Do not launch the old standalone global keyboard listener.
 6. Verify that fast typing on the ordinary keyboard opens nothing. Verify one
    idle scanner read opens exactly one canonical Magmo page. Then open a bin or
    pallet Scan In modal and verify that scanner reads appear only in its staged
@@ -667,11 +682,12 @@ has changed; preserve a known-good existing binding during a routine code update
    scanner read resumes opening its one canonical page. Cancel the first
    controlled test before performing a separate known-item confirmation test.
 
-The public scanner endpoint remains operationally **unverified** until the
-actual warehouse PC has completed exact-device learning, saved the emitted
-match, restarted the combined process and ngrok, and passed the controlled tests
-above. The canonical code and local reference copy are present, but that does
-not prove the physical scanner-to-public-callback path. Until verification is
-complete, Magmo must continue to treat scanner-unavailable/bridge failures as a
-safe failure and make no inventory change. `STORAGE_SCAN_ENABLED=false` remains
-the emergency Magmo-side kill switch.
+The production bridge and public control surface were deployed and verified on
+2026-09-04: the Python suite, local health, unauthenticated-route guards,
+credential parity, and authenticated public storage/Work Order start, drain,
+and stop checks passed. Physical acceptance remains incomplete: a rapid burst
+of at least ten disposable scans has not been observed end to end, normal
+keyboard and idle-scanner behavior have not been observed by an operator, and
+no populated bin or pallet label has been physically printed and inspected. Do
+not describe those checks as passed until an operator completes them.
+`STORAGE_SCAN_ENABLED=false` remains the emergency Magmo-side kill switch.
