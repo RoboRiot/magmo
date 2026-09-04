@@ -223,10 +223,10 @@ class StorageLabelZplTests(unittest.TestCase):
         for index in range(1, 14):
             self.assertIn(f"^FDB{index}^FS", zpl)
             self.assertIn(f"^FDAIS-B{index:05d}^FS", zpl)
-        self.assertIn("^FO145,400^GB106,380,2^FS", zpl)
+        self.assertIn("^FO148,400^GB107,380,2^FS", zpl)
         self.assertIn("AIS-P00065", zpl)
         self.assertIn("^BQN,2,4", zpl)
-        self.assertIn("^FO14,970^BQN,2,4", zpl)
+        self.assertIn("^FO16,970^BQN,2,4", zpl)
         self.assertIn("^FO134,20^GB2,920,2^FS", zpl)
         self.assertIn("LA,https://magmo.cloud/NewSearch/inventory/storage/P65", zpl)
 
@@ -259,7 +259,7 @@ class StorageLabelZplTests(unittest.TestCase):
         self.assertEqual(len(paged), 2)
         self.assertIn("1/2", paged[0])
         self.assertIn("2/2", paged[1])
-        self.assertIn("^FO145,20^GB530,1140,2^FS", paged[1])
+        self.assertIn("^FO148,20^GB527,1140,2^FS", paged[1])
         combined = "\n".join(paged)
         for index in range(1, MAX_PALLET_BINS_PER_PAGE + 2):
             self.assertEqual(combined.count(f"^FDB{index}^FS"), 1)

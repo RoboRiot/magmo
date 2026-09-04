@@ -41,7 +41,7 @@ PALLET_VIEW_HEIGHT_DOTS = LABEL_WIDTH_DOTS
 PALLET_GRID_LEFT = 20
 PALLET_GRID_TOP = 145
 PALLET_GRID_WIDTH = PALLET_VIEW_WIDTH_DOTS - 40
-PALLET_GRID_BOTTOM = 675
+PALLET_GRID_BOTTOM = 672
 PALLET_TILE_BARCODE_MODULES = 145
 
 UNIT_ID_PATTERN = re.compile(r"^([BP])([1-9]\d{0,4})$")
@@ -620,7 +620,7 @@ def _pallet_footer(payload: StorageLabelPayload) -> list[str]:
             field_width=500,
             alignment="C",
         ),
-        _landscape_qr_field(970, 674, payload.qr_url),
+        _landscape_qr_field(970, 672, payload.qr_url),
     ]
 
 
