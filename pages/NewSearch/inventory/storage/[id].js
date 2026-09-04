@@ -37,7 +37,7 @@ const naturalCollator = new Intl.Collator(undefined, {
 });
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 const BIN_LABEL_ITEMS_PER_PAGE = 10;
-const PALLET_LABEL_BINS_PER_PAGE = 25;
+const PALLET_LABEL_BINS_PER_PAGE = 15;
 
 function firstQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -105,21 +105,32 @@ function labelPreviewPages(preview) {
 
 function palletLabelLayout(binCount) {
   if (binCount <= 0) {
-    return { columns: 3, rows: 1, gridTop: "2.22in", headerSize: "2.1in" };
+    return {
+      columns: 1,
+      rows: 1,
+      gridTop: "0.72in",
+      headerSize: "2.05in",
+      tileFontSize: "0.48in",
+      barcodeHeight: "0.4in",
+      barcodeWidth: "2.2in",
+    };
   }
-  let layout;
-  if (binCount <= 4) {
-    layout = { columns: 2, gridTop: "2.12in", headerSize: "1.77in" };
-  } else if (binCount <= 9) {
-    layout = { columns: 3, gridTop: "1.8in", headerSize: "1.48in" };
-  } else if (binCount <= 16) {
-    layout = { columns: 4, gridTop: "1.55in", headerSize: "1.23in" };
-  } else {
-    layout = { columns: 5, gridTop: "1.4in", headerSize: "1.08in" };
-  }
+  const columns = binCount <= 1 ? 1 : binCount <= 4 ? 2 : 3;
+  const rows = Math.ceil(binCount / columns);
+  const tileSizes = [
+    { tileFontSize: "0.48in", barcodeHeight: "0.4in" },
+    { tileFontSize: "0.32in", barcodeHeight: "0.34in" },
+    { tileFontSize: "0.24in", barcodeHeight: "0.3in" },
+    { tileFontSize: "0.19in", barcodeHeight: "0.27in" },
+    { tileFontSize: "0.16in", barcodeHeight: "0.25in" },
+  ][Math.min(rows, 5) - 1];
   return {
-    ...layout,
-    rows: Math.ceil(binCount / layout.columns),
+    columns,
+    rows,
+    gridTop: "0.72in",
+    headerSize: "0.63in",
+    barcodeWidth: columns <= 2 ? "2.2in" : "1.45in",
+    ...tileSizes,
   };
 }
 
@@ -988,9 +999,18 @@ export default function StorageUnitDetailPage() {
         onHide={() => setShowLabelPreview(false)}
         centered
         size="lg"
-        className={styles.labelPreviewModal}
-        dialogClassName={styles.labelPreviewDialog}
+        className={`${styles.labelPreviewModal} ${
+          unitType === "pallet" ? styles.labelPreviewModalPallet : ""
+        }`}
+        dialogClassName={`${styles.labelPreviewDialog} ${
+          unitType === "pallet" ? styles.labelPreviewDialogPallet : ""
+        }`}
       >
+        {labelPreview && (
+          <style media="print">{`@page { size: ${
+            labelPreview.unitType === "pallet" ? "6in 4in" : "4in 6in"
+          }; margin: 0; }`}</style>
+        )}
         <Modal.Header closeButton className={styles.labelPreviewHeader}>
           <Modal.Title>{unitId} label preview</Modal.Title>
         </Modal.Header>
@@ -1009,7 +1029,11 @@ export default function StorageUnitDetailPage() {
                 const palletLayout = palletLabelLayout(page.bins?.length || 0);
                 return (
                   <div
-                    className={styles.storageLabelSheet}
+                    className={`${styles.storageLabelSheet} ${
+                      page.unitType === "pallet"
+                        ? styles.storageLabelSheetPallet
+                        : styles.storageLabelSheetBin
+                    }`}
                     key={`${page.unitId}-${page.page}`}
                   >
                   {page.unitType === "bin" ? (
@@ -1069,10 +1093,14 @@ export default function StorageUnitDetailPage() {
                           top: palletLayout.gridTop,
                           gridTemplateColumns: `repeat(${palletLayout.columns}, minmax(0, 1fr))`,
                           gridTemplateRows: `repeat(${palletLayout.rows}, minmax(0, 1fr))`,
+                          "--pallet-bin-font-size": palletLayout.tileFontSize,
+                          "--pallet-bin-barcode-height": palletLayout.barcodeHeight,
+                          "--pallet-bin-barcode-width": palletLayout.barcodeWidth,
                         }}
                       >
                         {page.bins.map((bin, index) => (
-                          <strong
+                          <div
+                            className={styles.storageLabelPalletBinCell}
                             key={bin.unit_id}
                             style={centeredPalletBinStyle(
                               index,
@@ -1080,8 +1108,13 @@ export default function StorageUnitDetailPage() {
                               palletLayout.columns
                             )}
                           >
-                            {bin.display_id}
-                          </strong>
+                            <strong>{bin.display_id}</strong>
+                            <div
+                              className={styles.storageLabelPalletBinBarcode}
+                              aria-label={`Code 128 barcode containing ${bin.serial_id}`}
+                              dangerouslySetInnerHTML={{ __html: bin.barcodeSvg }}
+                            />
+                          </div>
                         ))}
                       </div>
                     </>
@@ -1112,7 +1145,10 @@ export default function StorageUnitDetailPage() {
             </div>
           )}
           <p className={styles.labelPreviewHint}>
-            Each preview is a 4 × 6 inch Zebra label. The barcode encodes {labelPreview?.serialId || unitId}; the QR opens this storage page.
+            {labelPreview?.unitType === "pallet"
+              ? "Pallet previews are 6 × 4 inches in landscape orientation. Each bin barcode encodes its canonical AIS bin ID. "
+              : "Bin previews are 4 × 6 inches in portrait orientation. "}
+            The footer barcode encodes {labelPreview?.serialId || unitId}; the QR opens this storage page.
           </p>
         </Modal.Body>
         <Modal.Footer className={styles.labelPreviewFooter}>

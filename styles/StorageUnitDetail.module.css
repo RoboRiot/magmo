@@ -382,10 +382,15 @@
 }
 
 .labelPreviewDialog {
-  width: min(620px, calc(100vw - 24px));
-  max-width: 620px !important;
+  width: min(760px, calc(100vw - 24px));
+  max-width: 760px !important;
   margin-left: auto !important;
   margin-right: auto !important;
+}
+
+.labelPreviewDialogPallet {
+  width: min(760px, calc(100vw - 24px));
+  max-width: 760px !important;
 }
 
 .labelPreviewModal :global(.modal-content) {
@@ -440,9 +445,7 @@
 }
 
 .storageLabelSheet {
-  width: 4in;
   max-width: 100%;
-  aspect-ratio: 2 / 3;
   position: relative;
   flex: 0 0 auto;
   box-sizing: border-box;
@@ -454,6 +457,18 @@
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+.storageLabelSheetBin {
+  width: 4in;
+  aspect-ratio: 2 / 3;
+  page: binStorageLabel;
+}
+
+.storageLabelSheetPallet {
+  width: 6in;
+  aspect-ratio: 3 / 2;
+  page: palletStorageLabel;
 }
 
 .storageLabelBinHeading {
@@ -587,6 +602,10 @@
   font: 700 0.11in/1 Arial, Helvetica, sans-serif;
 }
 
+.storageLabelSheetPallet .storageLabelPalletPageNumber {
+  top: 0.57in;
+}
+
 .storageLabelPalletNumber {
   position: absolute;
   top: 0.28in;
@@ -602,8 +621,21 @@
   white-space: nowrap;
 }
 
+.storageLabelSheetPallet .storageLabelPalletNumber {
+  top: 0.64in;
+  right: 0.2in;
+  left: 0.2in;
+  line-height: 0.88;
+}
+
 .storageLabelPalletNumberWithBins {
   font-size: 1.65in;
+}
+
+.storageLabelSheetPallet .storageLabelPalletNumberWithBins {
+  top: 0.04in;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
 }
 
 .storageLabelBinGrid {
@@ -619,13 +651,41 @@
   gap: 0;
 }
 
-.storageLabelBinGrid strong {
+.storageLabelSheetPallet .storageLabelBinGrid {
+  right: 0.1in;
+  bottom: 0.72in;
+  left: 0.1in;
+}
+
+.storageLabelPalletBinCell {
+  min-width: 0;
+  min-height: 0;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   place-items: center;
   overflow: hidden;
   border: 2px solid #000;
-  font: 900 0.27in/1 "Arial Black", Arial, sans-serif;
+  padding: 0.015in 0.2in 0.035in;
+}
+
+.storageLabelPalletBinCell strong {
+  font: 900 var(--pallet-bin-font-size, 0.2in) / 1 "Arial Black", Arial,
+    sans-serif;
   white-space: nowrap;
+}
+
+.storageLabelPalletBinBarcode {
+  width: var(--pallet-bin-barcode-width, 1.45in);
+  max-width: 100%;
+  height: var(--pallet-bin-barcode-height, 0.25in);
+  align-self: center;
+  overflow: hidden;
+}
+
+.storageLabelPalletBinBarcode svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .storageLabelSymbols {
@@ -679,6 +739,24 @@
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.018in;
+}
+
+.storageLabelSheetPallet .storageLabelSymbols {
+  height: 0.58in;
+  right: 0.12in;
+  bottom: 0.05in;
+  left: 0.12in;
+}
+
+.storageLabelSheetPallet .storageLabelBarcodeBlock {
+  width: 4.7in;
+  height: 0.58in;
+}
+
+.storageLabelSheetPallet .storageLabelQr {
+  width: 0.58in;
+  height: 0.58in;
+  flex-basis: 0.58in;
 }
 
 .labelPreviewHint {
@@ -824,8 +902,13 @@
   color: #cbd5e1;
 }
 
-@page {
+@page binStorageLabel {
   size: 4in 6in;
+  margin: 0;
+}
+
+@page palletStorageLabel {
+  size: 6in 4in;
   margin: 0;
 }
 
@@ -847,6 +930,11 @@
     background: #fff !important;
   }
 
+  .labelPreviewModalPallet {
+    width: 6in !important;
+    min-height: 4in !important;
+  }
+
   .labelPreviewDialog,
   .labelPreviewModal :global(.modal-content),
   .labelPreviewBody {
@@ -864,6 +952,12 @@
     transform: none !important;
   }
 
+  .labelPreviewDialogPallet,
+  .labelPreviewModalPallet :global(.modal-content),
+  .labelPreviewModalPallet .labelPreviewBody {
+    width: 6in !important;
+  }
+
   .storageLabelPages {
     display: block !important;
   }
@@ -877,9 +971,7 @@
   }
 
   .storageLabelSheet {
-    width: 4in !important;
     max-width: none !important;
-    height: 6in !important;
     position: relative !important;
     margin: 0 !important;
     border: 0 !important;
@@ -887,6 +979,16 @@
     box-shadow: none !important;
     break-after: page;
     page-break-after: always;
+  }
+
+  .storageLabelSheetBin {
+    width: 4in !important;
+    height: 6in !important;
+  }
+
+  .storageLabelSheetPallet {
+    width: 6in !important;
+    height: 4in !important;
   }
 
   .storageLabelSheet:last-child {

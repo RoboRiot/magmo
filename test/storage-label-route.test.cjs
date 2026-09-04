@@ -164,6 +164,7 @@ function loadPreviewRoute({
       itemBarcodeSvgs: [
         { itemId: "AIS17704", svg: "<svg id=\"item-barcode\"></svg>" },
       ],
+      binBarcodeSvgs: [],
     };
   return loadProjectModule("pages/api/print/storage-label-preview.js", {
     "../../../context/FirebaseAdmin": { adminDb },
@@ -372,6 +373,46 @@ test("storage preview route returns server-derived bin contents and rendered sym
   assert.deepEqual(result.body.bins, []);
 });
 
+test("storage preview route attaches the canonical barcode to every pallet bin", async () => {
+  const palletPayload = {
+    ...BIN_PAYLOAD,
+    storage_unit_type: "pallet",
+    unit_id: "P65",
+    display_number: "65",
+    local_sn: "AIS-P00065",
+    serial_id: "AIS-P00065",
+    qr_value: "https://magmo.cloud/NewSearch/inventory/storage/P65",
+    barcode_value: "AIS-P00065",
+    items: [],
+    bins: [
+      { unit_id: "B47", display_id: "B47", serial_id: "AIS-B00047" },
+      { unit_id: "B130", display_id: "B130", serial_id: "AIS-B00130" },
+    ],
+  };
+  const result = await invoke(
+    loadPreviewRoute({
+      loadPayload: async () => palletPayload,
+      rendered: {
+        payload: palletPayload,
+        qrSvg: "<svg id=\"qr\"></svg>",
+        barcodeSvg: "<svg id=\"pallet-barcode\"></svg>",
+        itemBarcodeSvgs: [],
+        binBarcodeSvgs: [
+          { unitId: "B47", svg: "<svg id=\"bin-47\"></svg>" },
+          { unitId: "B130", svg: "<svg id=\"bin-130\"></svg>" },
+        ],
+      },
+    }),
+    { method: "GET", query: { unitId: "P65" } }
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.unitType, "pallet");
+  assert.equal(result.body.bins[0].serial_id, "AIS-B00047");
+  assert.equal(result.body.bins[0].barcodeSvg, "<svg id=\"bin-47\"></svg>");
+  assert.equal(result.body.bins[1].barcodeSvg, "<svg id=\"bin-130\"></svg>");
+});
+
 test("storage preview route requires GET, authentication, and a database", async () => {
   const methodResult = await invoke(loadPreviewRoute(), {
     method: "POST",
@@ -391,4 +432,36 @@ test("storage preview route requires GET, authentication, and a database", async
     query: { unitId: "B47" },
   });
   assert.equal(databaseResult.status, 503);
+});
+
+test("storage preview route fails closed when a pallet bin barcode is missing", async () => {
+  const palletPayload = {
+    ...BIN_PAYLOAD,
+    storage_unit_type: "pallet",
+    unit_id: "P65",
+    display_number: "65",
+    local_sn: "AIS-P00065",
+    serial_id: "AIS-P00065",
+    qr_value: "https://magmo.cloud/NewSearch/inventory/storage/P65",
+    barcode_value: "AIS-P00065",
+    items: [],
+    bins: [{ unit_id: "B47", display_id: "B47", serial_id: "AIS-B00047" }],
+  };
+  const result = await invoke(
+    loadPreviewRoute({
+      loadPayload: async () => palletPayload,
+      rendered: {
+        payload: palletPayload,
+        qrSvg: "<svg></svg>",
+        barcodeSvg: "<svg></svg>",
+        itemBarcodeSvgs: [],
+        binBarcodeSvgs: [],
+      },
+    }),
+    { method: "GET", query: { unitId: "P65" } }
+  );
+
+  assert.equal(result.status, 500);
+  assert.equal(result.body.code, "storage_label_symbol_mismatch");
+  assert.match(result.body.error, /could not be loaded/i);
 });

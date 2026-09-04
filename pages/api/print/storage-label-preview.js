@@ -36,6 +36,19 @@ export default async function handler(req, res) {
     const itemBarcodeById = new Map(
       rendered.itemBarcodeSvgs.map((entry) => [entry.itemId, entry.svg])
     );
+    const binBarcodeById = new Map(
+      rendered.binBarcodeSvgs.map((entry) => [entry.unitId, entry.svg])
+    );
+    const renderedBins = (rendered.payload.bins || []).map((bin) => ({
+      ...bin,
+      barcodeSvg: binBarcodeById.get(bin.unit_id) || "",
+    }));
+    if (renderedBins.some((bin) => !bin.barcodeSvg)) {
+      const error = new Error("A pallet-bin barcode could not be rendered.");
+      error.code = "storage_label_symbol_mismatch";
+      error.statusCode = 500;
+      throw error;
+    }
     return res.status(200).json({
       ok: true,
       unitId: rendered.payload.unit_id,
@@ -51,7 +64,7 @@ export default async function handler(req, res) {
         ...item,
         barcodeSvg: itemBarcodeById.get(item.item_id) || "",
       })),
-      bins: rendered.payload.bins || [],
+      bins: renderedBins,
     });
   } catch (error) {
     const status = Number(error?.statusCode) || 400;

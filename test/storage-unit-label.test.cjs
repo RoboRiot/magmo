@@ -59,11 +59,34 @@ test("renders one serial barcode per bin item from an enriched payload", () => {
 });
 
 test("renders a pallet label with its numeric display value", () => {
-  const result = renderStorageUnitLabelSymbols("P65");
+  const result = renderStorageUnitLabelSymbols({
+    template: "storage-unit-v2",
+    label_type: "storage_unit",
+    storage_unit_type: "pallet",
+    unit_id: "P65",
+    display_number: "65",
+    local_sn: "AIS-P00065",
+    serial_id: "AIS-P00065",
+    qr_value: "https://magmo.cloud/NewSearch/inventory/storage/P65",
+    barcode_value: "AIS-P00065",
+    barcode_format: "CODE128",
+    items: [],
+    bins: [
+      { unit_id: "B47", display_id: "B47", serial_id: "AIS-B00047" },
+      { unit_id: "B130", display_id: "B130", serial_id: "AIS-B00130" },
+    ],
+  });
   assert.equal(result.payload.storage_unit_type, "pallet");
   assert.equal(result.payload.display_number, "65");
   assert.match(result.qrSvg, /viewBox=/);
   assert.match(result.barcodeSvg, /viewBox=/);
+  assert.deepEqual(
+    result.binBarcodeSvgs.map((entry) => entry.unitId),
+    ["B47", "B130"]
+  );
+  for (const entry of result.binBarcodeSvgs) {
+    assert.match(entry.svg, /^<svg /);
+  }
 });
 
 test("refuses zero and regular-item IDs", () => {

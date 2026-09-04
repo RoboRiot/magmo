@@ -33,8 +33,16 @@ MAX_REQUEST_BYTES = 65_536
 MAX_ITEMS = 250
 MAX_BINS = 250
 MAX_BIN_ITEMS_PER_PAGE = 10
-MAX_PALLET_BINS_PER_PAGE = 25
+MAX_PALLET_BINS_PER_PAGE = 15
 MAX_ITEM_CODE_CHARACTERS = 20
+
+PALLET_VIEW_WIDTH_DOTS = LABEL_LENGTH_DOTS
+PALLET_VIEW_HEIGHT_DOTS = LABEL_WIDTH_DOTS
+PALLET_GRID_LEFT = 20
+PALLET_GRID_TOP = 145
+PALLET_GRID_WIDTH = PALLET_VIEW_WIDTH_DOTS - 40
+PALLET_GRID_BOTTOM = 675
+PALLET_TILE_BARCODE_MODULES = 145
 
 UNIT_ID_PATTERN = re.compile(r"^([BP])([1-9]\d{0,4})$")
 ITEM_BARCODE_PATTERN = re.compile(
@@ -340,6 +348,74 @@ def _barcode_field(x: int, y: int, value: str, *, height: int, module_width: int
     )
 
 
+def _landscape_text_field(
+    x: int,
+    y: int,
+    text: str,
+    *,
+    height: int,
+    width: int | None = None,
+    field_width: int | None = None,
+    alignment: str = "L",
+) -> str:
+    """Place upright text on the pallet label after it is turned landscape."""
+
+    font_width = height if width is None else width
+    printer_x = PALLET_VIEW_HEIGHT_DOTS - y - height
+    field = f"^FO{printer_x},{x}^A0R,{height},{font_width}"
+    if field_width is not None:
+        field += f"^FB{field_width},1,0,{alignment},0"
+    return f"{field}^FH\\^FD{zpl_escape(text)}^FS"
+
+
+def _landscape_barcode_field(
+    x: int,
+    y: int,
+    value: str,
+    *,
+    height: int,
+    module_width: int = 2,
+) -> str:
+    """Place a Code 128 barcode horizontally on the landscape-viewed label."""
+
+    printer_x = PALLET_VIEW_HEIGHT_DOTS - y - height
+    return (
+        f"^FO{printer_x},{x}^BY{module_width},2,{height}^BCR,{height},N,N,N"
+        f"^FH\\^FD{zpl_escape(value)}^FS"
+    )
+
+
+def _landscape_box(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    *,
+    thickness: int = 2,
+) -> str:
+    """Map a landscape-viewed rectangle into the printer's portrait coordinates."""
+
+    printer_x = PALLET_VIEW_HEIGHT_DOTS - y - height
+    return f"^FO{printer_x},{x}^GB{height},{width},{thickness}^FS"
+
+
+def _landscape_qr_field(
+    x: int,
+    y: int,
+    value: str,
+    *,
+    size: int = 132,
+    magnification: int = 4,
+) -> str:
+    """Place the square QR safely; ^BQ itself supports only normal orientation."""
+
+    printer_x = PALLET_VIEW_HEIGHT_DOTS - y - size
+    return (
+        f"^FO{printer_x},{x}^BQN,2,{magnification}^FH\\"
+        f"^FDLA,{zpl_escape(value)}^FS"
+    )
+
+
 def _page_shell(body: Sequence[str]) -> str:
     return "\n".join(
         [
@@ -505,14 +581,47 @@ def _bin_page(
     return _page_shell([*body, *_footer(payload)])
 
 
-def _pallet_grid_configuration(count: int) -> tuple[int, int, int]:
+def _pallet_grid_columns(count: int) -> int:
+    if count <= 1:
+        return 1
     if count <= 4:
-        return 2, 430, 360
-    if count <= 9:
-        return 3, 365, 300
-    if count <= 16:
-        return 4, 315, 250
-    return 5, 285, 220
+        return 2
+    return 3
+
+
+def _pallet_tile_sizes(rows: int) -> tuple[int, int]:
+    if rows <= 1:
+        return 96, 80
+    if rows == 2:
+        return 64, 68
+    if rows == 3:
+        return 48, 66
+    if rows == 4:
+        return 38, 60
+    return 32, 58
+
+
+def _pallet_footer(payload: StorageLabelPayload) -> list[str]:
+    return [
+        _landscape_box(20, 684, 920, 2),
+        _landscape_barcode_field(
+            65,
+            700,
+            payload.serial_id,
+            height=58,
+            module_width=2,
+        ),
+        _landscape_text_field(
+            35,
+            764,
+            payload.serial_id,
+            height=26,
+            width=24,
+            field_width=500,
+            alignment="C",
+        ),
+        _landscape_qr_field(970, 674, payload.qr_url),
+    ]
 
 
 def _pallet_page(
@@ -524,61 +633,72 @@ def _pallet_page(
 ) -> str:
     display = f"P{payload.display_number}"
     if not bins:
-        font = min(440, int(760 / max(1.0, len(display) * 0.62)))
-        y = 455 - font // 2
-        body = [_text_field(20, y, display, height=font, field_width=780, alignment="C")]
-        return _page_shell([*body, *_footer(payload)])
+        font = min(410, int(1100 / max(1.0, len(display) * 0.62)))
+        y = 125
+        body = [
+            _landscape_text_field(
+                40,
+                y,
+                display,
+                height=font,
+                field_width=1100,
+                alignment="C",
+            )
+        ]
+        return _page_shell([*body, *_pallet_footer(payload)])
 
-    columns, grid_top, base_header_font = _pallet_grid_configuration(len(bins))
-    header_font = min(
-        base_header_font,
-        max(105, int(760 / max(1.0, len(display) * 0.62))),
-    )
+    header_font = min(116, int(1100 / max(1.0, len(display) * 0.62)))
     body = [
-        _text_field(20, 22, display, height=header_font, field_width=780, alignment="C")
+        _landscape_text_field(
+            20,
+            16,
+            display,
+            height=header_font,
+            field_width=1140,
+            alignment="C",
+        ),
+        _landscape_box(20, 140, 1140, 2),
     ]
     if page_count > 1:
         body.append(
-            _text_field(
-                650,
-                max(22, grid_top - 34),
+            _landscape_text_field(
+                1020,
+                112,
                 f"{page_number}/{page_count}",
                 height=22,
                 width=20,
-                field_width=130,
+                field_width=120,
                 alignment="R",
             )
         )
 
+    columns = _pallet_grid_columns(len(bins))
     rows = math.ceil(len(bins) / columns)
-    grid_left = 20
-    grid_width = 780
-    grid_bottom = 892
-    cell_width = grid_width // columns
-    cell_height = (grid_bottom - grid_top) // rows
+    cell_width = PALLET_GRID_WIDTH // columns
+    cell_height = (PALLET_GRID_BOTTOM - PALLET_GRID_TOP) // rows
+    barcode_module_width = 3 if columns <= 2 else 2
+    barcode_width = PALLET_TILE_BARCODE_MODULES * barcode_module_width
     longest = max(len(value.display_id) for value in bins)
-    cell_font = max(
-        25,
-        min(
-            66,
-            int(cell_height * 0.48),
-            int((cell_width - 18) / max(1.0, longest * 0.62)),
-        ),
+    base_font, barcode_height = _pallet_tile_sizes(rows)
+    cell_font = min(
+        base_font,
+        int((cell_width - 24) / max(1.0, longest * 0.62)),
     )
     for index, bin_value in enumerate(bins):
         row, column = divmod(index, columns)
         values_in_row = min(columns, len(bins) - row * columns)
-        row_offset = (grid_width - values_in_row * cell_width) // 2
-        x = grid_left + row_offset + column * cell_width
-        y = grid_top + row * cell_height
+        row_offset = (PALLET_GRID_WIDTH - values_in_row * cell_width) // 2
+        x = PALLET_GRID_LEFT + row_offset + column * cell_width
+        y = PALLET_GRID_TOP + row * cell_height
         width = cell_width
-        height = cell_height if row < rows - 1 else grid_bottom - y
-        body.append(f"^FO{x},{y}^GB{width},{height},2^FS")
-        text_y = y + max(2, (height - cell_font) // 2)
+        height = cell_height if row < rows - 1 else PALLET_GRID_BOTTOM - y
+        body.append(_landscape_box(x, y, width, height))
+        content_height = cell_font + 5 + barcode_height
+        content_y = y + max(3, (height - content_height) // 2)
         body.append(
-            _text_field(
+            _landscape_text_field(
                 x,
-                text_y,
+                content_y,
                 bin_value.display_id,
                 height=cell_font,
                 width=max(20, cell_font - 4),
@@ -586,8 +706,17 @@ def _pallet_page(
                 alignment="C",
             )
         )
+        body.append(
+            _landscape_barcode_field(
+                x + (width - barcode_width) // 2,
+                content_y + cell_font + 5,
+                bin_value.serial_id,
+                height=barcode_height,
+                module_width=barcode_module_width,
+            )
+        )
 
-    return _page_shell([*body, *_footer(payload)])
+    return _page_shell([*body, *_pallet_footer(payload)])
 
 
 def build_storage_label_pages(value: StorageLabelPayload | Mapping[str, Any]) -> tuple[str, ...]:

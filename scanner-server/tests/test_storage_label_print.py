@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -213,17 +214,37 @@ class StorageLabelZplTests(unittest.TestCase):
 
         self.assertEqual(len(pages), 1)
         zpl = pages[0]
+        self.assertIn(f"^PW{LABEL_WIDTH_DOTS}", zpl)
+        self.assertIn(f"^LL{LABEL_LENGTH_DOTS}", zpl)
+        self.assertNotIn("^PW1180", zpl)
         self.assertIn("P65", zpl)
-        self.assertIn("^A0N,250,250", zpl)
+        self.assertIn("^A0R,116,116", zpl)
+        self.assertEqual(zpl.count("^BCR"), 14)
         for index in range(1, 14):
             self.assertIn(f"^FDB{index}^FS", zpl)
-        self.assertIn("^FO312,747^GB195,145,2^FS", zpl)
+            self.assertIn(f"^FDAIS-B{index:05d}^FS", zpl)
+        self.assertIn("^FO145,400^GB106,380,2^FS", zpl)
         self.assertIn("AIS-P00065", zpl)
+        self.assertIn("^BQN,2,4", zpl)
+        self.assertIn("^FO14,970^BQN,2,4", zpl)
+        self.assertIn("^FO134,20^GB2,920,2^FS", zpl)
         self.assertIn("LA,https://magmo.cloud/NewSearch/inventory/storage/P65", zpl)
 
-    def test_pallet_uses_five_by_five_page_then_paginates(self) -> None:
-        twenty_one = build_storage_label_pages(
-            label_payload("P9", bins=[bin_entry(index) for index in range(1, 22)])
+    def test_sparse_pallets_use_wider_three_dot_bin_barcodes(self) -> None:
+        zpl = build_storage_label_pages(
+            label_payload("P65", bins=[bin_entry(47), bin_entry(48), bin_entry(49)])
+        )[0]
+
+        self.assertEqual(zpl.count("^BY3"), 3)
+        for index in range(47, 50):
+            self.assertIn(f"^FDAIS-B{index:05d}^FS", zpl)
+
+    def test_pallet_uses_three_by_five_page_then_paginates(self) -> None:
+        full_page = build_storage_label_pages(
+            label_payload(
+                "P9",
+                bins=[bin_entry(index) for index in range(1, MAX_PALLET_BINS_PER_PAGE + 1)],
+            )
         )
         paged = build_storage_label_pages(
             label_payload(
@@ -232,15 +253,34 @@ class StorageLabelZplTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(twenty_one), 1)
-        self.assertIn("^FO332,769^GB156,123,2^FS", twenty_one[0])
+        self.assertEqual(MAX_PALLET_BINS_PER_PAGE, 15)
+        self.assertEqual(len(full_page), 1)
+        self.assertEqual(full_page[0].count("^BCR"), 16)
         self.assertEqual(len(paged), 2)
         self.assertIn("1/2", paged[0])
         self.assertIn("2/2", paged[1])
-        self.assertIn("^FO215,430^GB390,462,2^FS", paged[1])
+        self.assertIn("^FO145,20^GB530,1140,2^FS", paged[1])
         combined = "\n".join(paged)
         for index in range(1, MAX_PALLET_BINS_PER_PAGE + 2):
             self.assertEqual(combined.count(f"^FDB{index}^FS"), 1)
+            self.assertEqual(combined.count(f"^FDAIS-B{index:05d}^FS"), 1)
+
+    def test_maximum_bin_identifier_stays_inside_landscape_barcode_tiles(self) -> None:
+        bins = [bin_entry(index) for index in range(1, MAX_PALLET_BINS_PER_PAGE)]
+        bins.append(bin_entry(99999))
+        zpl = build_storage_label_pages(label_payload("P99999", bins=bins))[0]
+
+        self.assertIn("^FDB99999^FS", zpl)
+        self.assertIn("^FDAIS-B99999^FS", zpl)
+        self.assertIn("^BY2,2,58^BCR,58,N,N,N", zpl)
+        origins = re.findall(r"\^FO(-?\d+),(-?\d+)", zpl)
+        self.assertTrue(origins)
+        for raw_x, raw_y in origins:
+            with self.subTest(origin=(raw_x, raw_y)):
+                self.assertGreaterEqual(int(raw_x), 0)
+                self.assertLessEqual(int(raw_x), LABEL_WIDTH_DOTS)
+                self.assertGreaterEqual(int(raw_y), 0)
+                self.assertLessEqual(int(raw_y), LABEL_LENGTH_DOTS)
 
 
 class StorageLabelRouteTests(unittest.TestCase):
