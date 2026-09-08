@@ -313,7 +313,7 @@ def create_multi_zpl(item, case_number, total):
     """
     # Use the same canonical URL as the regular-print label.
     qr_url = build_item_url(item["local_sn"])
-    
+
     zpl = f"""
 ^XA
 ^PW820
@@ -356,7 +356,7 @@ def handle_print_multi():
     try:
         data = request.get_json()
         items = data.get("items")
-        
+
         if not items or not isinstance(items, list):
             return jsonify({"error": "Missing or invalid items list"}), 400
 
@@ -428,7 +428,7 @@ def handle_print_multi():
         return jsonify({"status": "Labels printed."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 # Function to create ZPL string for a single label.
 def create_zpl(data):
     if not data.get("name"):
@@ -540,10 +540,10 @@ def handle_bluefolder():
         if not data or not data.get("name"):
             return jsonify({"error": "Missing name"}), 400
         print(f"[{datetime.now()}] Received BlueFolder request: {data}")
-        
+
         # Use a constant item name "Service Item" per requirement.
         unique_name = "Service Item"
-        
+
         # --- Step 1: Create a new material item in BlueFolder ---
         item_payload = f"""
 <request>
@@ -568,14 +568,14 @@ def handle_bluefolder():
         item_response = requests.post(ITEMS_URL, data=item_payload, headers=HEADERS, auth=(API_TOKEN, 'x'))
         print("Response from Items API:")
         print(item_response.text)
-        
+
         try:
             item_xml = ET.fromstring(item_response.text)
         except Exception as e:
             error_details = f"Error parsing Items API XML: {e}"
             print(f"[{datetime.now()}] {error_details}")
             return jsonify({"error": error_details}), 500
-        
+
         # If creation fails due to duplicate item, log and move on.
         if item_xml.attrib.get("status") != "ok":
             if "another item that has the same" in item_response.text:
@@ -588,12 +588,12 @@ def handle_bluefolder():
         else:
             item_id_elem = item_xml.find("itemId")
             item_id = item_id_elem.text if item_id_elem is not None else None
-        
+
         # --- Step 2: Add the new material item to the work order ---
         service_request_id = data.get("workOrder")
         if not service_request_id:
             return jsonify({"error": "Missing workOrder field for BlueFolder"}), 400
-        
+
         now_str = datetime.now().strftime("%Y.%m.%d %I:%M %p")
         comment = (
             f"Name: {data['name']}\n"
@@ -624,18 +624,18 @@ def handle_bluefolder():
         material_response = requests.post(MATERIALS_URL, data=material_payload, headers=HEADERS, auth=(API_TOKEN, 'x'))
         print("Response from Service Request API:")
         print(material_response.text)
-        
+
         try:
             material_xml = ET.fromstring(material_response.text)
         except Exception as e:
             error_details = f"Error parsing Materials API XML: {e}"
             print(f"[{datetime.now()}] {error_details}")
             return jsonify({"error": error_details}), 500
-        
+
         if material_xml.attrib.get("status") != "ok":
             print(f"[{datetime.now()}] Failed to add material to work order: {material_response.text}")
             return jsonify({"error": "Failed to add material to work order", "response": material_response.text}), 500
-        
+
         print(f"[{datetime.now()}] BlueFolder service item added successfully!")
         return jsonify({
             "itemId": item_id,
