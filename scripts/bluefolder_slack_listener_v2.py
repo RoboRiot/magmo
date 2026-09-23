@@ -110,7 +110,7 @@ except ImportError:  # pragma: no cover
     load_dotenv = None
 
 
-LISTENER_VERSION = "2026.09.22-confirmed-tombstones.1"
+LISTENER_VERSION = "2026.09.23-bluefolder-destination-link.1"
 PRODUCTION_DISPATCH_CHANNEL_ID = "C07EPLKV9JT"
 REPORT_LISTENER_EXACT_COMMANDS = frozenset(
     {"!complete", "!done", "!hours", "!parts", "!trailer"}
@@ -710,7 +710,7 @@ class StateStore:
         retryable: bool = True,
     ) -> None:
         pending = self.data.setdefault("pending_magmo_imports", {})
-        pending[str(work_order_id)] = {
+        pending_record = {
             "number": str(fields.get("number") or work_order_id),
             "subject": str(fields.get("subject") or "")[:1200],
             "customer": str(fields.get("customer") or "")[:220],
@@ -720,6 +720,21 @@ class StateStore:
             "reason": str(reason or "")[:600],
             "retryable": bool(retryable),
         }
+        for key, maximum in (
+            ("bluefolder_customer_id", 100),
+            ("bluefolder_customer_name", 220),
+            ("bluefolder_location_id", 100),
+            ("bluefolder_location_name", 220),
+            ("bluefolder_address_street", 250),
+            ("bluefolder_address_city", 100),
+            ("bluefolder_address_state", 100),
+            ("bluefolder_address_postal_code", 30),
+            ("bluefolder_address_country", 100),
+        ):
+            value = str(fields.get(key) or "").strip()
+            if value:
+                pending_record[key] = value[:maximum]
+        pending[str(work_order_id)] = pending_record
         self.data.setdefault("health", {})["pending_magmo_import_count"] = len(
             pending
         )
@@ -1313,10 +1328,28 @@ class MagmoOpsIngestClient:
                 "A BlueFolder import requires its immutable service-request ID and number."
             )
 
+        bluefolder_identity: Dict[str, str] = {
+            "serviceRequestId": service_request_id,
+        }
+        for api_name, record_name in (
+            ("customerId", "bluefolder_customer_id"),
+            ("customerName", "bluefolder_customer_name"),
+            ("customerLocationId", "bluefolder_location_id"),
+            ("customerLocationName", "bluefolder_location_name"),
+            ("addressStreet", "bluefolder_address_street"),
+            ("addressCity", "bluefolder_address_city"),
+            ("addressState", "bluefolder_address_state"),
+            ("addressPostalCode", "bluefolder_address_postal_code"),
+            ("addressCountry", "bluefolder_address_country"),
+        ):
+            value = str(record.get(record_name) or "").strip()
+            if value:
+                bluefolder_identity[api_name] = value
+
         payload: Dict[str, Any] = {
             "eventType": "work_order.imported",
             "workOrderId": service_request_id,
-            "blueFolder": {"serviceRequestId": service_request_id},
+            "blueFolder": bluefolder_identity,
             "number": number,
         }
         optional_fields = {
@@ -6413,6 +6446,68 @@ def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[
     customer = safe_get(
         item, "customer_name", "customerName", "customer", "account_name"
     )
+    bluefolder_customer_id = safe_get(
+        item,
+        "customerId",
+        "customerID",
+        "customer_id",
+        "accountId",
+        "account_id",
+    )
+    bluefolder_location_id = safe_get(
+        item,
+        "customerLocationId",
+        "customerLocationID",
+        "customer_location_id",
+        "locationId",
+        "locationID",
+        "location_id",
+    )
+    bluefolder_location_name = safe_get(
+        item,
+        "customerLocationName",
+        "customer_location_name",
+        "locationName",
+        "location_name",
+    )
+    bluefolder_address_street = safe_get(
+        item,
+        "customerLocationStreetAddress",
+        "customer_location_street_address",
+        "addressStreet",
+        "streetAddress",
+        "address_line_1",
+    )
+    bluefolder_address_city = safe_get(
+        item,
+        "customerLocationCity",
+        "customer_location_city",
+        "addressCity",
+        "city",
+    )
+    bluefolder_address_state = safe_get(
+        item,
+        "customerLocationState",
+        "customer_location_state",
+        "addressState",
+        "state",
+    )
+    bluefolder_address_postal_code = safe_get(
+        item,
+        "customerLocationPostalCode",
+        "customer_location_postal_code",
+        "addressPostalCode",
+        "postalCode",
+        "zipCode",
+        "zip",
+    )
+    bluefolder_address_country = safe_get(
+        item,
+        "customerLocationCountry",
+        "customer_location_country",
+        "addressCountry",
+        "country",
+    )
     created_by_user_id = safe_get(
         item, "createdByUserId", "created_by_user_id", "createdBy"
     )
@@ -6480,6 +6575,15 @@ def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[
         "description": description,
         "created_at": normalize_bluefolder_datetime(created_at),
         "customer": customer,
+        "bluefolder_customer_id": bluefolder_customer_id,
+        "bluefolder_customer_name": customer,
+        "bluefolder_location_id": bluefolder_location_id,
+        "bluefolder_location_name": bluefolder_location_name,
+        "bluefolder_address_street": bluefolder_address_street,
+        "bluefolder_address_city": bluefolder_address_city,
+        "bluefolder_address_state": bluefolder_address_state,
+        "bluefolder_address_postal_code": bluefolder_address_postal_code,
+        "bluefolder_address_country": bluefolder_address_country,
         "link": link,
         "created_by_user_id": created_by_user_id,
         "bluefolder_status": bluefolder_status,
@@ -6499,6 +6603,33 @@ def bluefolder_import_record(
         "subject": str(fields.get("subject") or "")[:1200],
         "description": str(fields.get("description") or "")[:1800],
         "customer": str(fields.get("customer") or "")[:220],
+        "bluefolder_customer_id": str(
+            fields.get("bluefolder_customer_id") or ""
+        )[:100],
+        "bluefolder_customer_name": str(
+            fields.get("bluefolder_customer_name") or ""
+        )[:220],
+        "bluefolder_location_id": str(
+            fields.get("bluefolder_location_id") or ""
+        )[:100],
+        "bluefolder_location_name": str(
+            fields.get("bluefolder_location_name") or ""
+        )[:220],
+        "bluefolder_address_street": str(
+            fields.get("bluefolder_address_street") or ""
+        )[:250],
+        "bluefolder_address_city": str(
+            fields.get("bluefolder_address_city") or ""
+        )[:100],
+        "bluefolder_address_state": str(
+            fields.get("bluefolder_address_state") or ""
+        )[:100],
+        "bluefolder_address_postal_code": str(
+            fields.get("bluefolder_address_postal_code") or ""
+        )[:30],
+        "bluefolder_address_country": str(
+            fields.get("bluefolder_address_country") or ""
+        )[:100],
         "bluefolder_url": str(fields.get("link") or "")[:1200],
         "created_at": str(fields.get("created_at") or "")[:80],
         "bluefolder_status": str(fields.get("bluefolder_status") or "")[:220],
@@ -6536,6 +6667,33 @@ def record_successful_bluefolder_import(
             "subject": str(record.get("subject") or "")[:1200],
             "description": str(record.get("description") or "")[:1800],
             "customer": str(record.get("customer") or "")[:220],
+            "bluefolder_customer_id": str(
+                record.get("bluefolder_customer_id") or ""
+            )[:100],
+            "bluefolder_customer_name": str(
+                record.get("bluefolder_customer_name") or ""
+            )[:220],
+            "bluefolder_location_id": str(
+                record.get("bluefolder_location_id") or ""
+            )[:100],
+            "bluefolder_location_name": str(
+                record.get("bluefolder_location_name") or ""
+            )[:220],
+            "bluefolder_address_street": str(
+                record.get("bluefolder_address_street") or ""
+            )[:250],
+            "bluefolder_address_city": str(
+                record.get("bluefolder_address_city") or ""
+            )[:100],
+            "bluefolder_address_state": str(
+                record.get("bluefolder_address_state") or ""
+            )[:100],
+            "bluefolder_address_postal_code": str(
+                record.get("bluefolder_address_postal_code") or ""
+            )[:30],
+            "bluefolder_address_country": str(
+                record.get("bluefolder_address_country") or ""
+            )[:100],
             "created_at": str(record.get("created_at") or "")[:80],
             "bluefolder_url": str(record.get("bluefolder_url") or "")[:1200],
             "bluefolder_status": str(record.get("bluefolder_status") or "")[:220],
@@ -8424,6 +8582,15 @@ def process_once(
             "subject": title,
             "description": fields.get("description") or "",
             "customer": fields.get("customer") or "",
+            "bluefolder_customer_id": fields.get("bluefolder_customer_id") or "",
+            "bluefolder_customer_name": fields.get("bluefolder_customer_name") or "",
+            "bluefolder_location_id": fields.get("bluefolder_location_id") or "",
+            "bluefolder_location_name": fields.get("bluefolder_location_name") or "",
+            "bluefolder_address_street": fields.get("bluefolder_address_street") or "",
+            "bluefolder_address_city": fields.get("bluefolder_address_city") or "",
+            "bluefolder_address_state": fields.get("bluefolder_address_state") or "",
+            "bluefolder_address_postal_code": fields.get("bluefolder_address_postal_code") or "",
+            "bluefolder_address_country": fields.get("bluefolder_address_country") or "",
             "created_at": created_at,
             "bluefolder_url": bluefolder_link,
             "slack_channel": channel,
