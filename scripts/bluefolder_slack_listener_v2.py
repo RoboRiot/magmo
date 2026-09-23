@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-BlueFolder -> Slack dispatch listener
+BlueFolder -> Magmo intake and Slack evidence listener
 
 What it does:
-- Polls BlueFolder for newly created work orders
-- Posts a parent message into a Slack channel
-- Adds fixed mentions in the thread starter message
-- Fetches a Slack permalink for that message
-- Writes the Slack thread link back into BlueFolder's "Link to Slack Thread" field
-- Persists a local state file so the same work order is not posted twice
-- Writes each new work order directly to Firebase for Magmo's Ops board
-- Polls only the Slack threads created for those work orders
+- Polls every BlueFolder status for newly created work orders
+- Imports BlueFolder-only work orders into Magmo with the Slack-free,
+  idempotent ``work_order.imported`` contract
+- Adopts Magmo's authoritative Dispatch receipt when Magmo created the work order
+- Never creates or replies to a Slack Dispatch root; Magmo exclusively owns posting
+- Never fabricates or adopts a manual Dispatch receipt; an imported work order
+  waits for Magmo to create its own authoritative receipt
+- Keeps the Slack permalink in listener state and Magmo without writing it to BlueFolder
+- Persists a local state file so the same work order is not processed twice
+- Writes each new work order to Magmo through direct Firebase access or the
+  authenticated Ops ingest API
+- Discovers and polls existing Dispatch threads for every non-Closed Magmo order
 - Sends each new human message to Magmo for incremental assignment tracking
-- Stops tracking and removes the Firebase chat log when !done is sent
+- Keeps tracking through Service complete and Done; only Closed stops tracking
 
 Important:
 This script is intentionally written so the BlueFolder-specific pieces are easy to
@@ -24,11 +28,9 @@ Environment variables:
   BLUEFOLDER_BASE_URL=https://app.bluefolder.com/api/2.0
   BLUEFOLDER_API_TOKEN=xxxxxxxx
   BLUEFOLDER_WORK_ORDERS_PATH=/serviceRequests/list.aspx
-  BLUEFOLDER_LIST_STATUS=open
+  BLUEFOLDER_LIST_STATUS=
   BLUEFOLDER_WORK_ORDER_DETAIL_PATH=/serviceRequests/get.aspx?serviceRequestId={id}
   BLUEFOLDER_WORK_ORDER_URL_TEMPLATE=https://advancedimaging.bluefolder.com/service/sr.aspx?srid={id}
-  BLUEFOLDER_LINK_FIELD_LABEL=Link to Slack Thread
-
   SLACK_BOT_TOKEN=xoxb-...
   SLACK_CHANNEL_ID=C0123456789
   SLACK_CHANNEL_NAME=dispatch
@@ -46,6 +48,8 @@ Environment variables:
   OPS_REPORT_COMMANDS_MANAGED_BY_DONE_LISTENER=true
   FIREBASE_ADMIN_SERVICE_ACCOUNT_PATH=C:/path/to/service-account.json
   FIREBASE_PROJECT_ID=magmo-ac10c
+  OPS_INGEST_URL=https://magmo.cloud/api/ops/ingest
+  OPS_INGEST_SECRET=xxxxxxxx
   OPENAI_API_KEY=sk-...
   OPS_ASSIGNMENT_MODEL=gpt-5-nano
   OPS_MESSAGE_POLL_SECONDS=8
@@ -54,36 +58,44 @@ Optional:
   POLL_SECONDS=60
   STATE_FILE=./bluefolder_slack_state.json
   SLACK_POST_LOG_FILE=./slack_post_log.jsonl
+  RECONCILIATION_LOG_FILE=./listener_reconciliation_log.jsonl
   LOG_LEVEL=INFO
   BLUEFOLDER_TIMEOUT=30
   DRY_RUN=false
   BASELINE_ON_STARTUP=true
   ENABLE_BLUEFOLDER=true
-  TEST_SINGLE_SLACK_SEND=false
-  TEST_WORK_ORDER_NUMBER=9769
-  TEST_WORK_ORDER_SUBJECT=DUMMY TEST
-  TEST_WORK_ORDER_URL=https://app.bluefolder.com/workOrder/9769
 """
 
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import logging
 import os
 import re
 import sys
 import time
+import urllib.parse
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape as xml_escape
 
 import requests
 from slack_part_references import SlackPartReferenceResolver
+
+# Production dependencies are installed in the managed Python runtime.  An old
+# per-service ``vendor`` directory may still exist, but it must not shadow the
+# managed runtime: a damaged ACL on that directory previously made a clean
+# listener restart fail before it could load the globally installed dotenv.
+VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
+
 try:
     import firebase_admin
     from firebase_admin import credentials as firebase_credentials
@@ -98,23 +110,64 @@ except ImportError:  # pragma: no cover
     load_dotenv = None
 
 
-if load_dotenv:
-    # Keep explicit process variables highest priority, then discover the common
-    # Magmo and legacy listener env files so this script works from any cwd.
-    script_dir = Path(__file__).resolve().parent
-    project_dir = script_dir.parent
-    legacy_dir = Path.home() / "Desktop" / "magmo-api" / "bluefolder-slack-api"
-    env_candidates = (
-        script_dir / ".env.local",
-        script_dir / ".env",
-        project_dir / ".env.local",
-        project_dir / ".env",
-        legacy_dir / ".env.local",
-        legacy_dir / ".env",
-    )
-    for env_path in env_candidates:
-        if env_path.is_file():
-            load_dotenv(dotenv_path=env_path, override=False)
+LISTENER_VERSION = "2026.09.22-confirmed-tombstones.1"
+PRODUCTION_DISPATCH_CHANNEL_ID = "C07EPLKV9JT"
+REPORT_LISTENER_EXACT_COMMANDS = frozenset(
+    {"!complete", "!done", "!hours", "!parts", "!trailer"}
+)
+REPORT_LISTENER_DAILY_PATTERN = re.compile(
+    r"\s*!daily(?:\s+\d{2}/\d{2}/\d{4})?\s*", re.IGNORECASE
+)
+REPORT_LISTENER_MONITOR_PATTERN = re.compile(
+    r"\s*!monitor(?:\s+.+)?\s*", re.IGNORECASE
+)
+
+
+def report_listener_command(text: Any) -> str:
+    """Return the command owned by command_report, or an empty string."""
+    normalized = str(text or "").strip().lower()
+    if normalized in REPORT_LISTENER_EXACT_COMMANDS:
+        return normalized
+    if REPORT_LISTENER_DAILY_PATTERN.fullmatch(normalized):
+        return "!daily"
+    if REPORT_LISTENER_MONITOR_PATTERN.fullmatch(normalized):
+        return "!monitor"
+    return ""
+
+
+def load_simple_env_file(path: Path) -> bool:
+    """Load a local env file without ever echoing credential values."""
+    if not path.is_file():
+        return False
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+    return True
+
+
+# Keep explicit process variables highest priority, then load only the active
+# server deployment. A stale Desktop/magmo-api environment is never consulted.
+script_dir = Path(__file__).resolve().parent
+project_dir = script_dir.parent
+env_candidates = (
+    script_dir / ".env.local",
+    script_dir / ".env",
+    project_dir / ".env.local",
+    project_dir / ".env",
+)
+for env_path in env_candidates:
+    if not env_path.is_file():
+        continue
+    if load_dotenv:
+        load_dotenv(dotenv_path=env_path, override=False)
+    else:  # The managed deployment still checks for python-dotenv separately.
+        load_simple_env_file(env_path)
 
 
 def getenv_bool(name: str, default: bool = False) -> bool:
@@ -162,9 +215,128 @@ def parse_dt(value: Optional[str]) -> Optional[datetime]:
     try:
         if value.endswith("Z"):
             value = value[:-1] + "+00:00"
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
+        # BlueFolder emits timestamps without an offset but documents/uses them
+        # as UTC. Normalizing here prevents comparisons between historical
+        # naive state values and new RFC3339 values from crashing a poll.
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     except Exception:
         return None
+
+
+def ops_record_is_closed(record: Any) -> bool:
+    """Return True only for an authoritative Closed lifecycle state.
+
+    A Done milestone is deliberately not terminal. Dispatch evidence can arrive
+    after !done, and a Done work order can later be reopened.
+    """
+    entry = record if isinstance(record, dict) else {}
+    current_stage = re.sub(
+        r"[\s-]+", "_", str(entry.get("ops_workflow_status") or "").strip().lower()
+    ).strip("_")
+    if current_stage:
+        return current_stage == "closed"
+    if str(entry.get("ops_closed_at") or "").strip():
+        return True
+    if str(entry.get("bluefolder_date_time_closed") or "").strip():
+        return True
+    for key in ("ops_status", "bluefolder_workflow_stage"):
+        stage = re.sub(
+            r"[\s-]+", "_", str(entry.get(key) or "").strip().lower()
+        ).strip("_")
+        if stage == "closed":
+            return True
+    return False
+
+
+def ops_record_is_deleted(record: Any) -> bool:
+    entry = record if isinstance(record, dict) else {}
+    return bool(
+        entry.get("deletedAt")
+        or entry.get("deleted_at")
+        or entry.get("ops_deleted_at")
+        or entry.get("ops_missing_from_magmo")
+    )
+
+
+def monitoring_work_order_number(
+    work_order_id: Any, record: Optional[Dict[str, Any]] = None
+) -> str:
+    """Return the public work-order number used in a Dispatch root."""
+    entry = record if isinstance(record, dict) else {}
+    return str(entry.get("number") or work_order_id or "").strip()
+
+
+def monitoring_service_request_id(
+    work_order_id: Any, record: Optional[Dict[str, Any]] = None
+) -> str:
+    """Return BlueFolder's immutable identity, which can differ from number."""
+    entry = record if isinstance(record, dict) else {}
+    return str(
+        entry.get("service_request_id")
+        or entry.get("bluefolder_service_request_id")
+        or work_order_id
+        or ""
+    ).strip()
+
+
+def monitoring_ops_work_order_id(
+    work_order_id: Any, record: Optional[Dict[str, Any]] = None
+) -> str:
+    """Return the authoritative Magmo document/event identity."""
+    entry = record if isinstance(record, dict) else {}
+    return str(
+        entry.get("ops_work_order_id")
+        or entry.get("service_request_id")
+        or entry.get("bluefolder_service_request_id")
+        or work_order_id
+        or ""
+    ).strip()
+
+
+def is_exact_work_order_root(
+    message: Any,
+    work_order_number: str,
+    service_request_id: str = "",
+) -> bool:
+    """Validate an existing Slack root without trusting its author."""
+    if not isinstance(message, dict):
+        return False
+    work_order_number = str(work_order_number or "").strip()
+    service_request_id = str(service_request_id or work_order_number).strip()
+    ts = str(message.get("ts") or "").strip()
+    thread_ts = str(message.get("thread_ts") or "").strip()
+    text = str(message.get("text") or "")
+    # Slack renders #*10283* and *#10296* as ordinary numeric headers.
+    # Normalize only header presentation; validate BlueFolder URLs against
+    # the original text and retain exact IDs, root identity, and ambiguity checks.
+    header_text = re.sub(
+        r"(?m)^([ \t]*)\*?(#[ \t]*)\*?([0-9]+)\*?(?=[ \t\r\n]|$)",
+        r"\1\2\3",
+        text,
+    )
+    for url in re.findall(r"https?://[^\s<>|)]+", text, re.IGNORECASE):
+        parsed = urllib.parse.urlparse(url)
+        hostname = str(parsed.hostname or "").lower()
+        if hostname == "bluefolder.com" or hostname.endswith(".bluefolder.com"):
+            for key, values in urllib.parse.parse_qs(parsed.query).items():
+                if key.lower() == "srid" and any(
+                    value != service_request_id for value in values
+                ):
+                    return False
+    return bool(
+        work_order_number.isdigit()
+        and re.fullmatch(r"[0-9]+\.[0-9]+", ts)
+        and slack_ts_number(ts) > 0
+        and (not thread_ts or thread_ts == ts)
+        and re.search(
+            rf"(?m)^\s*#\s*{re.escape(work_order_number)}\b",
+            header_text,
+            re.IGNORECASE,
+        )
+    )
 
 
 @dataclass
@@ -176,16 +348,17 @@ class Settings:
         "BLUEFOLDER_WORK_ORDERS_PATH", BLUEFOLDER_SERVICE_REQUESTS_LIST_PATH
     )
     bluefolder_work_order_detail_path: str = os.getenv("BLUEFOLDER_WORK_ORDER_DETAIL_PATH", "/serviceRequests/get.aspx?serviceRequestId={id}")
-    bluefolder_list_status: str = os.getenv("BLUEFOLDER_LIST_STATUS", "open").strip()
+    # Empty means all statuses. Polling only ``open`` can permanently miss a
+    # request that is closed between polling cycles, so production intake must
+    # use the complete BlueFolder list.
+    bluefolder_list_status: str = os.getenv("BLUEFOLDER_LIST_STATUS", "").strip()
     bluefolder_work_order_url_template: str = os.getenv(
         "BLUEFOLDER_WORK_ORDER_URL_TEMPLATE",
         "https://advancedimaging.bluefolder.com/service/sr.aspx?srid={id}",
     ).strip()
-    bluefolder_link_field_label: str = os.getenv("BLUEFOLDER_LINK_FIELD_LABEL", "Link to Slack Thread")
     bluefolder_timeout: int = int(os.getenv("BLUEFOLDER_TIMEOUT", "30"))
-
     slack_bot_token: str = os.getenv("SLACK_BOT_TOKEN", "")
-    slack_channel_id: str = os.getenv("SLACK_CHANNEL_ID", "")
+    slack_channel_id: str = os.getenv("OPS_DISPATCH_CHANNEL_ID", "").strip()
     slack_channel_name: str = os.getenv("SLACK_CHANNEL_NAME", "dispatch").lstrip("#").strip()
     slack_user_ids: List[str] = field(
         default_factory=lambda: [
@@ -197,11 +370,10 @@ class Settings:
     require_clickable_mentions: bool = getenv_bool("REQUIRE_CLICKABLE_MENTIONS", True)
 
     ops_track_assignments: bool = getenv_bool("OPS_TRACK_ASSIGNMENTS", True)
-    ops_testing_channel_id: str = (
-        os.getenv("OPS_TESTING_CHANNEL_ID")
-        or os.getenv("SLACK_TESTING_CHANNEL_ID")
-        or os.getenv("SLACK_CHANNEL_ID")
-        or ""
+    # Retain the internal attribute name for compatibility with the older
+    # Firebase adapter, but source it only from the production Dispatch ID.
+    ops_testing_channel_id: str = os.getenv(
+        "OPS_DISPATCH_CHANNEL_ID", ""
     ).strip()
     ops_conversation_channel_id: str = os.getenv(
         "OPS_CONVERSATION_CHANNEL_ID", ""
@@ -229,6 +401,13 @@ class Settings:
         or os.getenv("FIREBASE_PROJECT_ID")
         or "magmo-ac10c"
     ).strip()
+    ops_ingest_url: str = os.getenv(
+        "OPS_INGEST_URL", "https://magmo.cloud/api/ops/ingest"
+    ).strip()
+    ops_ingest_secret: str = (
+        os.getenv("OPS_INGEST_SECRET") or os.getenv("MAGMO_OPS_SECRET") or ""
+    ).strip()
+    ops_health_url: str = os.getenv("OPS_HEALTH_URL", "").strip()
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
     ops_assignment_model: str = os.getenv("OPS_ASSIGNMENT_MODEL", "gpt-5-nano").strip()
     ops_assignment_max_output_tokens: int = int(
@@ -246,6 +425,15 @@ class Settings:
     ).strip()
     ops_message_poll_seconds: float = float(os.getenv("OPS_MESSAGE_POLL_SECONDS", "8"))
     ops_thread_scan_batch: int = int(os.getenv("OPS_THREAD_SCAN_BATCH", "1"))
+    # The secure API exposes work-order contexts one at a time. Keep these
+    # batches independent from the legacy Firestore scan setting so the entire
+    # non-Closed inventory is revisited promptly without hammering Magmo.
+    ops_api_context_refresh_batch: int = int(
+        os.getenv("OPS_API_CONTEXT_REFRESH_BATCH", "8")
+    )
+    ops_api_thread_scan_batch: int = int(
+        os.getenv("OPS_API_THREAD_SCAN_BATCH", "8")
+    )
     ops_priority_review_batch_size: int = int(
         os.getenv("OPS_PRIORITY_REVIEW_BATCH_SIZE", "2")
     )
@@ -255,15 +443,13 @@ class Settings:
     state_file: Path = Path(os.getenv("STATE_FILE", "./bluefolder_slack_state.json"))
     listener_lock_file: Path = Path(os.getenv("LISTENER_LOCK_FILE", "./bluefolder_slack_listener_v2.lock"))
     slack_post_log_file: Path = Path(os.getenv("SLACK_POST_LOG_FILE", "./slack_post_log.jsonl"))
+    reconciliation_log_file: Path = Path(
+        os.getenv("RECONCILIATION_LOG_FILE", "./listener_reconciliation_log.jsonl")
+    )
     log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
     dry_run: bool = getenv_bool("DRY_RUN", False)
     baseline_on_startup: bool = getenv_bool("BASELINE_ON_STARTUP", True)
     enable_bluefolder: bool = getenv_bool("ENABLE_BLUEFOLDER", True)
-    test_single_slack_send: bool = getenv_bool("TEST_SINGLE_SLACK_SEND", False)
-    test_work_order_number: str = os.getenv("TEST_WORK_ORDER_NUMBER", "9769").strip()
-    test_work_order_subject: str = os.getenv("TEST_WORK_ORDER_SUBJECT", "DUMMY TEST").strip()
-    test_work_order_url: str = os.getenv("TEST_WORK_ORDER_URL", "https://app.bluefolder.com/workOrder/9769").strip()
-
     def __post_init__(self) -> None:
         # Keep backward compatibility with earlier env naming.
         if not self.bluefolder_api_token and self.bluefolder_api_key:
@@ -274,31 +460,67 @@ class Settings:
         self.bluefolder_work_orders_path = normalize_bluefolder_list_path(
             self.bluefolder_work_orders_path
         )
+        self.ops_ingest_url = self.ops_ingest_url.rstrip("/")
+        if not self.ops_health_url and self.ops_ingest_url:
+            self.ops_health_url = self.ops_ingest_url.rsplit("/", 1)[0] + "/health"
+        self.ops_health_url = self.ops_health_url.rstrip("/")
+        # Runtime files must follow the listener when it is launched by a service
+        # manager whose working directory is not the scripts directory. Otherwise
+        # a restart can silently create a new empty state file and lose the
+        # historical cutover boundary.
+        script_dir = Path(__file__).resolve().parent
+        for attribute in (
+            "state_file",
+            "listener_lock_file",
+            "slack_post_log_file",
+            "reconciliation_log_file",
+        ):
+            path = getattr(self, attribute).expanduser()
+            if not path.is_absolute():
+                path = script_dir / path
+            setattr(self, attribute, path.resolve())
 
     def validate(self) -> None:
         missing = []
         if not self.bluefolder_base_url:
             missing.append("BLUEFOLDER_BASE_URL")
-        if self.enable_bluefolder and not self.test_single_slack_send and is_placeholder_secret(self.bluefolder_api_token):
+        if self.enable_bluefolder and is_placeholder_secret(self.bluefolder_api_token):
             missing.append("BLUEFOLDER_API_TOKEN")
-        # For real sends or one-shot Slack test, require Slack credentials.
-        if self.test_single_slack_send or not self.dry_run:
+        if self.bluefolder_list_status:
+            missing.append(
+                "BLUEFOLDER_LIST_STATUS must be empty so every lifecycle is monitored"
+            )
+        # Slack is read-only here: it validates/adopts Magmo-owned Dispatch roots
+        # and synchronizes their human replies. This process never posts roots.
+        if not self.dry_run:
             if is_placeholder_secret(self.slack_bot_token):
                 missing.append("SLACK_BOT_TOKEN")
             has_channel_id = not is_placeholder_secret(self.slack_channel_id)
             has_channel_name = bool((self.slack_channel_name or "").strip())
             if not has_channel_id and not has_channel_name:
                 missing.append("SLACK_CHANNEL_ID or SLACK_CHANNEL_NAME")
-            if not self.slack_user_ids and not self.slack_mention_text:
-                missing.append("SLACK_USER_IDS or SLACK_MENTION_TEXT")
-        if not self.dry_run and not self.test_single_slack_send and not self.baseline_on_startup:
+        testing_channel = "C07F6V10PRS"
+        dispatch_channel = "C07EPLKV9JT"
+        if self.slack_channel_id == testing_channel or self.ops_conversation_channel_id == testing_channel:
+            missing.append(
+                "Testing channel is forbidden (never Testing; production Dispatch only)"
+            )
+        if self.slack_channel_id != dispatch_channel:
+            missing.append(f"OPS_DISPATCH_CHANNEL_ID={dispatch_channel}")
+        if self.ops_conversation_channel_id != dispatch_channel:
+            missing.append(f"OPS_CONVERSATION_CHANNEL_ID={dispatch_channel}")
+        if not self.dry_run and not self.baseline_on_startup:
             missing.append("BASELINE_ON_STARTUP=true (required when DRY_RUN=false)")
         if self.ops_track_assignments:
-            if firebase_admin is None or firestore is None:
+            has_firebase_path = bool(self.firebase_service_account_path)
+            has_ingest_api = bool(self.ops_ingest_secret and self.ops_ingest_url)
+            if has_firebase_path and (firebase_admin is None or firestore is None):
                 missing.append("firebase-admin Python package")
-            if not self.firebase_service_account_path:
-                missing.append("FIREBASE_ADMIN_SERVICE_ACCOUNT_PATH")
-            if is_placeholder_secret(self.openai_api_key):
+            if not has_firebase_path and not has_ingest_api:
+                missing.append(
+                    "FIREBASE_ADMIN_SERVICE_ACCOUNT_PATH or OPS_INGEST_SECRET"
+                )
+            if has_firebase_path and is_placeholder_secret(self.openai_api_key):
                 missing.append("OPENAI_API_KEY")
         if missing:
             raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
@@ -315,18 +537,95 @@ class StateStore:
         self.load()
         self.data.setdefault("ops_thread_state", {})
         self.data.setdefault("ops_thread_scan_index", 0)
+        self.data.setdefault("pending_magmo_imports", {})
+        health = self.data.setdefault("health", {})
+        health["deployed_version"] = LISTENER_VERSION
+        health["listener_version"] = LISTENER_VERSION
+        health["pid"] = os.getpid()
+        health["process_started_at"] = utc_now_iso()
+        health["dispatch_authority"] = "magmo_only"
+        health["slack_root_posting_enabled"] = False
+        health["dispatch_signal"] = "verified_magmo_receipt_only"
+        health.setdefault("bluefolder_intake_sync_available", False)
+        health["pending_magmo_import_count"] = len(
+            self.data.get("pending_magmo_imports") or {}
+        )
+        health.setdefault("healthy", False)
+        health.setdefault("latest_successful_bluefolder_poll", "")
+        health.setdefault("last_successful_loop", "")
+        health.setdefault("last_slack_scan", {})
+        health.setdefault("last_magmo_request", {})
+        health.setdefault("latest_processed_work_order", "")
+        health.setdefault("bluefolder_work_order_count", 0)
+        health.setdefault("most_recent_error", "")
+        if not str(health.get("latest_processed_work_order") or "").strip():
+            known_numbers = [
+                numeric_work_order_number(
+                    (record if isinstance(record, dict) else {}).get("number")
+                    or work_order_id
+                )
+                for work_order_id, record in self.data.get(
+                    "processed_work_order_ids", {}
+                ).items()
+            ]
+            known_numbers = [number for number in known_numbers if number is not None]
+            if known_numbers:
+                health["latest_processed_work_order"] = str(max(known_numbers))
 
     def load(self) -> None:
         if not self.path.exists():
             return
         try:
             self.data = json.loads(self.path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            logging.warning("Failed to load state file %s: %s", self.path, exc)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError(
+                f"State file {self.path} is unreadable or corrupt and was preserved: {exc}"
+            ) from exc
+        if not isinstance(self.data, dict):
+            raise RuntimeError(
+                f"State file {self.path} is corrupt and was preserved: expected a JSON object."
+            )
 
     def save(self) -> None:
         self.data["updated_at"] = utc_now_iso()
-        self.path.write_text(json.dumps(self.data, indent=2, sort_keys=True), encoding="utf-8")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_name(
+            f".{self.path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+        )
+        try:
+            with temporary.open("x", encoding="utf-8", newline="\n") as handle:
+                json.dump(self.data, handle, indent=2, sort_keys=True)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            # Windows readers/antivirus can briefly deny an atomic replacement.
+            # Retry only those sharing/access failures; never truncate the live
+            # checkpoint or retry unrelated errors such as a full disk.
+            for attempt in range(6):
+                try:
+                    os.replace(temporary, self.path)
+                    break
+                except OSError as exc:
+                    transient_windows_error = (
+                        os.name == "nt"
+                        and getattr(exc, "winerror", None) in {5, 32, 33}
+                    )
+                    if not transient_windows_error or attempt == 5:
+                        raise
+                    time.sleep(0.05 * (2 ** attempt))
+            if os.name != "nt":
+                directory_fd = os.open(self.path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+        finally:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                # Cleanup must not mask a failed checkpoint replacement. Only
+                # this invocation's exclusive temporary file is ever removed.
+                logging.warning("Unable to remove state temporary file: %s", temporary.name)
 
     def is_processed(self, work_order_id: str) -> bool:
         return str(work_order_id) in self.data.get("processed_work_order_ids", {})
@@ -340,6 +639,98 @@ class StateStore:
     def set_last_seen_created_at(self, created_at: Optional[str]) -> None:
         if created_at:
             self.data["last_seen_created_at"] = created_at
+
+    def baseline_initialized(self) -> bool:
+        return bool(self.data.get("baseline_initialized_at"))
+
+    def mark_baseline_initialized(
+        self,
+        *,
+        source: str,
+        captured_count: int,
+    ) -> None:
+        self.data["baseline_initialized_at"] = utc_now_iso()
+        self.data["baseline_source"] = str(source or "startup")[:120]
+        self.data["baseline_captured_count"] = max(0, int(captured_count or 0))
+
+    def mark_poll_success(self, work_order_count: int) -> None:
+        health = self.data.setdefault("health", {})
+        now = utc_now_iso()
+        health.update(
+            {
+                "deployed_version": LISTENER_VERSION,
+                "listener_version": LISTENER_VERSION,
+                "pid": os.getpid(),
+                "healthy": True,
+                "dispatch_authority": "magmo_only",
+                "slack_root_posting_enabled": False,
+                "dispatch_signal": "verified_magmo_receipt_only",
+                "bluefolder_intake_sync_available": bool(
+                    health.get("bluefolder_intake_sync_available")
+                ),
+                "pending_magmo_import_count": len(
+                    self.data.get("pending_magmo_imports") or {}
+                ),
+                "latest_successful_bluefolder_poll": now,
+                "last_successful_loop": now,
+                "bluefolder_work_order_count": max(0, int(work_order_count or 0)),
+                "most_recent_error": "",
+            }
+        )
+
+    def set_bluefolder_intake_sync_available(self, available: bool) -> None:
+        self.data.setdefault("health", {})[
+            "bluefolder_intake_sync_available"
+        ] = bool(available)
+
+    def mark_error(self, error: Any) -> None:
+        health = self.data.setdefault("health", {})
+        health.update(
+            {
+                "deployed_version": LISTENER_VERSION,
+                "healthy": False,
+                "most_recent_error": str(error or "Unknown listener error")[:1000],
+                "last_error_at": utc_now_iso(),
+            }
+        )
+
+    def mark_latest_processed_work_order(self, number: Any) -> None:
+        value = str(number or "").strip()
+        if value:
+            self.data.setdefault("health", {})[
+                "latest_processed_work_order"
+            ] = value
+
+    def mark_pending_magmo_import(
+        self,
+        work_order_id: str,
+        fields: Dict[str, Any],
+        reason: str,
+        *,
+        retryable: bool = True,
+    ) -> None:
+        pending = self.data.setdefault("pending_magmo_imports", {})
+        pending[str(work_order_id)] = {
+            "number": str(fields.get("number") or work_order_id),
+            "subject": str(fields.get("subject") or "")[:1200],
+            "customer": str(fields.get("customer") or "")[:220],
+            "bluefolder_url": str(fields.get("link") or "")[:1200],
+            "created_at": str(fields.get("created_at") or "")[:80],
+            "last_checked_at": utc_now_iso(),
+            "reason": str(reason or "")[:600],
+            "retryable": bool(retryable),
+        }
+        self.data.setdefault("health", {})["pending_magmo_import_count"] = len(
+            pending
+        )
+
+    def clear_pending_magmo_import(self, work_order_id: str) -> bool:
+        pending = self.data.setdefault("pending_magmo_imports", {})
+        removed = pending.pop(str(work_order_id), None) is not None
+        self.data.setdefault("health", {})["pending_magmo_import_count"] = len(
+            pending
+        )
+        return removed
 
 
 class BlueFolderClient:
@@ -519,102 +910,6 @@ class BlueFolderClient:
             for user_id in user_ids
         ]
 
-    def update_slack_link(self, work_order_id: str, slack_url: str) -> None:
-        """Write the Slack link using API operations supported by the configured mode."""
-        if self._is_xml_mode():
-            try:
-                self._edit_custom_field_with_link(work_order_id, slack_url)
-            except Exception as exc:
-                logging.warning(
-                    "BlueFolder custom-field write-back failed for work order %s; "
-                    "falling back to a private comment: %s",
-                    work_order_id,
-                    exc,
-                )
-                self._add_comment_with_link(work_order_id, slack_url)
-            return
-
-        # JSON-mode compatibility for non-BlueFolder API implementations. The
-        # BlueFolder API 2.0 path above never PATCHes or PUTs get.aspx.
-        detail = self.get_work_order(work_order_id)
-        label = self.settings.bluefolder_link_field_label
-
-        update_payloads = []
-
-        additional_information = detail.get("additional_information")
-        if isinstance(additional_information, list):
-            patched = []
-            found = False
-            for entry in additional_information:
-                if not isinstance(entry, dict):
-                    patched.append(entry)
-                    continue
-                entry_label = str(entry.get("label") or entry.get("name") or "").strip()
-                if entry_label == label:
-                    next_entry = dict(entry)
-                    if "value" in next_entry:
-                        next_entry["value"] = slack_url
-                    else:
-                        next_entry["text"] = slack_url
-                    patched.append(next_entry)
-                    found = True
-                else:
-                    patched.append(entry)
-            if not found:
-                patched.append({"label": label, "value": slack_url})
-            update_payloads.append({"additional_information": patched})
-
-        custom_fields = detail.get("custom_fields")
-        if isinstance(custom_fields, list):
-            patched = []
-            found = False
-            for entry in custom_fields:
-                if not isinstance(entry, dict):
-                    patched.append(entry)
-                    continue
-                entry_label = str(entry.get("label") or entry.get("name") or "").strip()
-                if entry_label == label:
-                    next_entry = dict(entry)
-                    if "value" in next_entry:
-                        next_entry["value"] = slack_url
-                    else:
-                        next_entry["text"] = slack_url
-                    patched.append(next_entry)
-                    found = True
-                else:
-                    patched.append(entry)
-            if not found:
-                patched.append({"label": label, "value": slack_url})
-            update_payloads.append({"custom_fields": patched})
-
-        if not update_payloads:
-            update_payloads = [
-                {"additional_information": [{"label": label, "value": slack_url}]},
-                {"custom_fields": [{"label": label, "value": slack_url}]},
-            ]
-
-        path = self.settings.bluefolder_work_order_detail_path.format(id=work_order_id)
-        last_error: Optional[Exception] = None
-        for payload in update_payloads:
-            for method in ("PATCH", "PUT"):
-                try:
-                    self._request(method, path, json=payload)
-                    logging.info("Updated BlueFolder work order %s with Slack link", work_order_id)
-                    return
-                except Exception as exc:
-                    last_error = exc
-                    logging.debug(
-                        "BlueFolder update failed. work_order_id=%s method=%s payload=%s error=%s",
-                        work_order_id,
-                        method,
-                        payload,
-                        exc,
-                    )
-                    continue
-
-        if last_error:
-            raise last_error
-
     @staticmethod
     def _extract_collection(payload_or_resp: Any) -> List[Dict[str, Any]]:
         if isinstance(payload_or_resp, requests.Response):
@@ -634,101 +929,6 @@ class BlueFolderClient:
                 return [item for item in value if isinstance(item, dict)]
 
         return []
-
-    def _is_xml_mode(self) -> bool:
-        base = self.settings.bluefolder_base_url.lower()
-        list_path = self.settings.bluefolder_work_orders_path.lower()
-        return ".aspx" in list_path or "/api/2.0" in base
-
-    def _edit_custom_field_with_link(
-        self, work_order_id: str, slack_url: str
-    ) -> None:
-        work_order_id_safe = xml_escape(str(work_order_id))
-        label = xml_escape(
-            self.settings.bluefolder_link_field_label,
-            {'"': "&quot;", "'": "&apos;"},
-        )
-        value = xml_escape(str(slack_url))
-        payload = f"""
-<request>
-  <serviceRequestEdit>
-    <serviceRequestId>{work_order_id_safe}</serviceRequestId>
-    <customFields>
-      <customField name="{label}">{value}</customField>
-    </customFields>
-  </serviceRequestEdit>
-</request>
-""".strip()
-        resp = self._request(
-            "POST",
-            "/serviceRequests/edit.aspx",
-            data=payload.encode("utf-8"),
-            headers={
-                "Content-Type": "text/xml",
-                "Accept": "text/xml, application/xml, application/json",
-            },
-        )
-        if not self._payload_status_ok(resp):
-            error = self._payload_error_message(resp) or "unknown API response"
-            raise RuntimeError(f"BlueFolder serviceRequests/edit.aspx failed: {error}")
-        logging.info(
-            "Updated BlueFolder work order %s custom field %s",
-            work_order_id,
-            self.settings.bluefolder_link_field_label,
-        )
-
-    def _add_comment_with_link(self, work_order_id: str, slack_url: str) -> None:
-        comment = xml_escape(f"Slack thread: {slack_url}")
-        work_order_id_safe = xml_escape(str(work_order_id))
-        payload_variants = [
-            f"""
-<request>
-  <serviceRequestAddComment>
-    <serviceRequestId>{work_order_id_safe}</serviceRequestId>
-    <comment>{comment}</comment>
-    <commentIsPublic>false</commentIsPublic>
-  </serviceRequestAddComment>
-</request>
-""".strip(),
-            f"""
-<request>
-  <serviceRequestAddComment>
-    <serviceRequestId>{work_order_id_safe}</serviceRequestId>
-    <comment>{comment}</comment>
-  </serviceRequestAddComment>
-</request>
-""".strip(),
-        ]
-        endpoints = [
-            "/serviceRequests/addComment.aspx",
-            "/serviceRequests/addNote.aspx",
-        ]
-
-        last_error: Optional[Exception] = None
-        for endpoint in endpoints:
-            for payload in payload_variants:
-                try:
-                    resp = self._request(
-                        "POST",
-                        endpoint,
-                        data=payload.encode("utf-8"),
-                        headers={"Content-Type": "text/xml", "Accept": "text/xml, application/xml, application/json"},
-                    )
-                    if self._payload_status_ok(resp):
-                        logging.info("Updated BlueFolder work order %s with Slack link comment", work_order_id)
-                        return
-                except Exception as exc:
-                    last_error = exc
-                    logging.debug(
-                        "BlueFolder add comment failed. endpoint=%s work_order_id=%s error=%s",
-                        endpoint,
-                        work_order_id,
-                        exc,
-                    )
-
-        if last_error:
-            raise last_error
-        raise RuntimeError("BlueFolder comment write-back failed")
 
     @staticmethod
     def _payload_status_ok(resp: requests.Response) -> bool:
@@ -839,6 +1039,500 @@ class BlueFolderClient:
         return payload
 
 
+class MagmoOpsRequestError(RuntimeError):
+    """Structured Ops API failure used to make ownership decisions safely."""
+
+    def __init__(
+        self,
+        status_code: int,
+        code: str = "",
+        action: str = "",
+        payload: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.status_code = int(status_code or 0)
+        self.code = str(code or "").strip()
+        self.action = str(action or "").strip()
+        self.payload = payload if isinstance(payload, dict) else {}
+        detail = f" ({self.code})" if self.code else ""
+        if self.action:
+            detail += f"; {self.action}"
+        super().__init__(
+            f"Magmo Ops ingest HTTP {self.status_code}{detail}"[:900]
+        )
+
+
+class MagmoOpsIngestClient:
+    """Least-privilege Magmo client used when Firestore credentials are absent."""
+
+    supports_assignment_sync = False
+    supports_extended_sync = False
+    supports_message_sync = True
+    supports_bluefolder_import = False
+    sync_method = "ops_ingest"
+
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.url = settings.ops_ingest_url
+        self.health_url = settings.ops_health_url
+        self.secret = settings.ops_ingest_secret
+        self.last_request: Dict[str, Any] = {}
+        if not self.url.lower().startswith("https://"):
+            raise RuntimeError("OPS_INGEST_URL must use HTTPS.")
+        if not self.secret:
+            raise RuntimeError("OPS_INGEST_SECRET is not configured.")
+        self.health = self.verify_capabilities()
+        self.supports_bluefolder_import = self._bluefolder_import_available(
+            self.health
+        )
+
+    def verify_capabilities(self) -> Dict[str, Any]:
+        response = requests.get(self.health_url, timeout=30)
+        response.raise_for_status()
+        health = response.json()
+        supported = {
+            str(item or "").strip()
+            for item in health.get("supportedEventTypes") or []
+        }
+        required = {
+            "work_order.command_context",
+            "work_order.created",
+            "message.created",
+        }
+        missing = sorted(required - supported)
+        if not health.get("ok") or missing:
+            raise RuntimeError(
+                "Magmo Ops health is missing required listener capabilities"
+                + (f": {', '.join(missing)}" if missing else ".")
+            )
+        if health.get("writeEnabled") is not True:
+            raise RuntimeError("The configured Magmo Ops environment rejects writes.")
+        command_context = health.get("workOrderCommandContext")
+        if (
+            not isinstance(command_context, dict)
+            or command_context.get("evidenceWatermarkField")
+            != "latestIngestedSlackTs"
+        ):
+            raise RuntimeError(
+                "Magmo Ops health does not advertise its authoritative "
+                "Slack evidence watermark."
+            )
+        self._bluefolder_import_available(health)
+        return health
+
+    @staticmethod
+    def _bluefolder_import_available(health: Dict[str, Any]) -> bool:
+        supported = {
+            str(item or "").strip()
+            for item in health.get("supportedEventTypes") or []
+        }
+        if "work_order.imported" not in supported:
+            return False
+        bluefolder_import = health.get("bluefolderImport")
+        if not isinstance(bluefolder_import, dict):
+            raise RuntimeError(
+                "Magmo advertises work_order.imported without its BlueFolder contract."
+            )
+        if bluefolder_import.get("requiresSlackCoordinates") is not False:
+            raise RuntimeError(
+                "Magmo BlueFolder import must explicitly reject Slack coordinates."
+            )
+        if bluefolder_import.get("createsSlackPosts") is not False:
+            raise RuntimeError(
+                "Magmo BlueFolder import must explicitly create no Slack posts."
+            )
+        if bluefolder_import.get("preservesAuthoritativeSlackReceipt") is not True:
+            raise RuntimeError(
+                "Magmo BlueFolder import must preserve authoritative Slack receipts."
+            )
+        if list(bluefolder_import.get("idempotencyKeyFields") or []) != [
+            "blueFolder.serviceRequestId"
+        ]:
+            raise RuntimeError(
+                "Magmo BlueFolder import has an unexpected idempotency contract."
+            )
+        return True
+
+    def refresh_capabilities(self) -> Dict[str, Any]:
+        """Refresh health so a compatible Magmo deploy activates intake live."""
+        health = self.verify_capabilities()
+        self.health = health
+        self.supports_bluefolder_import = self._bluefolder_import_available(health)
+        return health
+
+    def _request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
+        command_ts = str(payload.get("commandTs") or "").strip()
+        idempotency_key = ":".join(
+            (
+                str(source.get("channel") or "").strip(),
+                str(source.get("threadTs") or "").strip(),
+                command_ts,
+            )
+        )
+        headers = {
+            "Content-Type": "application/json",
+            "x-ops-ingest-secret": self.secret,
+        }
+        if all(idempotency_key.split(":")):
+            headers["Idempotency-Key"] = idempotency_key
+
+        self.last_request = {
+            "at": utc_now_iso(),
+            "event_type": str(payload.get("eventType") or "")[:120],
+            "work_order_id": str(payload.get("workOrderId") or "")[:120],
+            "command_ts": command_ts[:120],
+            "status": "requesting",
+        }
+
+        response: Optional[requests.Response] = None
+        request_error: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                response = requests.post(
+                    self.url,
+                    json=payload,
+                    headers=headers,
+                    timeout=self.settings.ops_request_timeout,
+                )
+                request_error = None
+            except requests.RequestException as exc:
+                request_error = exc
+                if attempt < 2:
+                    time.sleep(float(attempt + 1))
+                    continue
+                raise
+            if response.status_code == 409 and attempt < 2:
+                time.sleep(1.0)
+                continue
+            if response.status_code == 429 and attempt < 2:
+                retry_after = response.headers.get("Retry-After") or ""
+                try:
+                    delay = max(1.0, min(30.0, float(retry_after)))
+                except (TypeError, ValueError):
+                    delay = float(attempt + 1)
+                time.sleep(delay)
+                continue
+            if response.status_code in {500, 503} and attempt < 2:
+                time.sleep(float(attempt + 1))
+                continue
+            break
+
+        if response is None:
+            if request_error:
+                raise request_error
+            raise RuntimeError("Magmo Ops ingest returned no response.")
+        try:
+            result = response.json()
+        except ValueError:
+            result = {}
+        if response.status_code >= 400:
+            code = str(result.get("code") or result.get("error") or "").strip()
+            action = str(result.get("action") or "").strip()
+            self.last_request["status"] = f"http_{response.status_code}"
+            self.last_request["error"] = (code or "request_failed")[:200]
+            raise MagmoOpsRequestError(
+                response.status_code,
+                code=code,
+                action=action,
+                payload=result,
+            )
+        if not isinstance(result, dict) or not result.get("ok"):
+            self.last_request["status"] = "rejected"
+            raise RuntimeError("Magmo Ops ingest did not confirm the event.")
+        self.last_request["status"] = "ok"
+        self.last_request["completed_at"] = utc_now_iso()
+        return result
+
+    def work_order_context(
+        self,
+        work_order_id: str,
+        *,
+        expected_number: str = "",
+    ) -> Optional[Dict[str, Any]]:
+        """Return Magmo's authoritative receipt, or None only for a missing WO."""
+        identity = str(work_order_id or "").strip()
+        expected_number = str(expected_number or identity).strip()
+        if not identity:
+            raise RuntimeError("A work-order identity is required for Magmo context.")
+        try:
+            result = self._request(
+                {
+                    "eventType": "work_order.command_context",
+                    "workOrderId": identity,
+                }
+            )
+        except MagmoOpsRequestError as exc:
+            if exc.status_code == 404 and exc.code == "work_order_not_found":
+                return None
+            raise
+        context = result.get("context")
+        if not isinstance(context, dict):
+            raise RuntimeError(
+                f"Magmo returned no valid context for work order {identity}."
+            )
+        returned_identity = str(
+            context.get("workOrderId")
+            or context.get("serviceRequestId")
+            or ""
+        ).strip()
+        if returned_identity != identity:
+            raise RuntimeError(
+                "Magmo returned context for a different work-order identity."
+            )
+        returned_number = str(context.get("number") or "").strip()
+        if returned_number != expected_number:
+            raise RuntimeError(
+                f"Magmo returned context for #{returned_number}, "
+                f"expected #{expected_number}."
+            )
+        if not str(context.get("workflowStatus") or "").strip():
+            raise RuntimeError(
+                "Magmo context is missing its authoritative workflowStatus."
+            )
+        if "latestIngestedSlackTs" not in context:
+            raise RuntimeError(
+                "Magmo context is missing latestIngestedSlackTs."
+            )
+        watermark = str(context.get("latestIngestedSlackTs") or "").strip()
+        if watermark and not re.fullmatch(r"[0-9]+\.[0-9]+", watermark):
+            raise RuntimeError(
+                "Magmo context returned an invalid Slack evidence watermark."
+            )
+        return context
+
+    def import_work_order(
+        self, work_order_id: str, record: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Import one BlueFolder record without any Slack identity."""
+        service_request_id = str(
+            record.get("service_request_id") or work_order_id or ""
+        ).strip()
+        number = str(record.get("number") or service_request_id).strip()
+        if not service_request_id or not number:
+            raise RuntimeError(
+                "A BlueFolder import requires its immutable service-request ID and number."
+            )
+
+        payload: Dict[str, Any] = {
+            "eventType": "work_order.imported",
+            "workOrderId": service_request_id,
+            "blueFolder": {"serviceRequestId": service_request_id},
+            "number": number,
+        }
+        optional_fields = {
+            "subject": "subject",
+            "description": "description",
+            "customer": "customer",
+            "bluefolderUrl": "bluefolder_url",
+            "createdAt": "created_at",
+            "bluefolderStatus": "bluefolder_status",
+            "bluefolderBillingStatus": "bluefolder_billing_status",
+            "bluefolderDateTimeClosed": "bluefolder_date_time_closed",
+            "bluefolderWorkflowStatus": "bluefolder_workflow_status",
+        }
+        for api_name, record_name in optional_fields.items():
+            value = str(record.get(record_name) or "").strip()
+            if value:
+                payload[api_name] = value
+        assignees = record.get("bluefolder_assignees")
+        if isinstance(assignees, list) and assignees:
+            payload["bluefolderAssignees"] = [
+                {
+                    key: str(person.get(key) or "").strip()
+                    for key in ("id", "name", "email")
+                    if str(person.get(key) or "").strip()
+                }
+                for person in assignees
+                if isinstance(person, dict)
+                and any(str(person.get(key) or "").strip() for key in ("id", "name", "email"))
+            ]
+
+        # The import contract rejects every Slack identity field. Keep this
+        # assertion adjacent to the request so a future refactor fails closed.
+        forbidden = {
+            "source",
+            "actor",
+            "commandTs",
+            "slackChannel",
+            "slackThreadTs",
+            "slackPermalink",
+        }
+        if forbidden.intersection(payload):
+            raise RuntimeError("BlueFolder import payload contains forbidden Slack data.")
+
+        result = self._request(payload)
+        self._validate_import_result(service_request_id, number, result)
+        return result
+
+    @staticmethod
+    def _validate_import_result(
+        service_request_id: str, number: str, result: Dict[str, Any]
+    ) -> None:
+        if not isinstance(result, dict) or result.get("ok") is not True:
+            raise RuntimeError("Magmo did not confirm the BlueFolder import.")
+        if result.get("eventType") != "work_order.imported":
+            raise RuntimeError("Magmo returned the wrong BlueFolder import event type.")
+        if not isinstance(result.get("created"), bool) or not isinstance(
+            result.get("idempotentReplay"), bool
+        ):
+            raise RuntimeError("Magmo import response is missing replay metadata.")
+        if result.get("before") is not None and not isinstance(
+            result.get("before"), dict
+        ):
+            raise RuntimeError("Magmo import response has an invalid before value.")
+        if not isinstance(result.get("after"), dict) or not isinstance(
+            result.get("appliedChanges"), dict
+        ):
+            raise RuntimeError("Magmo import response is missing authoritative changes.")
+        if not str(result.get("requestId") or "").strip() or not str(
+            result.get("apiVersion") or ""
+        ).strip():
+            raise RuntimeError("Magmo import response is missing request metadata.")
+
+        identity = result.get("idempotencyKey")
+        if isinstance(identity, dict):
+            returned_id = str(
+                identity.get("blueFolderServiceRequestId") or ""
+            ).strip()
+            if returned_id and returned_id != service_request_id:
+                raise RuntimeError("Magmo import returned a different idempotency identity.")
+
+        after = result["after"]
+        after_bluefolder = after.get("blueFolder")
+        returned_id = str(
+            after.get("workOrderId")
+            or after.get("serviceRequestId")
+            or (
+                after_bluefolder.get("serviceRequestId")
+                if isinstance(after_bluefolder, dict)
+                else ""
+            )
+        ).strip()
+        if returned_id and returned_id != service_request_id:
+            raise RuntimeError("Magmo import returned a different work-order identity.")
+        returned_number = str(after.get("number") or "").strip()
+        if returned_number and returned_number != number:
+            raise RuntimeError("Magmo import returned a different work-order number.")
+
+        receipt_fields = {
+            "slackChannel",
+            "slackThreadTs",
+            "slackPermalink",
+            "dispatchReceipt",
+        }
+        before = result.get("before") or {}
+        for field_name in receipt_fields:
+            before_value = before.get(field_name)
+            if before_value and after.get(field_name) != before_value:
+                raise RuntimeError(
+                    "Magmo import did not preserve its authoritative Slack receipt."
+                )
+            if field_name in result.get("appliedChanges", {}):
+                raise RuntimeError(
+                    "Magmo import unexpectedly changed an authoritative Slack receipt."
+                )
+
+    def post_message(
+        self,
+        *,
+        work_order_id: str,
+        channel: str,
+        thread_ts: str,
+        message: Dict[str, Any],
+        sender_name: str,
+        text: str,
+        candidates: List[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        """Send one original Slack event to Magmo with a stable identity."""
+        slack_ts = str(message.get("ts") or "").strip()
+        sender_id = str(message.get("user") or "").strip()
+        if not slack_ts or not channel or not thread_ts:
+            raise RuntimeError(
+                "A Slack message sync requires channel, thread, and message timestamp."
+            )
+        return self._request(
+            {
+                "eventType": "message.created",
+                "workOrderId": str(work_order_id or "").strip(),
+                "commandTs": slack_ts,
+                "source": {
+                    "channel": str(channel)[:120],
+                    "threadTs": str(thread_ts)[:120],
+                    "command": "message.created",
+                },
+                "actor": {
+                    "id": sender_id[:180],
+                    "name": str(sender_name or sender_id or "Unknown")[:180],
+                },
+                "senderId": sender_id[:180],
+                "slackTs": slack_ts[:180],
+                "text": str(text or "")[:6000],
+                "candidates": candidates or [],
+                "analysis": {
+                    "slackTs": slack_ts[:180],
+                    "text": str(text or "")[:6000],
+                    "candidates": candidates or [],
+                },
+            }
+        )
+
+    @staticmethod
+    def describe_slack_media(message: Dict[str, Any]) -> str:
+        rows: List[str] = []
+        for item in list(message.get("files") or []):
+            if not isinstance(item, dict):
+                continue
+            label = str(
+                item.get("title") or item.get("name") or "Slack attachment"
+            ).strip()
+            mime = str(item.get("mimetype") or "").strip()
+            rows.append(f"Attachment: {label}" + (f" ({mime})" if mime else ""))
+        for item in list(message.get("attachments") or []):
+            if not isinstance(item, dict):
+                continue
+            label = str(
+                item.get("title") or item.get("fallback") or "Slack attachment"
+            ).strip()
+            rows.append(f"Attachment: {label}")
+        return "\n".join(dict.fromkeys(rows))[:3000]
+
+    def create_work_order(
+        self, work_order_id: str, record: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        number = str(record.get("number") or work_order_id or "").strip()
+        channel = str(record.get("slack_channel") or "").strip()
+        thread_ts = str(record.get("slack_ts") or "").strip()
+        if not number or not channel or not thread_ts or thread_ts == "0.000000":
+            raise RuntimeError(
+                "A Magmo work-order create requires its number and original Slack thread."
+            )
+        return self._request(
+            {
+                "eventType": "work_order.created",
+                "workOrderId": number,
+                "commandTs": thread_ts,
+                "source": {
+                    "channel": channel,
+                    "threadTs": thread_ts,
+                    "command": "work_order.created",
+                },
+                "actor": {
+                    "id": "bluefolder-listener",
+                    "name": "BlueFolder Listener",
+                },
+                "number": number,
+                "subject": str(record.get("subject") or "")[:1200],
+                "description": str(record.get("description") or "")[:1800],
+                "customer": str(record.get("customer") or "")[:220],
+                "bluefolderUrl": str(record.get("bluefolder_url") or "")[:1200],
+                "slackChannel": channel[:120],
+                "slackThreadTs": thread_ts[:120],
+                "createdAt": str(record.get("created_at") or "")[:80],
+                "bluefolderAssignees": record.get("bluefolder_assignees") or [],
+            }
+        )
+
+
 class FirebaseOpsClient:
     """Direct Firebase/Firestore client for Magmo's Ops board."""
 
@@ -846,7 +1540,14 @@ class FirebaseOpsClient:
     SERVICE_REQUEST_COLLECTION = "ServiceRequests"
     CLIENT_COLLECTION = "Client"
     MEMORY_COLLECTION = "OpsCompanyMemory"
+    SYSTEM_NOTE_COLLECTION = "OpsSystemNotes"
     MESSAGE_COLLECTION = "messages"
+    SUPPORTED_SLACK_IMAGE_MIMES = {
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    }
     ACTIVE_STATUSES = {"active", "open", "processing"}
     PRIORITY_TIERS = {"hard_down", "in_progress", "needs_scheduled", "anytime"}
     GENERATED_PRIORITY_PATTERN = re.compile(
@@ -865,22 +1566,28 @@ class FirebaseOpsClient:
         "anytime": 3,
     }
     MAX_ASSIGNMENT_HISTORY = 100
+    MAX_PARTICIPATION_HISTORY = 100
     MAX_PRIORITY_HISTORY = 100
     MAX_WORKFLOW_STAGE_HISTORY = 100
     CURRENT_PRIORITY_INFERENCE_VERSION = 2
-    CURRENT_REMOTE_INFERENCE_VERSION = 1
+    CURRENT_REMOTE_INFERENCE_VERSION = 2
     WORKFLOW_STAGES = {
         "unassigned",
         "active",
         "remote",
+        "scheduled",
+        "on_hold",
+        "inactive",
         "service_complete",
         "done",
+        "closed",
     }
 
     def __init__(self, settings: Settings):
         self.settings = settings
         self.priority_review_complete = False
         self.remote_review_complete = False
+        self._slack_file_read_warning_emitted = False
         self.user_names_by_id: Dict[str, str] = {
             "U07F4G8NP2P": "Yao N",
             "U07EY4TF21L": "Stanley Wu",
@@ -987,6 +1694,15 @@ class FirebaseOpsClient:
             id_key = user_id.lower()
             if not name or not name_key:
                 continue
+            if name_key in {
+                "magmo",
+                "magmo ai",
+                "magmo bot",
+                "magmo recovery",
+                "magmo audit",
+                "slackbot",
+            } or id_key.startswith("magmo-"):
+                continue
             existing_index = indexes_by_name.get(name_key)
             if existing_index is not None:
                 existing_id = result[existing_index].get("id", "")
@@ -1054,15 +1770,12 @@ class FirebaseOpsClient:
         self, changed_at_iso: str, bluefolder_assignees: Any = None
     ) -> Dict[str, Any]:
         protected = self._normalize_assignees(bluefolder_assignees)
-        assignees = self._merge_assignees(
-            protected,
-            [{"id": "U07F4G8NP2P", "name": "Yao N"}],
-        )
+        assignees = protected
         protected_names = ", ".join(entry["name"] for entry in protected)
         reason = (
-            f"BlueFolder assigned {protected_names}; Yao remains the initial dispatch coordinator."
+            f"BlueFolder Assigned To identifies {protected_names} as the dispatched engineer."
             if protected_names
-            else "New work orders start with Yao until responsibility changes in Slack."
+            else "No remote or physical worker is assigned yet."
         )
         return {
             "id": "initial-assignment",
@@ -1116,18 +1829,25 @@ class FirebaseOpsClient:
         stage = re.sub(r"[\s-]+", "_", cls._clean(value, 60).lower())
         if stage in {"in_progress", "processing", "open"}:
             return "active"
-        if stage in {"completed", "complete", "closed"}:
+        if stage in {"completed", "complete"}:
             return "done"
         return stage if stage in cls.WORKFLOW_STAGES else ""
 
     @classmethod
     def _workflow_stage(cls, current: Dict[str, Any]) -> str:
-        if cls._clean(current.get("status"), 40).lower() not in cls.ACTIVE_STATUSES:
-            return "done"
         stored = cls._workflow_stage_value(
             current.get("workflowStatus") or current.get("workflowStage")
         )
-        if stored in {"service_complete", "done"}:
+        if cls._clean(current.get("status"), 40).lower() not in cls.ACTIVE_STATUSES:
+            return "closed" if stored == "closed" else "done"
+        if stored in {
+            "scheduled",
+            "on_hold",
+            "inactive",
+            "service_complete",
+            "done",
+            "closed",
+        }:
             return stored
         bluefolder_assignees = current.get("bluefolderAssignees")
         if isinstance(bluefolder_assignees, list) and any(
@@ -1443,7 +2163,7 @@ class FirebaseOpsClient:
         }
 
     @staticmethod
-    def _rule_remote_work_update(
+    def _rule_remote_work_update_legacy(
         current_active: bool, text: str
     ) -> Dict[str, Any]:
         normalized = re.sub(r"\s+", " ", str(text or "").lower()).strip()
@@ -1511,6 +2231,94 @@ class FirebaseOpsClient:
             "remoteWorkReason": reason,
             "remoteWorkConfidence": confidence,
             "workMode": work_mode,
+        }
+
+    @staticmethod
+    def _rule_remote_work_update(
+        current_active: bool, text: str
+    ) -> Dict[str, Any]:
+        normalized = re.sub(r"\s+", " ", str(text or "").lower()).strip()
+        remote_ended = re.search(
+            r"\b(?:remote\s+(?:session|work|support|troubleshooting)\s+"
+            r"(?:ended|complete|completed|done|stopped|closed)|"
+            r"(?:couldn['’]?t|could\s+not|can['’]?t|cannot|unable\s+to)"
+            r".{0,55}remote(?:ly)?|"
+            r"remote(?:ly)?.{0,55}"
+            r"(?:couldn['’]?t|could\s+not|can['’]?t|cannot|unable\s+to)|"
+            r"(?:work|service|remote\s+support)\s+(?:is\s+)?not\s+required|"
+            r"no\s+(?:remote\s+)?work\s+(?:is\s+)?required|"
+            r"remote\s+(?:work|support|access)\s+(?:is\s+)?"
+            r"no\s+longer\s+(?:needed|required)|"
+            r"on[-\s]?site\s+only|"
+            r"cannot\s+install\s+remotely|"
+            r"can['’]?t\s+install\s+remotely)\b",
+            normalized,
+            re.IGNORECASE,
+        )
+        remote_marker = re.search(
+            r"\b(?:remote(?:ly)?|remote\s+(?:session|connection|access|support)|"
+            r"teamviewer|anydesk|vpn|ssh|screen\s*share|vnc|rdp|putty)\b",
+            normalized,
+            re.IGNORECASE,
+        )
+        active_work = re.search(
+            r"\b(?:check|checking|checked|work|working|troubleshoot|"
+            r"troubleshooting|diagnose|diagnosing|diagnostics?|test|testing|"
+            r"fix|fixing|repair|repairing|reboot|rebooting|reload|reloading|"
+            r"configure|configuring|connect|connected|connecting|"
+            r"log(?:ged|ging)?\s+in|look(?:ing)?\s+into|attempt|attempting|"
+            r"review|reviewing|access|accessing|investigate|investigating|"
+            r"update|updating|install|installing|verify|verifying|on\s+it)\b",
+            normalized,
+            re.IGNORECASE,
+        )
+        direct_remote_request = re.search(
+            r"\b(?:(?:can|could|will|would)\s+you.{0,80})?"
+            r"(?:check|fix|look|work|test|review|connect|access|"
+            r"troubleshoot|diagnose).{0,80}remote(?:ly)?\b",
+            normalized,
+            re.IGNORECASE,
+        )
+        live_remote_session = re.search(
+            r"\b(?:logged|logging)\s+in\b|"
+            r"\b(?:vnc|teamviewer|anydesk|rdp|ssh|putty).{0,40}"
+            r"(?:working|connected|open|running|up)\b",
+            normalized,
+            re.IGNORECASE,
+        )
+        if remote_ended:
+            next_active = False
+            reason = (
+                "The latest Slack message explicitly says remote work ended, "
+                "was unavailable, or is no longer required."
+            )
+            confidence = 0.99
+            work_mode = "unspecified"
+        elif (
+            (remote_marker and active_work)
+            or direct_remote_request
+            or live_remote_session
+        ):
+            next_active = True
+            reason = (
+                "The Slack message starts or confirms active remote troubleshooting."
+            )
+            confidence = 0.99
+            work_mode = "remote"
+        else:
+            next_active = current_active
+            reason = (
+                "The latest message does not clearly start or end active remote work."
+            )
+            confidence = 0.98
+            work_mode = "remote" if current_active else "unspecified"
+        return {
+            "remoteStateChanged": next_active != current_active,
+            "remoteWorkActive": next_active,
+            "remoteWorkReason": reason,
+            "remoteWorkConfidence": confidence,
+            "workMode": work_mode,
+            "remoteExplicitEnd": bool(remote_ended),
         }
 
     def _save_company_lessons(
@@ -1628,6 +2436,10 @@ class FirebaseOpsClient:
             ),
             "description": self._clean(data.get("description"), 1800),
             "customer": self._clean(data.get("customer"), 220),
+            "clientId": self._clean(data.get("clientId"), 180),
+            "clientName": self._clean(data.get("clientName"), 220),
+            "machineId": self._clean(data.get("machineId"), 180),
+            "machineName": self._clean(data.get("machineName"), 220),
             "priorityTier": self._priority_tier(data.get("priorityTier")),
             "priorityLabel": self._priority_label(
                 data.get("priorityTier"), data.get("priorityLabel")
@@ -1646,6 +2458,7 @@ class FirebaseOpsClient:
                 for tier in data.get("rejectedPriorityTiers") or []
             ][:12],
             "assignees": self._normalize_assignees(data.get("assignees")),
+            "participants": self._normalize_assignees(data.get("participants")),
             "bluefolderAssignees": self._normalize_assignees(
                 data.get("bluefolderAssignees")
             ),
@@ -1665,6 +2478,7 @@ class FirebaseOpsClient:
             ),
             "status": "active" if status in self.ACTIVE_STATUSES else "completed",
             "workflowStatus": self._workflow_stage(data),
+            "scheduledFor": self._clean(data.get("scheduledFor"), 20),
         }
 
     def _save_initial_priority_analysis(
@@ -1734,22 +2548,57 @@ class FirebaseOpsClient:
             )
         )
         current_stage = self._workflow_stage(current)
-        desired_stage = (
-            "active"
-            if self._normalize_assignees(current.get("bluefolderAssignees"))
-            else ("remote" if next_remote_active else "unassigned")
+        requested_stage = self._workflow_stage_value(
+            analysis.get("workflowStatus")
         )
+        workflow_confidence = float(analysis.get("workflowConfidence") or 0)
+        scheduled_for = self._clean(analysis.get("scheduledFor"), 20)
+        valid_scheduled_for = False
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", scheduled_for):
+            try:
+                valid_scheduled_for = (
+                    datetime.strptime(scheduled_for, "%Y-%m-%d").date()
+                    > datetime.now(timezone.utc).date()
+                )
+            except ValueError:
+                valid_scheduled_for = False
+        workflow_change_accepted = (
+            bool(analysis.get("workflowChanged"))
+            and bool(requested_stage)
+            and requested_stage not in {"service_complete", "done", "closed"}
+            and requested_stage != current_stage
+            and workflow_confidence >= 0.76
+            and (requested_stage != "scheduled" or valid_scheduled_for)
+        )
+        desired_stage = current_stage
+        if workflow_change_accepted:
+            desired_stage = requested_stage
+        elif remote_change_accepted:
+            desired_stage = (
+                "active"
+                if self._normalize_assignees(current.get("bluefolderAssignees"))
+                else ("remote" if next_remote_active else "unassigned")
+            )
         workflow_update = (
             {}
             if not include_remote
-            or current_stage in {"service_complete", "done"}
+            or current_stage in {"service_complete", "done", "closed"}
             else self._workflow_transition_update(
                 current,
                 desired_stage,
                 changed_by="Magmo AI",
-                source="remote_inference",
+                source=(
+                    "workflow_inference"
+                    if workflow_change_accepted
+                    else "remote_inference"
+                ),
                 reason=(
-                    self._clean(analysis.get("remoteWorkReason"), 500)
+                    self._clean(
+                        analysis.get("workflowReason")
+                        if workflow_change_accepted
+                        else analysis.get("remoteWorkReason"),
+                        500,
+                    )
                     or (
                         "Slack indicates active remote work."
                         if next_remote_active
@@ -1799,6 +2648,35 @@ class FirebaseOpsClient:
                         "remoteInferenceVersion": self.CURRENT_REMOTE_INFERENCE_VERSION,
                         "workMode": next_work_mode,
                         **workflow_update,
+                        **(
+                            {
+                                "aiWorkflowDecision": {
+                                    "source": (
+                                        "workflow_inference"
+                                        if workflow_change_accepted
+                                        else "remote_inference"
+                                    ),
+                                    "previousStage": current_stage,
+                                    "workflowStatus": desired_stage,
+                                    "reason": self._clean(
+                                        analysis.get("workflowReason")
+                                        if workflow_change_accepted
+                                        else analysis.get("remoteWorkReason"),
+                                        700,
+                                    ),
+                                    "confidence": (
+                                        workflow_confidence
+                                        if workflow_change_accepted
+                                        else remote_confidence
+                                    ),
+                                    "evidenceSlackTs": "",
+                                    "decidedAtIso": utc_now_iso(),
+                                    "reviewed": False,
+                                }
+                            }
+                            if workflow_update and desired_stage != current_stage
+                            else {}
+                        ),
                     }
                     if include_remote
                     else {}
@@ -1903,10 +2781,7 @@ class FirebaseOpsClient:
                 update["lastActivityAt"] = firestore.SERVER_TIMESTAMP
 
             if not snapshot.exists:
-                initial_assignees = self._merge_assignees(
-                    bluefolder_assignees,
-                    [{"id": "U07F4G8NP2P", "name": "Yao N"}],
-                )
+                initial_assignees = bluefolder_assignees
                 protected_names = ", ".join(
                     entry["name"] for entry in bluefolder_assignees
                 )
@@ -1938,13 +2813,17 @@ class FirebaseOpsClient:
                         "assignees": initial_assignees,
                         "assignmentSummary": self._assignment_summary(initial_assignees),
                         "assignmentDecisionReason": (
-                            f"BlueFolder assigned {protected_names}; these engineers remain assigned while Slack adds helpers."
+                            f"BlueFolder Assigned To identifies {protected_names} as the dispatched engineer; Slack may add proven remote or physical workers."
                             if protected_names
-                            else "New work orders start with Yao until responsibility changes in Slack."
+                            else "No remote or physical worker is assigned yet."
                         ),
                         "assignmentHistory": [
                             self._initial_assignment(now_iso, bluefolder_assignees)
                         ],
+                        "participants": [],
+                        "participationSummary": "No participation recorded yet.",
+                        "participationDecisionReason": "",
+                        "participationHistory": [],
                         "messageCount": 0,
                         "analysisInputTokens": 0,
                         "analysisOutputTokens": 0,
@@ -1959,8 +2838,6 @@ class FirebaseOpsClient:
                 next_assignees = self._merge_assignees(
                     bluefolder_assignees, helpers
                 )
-                if not next_assignees:
-                    next_assignees = [{"id": "U07F4G8NP2P", "name": "Yao N"}]
                 created_iso = (
                     self._timestamp_to_iso(existing.get("createdAt"))
                     or self._clean(existing.get("createdAtIso"), 80)
@@ -2018,7 +2895,7 @@ class FirebaseOpsClient:
                     not is_completed
                     and has_bluefolder_assignment_data
                     and self._workflow_stage(existing)
-                    not in {"service_complete", "done"}
+                    not in {"service_complete", "done", "closed"}
                 ):
                     next_stage = (
                         "active"
@@ -2091,10 +2968,11 @@ class FirebaseOpsClient:
             r"\b(?:hard\s*down|system\s+down|machine\s+down|scanner\s+down|offline|unusable|not\s+operational|cannot\s+scan|no\s+connection)\b",
             r"\b(?:schedul(?:e|ed|ing)|appointment|availability|eta|dispatch|send\s+(?:a\s+)?tech|visit|delivery|parts?\s+(?:needed|ordered|arriv|ship))\b",
             r"\b(?:working\s+on|in\s+progress|en\s+route|on\s+the\s+way|at\s+the\s+site|troubleshoot|testing|repairing|replacing|installing|delivering|coordinating)\b",
-            r"\b(?:remote(?:ly)?|remote\s+(?:session|connection|access)|teamviewer|anydesk|vpn|ssh|screen\s*share|logged\s+in|logging\s+in)\b",
+            r"\b(?:remote(?:ly)?|remote\s+(?:session|connection|access|support)|teamviewer|anydesk|vpn|ssh|screen\s*share|vnc|rdp|putty|logged\s+in|logging\s+in)\b",
             r"\b(?:back\s+up|operational|restored|resolved|running\s+again)\b",
             r"\b(?:no\s+rush|not\s+urgent|whenever|when\s+you\s+have\s+time|can\s+wait|next\s+pm|monitor(?:ing)?|follow\s+up\s+later)\b",
-            r"\b(?:waiting\s+on|pending|approval|quote|purchase\s+order|vendor|customer\s+(?:reply|response|confirmation)|blocked)\b",
+            r"\b(?:waiting\s+(?:on|for)|on\s+hold|pending|approval|quote|purchase\s+order|vendor|customer\s+(?:reply|response|confirmation)|blocked)\b",
+            r"\b(?:suggest|recommend|advis|try\s+(?:this|that)|should\s+(?:check|test|replace|call|contact)|useful\s+info|according\s+to|found\s+(?:that|the)|parts?\s+(?:number|information|status)|shipping\s+(?:status|label)|called\s+(?:the\s+)?(?:customer|site|vendor))\b",
         ]
         return any(re.search(signal, normalized, re.IGNORECASE) for signal in signals)
 
@@ -2109,6 +2987,159 @@ class FirebaseOpsClient:
                 if text:
                     parts.append(str(text))
         return "\n".join(parts).strip()
+
+    @staticmethod
+    def _valid_image_payload(content: bytes, mime: str) -> bool:
+        if not content:
+            return False
+        normalized = str(mime or "").split(";", 1)[0].strip().lower()
+        if normalized == "image/jpeg":
+            return content.startswith(b"\xff\xd8\xff")
+        if normalized == "image/png":
+            return content.startswith(b"\x89PNG\r\n\x1a\n")
+        if normalized == "image/gif":
+            return content.startswith((b"GIF87a", b"GIF89a"))
+        if normalized == "image/webp":
+            return (
+                len(content) >= 12
+                and content.startswith(b"RIFF")
+                and content[8:12] == b"WEBP"
+            )
+        return False
+
+    def describe_slack_media(self, message: Dict[str, Any]) -> str:
+        files = [
+            item
+            for item in (message.get("files") or [])
+            if isinstance(item, dict)
+        ][:5]
+        attachments = [
+            item
+            for item in (message.get("attachments") or [])
+            if isinstance(item, dict)
+        ][:5]
+        descriptors: List[str] = []
+        for item in files:
+            title = self._clean(item.get("title") or item.get("name"), 160)
+            mime = self._clean(item.get("mimetype"), 100)
+            pretty = self._clean(item.get("pretty_type"), 100)
+            descriptors.append(
+                f"{title or 'Slack file'} ({mime or pretty or 'attachment'})"
+            )
+        for item in attachments:
+            title = self._clean(
+                item.get("title") or item.get("fallback") or item.get("text"),
+                180,
+            )
+            if title:
+                descriptors.append(title)
+        if not descriptors:
+            return ""
+
+        image_content: List[Dict[str, Any]] = []
+        unavailable_image_count = 0
+        for item in files:
+            mime = self._clean(item.get("mimetype"), 100).lower()
+            download_url = self._clean(
+                item.get("url_private_download") or item.get("url_private"),
+                2000,
+            )
+            if mime not in self.SUPPORTED_SLACK_IMAGE_MIMES or not download_url:
+                continue
+            try:
+                response = requests.get(
+                    download_url,
+                    headers={
+                        "Authorization": f"Bearer {self.settings.slack_bot_token}"
+                    },
+                    timeout=min(30, self.settings.ops_request_timeout),
+                )
+                response.raise_for_status()
+                if len(response.content) > 8 * 1024 * 1024:
+                    continue
+                response_mime = self._clean(
+                    response.headers.get("Content-Type"), 100
+                ).split(";", 1)[0].lower()
+                if not self._valid_image_payload(response.content, mime):
+                    unavailable_image_count += 1
+                    if (
+                        response_mime == "text/html"
+                        and not self._slack_file_read_warning_emitted
+                    ):
+                        logging.warning(
+                            "Slack image bytes are unavailable. The bot can read the "
+                            "message metadata but needs the files:read OAuth scope to "
+                            "download private attachments."
+                        )
+                        self._slack_file_read_warning_emitted = True
+                    continue
+                encoded = base64.b64encode(response.content).decode("ascii")
+                image_content.append(
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{mime};base64,{encoded}",
+                        "detail": "low",
+                    }
+                )
+                if len(image_content) >= 3:
+                    break
+            except Exception as exc:
+                logging.debug("Slack image download skipped: %s", exc)
+
+        prefix = "Slack attachments: " + "; ".join(descriptors)
+        if unavailable_image_count:
+            prefix += (
+                f". {unavailable_image_count} image attachment(s) could not be read "
+                "because Slack did not return image bytes"
+            )
+        if not image_content or not self.settings.openai_api_key:
+            return prefix
+        try:
+            response = self.openai_session.post(
+                "https://api.openai.com/v1/responses",
+                json={
+                    "model": self.settings.ops_assignment_model,
+                    "store": False,
+                    "input": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "input_text",
+                                    "text": (
+                                        "Briefly classify these field-service Slack images. "
+                                        "State only observable evidence useful for dispatch: "
+                                        "whether they show physical equipment/on-site work, "
+                                        "or a computer screen, logs, or remote troubleshooting. "
+                                        "Do not identify people and do not infer duration. "
+                                        "Use one sentence under 45 words."
+                                    ),
+                                },
+                                *image_content,
+                            ],
+                        }
+                    ],
+                    "max_output_tokens": 120,
+                    "text": {"verbosity": "low"},
+                },
+                timeout=self.settings.ops_request_timeout,
+            )
+            if not response.ok:
+                raise RuntimeError(
+                    "OpenAI Slack image analysis returned HTTP "
+                    f"{response.status_code}: {(response.text or '')[:500]}"
+                )
+            observation = self._clean(
+                self._openai_output_text(response.json()), 600
+            )
+            return (
+                f"{prefix}. Image evidence: {observation}"
+                if observation
+                else prefix
+            )
+        except Exception as exc:
+            logging.warning("Slack image analysis skipped: %s", exc)
+            return prefix
 
     def _explicit_assignment_targets(
         self,
@@ -2166,6 +3197,12 @@ class FirebaseOpsClient:
             re.IGNORECASE,
         ):
             return []
+        if not re.search(
+            r"\b(?:handle|take|work\s+on|check\s+(?:this\s+)?remotely|remote\s+in|connect\s+to|troubleshoot|diagnos|test|repair|replace|install|go\s+(?:to|onsite)|head\s+to|visit|on[- ]?site|field\s+service)\b",
+            text,
+            re.IGNORECASE,
+        ):
+            return []
         sender_id = self._clean((message.get("sender") or {}).get("id"), 80)
         targets = []
         for candidate in candidates:
@@ -2181,6 +3218,26 @@ class FirebaseOpsClient:
                 targets.append(candidate)
         return self._normalize_assignees(targets)
 
+    def _dispatch_assignment_targets(
+        self,
+        candidates: List[Dict[str, str]],
+        message: Dict[str, Any],
+    ) -> List[Dict[str, str]]:
+        text = str(message.get("text") or "")
+        targets: List[Dict[str, str]] = []
+        for candidate in candidates:
+            name = self._clean(candidate.get("name"), 100)
+            if not name:
+                continue
+            mention = rf"@?{re.escape(name)}"
+            patterns = [
+                rf"\b(?:send(?:ing)?|dispatch(?:ing|ed)?|have)\s+{mention}\s+(?:to|out|over|there|on[- ]?site|go|head|visit|attempt|check|test|repair|install|deliver)\b",
+                rf"{mention}\s+(?:will|is\s+going\s+to|is\s+heading|was\s+sent|went|arrived|is\s+on[- ]?site)\s+(?:go|head|visit|work|check|test|repair|install|deliver|pick\s+up)\b",
+            ]
+            if any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns):
+                targets.append(candidate)
+        return self._normalize_assignees(targets)
+
     def _infer_assignment(
         self,
         work_order: Dict[str, Any],
@@ -2193,8 +3250,12 @@ class FirebaseOpsClient:
         current_assignees = self._merge_assignees(
             protected_assignees, work_order.get("assignees")
         )
+        current_participants = self._without_assignees(
+            work_order.get("participants"), current_assignees
+        )
         candidates = self._normalize_assignees(
             current_assignees
+            + current_participants
             + list(message.get("candidates") or [])
             + [message.get("sender") or {}]
         )
@@ -2231,6 +3292,9 @@ class FirebaseOpsClient:
             current_tier, priority_evidence
         )
         current_remote_active = bool(work_order.get("remoteWorkActive"))
+        current_workflow_status = self._workflow_stage_value(
+            work_order.get("workflowStatus")
+        ) or "unassigned"
         current_work_mode = self._clean(
             work_order.get("workMode"), 40
         ).lower()
@@ -2248,6 +3312,57 @@ class FirebaseOpsClient:
         memories = self._relevant_company_memory(work_order, message_text)
         memory_ids = [memory["id"] for memory in memories]
 
+        def deterministic_workflow() -> Dict[str, Any]:
+            normalized = message_text.lower()
+            requested_stage = current_workflow_status
+            reason = "The message does not clearly change the circulation stage."
+            confidence = 0.0
+            scheduled_for = ""
+            date_match = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", normalized)
+            if re.search(
+                r"\b(?:waiting\s+(?:on|for)|on\s+hold|blocked\s+(?:by|on)|pending\s+(?:a\s+)?(?:part|customer|approval|access|information|response)|cannot\s+continue\s+until)\b",
+                normalized,
+                re.IGNORECASE,
+            ):
+                requested_stage = "on_hold"
+                reason = "The message states that work is waiting on a concrete dependency."
+                confidence = 0.97
+            elif date_match and re.search(
+                r"\b(?:schedul|appointment|booked|dispatch|visit|on[- ]site)\w*\b",
+                normalized,
+                re.IGNORECASE,
+            ):
+                candidate = date_match.group(1)
+                try:
+                    if datetime.strptime(candidate, "%Y-%m-%d").date() > datetime.now(timezone.utc).date():
+                        requested_stage = "scheduled"
+                        scheduled_for = candidate
+                        reason = f"The message schedules the work for {candidate}."
+                        confidence = 0.99
+                except ValueError:
+                    pass
+            elif bool(rule_remote.get("remoteWorkActive")):
+                requested_stage = "remote"
+                reason = self._clean(rule_remote.get("remoteWorkReason"), 700)
+                confidence = float(rule_remote.get("remoteWorkConfidence") or 0.99)
+            elif re.search(
+                r"\b(?:on[- ]site|in[- ]person|en\s+route|heading\s+to|arriv(?:ed|ing)|working\s+on|dispatch(?:ed|ing)|eta)\b",
+                normalized,
+                re.IGNORECASE,
+            ):
+                requested_stage = "active"
+                reason = "The message shows physical or dispatch work being handled now."
+                confidence = 0.94
+            return {
+                "workflowChanged": requested_stage != current_workflow_status,
+                "workflowStatus": requested_stage,
+                "workflowReason": reason,
+                "workflowConfidence": confidence,
+                "scheduledFor": scheduled_for or self._clean(
+                    work_order.get("scheduledFor"), 20
+                ),
+            }
+
         def deterministic_result(
             assignees: List[Dict[str, str]],
             reason: str,
@@ -2261,11 +3376,23 @@ class FirebaseOpsClient:
                 "summary": self._assignment_summary(assignees),
                 "reason": reason,
                 "confidence": confidence,
+                "participationChanged": False,
+                "participants": current_participants,
+                "participationSummary": (
+                    "Participating: "
+                    + ", ".join(entry["name"] for entry in current_participants)
+                    + "."
+                    if current_participants
+                    else "No current participants."
+                ),
+                "participationReason": "The message did not change participation.",
+                "participationConfidence": confidence,
                 "usage": {"inputTokens": 0, "outputTokens": 0},
                 "memoryIds": memory_ids,
             }
             result.update(rule_priority)
             result.update(rule_remote)
+            result.update(deterministic_workflow())
             result.update(
                 {
                     "priorityLabel": self._priority_label(
@@ -2301,6 +3428,27 @@ class FirebaseOpsClient:
                     explicit_targets,
                     "The Slack message explicitly assigns the work order to "
                     f"{target_names}.",
+                    0.99,
+                )
+
+            dispatch_targets = self._dispatch_assignment_targets(
+                candidates, message
+            )
+            dispatch_targets = (
+                self._merge_assignees(
+                    protected_assignees, current_assignees, dispatch_targets
+                )
+                if dispatch_targets
+                else []
+            )
+            if dispatch_targets:
+                target_names = ", ".join(
+                    entry["name"] for entry in dispatch_targets
+                )
+                return deterministic_result(
+                    dispatch_targets,
+                    "The Slack message explicitly dispatches "
+                    f"{target_names} for remote or physical work.",
                     0.99,
                 )
 
@@ -2350,14 +3498,27 @@ class FirebaseOpsClient:
                     "role": "system",
                     "content": (
                         "Update a field-service work order from its current state and one "
-                        "new Slack message. For assignment, change responsibility only for "
-                        "an explicit assignment, acceptance, handoff, removal, or clear "
-                        "statement that someone is now handling the task. Interpret "
-                        "first-person commitments as the sender. Technical advisers, people "
-                        "merely notified, question askers, and status reporters are not owners "
-                        "unless they accept responsibility. BlueFolder-protected engineers "
-                        "must remain assigned. Multiple owners are allowed, but use only "
-                        "supplied candidate names. The newest Slack message is the strongest "
+                        "new Slack message. Assignment is reserved for people actually doing "
+                        "remote technical work or physical field work. Remote assignment needs "
+                        "affirmative evidence of hands-on diagnosis, testing, software changes, "
+                        "machine access, or a live remote session. Physical assignment includes "
+                        "BlueFolder dispatch, ETA/travel to site, arrival, installation, repair, "
+                        "delivery, or on-site testing. An explicit assignment, acceptance, or "
+                        "handoff can establish that responsibility. Interpret first-person "
+                        "commitments as the sender. Participation is meaningful advice, useful "
+                        "information, coordination, status, parts/shipping help, or troubleshooting "
+                        "guidance without doing the remote or physical work. Julie discussing useful "
+                        "work-order information is participation unless separate evidence shows her "
+                        "doing hands-on remote or physical work. A mention, copied recipient, ETA "
+                        "question, notification, or FYI is neither assignment nor participation. "
+                        "Only the engineer in BlueFolder's Assigned To field is a protected BlueFolder assignment. BlueFolder "
+                        "Related To people, service managers, account managers, administrative "
+                        "oversight, and mass mention lists are not assignments. Never return Magmo, "
+                        "Magmo recovery, Slackbot, another bot, or a raw Slack ID as a person. Keep "
+                        "assignment and participation mutually exclusive. Preserve current manual "
+                        "assignments unless the new message clearly removes, ends, or hands off their "
+                        "remote/physical responsibility. Multiple people are allowed, "
+                        "but use only supplied candidate names. The newest Slack message is the strongest "
                         "category evidence; the compact prior situation and saved examples only "
                         "provide continuity or explain company language. For operational category, choose hard_down "
                         "only when equipment or customer operation is currently stopped or "
@@ -2379,6 +3540,16 @@ class FirebaseOpsClient:
                         "to add remote access, a future remote plan, or merely mentioning remote "
                         "is not active remote work. Preserve the current remote state unless the "
                         "newest evidence clearly starts or ends remote work. "
+                        "Also classify the circulation stage independently from urgency. Use active "
+                        "only for physical or dispatch work being handled now or today; remote only "
+                        "for active remote work; scheduled when an explicit date tomorrow or later "
+                        "is established; on_hold when progress cannot continue because the team is "
+                        "waiting for a part, customer, approval, access, information, or another "
+                        "concrete dependency; inactive only when Magmo already marked it inactive "
+                        "after seven days; and unassigned when no remote or physical worker, later "
+                        "schedule, or hold is established. Preserve scheduled or on_hold unless the "
+                        "newest message clearly changes it. scheduledFor must be YYYY-MM-DD when an "
+                        "exact future date is known, otherwise empty. "
                         "Saved company examples are advisory and never stronger than current "
                         "evidence. Update priorityContext as a short factual statement of the current "
                         "operational situation so later messages do not require rereading the thread. "
@@ -2402,6 +3573,8 @@ class FirebaseOpsClient:
                         f"Description: {compact(work_order.get('description'), 1200) or 'Not supplied'}\n"
                         "Current assignees: "
                         f"{', '.join(x['name'] for x in current_assignees) or 'Unassigned'}\n"
+                        "Current participants: "
+                        f"{', '.join(x['name'] for x in current_participants) or 'None'}\n"
                         "BlueFolder-protected assignees: "
                         f"{', '.join(x['name'] for x in protected_assignees) or 'None'}\n"
                         "Allowed candidate names: "
@@ -2411,6 +3584,7 @@ class FirebaseOpsClient:
                         f"Current operational situation: {compact(work_order.get('priorityContext'), 900) or compact(work_order.get('priorityReason'), 700) or 'Not established yet'}\n"
                         f"Current remote work active: {str(current_remote_active).lower()}\n"
                         f"Current work mode: {current_work_mode}\n"
+                        f"Current circulation stage: {current_workflow_status}\n"
                         "Rejected categories: "
                         f"{', '.join(sorted(rejected_tiers)) or 'None'}\n"
                         f"New message sender: {compact((message.get('sender') or {}).get('name'), 100) or 'None'}\n"
@@ -2445,6 +3619,19 @@ class FirebaseOpsClient:
                             "summary": {"type": "string"},
                             "reason": {"type": "string"},
                             "confidence": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "participationChanged": {"type": "boolean"},
+                            "participantNames": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "maxItems": 12,
+                            },
+                            "participationSummary": {"type": "string"},
+                            "participationReason": {"type": "string"},
+                            "participationConfidence": {
                                 "type": "number",
                                 "minimum": 0,
                                 "maximum": 1,
@@ -2485,6 +3672,28 @@ class FirebaseOpsClient:
                                 "minimum": 0,
                                 "maximum": 1,
                             },
+                            "workflowChanged": {"type": "boolean"},
+                            "workflowStatus": {
+                                "type": "string",
+                                "enum": [
+                                    "unassigned",
+                                    "active",
+                                    "remote",
+                                    "scheduled",
+                                    "on_hold",
+                                    "inactive",
+                                ],
+                            },
+                            "workflowReason": {"type": "string"},
+                            "workflowConfidence": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "scheduledFor": {
+                                "type": "string",
+                                "maxLength": 20,
+                            },
                         },
                         "required": [
                             "changed",
@@ -2492,6 +3701,11 @@ class FirebaseOpsClient:
                             "summary",
                             "reason",
                             "confidence",
+                            "participationChanged",
+                            "participantNames",
+                            "participationSummary",
+                            "participationReason",
+                            "participationConfidence",
                             "priorityChanged",
                             "priorityTier",
                             "priorityLabel",
@@ -2505,6 +3719,11 @@ class FirebaseOpsClient:
                             "remoteStateChanged",
                             "remoteWorkReason",
                             "remoteWorkConfidence",
+                            "workflowChanged",
+                            "workflowStatus",
+                            "workflowReason",
+                            "workflowConfidence",
+                            "scheduledFor",
                         ],
                     },
                 },
@@ -2532,6 +3751,25 @@ class FirebaseOpsClient:
             self._merge_assignees(protected_assignees, requested)
             if assignment_changed
             else current_assignees
+        )
+        requested_participants = [
+            candidate_by_name[name]
+            for raw_name in output.get("participantNames") or []
+            if (name := compact(raw_name, 100).lower()) in candidate_by_name
+        ]
+        participation_changed = (
+            bool(output.get("participationChanged")) and not priority_only
+        )
+        participants = self._without_assignees(
+            (
+                requested_participants
+                if participation_changed
+                else current_participants
+            ),
+            assignees,
+        )
+        participation_changed = participation_changed and not self._assignees_match(
+            current_participants, participants
         )
         requested_tier = self._priority_tier(output.get("priorityTier"))
         requested_generated = self._priority_generated(requested_tier)
@@ -2590,6 +3828,15 @@ class FirebaseOpsClient:
             and requested_remote_active != current_remote_active
             and remote_confidence >= 0.72
         )
+        if (
+            current_remote_active
+            and remote_changed
+            and not requested_remote_active
+            and not bool(rule_remote.get("remoteExplicitEnd"))
+        ):
+            remote_changed = False
+            requested_remote_active = True
+            remote_confidence = max(remote_confidence, 0.99)
         requested_work_mode = compact(output.get("workMode"), 40).lower()
         if requested_work_mode not in {
             "remote",
@@ -2608,7 +3855,13 @@ class FirebaseOpsClient:
                 else current_remote_active
             ),
             "remoteWorkReason": compact(
-                output.get("remoteWorkReason")
+                (
+                    work_order.get("remoteWorkReason")
+                    if current_remote_active
+                    and not remote_changed
+                    and requested_remote_active
+                    else output.get("remoteWorkReason")
+                )
                 or (
                     "The conversation indicates active remote work."
                     if current_remote_active
@@ -2623,6 +3876,55 @@ class FirebaseOpsClient:
         }
         if rule_remote.get("remoteStateChanged"):
             remote_result.update(rule_remote)
+        requested_workflow_status = self._workflow_stage_value(
+            output.get("workflowStatus")
+        ) or current_workflow_status
+        workflow_confidence = float(output.get("workflowConfidence") or 0)
+        scheduled_for = compact(output.get("scheduledFor"), 20)
+        valid_future_schedule = False
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", scheduled_for):
+            try:
+                valid_future_schedule = (
+                    datetime.strptime(scheduled_for, "%Y-%m-%d").date()
+                    > datetime.now(timezone.utc).date()
+                )
+            except ValueError:
+                valid_future_schedule = False
+        if bool(remote_result.get("remoteWorkActive")):
+            requested_workflow_status = "remote"
+            workflow_confidence = max(
+                workflow_confidence,
+                float(remote_result.get("remoteWorkConfidence") or 0),
+            )
+        workflow_changed = (
+            bool(output.get("workflowChanged"))
+            and requested_workflow_status != current_workflow_status
+            and workflow_confidence >= 0.76
+            and (
+                requested_workflow_status != "scheduled"
+                or valid_future_schedule
+            )
+        )
+        workflow_result = {
+            "workflowChanged": workflow_changed,
+            "workflowStatus": (
+                requested_workflow_status
+                if workflow_changed
+                else current_workflow_status
+            ),
+            "workflowReason": compact(
+                output.get("workflowReason")
+                or "The latest Slack evidence did not justify a circulation-stage change.",
+                700,
+            ),
+            "workflowConfidence": workflow_confidence,
+            "scheduledFor": (
+                scheduled_for
+                if workflow_changed
+                and requested_workflow_status == "scheduled"
+                else compact(work_order.get("scheduledFor"), 20)
+            ),
+        }
         usage = response_data.get("usage") or {}
         return {
             "changed": assignment_changed,
@@ -2646,8 +3948,34 @@ class FirebaseOpsClient:
                 700,
             ),
             "confidence": float(output.get("confidence") or 0),
+            "participationChanged": participation_changed,
+            "participants": participants,
+            "participationSummary": compact(
+                output.get("participationSummary")
+                or (
+                    "Participating: "
+                    + ", ".join(entry["name"] for entry in participants)
+                    + "."
+                    if participants
+                    else "No current participants."
+                ),
+                700,
+            ),
+            "participationReason": compact(
+                output.get("participationReason")
+                or (
+                    "The latest Slack message changed participation."
+                    if participation_changed
+                    else "The latest Slack message did not change participation."
+                ),
+                700,
+            ),
+            "participationConfidence": float(
+                output.get("participationConfidence") or 0
+            ),
             **priority_result,
             **remote_result,
+            **workflow_result,
             "memoryIds": memory_ids,
             "usage": {
                 "inputTokens": int(usage.get("input_tokens") or 0),
@@ -2679,6 +4007,9 @@ class FirebaseOpsClient:
             previous_assignees = self._normalize_assignees(
                 current.get("assignees")
             )
+            previous_participants = self._without_assignees(
+                current.get("participants"), previous_assignees
+            )
             protected_previous = self._merge_assignees(
                 protected_assignees, previous_assignees
             )
@@ -2692,6 +4023,20 @@ class FirebaseOpsClient:
                 bool(analysis.get("changed")) or protection_repair
             ) and not self._assignees_match(previous_assignees, next_assignees)
             decision_reason = self._clean(analysis.get("reason"), 700)
+            next_participants = self._without_assignees(
+                (
+                    analysis.get("participants")
+                    if bool(analysis.get("participationChanged"))
+                    else previous_participants
+                ),
+                next_assignees,
+            )
+            participation_changed = not self._assignees_match(
+                previous_participants, next_participants
+            )
+            participation_reason = self._clean(
+                analysis.get("participationReason"), 700
+            )
             remote_confidence = float(
                 analysis.get("remoteWorkConfidence") or 0
             )
@@ -2725,14 +4070,44 @@ class FirebaseOpsClient:
                 )
             )
             current_stage = self._workflow_stage(current)
-            desired_stage = (
-                "active"
-                if protected_assignees
-                else ("remote" if next_remote_active else "unassigned")
+            desired_stage = current_stage
+            requested_stage = self._workflow_stage_value(
+                analysis.get("workflowStatus")
             )
+            workflow_confidence = float(
+                analysis.get("workflowConfidence") or 0
+            )
+            scheduled_for = self._clean(analysis.get("scheduledFor"), 20)
+            valid_scheduled_for = False
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", scheduled_for):
+                try:
+                    valid_scheduled_for = (
+                        datetime.strptime(scheduled_for, "%Y-%m-%d").date()
+                        > datetime.now(timezone.utc).date()
+                    )
+                except ValueError:
+                    valid_scheduled_for = False
+            workflow_change_accepted = (
+                bool(analysis.get("workflowChanged"))
+                and bool(requested_stage)
+                and requested_stage not in {"service_complete", "done", "closed"}
+                and requested_stage != current_stage
+                and workflow_confidence >= 0.76
+                and (
+                    requested_stage != "scheduled" or valid_scheduled_for
+                )
+            )
+            if workflow_change_accepted:
+                desired_stage = requested_stage
+            elif remote_change_accepted:
+                desired_stage = (
+                    "active"
+                    if protected_assignees
+                    else ("remote" if next_remote_active else "unassigned")
+                )
             workflow_update = (
                 {}
-                if current_stage in {"service_complete", "done"}
+                if current_stage in {"service_complete", "done", "closed"}
                 else self._workflow_transition_update(
                     current,
                     desired_stage,
@@ -2740,9 +4115,18 @@ class FirebaseOpsClient:
                         (message.get("sender") or {}).get("name"), 100
                     )
                     or "Magmo AI",
-                    source="remote_inference",
+                    source=(
+                        "workflow_inference"
+                        if workflow_change_accepted
+                        else "remote_inference"
+                    ),
                     reason=(
-                        self._clean(analysis.get("remoteWorkReason"), 500)
+                        self._clean(
+                            analysis.get("workflowReason")
+                            if workflow_change_accepted
+                            else analysis.get("remoteWorkReason"),
+                            500,
+                        )
                         or (
                             "Slack indicates active remote work."
                             if next_remote_active
@@ -2763,6 +4147,16 @@ class FirebaseOpsClient:
                 ),
                 "assignmentDecisionReason": decision_reason,
                 "assignmentConfidence": float(analysis.get("confidence") or 0),
+                "participants": next_participants,
+                "participationSummary": (
+                    self._clean(analysis.get("participationSummary"), 700)
+                    if next_participants
+                    else "No current participants."
+                ),
+                "participationDecisionReason": participation_reason,
+                "participationConfidence": float(
+                    analysis.get("participationConfidence") or 0
+                ),
                 "priorityContext": self._clean(
                     analysis.get("priorityContext")
                     or current.get("priorityContext"),
@@ -2778,6 +4172,66 @@ class FirebaseOpsClient:
                 "remoteInferenceVersion": self.CURRENT_REMOTE_INFERENCE_VERSION,
                 "workMode": next_work_mode,
                 **workflow_update,
+                **(
+                    {
+                        "workflowDecisionReason": self._clean(
+                            analysis.get("workflowReason"), 700
+                        ),
+                        "workflowDecisionConfidence": workflow_confidence,
+                        "scheduledFor": (
+                            scheduled_for
+                            if desired_stage == "scheduled"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "scheduledReason": (
+                            self._clean(analysis.get("workflowReason"), 700)
+                            if desired_stage == "scheduled"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "holdReason": (
+                            self._clean(analysis.get("workflowReason"), 700)
+                            if desired_stage == "on_hold"
+                            else firestore.DELETE_FIELD
+                        ),
+                    }
+                    if workflow_change_accepted
+                    else {}
+                ),
+                **(
+                    {
+                        "workflowDecisionReason": self._clean(
+                            analysis.get("workflowReason"), 700
+                        ),
+                        "workflowDecisionConfidence": workflow_confidence,
+                        "scheduledFor": (
+                            scheduled_for
+                            if desired_stage == "scheduled"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "scheduledReason": (
+                            self._clean(analysis.get("workflowReason"), 700)
+                            if desired_stage == "scheduled"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "holdReason": (
+                            self._clean(analysis.get("workflowReason"), 700)
+                            if desired_stage == "on_hold"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "holdStartedAt": (
+                            firestore.SERVER_TIMESTAMP
+                            if desired_stage == "on_hold"
+                            else firestore.DELETE_FIELD
+                        ),
+                        "inactiveReason": (
+                            self._clean(analysis.get("workflowReason"), 700)
+                            if desired_stage == "inactive"
+                            else firestore.DELETE_FIELD
+                        ),
+                    }
+                    if workflow_change_accepted
+                    else {}
+                ),
                 "analysisInputTokens": firestore.Increment(
                     int((analysis.get("usage") or {}).get("inputTokens") or 0)
                 ),
@@ -2787,6 +4241,30 @@ class FirebaseOpsClient:
                 "updatedAt": firestore.SERVER_TIMESTAMP,
             }
             now_iso = utc_now_iso()
+            if workflow_update and desired_stage != current_stage:
+                update["aiWorkflowDecision"] = {
+                    "source": (
+                        "workflow_inference"
+                        if workflow_change_accepted
+                        else "remote_inference"
+                    ),
+                    "previousStage": current_stage,
+                    "workflowStatus": desired_stage,
+                    "reason": self._clean(
+                        analysis.get("workflowReason")
+                        if workflow_change_accepted
+                        else analysis.get("remoteWorkReason"),
+                        700,
+                    ),
+                    "confidence": (
+                        workflow_confidence
+                        if workflow_change_accepted
+                        else remote_confidence
+                    ),
+                    "evidenceSlackTs": self._clean(message.get("slackTs"), 180),
+                    "decidedAtIso": now_iso,
+                    "reviewed": False,
+                }
             if assignment_changed:
                 history = list(current.get("assignmentHistory") or [])
                 history.append(
@@ -2811,6 +4289,34 @@ class FirebaseOpsClient:
                     -self.MAX_ASSIGNMENT_HISTORY :
                 ]
                 update["assignmentUpdatedAt"] = firestore.SERVER_TIMESTAMP
+            if participation_changed:
+                participation_history = list(
+                    current.get("participationHistory") or []
+                )
+                participation_history.append(
+                    {
+                        "id": self._message_id(raw_message_id),
+                        "source": "ai",
+                        "previousParticipants": previous_participants,
+                        "participants": next_participants,
+                        "reason": participation_reason,
+                        "triggerMessage": self._clean(message.get("text"), 1000),
+                        "triggerSender": self._clean(
+                            (message.get("sender") or {}).get("name"), 100
+                        ),
+                        "triggerSlackTs": self._clean(
+                            message.get("slackTs"), 180
+                        ),
+                        "confidence": float(
+                            analysis.get("participationConfidence") or 0
+                        ),
+                        "changedAtIso": now_iso,
+                    }
+                )
+                update["participationHistory"] = participation_history[
+                    -self.MAX_PARTICIPATION_HISTORY :
+                ]
+                update["participationUpdatedAt"] = firestore.SERVER_TIMESTAMP
             previous_tier = self._priority_tier(current.get("priorityTier"))
             requested_tier = self._priority_tier(analysis.get("priorityTier"))
             priority_confidence = float(
@@ -2879,6 +4385,11 @@ class FirebaseOpsClient:
                     "analysisConfidence": float(
                         analysis.get("confidence") or 0
                     ),
+                    "analysisChangedParticipation": participation_changed,
+                    "analysisParticipationReason": participation_reason,
+                    "analysisParticipationConfidence": float(
+                        analysis.get("participationConfidence") or 0
+                    ),
                     "analysisChangedPriority": priority_changed,
                     "analysisPriorityTier": (
                         requested_tier if priority_changed else previous_tier
@@ -2891,6 +4402,12 @@ class FirebaseOpsClient:
                         analysis.get("remoteWorkReason"), 700
                     ),
                     "analysisRemoteWorkConfidence": remote_confidence,
+                    "analysisChangedWorkflow": workflow_change_accepted,
+                    "analysisWorkflowStatus": desired_stage,
+                    "analysisWorkflowReason": self._clean(
+                        analysis.get("workflowReason"), 700
+                    ),
+                    "analysisWorkflowConfidence": workflow_confidence,
                     "analysisMemoryIds": list(
                         analysis.get("memoryIds") or []
                     )[:5],
@@ -2900,9 +4417,12 @@ class FirebaseOpsClient:
             )
             return {
                 "changed": assignment_changed,
+                "participationChanged": participation_changed,
                 "priorityChanged": priority_changed,
                 "remoteChanged": remote_change_accepted,
                 "remoteWorkActive": next_remote_active,
+                "workflowChanged": workflow_change_accepted,
+                "workflowStatus": desired_stage,
             }
 
         return save(transaction)
@@ -3324,18 +4844,26 @@ class FirebaseOpsClient:
                 )
         return processed
 
-    def active_intake_thread_records(self) -> List[Tuple[str, Dict[str, Any]]]:
+    def existing_work_order_records(self) -> List[Tuple[str, Dict[str, Any]]]:
+        """Return every existing, nondeleted Magmo work order for monitoring."""
         records: List[Tuple[str, Dict[str, Any]]] = []
-        for snapshot in self.db.collection(self.COLLECTION).limit(500).stream():
+        # Do not cap the inventory. A fixed first page can permanently starve
+        # later work orders from Slack monitoring.
+        for snapshot in self.db.collection(self.COLLECTION).stream():
             data = snapshot.to_dict() or {}
-            if str(data.get("status") or "").lower() not in self.ACTIVE_STATUSES:
+            if data.get("deletedAt"):
                 continue
-            if not self._clean(data.get("intakeServiceRequestId"), 180):
-                continue
-            channel = self._clean(data.get("slackChannel"), 120)
-            thread_ts = self._clean(data.get("slackThreadTs"), 120)
-            if not channel or not thread_ts:
-                continue
+            status = self._clean(data.get("status"), 40)
+            workflow_status = (
+                "closed"
+                if status.lower() == "closed"
+                else (
+                    self._workflow_stage_value(
+                        data.get("workflowStatus") or data.get("workflowStage")
+                    )
+                    or self._workflow_stage(data)
+                )
+            )
             records.append(
                 (
                     snapshot.id,
@@ -3347,23 +4875,42 @@ class FirebaseOpsClient:
                         "description": self._clean(data.get("description"), 1800),
                         "customer": self._clean(data.get("customer"), 220),
                         "created_at": self._clean(data.get("createdAtIso"), 80),
+                        "bluefolder_created_at": self._clean(
+                            data.get("bluefolderCreatedAt"), 80
+                        ),
                         "bluefolder_url": self._clean(
                             data.get("bluefolderUrl"), 1200
                         ),
-                        "slack_channel": channel,
-                        "slack_ts": thread_ts,
+                        "slack_channel": self._clean(
+                            data.get("slackChannel"), 120
+                        ),
+                        "slack_ts": self._clean(data.get("slackThreadTs"), 120),
                         "slack_permalink": self._clean(
                             data.get("slackPermalink"), 1200
                         ),
                         "bluefolder_assignees": self._normalize_assignees(
                             data.get("bluefolderAssignees")
                         ),
+                        "ops_status": status,
+                        "ops_workflow_status": workflow_status,
+                        "ops_closed_at": (
+                            self._timestamp_to_iso(data.get("closedAt"))
+                            or self._clean(data.get("closedAtIso"), 80)
+                        ),
                         "ops_created_at": utc_now_iso(),
-                        "website_intake": True,
+                        "discovered_from_existing_magmo": True,
                     },
                 )
             )
         return records
+
+    def active_intake_thread_records(self) -> List[Tuple[str, Dict[str, Any]]]:
+        """Compatibility name for every existing non-Closed monitoring row."""
+        return [
+            (work_order_id, record)
+            for work_order_id, record in self.existing_work_order_records()
+            if not ops_record_is_closed(record)
+        ]
 
     def process_pending_priority_inference(self, limit: int = 2) -> int:
         """Revisit active records classified by an older inference version.
@@ -3382,7 +4929,7 @@ class FirebaseOpsClient:
             data = snapshot.to_dict() or {}
             if str(data.get("status") or "").lower() not in self.ACTIVE_STATUSES:
                 continue
-            if self._workflow_stage(data) in {"service_complete", "done"}:
+            if self._workflow_stage(data) in {"service_complete", "done", "closed"}:
                 continue
             if (
                 int(data.get("priorityInferenceVersion") or 0)
@@ -3430,7 +4977,7 @@ class FirebaseOpsClient:
             data = snapshot.to_dict() or {}
             if str(data.get("status") or "").lower() not in self.ACTIVE_STATUSES:
                 continue
-            if self._workflow_stage(data) in {"service_complete", "done"}:
+            if self._workflow_stage(data) in {"service_complete", "done", "closed"}:
                 continue
             if self._normalize_assignees(data.get("bluefolderAssignees")):
                 continue
@@ -3555,6 +5102,7 @@ class FirebaseOpsClient:
         msg_ref = ref.collection(self.MESSAGE_COLLECTION).document(msg_id)
         normalized_candidates = self._normalize_assignees(candidates)
         needs_analysis = self._should_analyze_assignment(text)
+        edited_event_ts = self._clean(message.get("edited_event_ts"), 180)
         now_ms = int(time.time() * 1000)
         transaction = self.db.transaction()
 
@@ -3565,18 +5113,52 @@ class FirebaseOpsClient:
             if not work_order_snapshot.exists:
                 raise RuntimeError(f"Ops work order {work_order_id} does not exist.")
             current = work_order_snapshot.to_dict() or {}
-            if str(current.get("status") or "").lower() not in self.ACTIVE_STATUSES:
-                return {"accepted": False, "reason": "completed"}
+            if current.get("deletedAt"):
+                return {
+                    "accepted": False,
+                    "needsAnalysis": False,
+                    "reason": "deleted",
+                }
+            closed_work_order = (
+                str(current.get("status") or "").strip().lower() == "closed"
+                or self._workflow_stage(current) == "closed"
+            )
 
             if message_snapshot.exists:
                 existing_message = message_snapshot.to_dict() or {}
-                retryable = existing_message.get("analysisStatus") == "error" or (
-                    existing_message.get("analysisStatus") == "analyzing"
-                    and now_ms - int(existing_message.get("analysisStartedAtMs") or 0)
-                    > 120000
+                analysis_status = str(
+                    existing_message.get("analysisStatus") or ""
+                ).strip().lower()
+                analysis_age_ms = now_ms - int(
+                    existing_message.get("analysisStartedAtMs") or 0
                 )
-                if not retryable or not needs_analysis:
+                retryable = analysis_status == "error" or (
+                    analysis_status == "analyzing" and analysis_age_ms > 120000
+                )
+                if (
+                    not edited_event_ts
+                    and needs_analysis
+                    and analysis_status == "analyzing"
+                    and not retryable
+                ):
+                    # Keep the caller's durable Slack cursor behind this
+                    # message until analysis finishes or becomes reclaimable.
+                    return {
+                        "accepted": False,
+                        "needsAnalysis": True,
+                        "reason": "analysis_pending",
+                    }
+                # An edit refreshes the original Slack message document. The
+                # edit timestamp is a version marker, never a new message ID.
+                if not edited_event_ts and (not retryable or not needs_analysis):
                     return {"accepted": False, "reason": "duplicate"}
+
+            if closed_work_order:
+                return {
+                    "accepted": False,
+                    "needsAnalysis": False,
+                    "reason": "closed",
+                }
 
             sender = self._normalize_assignees(
                 [
@@ -3597,6 +5179,11 @@ class FirebaseOpsClient:
                     "receivedAt": firestore.SERVER_TIMESTAMP,
                     "analysisStatus": "analyzing" if needs_analysis else "not_needed",
                     "analysisStartedAtMs": now_ms if needs_analysis else 0,
+                    **(
+                        {"slackEditedTs": edited_event_ts}
+                        if edited_event_ts
+                        else {}
+                    ),
                 },
                 merge=True,
             )
@@ -3607,6 +5194,25 @@ class FirebaseOpsClient:
                 "lastActivityAtIso": utc_now_iso(),
                 "updatedAt": firestore.SERVER_TIMESTAMP,
             }
+            if self._workflow_stage(current) == "inactive":
+                activity_stage = (
+                    "active"
+                    if self._normalize_assignees(current.get("bluefolderAssignees"))
+                    else (
+                        "remote"
+                        if bool(current.get("remoteWorkActive"))
+                        else "unassigned"
+                    )
+                )
+                work_order_update.update(
+                    self._workflow_transition_update(
+                        current,
+                        activity_stage,
+                        changed_by=sender_record.get("name") or "Slack",
+                        source="new_activity",
+                        reason="A new Slack message resumed activity on the work order.",
+                    )
+                )
             if not message_snapshot.exists:
                 work_order_update["messageCount"] = firestore.Increment(1)
             txn.set(ref, work_order_update, merge=True)
@@ -3685,6 +5291,168 @@ class FirebaseOpsClient:
 
         messages.sort(key=sort_key)
         return messages
+
+    def _generate_system_note_text(
+        self, work_order: Dict[str, Any], messages: List[Dict[str, Any]]
+    ) -> str:
+        lines: List[str] = []
+        for message in messages[-40:]:
+            sender = message.get("sender") or {}
+            text = re.sub(r"\s+", " ", self._clean(message.get("text"), 700)).strip()
+            if text and not text.lower().startswith("!notes"):
+                lines.append(
+                    f"{self._clean(sender.get('name'), 100) or 'Slack'}: {text}"
+                )
+        transcript = "\n".join(lines)[-12000:]
+        if not transcript:
+            raise RuntimeError(
+                "Bare !notes needs recorded Slack context. Use !notes followed by the note text instead."
+            )
+        payload = {
+            "model": self.settings.ops_summary_model,
+            "store": False,
+            "input": [
+                {
+                    "role": "system",
+                    "content": (
+                        "Write one durable client-system service note from this work-order conversation. "
+                        "Use one concise sentence, maximum 55 words. Preserve only facts that would help "
+                        "with future service on this client or machine, such as configuration, access, "
+                        "recurring behavior, installed hardware, or an important service constraint. "
+                        "Do not write a status update, assignment, ETA, temporary plan, or private reasoning. "
+                        "If there is no durable fact, return an empty note."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Work order: #{self._clean(work_order.get('number'), 100)} "
+                        f"{self._clean(work_order.get('subject'), 400)}\n"
+                        f"Client: {self._clean(work_order.get('clientName') or work_order.get('customer'), 220)}\n"
+                        f"Machine: {self._clean(work_order.get('machineName'), 220) or 'Not linked'}\n"
+                        f"Conversation:\n{transcript}"
+                    ),
+                },
+            ],
+            "max_output_tokens": 120,
+            "reasoning": {"effort": "minimal"},
+            "text": {
+                "verbosity": "low",
+                "format": {
+                    "type": "json_schema",
+                    "name": "client_system_note",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"note": {"type": "string"}},
+                        "required": ["note"],
+                    },
+                },
+            },
+        }
+        response = self.openai_session.post(
+            "https://api.openai.com/v1/responses",
+            json=payload,
+            timeout=self.settings.ops_request_timeout,
+        )
+        if not response.ok:
+            raise RuntimeError(
+                f"OpenAI system-note analysis returned HTTP {response.status_code}: "
+                f"{(response.text or '')[:300]}"
+            )
+        output = json.loads(self._openai_output_text(response.json()))
+        note = self._clean(output.get("note"), 1800)
+        if not note:
+            raise RuntimeError(
+                "The thread did not contain a durable client or machine fact to save."
+            )
+        return note
+
+    def save_system_note(
+        self,
+        work_order_id: str,
+        sender_name: str,
+        slack_ts: str,
+        note_text: str = "",
+    ) -> Dict[str, Any]:
+        ref = self._work_order_ref(work_order_id)
+        snapshot = ref.get()
+        if not snapshot.exists:
+            raise RuntimeError(f"Ops work order {work_order_id} does not exist.")
+        data = snapshot.to_dict() or {}
+        work_order = self._serialize_work_order(work_order_id, data)
+        client_id = self._clean(data.get("clientId"), 180)
+        client_name = self._clean(
+            data.get("clientName") or data.get("customer"), 220
+        )
+        machine_id = self._clean(data.get("machineId"), 180)
+        machine_name = self._clean(data.get("machineName"), 220)
+        request_id = self._clean(data.get("intakeServiceRequestId"), 180)
+        if request_id and (not client_id or not machine_id):
+            request_snapshot = self.db.collection(
+                self.SERVICE_REQUEST_COLLECTION
+            ).document(request_id).get()
+            if request_snapshot.exists:
+                request = request_snapshot.to_dict() or {}
+                confirmed_client = request.get("confirmedClient") or {}
+                machine = request.get("machine") or {}
+                client_id = client_id or self._clean(confirmed_client.get("id"), 180)
+                client_name = client_name or self._clean(confirmed_client.get("name"), 220)
+                machine_id = machine_id or self._clean(
+                    request.get("machineId") or machine.get("id"), 180
+                )
+                machine_name = machine_name or self._clean(
+                    machine.get("name") or machine.get("label"), 220
+                )
+        if not client_id:
+            client_key = self._name_key(client_name)
+            for client_snapshot in self.db.collection(self.CLIENT_COLLECTION).limit(500).stream():
+                client = client_snapshot.to_dict() or {}
+                if self._name_key(
+                    client.get("name") or client.get("clientName") or client.get("companyName")
+                ) == client_key:
+                    client_id = client_snapshot.id
+                    client_name = self._clean(
+                        client.get("name") or client.get("clientName") or client_name,
+                        220,
+                    )
+                    break
+        if not client_id:
+            raise RuntimeError(
+                "This work order is not linked to a Magmo client, so !notes cannot save safely."
+            )
+        note = self._clean(note_text, 1800)
+        if not note:
+            note = self._generate_system_note_text(
+                work_order, self._load_message_log(ref)
+            )
+        note_id = self._message_id(
+            f"slack-{work_order_id}-{self._clean(slack_ts, 180)}"
+        )
+        note_ref = self.db.collection(self.SYSTEM_NOTE_COLLECTION).document(note_id)
+        if note_ref.get().exists:
+            return {"ok": True, "duplicate": True, "noteId": note_id}
+        note_ref.set(
+            {
+                "scopeType": "machine" if machine_id else "client",
+                "clientId": client_id,
+                "clientName": client_name,
+                "machineId": machine_id,
+                "machineName": machine_name,
+                "workOrderId": self._clean(work_order_id, 180),
+                "workOrderNumber": self._clean(work_order.get("number"), 120),
+                "workOrderSubject": self._clean(work_order.get("subject"), 500),
+                "text": note,
+                "source": "slack",
+                "createdBy": self._clean(sender_name, 180),
+                "slackTs": self._clean(slack_ts, 180),
+                "createdAt": firestore.SERVER_TIMESTAMP,
+                "createdAtIso": utc_now_iso(),
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            }
+        )
+        return {"ok": True, "duplicate": False, "noteId": note_id, "text": note}
 
     def _generate_final_summary(
         self, work_order: Dict[str, Any], messages: List[Dict[str, Any]]
@@ -3871,10 +5639,7 @@ class FirebaseOpsClient:
         protected_assignees = self._normalize_assignees(
             current.get("bluefolderAssignees")
         )
-        initial_assignees = self._merge_assignees(
-            protected_assignees,
-            [{"id": "U07F4G8NP2P", "name": "Yao N"}],
-        )
+        initial_assignees = protected_assignees
         deleted_messages = self._delete_message_log(ref)
         next_stage = "active" if protected_assignees else "unassigned"
         workflow_update = self._workflow_transition_update(
@@ -3889,14 +5654,18 @@ class FirebaseOpsClient:
                 "assignees": initial_assignees,
                 "assignmentSummary": self._assignment_summary(initial_assignees),
                 "assignmentDecisionReason": (
-                    "BlueFolder engineers remain protected; Slack helper analysis was reset."
+                    "BlueFolder Assigned To engineers remain protected; Slack assignment and participation analysis was reset."
                     if protected_assignees
-                    else "New work orders start with Yao until responsibility changes in Slack."
+                    else "No remote or physical worker is assigned after the analysis reset."
                 ),
                 "assignmentConfidence": 1,
                 "assignmentHistory": [
                     self._initial_assignment(created_at_iso, protected_assignees)
                 ],
+                "participants": [],
+                "participationSummary": "No participation recorded yet.",
+                "participationDecisionReason": "Participation analysis was reset.",
+                "participationHistory": [],
                 "workflowStatus": next_stage,
                 **workflow_update,
                 "remoteWorkActive": False,
@@ -4026,21 +5795,33 @@ class FirebaseOpsClient:
         if not self._timestamp_to_iso(current.get("completedAt")):
             completion_update["completedAt"] = firestore.SERVER_TIMESTAMP
         ref.set(completion_update, merge=True)
-        deleted_messages = self._delete_message_log(ref)
-        ref.set(
-            {
-                "messageCount": 0,
-                "chatLogDeletedAt": firestore.SERVER_TIMESTAMP,
-                "updatedAt": firestore.SERVER_TIMESTAMP,
-            },
-            merge=True,
-        )
         return {
             "ok": True,
             "completed": True,
-            "deletedMessages": deleted_messages,
+            "deletedMessages": 0,
             "finalSummarySaved": True,
         }
+
+
+def create_ops_client(settings: Settings) -> Any:
+    if settings.firebase_service_account_path:
+        client = FirebaseOpsClient(settings)
+        client.supports_assignment_sync = True
+        client.supports_extended_sync = True
+        client.sync_method = "firebase"
+        return client
+    return MagmoOpsIngestClient(settings)
+
+class SlackRateLimited(RuntimeError):
+    """Defer this method across every thread without dropping checkpoints."""
+
+    def __init__(self, method: str, retry_after: float):
+        self.method = method
+        self.retry_after = max(0.0, retry_after)
+        super().__init__(
+            f"Slack {method} cooling down for {self.retry_after:.1f}s"
+        )
+
 
 class SlackClient:
     def __init__(self, settings: Settings):
@@ -4051,10 +5832,15 @@ class SlackClient:
             "Content-Type": "application/json; charset=utf-8",
         })
         self._resolved_channel_id: Optional[str] = None
+        self._method_blocked_until: Dict[str, float] = {}
+        self._method_next_request_at: Dict[str, float] = {}
         self._user_lookup_loaded = False
         self._user_lookup: Dict[str, str] = {}
         self._user_names_by_id: Dict[str, str] = {}
         self._user_aliases_by_id: Dict[str, List[str]] = {}
+        self._full_channel_history_cache: Dict[
+            str, Tuple[float, List[Dict[str, Any]]]
+        ] = {}
         self._part_reference_resolver = SlackPartReferenceResolver(
             self._slack_list_item_info,
             warn=logging.warning,
@@ -4067,9 +5853,52 @@ class SlackClient:
                 self._user_names_by_id[user_id] = name
                 self._user_aliases_by_id[user_id] = [name]
 
+    def rate_limit_remaining(self, method: str) -> float:
+        return max(
+            0.0, self._method_blocked_until.get(method, 0.0) - time.monotonic()
+        )
+
+    def _before_request(self, method: str) -> None:
+        remaining = self.rate_limit_remaining(method)
+        if remaining > 0:
+            raise SlackRateLimited(method, remaining)
+        # Pace high-volume read methods instead of bursting across hundreds of
+        # work orders. A server Retry-After always takes precedence over pacing.
+        interval = 1.3 if method in {
+            "conversations.replies", "conversations.history"
+        } else 0.0
+        delay = self._method_next_request_at.get(method, 0.0) - time.monotonic()
+        if delay > 0:
+            time.sleep(min(delay, interval))
+        self._method_next_request_at[method] = time.monotonic() + interval
+
+    def _check_rate_limit(self, method: str, response: Any) -> None:
+        if response.status_code != 429:
+            return
+        try:
+            retry_after = float(response.headers.get("Retry-After", "60"))
+            if not (0 < retry_after < float("inf")):
+                retry_after = 60.0
+        except (TypeError, ValueError, OverflowError):
+            retry_after = 60.0
+        # One cooldown per method, not per work order. Do not sleep through a
+        # long limit: let BlueFolder intake and the listener heartbeat continue.
+        self._method_blocked_until[method] = time.monotonic() + retry_after
+        logging.warning(
+            "Slack %s rate limited; deferring this method for %.1fs",
+            method, retry_after,
+        )
+        raise SlackRateLimited(method, retry_after)
+
     def _post_raw(self, method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        if str(method or "").strip() == "chat.postMessage":
+            raise RuntimeError(
+                "Slack Dispatch posting is disabled: Magmo exclusively owns every root."
+            )
         url = f"https://slack.com/api/{method}"
+        self._before_request(method)
         resp = self.session.post(url, json=payload, timeout=30)
+        self._check_rate_limit(method, resp)
         resp.raise_for_status()
         return resp.json()
 
@@ -4081,7 +5910,9 @@ class SlackClient:
 
     def _get(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         url = f"https://slack.com/api/{method}"
+        self._before_request(method)
         resp = self.session.get(url, params=params, timeout=30)
+        self._check_rate_limit(method, resp)
         resp.raise_for_status()
         data = resp.json()
         if not data.get("ok"):
@@ -4096,35 +5927,17 @@ class SlackClient:
             {"list_id": list_id, "id": record_id},
         )
 
+    def _post_message_with_join_retry(
+        self, channel_id: str, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        raise RuntimeError(
+            "Slack Dispatch posting is disabled: Magmo exclusively owns every root."
+        )
+
     def expand_part_references(
         self, text: str, message: Optional[Dict[str, Any]] = None
     ) -> str:
         return self._part_reference_resolver.expand(text, message)
-
-    def _post_message_with_join_retry(self, channel_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        data = self._post_raw("chat.postMessage", payload)
-        if data.get("ok"):
-            return data
-
-        if data.get("error") == "not_in_channel":
-            # Try to join automatically when possible, then retry once.
-            if isinstance(channel_id, str) and channel_id and not channel_id.startswith("#"):
-                join_resp = self._post_raw("conversations.join", {"channel": channel_id})
-                if join_resp.get("ok"):
-                    data = self._post_raw("chat.postMessage", payload)
-                elif join_resp.get("error") == "missing_scope":
-                    raise RuntimeError(
-                        "Slack bot is not in channel and token lacks conversations.join scope. "
-                        "Invite the bot to #dispatch, then retry."
-                    )
-            if not data.get("ok"):
-                raise RuntimeError(
-                    "Slack bot is not in the target channel. Invite the bot to #dispatch and retry."
-                )
-
-        if not data.get("ok"):
-            raise RuntimeError(f"Slack API chat.postMessage failed: {data}")
-        return data
 
     def _resolve_channel_id(self) -> str:
         if self._resolved_channel_id:
@@ -4312,60 +6125,9 @@ class SlackClient:
         mention_user_ids: List[str],
         mention_text: str = "",
     ) -> Tuple[str, str]:
-        channel_id = self._resolve_channel_id()
-        title_link = f"<{bluefolder_url}|{title_text}>"
-        resolved_mention_ids = self._resolve_mention_user_ids(mention_user_ids, mention_text)
-        mentions = " ".join(f"<@{user_id}>" for user_id in resolved_mention_ids).strip()
-        if not mentions and mention_text.strip():
-            if self.settings.require_clickable_mentions:
-                raise RuntimeError(
-                    "Could not create clickable Slack @mentions from names. "
-                    "Set SLACK_USER_IDS with real member IDs (U...) or grant users:read scope "
-                    "and reinstall the app."
-                )
-            logging.warning(
-                "Using plain-text mention fallback. This will not create clickable @mentions."
-            )
-            mentions = mention_text.strip()
-
-        parent_message = "\n".join(
-            part for part in [
-                f"#{work_order_number}",
-                title_link,
-            ] if part.strip()
+        raise RuntimeError(
+            "Slack Dispatch posting is disabled: Magmo exclusively owns every root."
         )
-
-        parent_payload = {
-            "channel": channel_id,
-            "text": parent_message,
-            "mrkdwn": True,
-            "unfurl_links": False,
-            "unfurl_media": False,
-        }
-        data = self._post_message_with_join_retry(channel_id, parent_payload)
-        response_channel = str(data.get("channel") or "").strip()
-        response_ts = str(data.get("ts") or data.get("message", {}).get("ts") or "").strip()
-
-        if not response_channel and isinstance(channel_id, str) and channel_id and not channel_id.startswith("#"):
-            response_channel = channel_id
-
-        if not response_ts:
-            logging.warning("Slack post succeeded but response did not include ts. Raw response: %s", data)
-            return response_channel, response_ts
-
-        # Match existing dispatch pattern: mentions are a reply in-thread.
-        if mentions:
-            thread_payload = {
-                "channel": response_channel or channel_id,
-                "text": mentions,
-                "thread_ts": response_ts,
-                "mrkdwn": True,
-                "unfurl_links": False,
-                "unfurl_media": False,
-            }
-            self._post_message_with_join_retry(channel_id, thread_payload)
-
-        return response_channel, response_ts
 
     def thread_parent(self, channel: str, thread_ts: str) -> Dict[str, Any]:
         data = self._get(
@@ -4426,15 +6188,33 @@ class SlackClient:
             if not cursor:
                 return messages
 
+    def cached_full_channel_history(
+        self, channel: str, *, max_age_seconds: float = 60.0
+    ) -> List[Dict[str, Any]]:
+        """Return full channel history with a short in-process cache.
+
+        Recovered records can have no source timestamp, or a legacy timestamp
+        from another channel. Caching keeps exact Dispatch discovery from
+        paging the entire channel independently for every work order.
+        """
+        now = time.monotonic()
+        cached = self._full_channel_history_cache.get(channel)
+        if cached and now - cached[0] <= max(1.0, float(max_age_seconds)):
+            return list(cached[1])
+        messages = self.channel_history(channel)
+        self._full_channel_history_cache[channel] = (now, list(messages))
+        return messages
+
     def find_work_order_thread(
         self,
         channel: str,
-        work_order_id: str,
+        work_order_number: str,
         *,
+        service_request_id: str = "",
         near_ts: str = "",
         window_seconds: int = 3600,
     ) -> Optional[Dict[str, Any]]:
-        if not channel or not work_order_id:
+        if channel != PRODUCTION_DISPATCH_CHANNEL_ID or not work_order_number:
             return None
         try:
             near_value = float(str(near_ts or "0"))
@@ -4443,26 +6223,34 @@ class SlackClient:
         window = max(60, int(window_seconds or 3600))
         oldest = str(max(0.0, near_value - window)) if near_value else ""
         latest = str(near_value + window) if near_value else ""
-        messages = self.channel_history(channel, oldest=oldest, latest=latest)
-        pattern = re.compile(
-            rf"(?m)^\s*#\s*{re.escape(str(work_order_id))}\b",
-            re.IGNORECASE,
+        messages = (
+            self.channel_history(channel, oldest=oldest, latest=latest)
+            if near_value
+            else self.cached_full_channel_history(channel)
         )
         matches = [
             message
             for message in messages
-            if pattern.search(str(message.get("text") or ""))
-            and str(message.get("ts") or "").strip()
+            if is_exact_work_order_root(
+                message, work_order_number, service_request_id
+            )
         ]
-        if not matches:
-            return None
         if near_value:
-            matches.sort(
-                key=lambda message: abs(
-                    slack_ts_number(message.get("ts")) - near_value
+            # Also check full Dispatch history: a legacy timestamp can be far
+            # from the real root, and a second exact root must remain ambiguous.
+            matches.extend(
+                message
+                for message in self.cached_full_channel_history(channel)
+                if is_exact_work_order_root(
+                    message, work_order_number, service_request_id
                 )
             )
-        return matches[0]
+        matches_by_ts = {str(message["ts"]): message for message in matches}
+        if len(matches_by_ts) != 1:
+            # Never pick between duplicate roots by proximity. An unresolved or
+            # ambiguous record stays retryable and cannot create a Slack root.
+            return None
+        return next(iter(matches_by_ts.values()))
 
     def user_name(self, user_id: str, fallback: str = "") -> str:
         self._load_user_lookup()
@@ -4563,6 +6351,23 @@ def extract_bluefolder_assignee_user_ids(item: Dict[str, Any]) -> List[str]:
     return user_ids
 
 
+def normalize_bluefolder_datetime(value: Any) -> str:
+    """Return an unambiguous RFC3339 timestamp for Magmo imports.
+
+    BlueFolder's service-request API returns UTC timestamps without an offset.
+    Existing offsets are preserved; otherwise the value is explicitly treated
+    as UTC instead of allowing the server's local timezone to reinterpret it.
+    """
+    raw = str(value or "").strip()
+    parsed = parse_dt(raw)
+    if parsed is None:
+        return ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    normalized = parsed.astimezone(timezone.utc).isoformat()
+    return normalized.replace("+00:00", "Z")
+
+
 def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
     work_order_id = safe_get(
         item,
@@ -4596,8 +6401,49 @@ def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[
         "serviceDescription",
         "notes",
     )
-    created_at = safe_get(item, "created_at", "created", "date_created", "dateCreated", "dateAdded")
-    customer = safe_get(item, "customer_name", "customer", "account_name")
+    created_at = safe_get(
+        item,
+        "created_at",
+        "created",
+        "date_created",
+        "dateTimeCreated",
+        "dateCreated",
+        "dateAdded",
+    )
+    customer = safe_get(
+        item, "customer_name", "customerName", "customer", "account_name"
+    )
+    created_by_user_id = safe_get(
+        item, "createdByUserId", "created_by_user_id", "createdBy"
+    )
+    bluefolder_status = safe_get(
+        item,
+        "status",
+        "statusName",
+        "serviceRequestStatus",
+        "workOrderStatus",
+    )
+    bluefolder_billing_status = safe_get(
+        item,
+        "billingStatus",
+        "billing_status",
+        "serviceRequestBillingStatus",
+    )
+    bluefolder_date_time_closed = normalize_bluefolder_datetime(
+        safe_get(
+            item,
+            "dateTimeClosed",
+            "dateClosed",
+            "closedAt",
+            "closed_at",
+        )
+    )
+    bluefolder_workflow_status = safe_get(
+        item,
+        "workflowStatus",
+        "workflow_status",
+        "serviceRequestWorkflowStatus",
+    )
 
     app_base = settings.bluefolder_base_url.rstrip("/")
     for suffix in ("/api/2.0", "/api/2", "/api"):
@@ -4632,11 +6478,99 @@ def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[
         "number": number or work_order_id,
         "subject": subject,
         "description": description,
-        "created_at": created_at,
+        "created_at": normalize_bluefolder_datetime(created_at),
         "customer": customer,
         "link": link,
+        "created_by_user_id": created_by_user_id,
+        "bluefolder_status": bluefolder_status,
+        "bluefolder_billing_status": bluefolder_billing_status,
+        "bluefolder_date_time_closed": bluefolder_date_time_closed,
+        "bluefolder_workflow_status": bluefolder_workflow_status,
         "bluefolder_assignee_user_ids": extract_bluefolder_assignee_user_ids(item),
     }
+
+
+def bluefolder_import_record(
+    fields: Dict[str, Any], assignees: List[Dict[str, str]]
+) -> Dict[str, Any]:
+    return {
+        "service_request_id": str(fields.get("id") or "").strip(),
+        "number": str(fields.get("number") or fields.get("id") or "").strip(),
+        "subject": str(fields.get("subject") or "")[:1200],
+        "description": str(fields.get("description") or "")[:1800],
+        "customer": str(fields.get("customer") or "")[:220],
+        "bluefolder_url": str(fields.get("link") or "")[:1200],
+        "created_at": str(fields.get("created_at") or "")[:80],
+        "bluefolder_status": str(fields.get("bluefolder_status") or "")[:220],
+        "bluefolder_billing_status": str(
+            fields.get("bluefolder_billing_status") or ""
+        )[:220],
+        "bluefolder_date_time_closed": str(
+            fields.get("bluefolder_date_time_closed") or ""
+        )[:80],
+        "bluefolder_workflow_status": str(
+            fields.get("bluefolder_workflow_status") or ""
+        )[:220],
+        "bluefolder_assignees": list(assignees or []),
+    }
+
+
+def record_successful_bluefolder_import(
+    state: StateStore,
+    work_order_id: str,
+    record: Dict[str, Any],
+    result: Dict[str, Any],
+) -> None:
+    records = state.data.setdefault("processed_work_order_ids", {})
+    existing = records.get(str(work_order_id))
+    saved = dict(existing) if isinstance(existing, dict) else {}
+    # Preserve historical/baseline markers and any authoritative receipt that
+    # was already known locally. The import response is retained separately as
+    # Magmo's source of truth for placement.
+    saved.update(
+        {
+            "number": str(record.get("number") or work_order_id),
+            "service_request_id": str(
+                record.get("service_request_id") or work_order_id
+            ),
+            "subject": str(record.get("subject") or "")[:1200],
+            "description": str(record.get("description") or "")[:1800],
+            "customer": str(record.get("customer") or "")[:220],
+            "created_at": str(record.get("created_at") or "")[:80],
+            "bluefolder_url": str(record.get("bluefolder_url") or "")[:1200],
+            "bluefolder_status": str(record.get("bluefolder_status") or "")[:220],
+            "bluefolder_billing_status": str(
+                record.get("bluefolder_billing_status") or ""
+            )[:220],
+            "bluefolder_date_time_closed": str(
+                record.get("bluefolder_date_time_closed") or ""
+            )[:80],
+            "bluefolder_workflow_status": str(
+                record.get("bluefolder_workflow_status") or ""
+            )[:220],
+            "bluefolder_assignees": list(
+                record.get("bluefolder_assignees") or []
+            ),
+            "processed_at": saved.get("processed_at") or utc_now_iso(),
+            "ops_created_at": saved.get("ops_created_at") or utc_now_iso(),
+            "magmo_imported_at": utc_now_iso(),
+            "magmo_import_created": bool(result.get("created")),
+            "magmo_import_idempotent_replay": bool(
+                result.get("idempotentReplay")
+            ),
+            "magmo_import_request_id": str(result.get("requestId") or "")[:180],
+            "magmo_import_api_version": str(result.get("apiVersion") or "")[:120],
+            "magmo_import_applied_changes": dict(
+                result.get("appliedChanges") or {}
+            ),
+            "magmo_authoritative_after": dict(result.get("after") or {}),
+            "dispatch_owner": saved.get("dispatch_owner") or "magmo_pending",
+        }
+    )
+    state.mark_processed(str(work_order_id), saved)
+    state.clear_pending_magmo_import(str(work_order_id))
+    state.mark_latest_processed_work_order(record.get("number") or work_order_id)
+    state.save()
 
 
 def build_slack_title(fields: Dict[str, str]) -> str:
@@ -4706,22 +6640,124 @@ def slack_thread_from_permalink(permalink: str) -> Tuple[str, str]:
     return channel, f"{digits[:-6]}.{digits[-6:]}"
 
 
-def filter_new_items(items: List[Dict[str, Any]], state: StateStore) -> List[Dict[str, Any]]:
+def dispatch_root_proves_work_order(
+    message: Dict[str, Any],
+    work_order_number: str,
+    service_request_id: str = "",
+) -> bool:
+    """Require an exact numeric root and reject conflicting BF identity."""
+    return is_exact_work_order_root(
+        message,
+        work_order_number,
+        service_request_id,
+    )
+
+
+def magmo_dispatch_receipt(
+    context: Dict[str, Any], expected_number: str
+) -> Tuple[str, str, str]:
+    """Extract only an exact Dispatch receipt from authoritative Magmo context."""
+    if not isinstance(context, dict):
+        return "", "", ""
+    returned_number = str(context.get("number") or "").strip()
+    if returned_number and returned_number != str(expected_number or "").strip():
+        return "", "", ""
+    nested = context.get("dispatchReceipt")
+    receipt = nested if isinstance(nested, dict) else {}
+    channel = str(
+        context.get("slackChannel") or receipt.get("slackChannel") or ""
+    ).strip()
+    thread_ts = str(
+        context.get("slackThreadTs") or receipt.get("slackThreadTs") or ""
+    ).strip()
+    permalink = str(
+        context.get("slackPermalink") or receipt.get("slackPermalink") or ""
+    ).strip()
+    if channel != "C07EPLKV9JT" or not re.fullmatch(
+        r"\d{8,}(?:\.\d{1,9})?", thread_ts
+    ):
+        return "", "", ""
+    if permalink:
+        permalink_channel, permalink_ts = slack_thread_from_permalink(permalink)
+        if permalink_channel != channel or permalink_ts != thread_ts:
+            return "", "", ""
+    return channel, thread_ts, permalink
+
+
+def fetch_authoritative_work_order_context(
+    ops: MagmoOpsIngestClient,
+    service_request_id: str,
+    work_order_number: str,
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Resolve context by immutable identity, with a legacy-number fallback."""
+    service_request_id = str(service_request_id or "").strip()
+    work_order_number = str(work_order_number or service_request_id).strip()
+    identities = list(
+        dict.fromkeys(
+            identity
+            for identity in (service_request_id, work_order_number)
+            if identity
+        )
+    )
+    for identity in identities:
+        context = ops.work_order_context(
+            identity,
+            expected_number=work_order_number,
+        )
+        if context is not None:
+            return context, identity
+    return None, service_request_id or work_order_number
+
+
+def work_order_age_seconds(created_at: str) -> Optional[float]:
+    created = parse_dt(created_at)
+    if created is None:
+        return None
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return max(0.0, (datetime.now(timezone.utc) - created).total_seconds())
+
+
+def numeric_work_order_number(value: Any) -> Optional[int]:
+    match = re.search(r"\d+", str(value or ""))
+    return int(match.group(0)) if match else None
+
+
+def filter_new_items(
+    items: List[Dict[str, Any]], state: StateStore, settings: Settings
+) -> List[Dict[str, Any]]:
     candidates = []
+    cutover = numeric_work_order_number(state.data.get("cutover_work_order_number"))
     last_seen = parse_dt(state.get_last_seen_created_at())
+    pending_imports = state.data.get("pending_magmo_imports", {})
 
     for item in items:
-        fields = extract_work_order_fields(item, SETTINGS)
+        fields = extract_work_order_fields(item, settings)
         work_order_id = fields["id"]
         if not work_order_id:
             continue
         if state.is_processed(work_order_id):
             continue
+        pending = pending_imports.get(str(work_order_id))
+        if isinstance(pending, dict) and pending.get("retryable") is False:
+            # Invalid/ambiguous requests must not be replayed unchanged on every
+            # polling cycle. They remain visible in state for operator repair.
+            continue
 
-        created_at = parse_dt(fields["created_at"])
-        external_id = nested_value_by_key(item, "externalId")
-        is_website_intake = external_id.startswith("AIS-WEB-")
-        if last_seen and created_at and created_at < last_seen and not is_website_intake:
+        # The reconciled cutover is an independent safety boundary. State keys
+        # can vary between BlueFolder ID and display number, so relying only on
+        # is_processed() could repost a historical order under its alternate ID.
+        item_number = numeric_work_order_number(fields.get("number"))
+        if cutover is not None and item_number is not None and item_number <= cutover:
+            continue
+
+        created = parse_dt(fields.get("created_at"))
+        if pending is None and last_seen and created and created <= last_seen:
+            # The all-status poll intentionally sees closed historical records
+            # that the old open-only listener never saw. The frozen backfill
+            # handles those without adopting/replaying their Slack threads.
+            # Only already-pending records and genuinely newer creations belong
+            # in the continuous listener path.
             continue
 
         candidates.append(item)
@@ -4735,25 +6771,489 @@ def filter_new_items(items: List[Dict[str, Any]], state: StateStore) -> List[Dic
     )
 
 
+def remember_bluefolder_context_candidates(
+    settings: Settings,
+    state: StateStore,
+    work_orders: List[Dict[str, Any]],
+) -> int:
+    """Remember a read-only catalog for API context discovery.
+
+    The secure Ops API intentionally has no broad work-order listing method.
+    BlueFolder's complete list supplies identities only; this function never
+    imports historical records. ``work_order.command_context`` later decides
+    whether a candidate already exists in Magmo and is eligible to monitor.
+    """
+    queue = state.data.setdefault("ops_context_candidates", {})
+    changed = 0
+    for item in work_orders:
+        fields = extract_work_order_fields(item, settings)
+        service_request_id = str(fields.get("id") or "").strip()
+        number = str(fields.get("number") or service_request_id).strip()
+        if not service_request_id or not number.isdigit():
+            continue
+        existing = queue.get(service_request_id)
+        candidate = dict(existing) if isinstance(existing, dict) else {}
+        before = dict(candidate)
+        candidate.update(
+            {
+                "service_request_id": service_request_id,
+                "number": number,
+                "created_at": str(fields.get("created_at") or "")[:80],
+            }
+        )
+        if before != candidate:
+            queue[service_request_id] = candidate
+            changed += 1
+    health = state.data.setdefault("health", {})
+    health["ops_context_candidate_count"] = len(queue)
+    if changed:
+        state.save()
+    return changed
+
+
+def _api_context_candidates(
+    state: StateStore,
+) -> List[Tuple[int, str, str, str, Dict[str, Any], Dict[str, Any]]]:
+    """Return de-duplicated candidates ordered by monitoring importance."""
+    processed = state.data.setdefault("processed_work_order_ids", {})
+    queue = state.data.setdefault("ops_context_candidates", {})
+    by_number: Dict[
+        str, Tuple[int, str, str, str, Dict[str, Any], Dict[str, Any]]
+    ] = {}
+
+    for work_order_id, raw_record in processed.items():
+        record = raw_record if isinstance(raw_record, dict) else {}
+        number = monitoring_work_order_number(work_order_id, record)
+        service_request_id = monitoring_service_request_id(work_order_id, record)
+        if not number.isdigit():
+            continue
+        important = bool(
+            record.get("ops_created_at")
+            or record.get("magmo_imported_at")
+            or record.get("discovered_from_existing_magmo")
+            or not record.get("baseline")
+        )
+        if not important:
+            continue
+        metadata = record
+        priority = 0
+        by_number[number] = (
+            priority,
+            str(work_order_id),
+            number,
+            service_request_id,
+            record,
+            metadata,
+        )
+
+    for service_request_id, raw_candidate in queue.items():
+        candidate = raw_candidate if isinstance(raw_candidate, dict) else {}
+        number = str(candidate.get("number") or service_request_id).strip()
+        if not number.isdigit() or number in by_number:
+            continue
+        raw_record = processed.get(str(service_request_id))
+        record = raw_record if isinstance(raw_record, dict) else {}
+        by_number[number] = (
+            1,
+            str(service_request_id),
+            number,
+            str(candidate.get("service_request_id") or service_request_id),
+            record,
+            candidate,
+        )
+
+    def order_key(
+        item: Tuple[int, str, str, str, Dict[str, Any], Dict[str, Any]]
+    ) -> Tuple[int, float, int]:
+        priority, _key, number, _service_id, _record, metadata = item
+        refreshed = parse_dt(
+            str(
+                metadata.get("last_context_checked_at")
+                or metadata.get("ops_context_refreshed_at")
+                or ""
+            )
+        )
+        refreshed_ts = refreshed.timestamp() if refreshed else 0.0
+        return priority, refreshed_ts, int(number)
+
+    return sorted(by_number.values(), key=order_key)
+
+
+def hydrate_work_order_contexts_from_ops_api(
+    settings: Settings,
+    state: StateStore,
+    ops: MagmoOpsIngestClient,
+) -> int:
+    """Refresh API-backed lifecycle/receipt state without replaying evidence."""
+    if not callable(getattr(ops, "work_order_context", None)):
+        return 0
+    candidates = _api_context_candidates(state)
+    if not candidates:
+        return 0
+
+    now = datetime.now(timezone.utc)
+    eligible = []
+    for candidate in candidates:
+        metadata = candidate[5]
+        missing_at = parse_dt(str(metadata.get("ops_context_missing_at") or ""))
+        if missing_at and (now - missing_at).total_seconds() < 3600:
+            continue
+        eligible.append(candidate)
+    batch_size = max(1, int(settings.ops_api_context_refresh_batch))
+    primary = [candidate for candidate in eligible if candidate[0] == 0]
+    discovery = [candidate for candidate in eligible if candidate[0] != 0]
+    if batch_size == 1 and primary and discovery:
+        lane = str(
+            state.data.get("ops_context_refresh_lane") or "primary"
+        ).strip().lower()
+        if lane == "discovery":
+            selected_primary = []
+            selected_discovery = discovery[:1]
+            state.data["ops_context_refresh_lane"] = "primary"
+        else:
+            selected_primary = primary[:1]
+            selected_discovery = []
+            state.data["ops_context_refresh_lane"] = "discovery"
+    else:
+        discovery_slots = min(len(discovery), max(1, batch_size // 2))
+        selected_primary = primary[: max(0, batch_size - discovery_slots)]
+        selected_discovery = discovery[:discovery_slots]
+    selected = selected_primary + selected_discovery
+    if len(selected) < batch_size:
+        remaining = batch_size - len(selected)
+        selected.extend(
+            primary[len(selected_primary) : len(selected_primary) + remaining]
+        )
+    if len(selected) < batch_size:
+        remaining = batch_size - len(selected)
+        selected.extend(
+            discovery[
+                len(selected_discovery) : len(selected_discovery) + remaining
+            ]
+        )
+    # A successful import can already be hydrated into processed records while
+    # its response acknowledgement is still pending. Give those records a
+    # bounded read-only reconciliation lane; the rest of the batch continues
+    # the normal monitoring/discovery sweep. Failed reads rotate by check time.
+    pending_imports = state.data.get("pending_magmo_imports") or {}
+    pending_candidates = [
+        candidate for candidate in eligible
+        if str(candidate[3]) in pending_imports
+    ]
+    if pending_candidates:
+        pending_candidates.sort(
+            key=lambda candidate: (
+                str(candidate[5].get("last_context_checked_at") or ""),
+                int(candidate[2]),
+            )
+        )
+        regular_candidates = [
+            candidate for candidate in selected
+            if str(candidate[3]) not in pending_imports
+        ]
+        regular_keys = {candidate[1] for candidate in regular_candidates}
+        regular_candidates.extend(
+            candidate for candidate in eligible
+            if str(candidate[3]) not in pending_imports
+            and candidate[1] not in regular_keys
+        )
+        pending_slots = min(len(pending_candidates), max(1, batch_size // 2))
+        if not regular_candidates:
+            pending_slots = min(len(pending_candidates), batch_size)
+        elif batch_size == 1:
+            lane = state.data.get("ops_pending_context_refresh_lane", "pending")
+            pending_slots = 0 if lane == "regular" else 1
+            state.data["ops_pending_context_refresh_lane"] = (
+                "pending" if lane == "regular" else "regular"
+            )
+        selected = (
+            pending_candidates[:pending_slots]
+            + regular_candidates[: batch_size - pending_slots]
+        )
+        if len(selected) < batch_size:
+            selected.extend(
+                pending_candidates[
+                    pending_slots : pending_slots + batch_size - len(selected)
+                ]
+            )
+    if not selected:
+        return 0
+
+    processed = state.data.setdefault("processed_work_order_ids", {})
+    thread_states = state.data.setdefault("ops_thread_state", {})
+    canonical_dispatch = str(settings.ops_conversation_channel_id or "").strip()
+    refreshed_count = 0
+    found_count = 0
+
+    for (
+        _priority,
+        state_key,
+        number,
+        service_request_id,
+        record,
+        metadata,
+    ) in selected:
+        checked_at = utc_now_iso()
+        try:
+            context, resolved_ops_id = fetch_authoritative_work_order_context(
+                ops,
+                service_request_id,
+                number,
+            )
+            if context is not None:
+                returned_id = str(
+                    context.get("workOrderId") or context.get("serviceRequestId") or ""
+                ).strip()
+                returned_number = str(context.get("number") or "").strip()
+                returned_bluefolder_id = str(
+                    (context.get("blueFolder") or {}).get("serviceRequestId") or ""
+                ).strip() if isinstance(context.get("blueFolder"), dict) else ""
+                if returned_id != resolved_ops_id or returned_number != number:
+                    raise RuntimeError("Magmo context did not match the requested work-order identity and number.")
+                if returned_bluefolder_id and returned_bluefolder_id != service_request_id:
+                    raise RuntimeError("Magmo context returned a different BlueFolder service-request identity.")
+        except Exception as exc:
+            metadata["ops_context_refresh_error"] = str(exc)[:600]
+            metadata["last_context_checked_at"] = checked_at
+            logging.warning(
+                "Magmo context refresh failed for work order %s; it will retry: %s",
+                number,
+                exc,
+            )
+            refreshed_count += 1
+            continue
+
+        metadata["last_context_checked_at"] = checked_at
+        metadata.pop("ops_context_refresh_error", None)
+        refreshed_count += 1
+        if context is None:
+            metadata["ops_context_missing_at"] = checked_at
+            if record and (
+                record.get("ops_created_at")
+                or record.get("discovered_from_existing_magmo")
+            ):
+                record["ops_missing_from_magmo"] = True
+                record["ops_context_refreshed_at"] = checked_at
+            continue
+
+        # A missing work order is not proof of deletion. Only a validated,
+        # exact-identity command context may supply a persisted tombstone.
+        # Keep tombstoned rows in the context refresh rotation so restoring
+        # the Magmo row resumes monitoring without losing any Slack cursor.
+        if context.get("deleted") is True:
+            deleted_at = str(context.get("deletedAt") or "").strip()
+            if parse_dt(deleted_at) is None:
+                metadata["ops_context_refresh_error"] = "Invalid Magmo tombstone timestamp."
+                continue
+            saved = record if isinstance(record, dict) else {}
+            first_observation = not saved.get("ops_tombstone_source")
+            saved.update({
+                "number": number,
+                "service_request_id": service_request_id,
+                "ops_work_order_id": resolved_ops_id,
+                "ops_deleted_at": deleted_at,
+                "ops_tombstone_source": "work_order.command_context",
+                "ops_monitoring_suppressed_reason": "magmo_confirmed_deleted",
+                "ops_context_refreshed_at": checked_at,
+                "last_context_checked_at": checked_at,
+                "discovered_from_existing_magmo": True,
+            })
+            saved.setdefault("ops_monitoring_suppressed_at", checked_at)
+            saved.pop("ops_context_missing_at", None)
+            saved.pop("ops_missing_from_magmo", None)
+            if first_observation:
+                audit = list(saved.get("ops_monitoring_audit") or [])
+                audit.append({"action": "suppressed", "reason": "magmo_confirmed_deleted", "at": checked_at, "deletedAt": deleted_at, "workOrderId": resolved_ops_id})
+                saved["ops_monitoring_audit"] = audit[-20:]
+                logging.info("Stopped evidence retries for confirmed deleted Magmo work order %s; read-only context checks continue", number)
+            processed[state_key] = saved
+            continue
+        if record.get("ops_tombstone_source") and context.get("deleted") is not False:
+            # An older API build omitting the field is not proof of restore.
+            metadata["ops_context_refresh_error"] = "Magmo context did not explicitly clear its saved tombstone."
+            continue
+
+        found_count += 1
+        metadata.pop("ops_context_missing_at", None)
+        saved = record if isinstance(record, dict) else {}
+        saved["number"] = number
+        saved["service_request_id"] = str(
+            (
+                context.get("blueFolder", {}).get("serviceRequestId")
+                if isinstance(context.get("blueFolder"), dict)
+                else ""
+            )
+            or service_request_id
+        ).strip()
+        saved["ops_work_order_id"] = str(
+            context.get("workOrderId") or resolved_ops_id or number
+        ).strip()
+        for local_key, context_key, limit in (
+            ("subject", "subject", 1200),
+            ("description", "description", 1800),
+            ("customer", "customer", 220),
+            ("created_at", "createdAt", 80),
+        ):
+            value = str(context.get(context_key) or "").strip()
+            if value:
+                saved[local_key] = value[:limit]
+        workflow_status = str(
+            context.get("workflowStatus")
+            or context.get("workflow_status")
+            or ""
+        ).strip()
+        status = str(context.get("status") or "").strip()
+        if workflow_status:
+            saved["ops_workflow_status"] = workflow_status
+        if status:
+            saved["ops_status"] = status
+        saved["ops_created_at"] = saved.get("ops_created_at") or checked_at
+        saved["processed_at"] = saved.get("processed_at") or checked_at
+        saved["discovered_from_existing_magmo"] = True
+        saved["ops_context_refreshed_at"] = checked_at
+        saved["latest_ingested_slack_ts"] = str(
+            context.get("latestIngestedSlackTs")
+            or context.get("latest_ingested_slack_ts")
+            or ""
+        ).strip()
+        saved.pop("baseline", None)
+        saved.pop("ops_missing_from_magmo", None)
+        if saved.pop("ops_tombstone_source", None):
+            audit = list(saved.get("ops_monitoring_audit") or [])
+            audit.append({"action": "restored", "reason": "magmo_confirmed_restored", "at": checked_at, "workOrderId": resolved_ops_id})
+            saved["ops_monitoring_audit"] = audit[-20:]
+            saved.pop("ops_monitoring_suppressed_reason", None)
+            saved.pop("ops_monitoring_suppressed_at", None)
+            logging.info("Resumed evidence monitoring for restored Magmo work order %s", number)
+        for deletion_key in ("ops_deleted_at", "deleted_at", "deletedAt"):
+            saved.pop(deletion_key, None)
+
+        if ops_record_is_closed(saved):
+            saved["ops_closed_at"] = saved.get("ops_closed_at") or checked_at
+        else:
+            saved.pop("ops_closed_at", None)
+            saved.pop("bluefolder_date_time_closed", None)
+            if (
+                str(saved.get("bluefolder_workflow_stage") or "")
+                .strip()
+                .lower()
+                == "closed"
+            ):
+                saved.pop("bluefolder_workflow_stage", None)
+
+        channel, root_ts, permalink = magmo_dispatch_receipt(context, number)
+        current_channel = str(saved.get("slack_channel") or "").strip()
+        current_ts = str(saved.get("slack_ts") or "").strip()
+        if current_channel and current_channel != canonical_dispatch:
+            saved.setdefault("source_slack_channel", current_channel)
+            saved.setdefault("source_slack_ts", current_ts)
+            if saved.get("slack_permalink"):
+                saved.setdefault(
+                    "source_slack_permalink", saved.get("slack_permalink")
+                )
+            saved["slack_channel"] = ""
+            saved["slack_ts"] = ""
+            saved["slack_permalink"] = ""
+        if channel == canonical_dispatch and slack_ts_number(root_ts) > 0:
+            saved["slack_channel"] = channel
+            saved["slack_ts"] = root_ts
+            if permalink:
+                saved["slack_permalink"] = permalink
+            saved["ops_conversation_channel"] = channel
+            saved["ops_conversation_ts"] = root_ts
+            if permalink:
+                saved["ops_conversation_permalink"] = permalink
+            saved["dispatch_owner"] = "magmo"
+
+            local_thread_key = f"{channel}:{root_ts}"
+            if local_thread_key not in thread_states:
+                watermark = str(saved.get("latest_ingested_slack_ts") or "").strip()
+                has_watermark = bool(
+                    re.fullmatch(r"[0-9]+\.[0-9]+", watermark)
+                    and slack_ts_number(watermark) >= slack_ts_number(root_ts)
+                )
+                initial_cursor = (
+                    watermark if has_watermark else root_ts
+                )
+                thread_states[local_thread_key] = {
+                    "last_message_ts": initial_cursor,
+                    "work_order_id": number,
+                    "state_record_id": state_key,
+                    "watermark_source": (
+                        "magmo_latest_ingested_slack_ts"
+                        if has_watermark
+                        else "dispatch_root"
+                    ),
+                    **(
+                        {
+                            "parent_seed_through_ts": initial_cursor,
+                        }
+                        if has_watermark
+                        else {}
+                    ),
+                }
+
+        processed[state_key] = saved
+        pending_import = pending_imports.get(str(service_request_id))
+        if (
+            isinstance(pending_import, dict)
+            and str(pending_import.get("number") or service_request_id).strip() == number
+            and (
+                returned_bluefolder_id == service_request_id
+                or (not returned_bluefolder_id and returned_id == service_request_id)
+            )
+            and state.clear_pending_magmo_import(service_request_id)
+        ):
+            # The authoritative read proves this exact import already exists.
+            # Do not replay the import, change receipts, or reset any cursors.
+            saved["magmo_import_acknowledged_from_context_at"] = checked_at
+            latest_number = numeric_work_order_number(
+                state.data.get("health", {}).get("latest_processed_work_order")
+            )
+            if latest_number is None or int(number) > latest_number:
+                state.mark_latest_processed_work_order(number)
+
+    health = state.data.setdefault("health", {})
+    health["last_ops_context_refresh"] = utc_now_iso()
+    health["ops_context_refresh_batch_count"] = refreshed_count
+    health["ops_context_refresh_found_count"] = found_count
+    state.save()
+    return refreshed_count
+
+
 def ops_work_order_records(
-    settings: Settings, state: StateStore
+    settings: Settings,
+    state: StateStore,
+    *,
+    include_completed: bool = False,
 ) -> List[Tuple[str, Dict[str, Any]]]:
+    """Return monitoring candidates regardless of saved Slack coordinates.
+
+    ``include_completed`` remains for compatibility. Done and Service complete
+    are always included; only Closed or deleted records are terminal.
+    """
     records: List[Tuple[str, Dict[str, Any]]] = []
     for work_order_id, raw_record in state.data.get(
         "processed_work_order_ids", {}
     ).items():
         record = raw_record if isinstance(raw_record, dict) else {}
+        if (
+            record.get("baseline")
+            or ops_record_is_closed(record)
+            or ops_record_is_deleted(record)
+        ):
+            continue
+        if record.get("discovered_from_existing_magmo") or record.get(
+            "ops_created_at"
+        ):
+            records.append((str(work_order_id), record))
+            continue
         channel = str(record.get("slack_channel") or "").strip()
         thread_ts = str(record.get("slack_ts") or "").strip()
         if (
-            record.get("baseline")
-            or record.get("ops_completed_at")
-            or not channel
-            or not thread_ts
-            or thread_ts == "0.000000"
+            channel != PRODUCTION_DISPATCH_CHANNEL_ID
+            or slack_ts_number(thread_ts) <= 0
         ):
-            continue
-        if settings.ops_testing_channel_id and channel != settings.ops_testing_channel_id:
             continue
         records.append((str(work_order_id), record))
     return sorted(
@@ -4769,6 +7269,14 @@ def sync_work_order_to_ops(
     work_order_id: str,
     record: Dict[str, Any],
 ) -> bool:
+    if not getattr(ops, "supports_extended_sync", False):
+        # API mode proves existence through work_order.command_context. It may
+        # never manufacture a record with the legacy Slack-bound create event.
+        return bool(
+            record.get("ops_context_refreshed_at")
+            and record.get("discovered_from_existing_magmo")
+            and record.get("ops_work_order_id")
+        )
     if record.get("ops_created_at") or record.get("ops_completed_at"):
         return True
     try:
@@ -4792,29 +7300,84 @@ def sync_work_order_to_ops(
 def sync_pending_work_orders(
     settings: Settings, state: StateStore, ops: FirebaseOpsClient
 ) -> None:
+    # The secure ingest client must never fall back to the legacy
+    # Slack-coordinate-bearing work_order.created contract. BlueFolder-only
+    # records are handled exclusively by work_order.imported in process_once.
+    if not getattr(ops, "supports_extended_sync", False):
+        return
+    cutover = numeric_work_order_number(state.data.get("cutover_work_order_number"))
     for work_order_id, record in ops_work_order_records(settings, state):
+        number = numeric_work_order_number(record.get("number") or work_order_id)
+        if cutover is not None and number is not None and number <= cutover:
+            continue
         if not record.get("ops_created_at"):
             sync_work_order_to_ops(state, ops, work_order_id, record)
 
 
 def hydrate_intake_threads_from_ops(
-    state: StateStore, ops: FirebaseOpsClient
+    settings: Settings, state: StateStore, ops: FirebaseOpsClient
 ) -> int:
+    """Refresh authoritative Magmo eligibility without resetting cursors."""
     hydrated = 0
-    for work_order_id, incoming in ops.active_intake_thread_records():
-        existing = state.data.setdefault("processed_work_order_ids", {}).get(
-            work_order_id
-        )
+    canonical_dispatch = str(settings.ops_conversation_channel_id or "").strip()
+    # Finish the read before changing state. A failed Firestore stream must not
+    # be interpreted as deleted work orders.
+    incoming_records = list(ops.existing_work_order_records())
+    existing_ids = {str(work_order_id) for work_order_id, _ in incoming_records}
+    processed = state.data.setdefault("processed_work_order_ids", {})
+    for work_order_id, incoming in incoming_records:
+        work_order_id = str(work_order_id)
+        existing = processed.get(work_order_id)
         record = existing if isinstance(existing, dict) else {}
-        if (
-            str(record.get("slack_channel") or "") == incoming["slack_channel"]
-            and str(record.get("slack_ts") or "") == incoming["slack_ts"]
-        ):
-            continue
-        record.update(incoming)
+        before = dict(record)
+        for key, value in incoming.items():
+            if key in {"slack_channel", "slack_ts", "slack_permalink"}:
+                # Blank or legacy coordinates cannot erase a locally verified
+                # Dispatch root. Newly supplied coordinates are reverified by
+                # resolve_ops_conversation_thread before they are read.
+                if (
+                    str(incoming.get("slack_channel") or "").strip()
+                    == canonical_dispatch
+                    and slack_ts_number(incoming.get("slack_ts")) > 0
+                ):
+                    if value:
+                        record[key] = value
+                elif key not in record:
+                    record[key] = ""
+            elif key == "ops_created_at":
+                record.setdefault(key, value)
+            else:
+                record[key] = value
+        record.pop("baseline", None)
+        record.pop("ops_missing_from_magmo", None)
+        for key in ("ops_deleted_at", "deleted_at", "deletedAt"):
+            record.pop(key, None)
+        if not ops_record_is_closed(incoming):
+            # An authoritative reopen clears stale terminal markers without
+            # resetting a Slack message watermark.
+            record.pop("ops_closed_at", None)
+            record.pop("bluefolder_date_time_closed", None)
+            if (
+                str(record.get("bluefolder_workflow_stage") or "").lower()
+                == "closed"
+            ):
+                record.pop("bluefolder_workflow_stage", None)
         record["processed_at"] = record.get("processed_at") or utc_now_iso()
-        state.mark_processed(work_order_id, record)
-        hydrated += 1
+        if before != record:
+            state.mark_processed(work_order_id, record)
+            hydrated += 1
+    for work_order_id, record in processed.items():
+        if (
+            str(work_order_id) not in existing_ids
+            and isinstance(record, dict)
+            and (
+                record.get("discovered_from_existing_magmo")
+                or record.get("ops_created_at")
+            )
+            and not record.get("ops_missing_from_magmo")
+        ):
+            record["ops_missing_from_magmo"] = True
+            hydrated += 1
     if hydrated:
         state.save()
     return hydrated
@@ -4840,6 +7403,8 @@ def sync_bluefolder_assignment_updates(
     for work_order_id, raw_record in processed_records.items():
         record = raw_record if isinstance(raw_record, dict) else {}
         if record.get("baseline"):
+            continue
+        if str(record.get("slack_channel") or "").strip() != "C07EPLKV9JT":
             continue
         item = items_by_id.get(str(work_order_id)) or items_by_id.get(
             str(record.get("number") or "")
@@ -4879,6 +7444,36 @@ def sync_bluefolder_assignment_updates(
     return updated_count
 
 
+def ops_conversation_lookup_anchor(
+    record: Dict[str, Any],
+    original_channel: str,
+    target_channel: str,
+) -> str:
+    """Choose a useful timestamp anchor when discovering an existing root."""
+    original_ts = str(record.get("slack_ts") or "").strip()
+    if not target_channel or target_channel == original_channel:
+        return original_ts
+    created_at = parse_dt(
+        str(
+            record.get("bluefolder_created_at")
+            or record.get("created_at")
+            or ""
+        )
+    )
+    if not created_at:
+        return original_ts
+    if created_at.tzinfo is None:
+        try:
+            created_at = created_at.replace(
+                tzinfo=ZoneInfo(
+                    os.getenv("OPS_LOCAL_TIMEZONE", "America/Los_Angeles")
+                )
+            )
+        except Exception:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+    return f"{created_at.timestamp():.6f}"
+
+
 def resolve_ops_conversation_thread(
     settings: Settings,
     state: StateStore,
@@ -4887,32 +7482,132 @@ def resolve_ops_conversation_thread(
     work_order_id: str,
     record: Dict[str, Any],
 ) -> Tuple[str, str]:
+    work_order_number = monitoring_work_order_number(work_order_id, record)
+    service_request_id = monitoring_service_request_id(work_order_id, record)
     original_channel = str(record.get("slack_channel") or "").strip()
     original_ts = str(record.get("slack_ts") or "").strip()
     target_channel = str(settings.ops_conversation_channel_id or "").strip()
-    if not target_channel or target_channel == original_channel:
-        return original_channel, original_ts
+    if target_channel != PRODUCTION_DISPATCH_CHANNEL_ID:
+        return "", ""
+
+    def adopt_dispatch(
+        conversation_ts: str, permalink: str = "", *, source: str
+    ) -> Tuple[str, str]:
+        conversation_ts = str(conversation_ts or "").strip()
+        if slack_ts_number(conversation_ts) <= 0:
+            return target_channel, ""
+        if original_channel and original_channel != target_channel:
+            # Keep the legacy source for audit only. These primary coordinates
+            # are the only ones used for future message monitoring.
+            record.setdefault("source_slack_channel", original_channel)
+            record.setdefault("source_slack_ts", original_ts)
+            if record.get("slack_permalink"):
+                record.setdefault(
+                    "source_slack_permalink", record.get("slack_permalink")
+                )
+        record["slack_channel"] = target_channel
+        record["slack_ts"] = conversation_ts
+        if permalink:
+            record["slack_permalink"] = permalink
+        record["ops_conversation_channel"] = target_channel
+        record["ops_conversation_ts"] = conversation_ts
+        record["ops_conversation_permalink"] = (
+            permalink
+            or str(record.get("ops_conversation_permalink") or "").strip()
+        )
+        record["ops_conversation_linked_at"] = utc_now_iso()
+        record["ops_conversation_link_source"] = source
+        record["ops_conversation_verified_identity"] = (
+            f"{work_order_number}:{service_request_id}:"
+            f"{target_channel}:{conversation_ts}"
+        )
+        record.pop("ops_thread_lookup_error", None)
+        state.save()
+        return target_channel, conversation_ts
+
+    def verified_saved_root(candidate_ts: str) -> bool:
+        if (
+            not re.fullmatch(r"[0-9]+\.[0-9]+", candidate_ts)
+            or slack_ts_number(candidate_ts) <= 0
+        ):
+            return False
+        identity = (
+            f"{work_order_number}:{service_request_id}:"
+            f"{target_channel}:{candidate_ts}"
+        )
+        if record.get("ops_conversation_verified_identity") == identity:
+            return True
+        try:
+            parent = slack.thread_parent(target_channel, candidate_ts)
+        except SlackRateLimited:
+            raise
+        except Exception:
+            return False
+        return (
+            str(parent.get("ts") or "").strip() == candidate_ts
+            and is_exact_work_order_root(
+                parent, work_order_number, service_request_id
+            )
+        )
+
+    def dispatch_permalink(candidate_ts: str, current: str) -> str:
+        current = str(current or "").strip()
+        if current:
+            return current
+        try:
+            return slack.get_permalink(target_channel, candidate_ts)
+        except Exception as exc:
+            logging.warning(
+                "Verified Dispatch thread for work order %s but could not "
+                "refresh its permalink: %s",
+                work_order_number,
+                exc,
+            )
+            return ""
+
+    if target_channel == original_channel and verified_saved_root(original_ts):
+        return adopt_dispatch(
+            original_ts,
+            dispatch_permalink(original_ts, record.get("slack_permalink")),
+            source="canonical_primary",
+        )
 
     linked_channel = str(record.get("ops_conversation_channel") or "").strip()
     linked_ts = str(record.get("ops_conversation_ts") or "").strip()
-    if linked_channel == target_channel and linked_ts:
-        return linked_channel, linked_ts
+    if linked_channel == target_channel and verified_saved_root(linked_ts):
+        return adopt_dispatch(
+            linked_ts,
+            dispatch_permalink(
+                linked_ts, record.get("ops_conversation_permalink")
+            ),
+            source="canonical_saved_link",
+        )
 
     last_attempt = parse_dt(record.get("ops_thread_lookup_attempted_at"))
     if last_attempt:
         elapsed = (datetime.now(timezone.utc) - last_attempt).total_seconds()
         if elapsed < max(5, settings.ops_thread_lookup_retry_seconds):
-            return original_channel, original_ts
+            return target_channel, ""
 
     record["ops_thread_lookup_attempted_at"] = utc_now_iso()
+    lookup_anchor = ops_conversation_lookup_anchor(
+        record, original_channel, target_channel
+    )
     match = slack.find_work_order_thread(
         target_channel,
-        work_order_id,
-        near_ts=original_ts,
+        work_order_number,
+        service_request_id=service_request_id,
+        near_ts=lookup_anchor,
         window_seconds=settings.ops_thread_lookup_window_seconds,
     )
-    if not match:
-        return original_channel, original_ts
+    if not is_exact_work_order_root(
+        match, work_order_number, service_request_id
+    ):
+        record["ops_thread_lookup_error"] = (
+            "No exact work-order root was found in the configured Dispatch channel."
+        )
+        state.save()
+        return target_channel, ""
 
     conversation_ts = str(match.get("ts") or "").strip()
     permalink = ""
@@ -4921,28 +7616,20 @@ def resolve_ops_conversation_thread(
     except Exception as exc:
         logging.warning(
             "Found the dispatch thread for work order %s but could not fetch its permalink: %s",
-            work_order_id,
+            work_order_number,
             exc,
         )
 
-    linked_record = dict(record)
-    linked_record["slack_channel"] = target_channel
-    linked_record["slack_ts"] = conversation_ts
-    if permalink:
-        linked_record["slack_permalink"] = permalink
-    ops.create_work_order(work_order_id, linked_record)
-    record["ops_conversation_channel"] = target_channel
-    record["ops_conversation_ts"] = conversation_ts
-    record["ops_conversation_permalink"] = permalink
-    record["ops_conversation_linked_at"] = utc_now_iso()
-    state.save()
+    channel, conversation_ts = adopt_dispatch(
+        conversation_ts, permalink, source="exact_dispatch_root"
+    )
     logging.info(
         "Linked Ops work order %s to conversation thread %s:%s",
-        work_order_id,
-        target_channel,
+        work_order_number,
+        channel,
         conversation_ts,
     )
-    return target_channel, conversation_ts
+    return channel, conversation_ts
 
 
 def slack_ts_number(value: Any) -> float:
@@ -4963,11 +7650,19 @@ def sync_ops_slack_message(
     *,
     event_ts: str = "",
 ) -> str:
-    if message.get("bot_id") or message.get("subtype"):
+    if channel != PRODUCTION_DISPATCH_CHANNEL_ID:
+        raise RuntimeError(
+            f"Slack event synchronization is Dispatch-only; refused {channel}."
+        )
+    subtype = str(message.get("subtype") or "").strip()
+    if message.get("bot_id") or (
+        subtype and subtype not in {"file_share", "thread_broadcast"}
+    ):
         return "skipped"
 
     raw_text = str(message.get("text") or "").strip()
-    if not raw_text:
+    has_media = bool(message.get("files") or message.get("attachments"))
+    if not raw_text and not has_media:
         return "skipped"
 
     sender_id = str(message.get("user") or "").strip()
@@ -4976,24 +7671,46 @@ def sync_ops_slack_message(
         str(message.get("username") or "").strip(),
     )
     command = raw_text.lower()
+    delegated_command = report_listener_command(raw_text)
+    notes_match = re.match(r"^!notes(?:\s+([\s\S]+))?$", raw_text, re.IGNORECASE)
+    if notes_match and callable(getattr(ops, "save_system_note", None)):
+        note_text = str(notes_match.group(1) or "").strip()
+        if note_text:
+            note_text = slack.expand_user_mentions(note_text)
+            note_text = slack.expand_part_references(note_text, message)
+        result = ops.save_system_note(
+            work_order_id,
+            sender_name,
+            str(event_ts or message.get("ts") or "").strip(),
+            note_text,
+        )
+        record["ops_system_note_seen_at"] = utc_now_iso()
+        record["ops_system_note_id"] = result.get("noteId") or ""
+        logging.info(
+            "Saved client/system note for work order %s from Slack",
+            work_order_id,
+        )
+        return "note"
     if (
         ops.settings.ops_report_commands_managed_by_done_listener
-        and command in {"!complete", "!done", "!parts"}
+        and delegated_command
     ):
         record["ops_report_command_seen_at"] = utc_now_iso()
-        record["ops_report_command"] = command
-        if command == "!complete":
+        record["ops_report_command"] = delegated_command
+        command_ts = str(event_ts or message.get("ts") or "").strip()
+        if delegated_command == "!complete":
             record["ops_service_completed_at"] = utc_now_iso()
             record["ops_service_completed_by"] = sender_name
-        elif command == "!done":
-            # The command is authoritative. Stop this listener's thread scan;
-            # the report listener owns the final summary, Firebase transition,
-            # and temporary-message cleanup.
+            record["slack_complete_command_ts"] = command_ts
+        elif delegated_command == "!done":
+            # The report listener owns the transition and summary. This
+            # listener keeps watching the Dispatch thread until true Closed.
             record["ops_completed_at"] = utc_now_iso()
             record["ops_completed_by"] = sender_name
+            record["slack_done_command_ts"] = command_ts
         logging.info(
             "Delegated %s for work order %s to the done-report listener",
-            command,
+            delegated_command,
             work_order_id,
         )
         return "report_command_delegated"
@@ -5011,18 +7728,26 @@ def sync_ops_slack_message(
         record["ops_completed_at"] = utc_now_iso()
         record["ops_completed_by"] = sender_name
         logging.info(
-            "Stopped Ops tracking and cleared chat log for work order %s",
+            "Moved Ops work order %s to Done; Dispatch tracking continues until Closed",
             work_order_id,
         )
         return "completed"
 
     event_message = dict(message)
-    if event_ts:
-        event_message["ts"] = event_ts
+    message_ts = str(message.get("ts") or "").strip()
+    if event_ts and str(event_ts).strip() != message_ts:
+        event_message["edited_event_ts"] = str(event_ts).strip()
     candidates = slack.assignment_candidates(raw_text, sender_id)
     expanded_text = slack.expand_user_mentions(raw_text)
     expanded_text = slack.expand_part_references(expanded_text, message)
-    ops.post_message(
+    media_context = ops.describe_slack_media(message)
+    if media_context:
+        expanded_text = (
+            f"{expanded_text}\n{media_context}".strip()
+            if expanded_text
+            else media_context
+        )
+    post_result = ops.post_message(
         work_order_id=work_order_id,
         channel=channel,
         thread_ts=root_ts,
@@ -5030,7 +7755,24 @@ def sync_ops_slack_message(
         sender_name=sender_name,
         text=expanded_text,
         candidates=candidates,
-    )
+    ) or {}
+    result_reason = str(post_result.get("reason") or "").strip().lower()
+    if result_reason == "deleted":
+        record["ops_missing_from_magmo"] = True
+        return "deleted"
+    if result_reason == "closed":
+        record["ops_closed_at"] = record.get("ops_closed_at") or utc_now_iso()
+        record["ops_workflow_status"] = "closed"
+        logging.info(
+            "Stopped Dispatch ingestion for closed work order %s", work_order_id
+        )
+        return "closed"
+    if post_result.get("ok") is False or (
+        post_result.get("accepted") is False and result_reason != "duplicate"
+    ):
+        raise RuntimeError(
+            f"Ops message ingestion did not succeed: {result_reason or 'unknown failure'}"
+        )
     return "synced"
 
 
@@ -5039,36 +7781,87 @@ def scan_ops_threads(
     state: StateStore,
     slack: SlackClient,
     ops: FirebaseOpsClient,
+    *,
+    include_completed: bool = False,
+    batch_size_override: Optional[int] = None,
 ) -> int:
-    records = ops_work_order_records(settings, state)
+    if isinstance(slack, SlackClient):
+        remaining = slack.rate_limit_remaining("conversations.replies")
+        if remaining > 0:
+            return 0
+    records = ops_work_order_records(
+        settings, state, include_completed=include_completed
+    )
     if not records:
         return 0
 
-    batch_size = max(1, settings.ops_thread_scan_batch)
+    batch_size = max(
+        1,
+        int(
+            batch_size_override
+            if batch_size_override is not None
+            else settings.ops_thread_scan_batch
+        ),
+    )
     start = int(state.data.get("ops_thread_scan_index") or 0) % len(records)
     batch = [
         records[(start + offset) % len(records)]
         for offset in range(min(batch_size, len(records)))
     ]
-    state.data["ops_thread_scan_index"] = (
-        start + min(batch_size, len(records))
-    ) % len(records)
     thread_states = state.data.setdefault("ops_thread_state", {})
     sent_count = 0
+    rate_deferred = False
+    scan_started = time.monotonic()
 
-    for work_order_id, record in batch:
-        if not sync_work_order_to_ops(state, ops, work_order_id, record):
+    def defer_scan(exc: SlackRateLimited, offset: int) -> None:
+        nonlocal rate_deferred
+        rate_deferred = True
+        state.data["ops_thread_scan_index"] = (start + offset) % len(records)
+        state.data.setdefault("health", {})["slack_rate_limit"] = {
+            "method": exc.method,
+            "retry_after_seconds": round(exc.retry_after, 2),
+            "observed_at": utc_now_iso(),
+            "retry_at": datetime.fromtimestamp(
+                time.time() + exc.retry_after, timezone.utc
+            ).isoformat(),
+        }
+        state.save()
+
+    for offset, (state_record_id, record) in enumerate(batch):
+        # Large configured batches must not monopolize the single listener
+        # loop once requests are paced. Continue the same fair sweep next loop.
+        if offset > 0 and time.monotonic() - scan_started >= 20.0:
+            break
+        state.data["ops_thread_scan_index"] = (start + offset + 1) % len(records)
+        work_order_id = monitoring_work_order_number(state_record_id, record)
+        service_request_id = monitoring_service_request_id(
+            state_record_id, record
+        )
+        ops_work_order_id = monitoring_ops_work_order_id(
+            state_record_id, record
+        )
+        if (
+            not getattr(ops, "supports_extended_sync", False)
+            and not sync_work_order_to_ops(
+                state, ops, ops_work_order_id, record
+            )
+        ):
+            # API-backed rows must be proven by a fresh authoritative context
+            # before even reading Slack, because an old local row may now be
+            # Closed or deleted in Magmo.
             continue
-
         try:
             channel, root_ts = resolve_ops_conversation_thread(
                 settings,
                 state,
                 slack,
                 ops,
-                work_order_id,
+                state_record_id,
                 record,
             )
+        except SlackRateLimited as exc:
+            defer_scan(exc, offset)
+            break
         except Exception as exc:
             logging.warning(
                 "Conversation-thread lookup failed for work order %s; it will retry: %s",
@@ -5076,14 +7869,55 @@ def scan_ops_threads(
                 exc,
             )
             continue
+        required_channel = str(settings.ops_conversation_channel_id or "").strip()
+        if (
+            required_channel != PRODUCTION_DISPATCH_CHANNEL_ID
+            or channel != required_channel
+            or slack_ts_number(root_ts) <= 0
+        ):
+            logging.info(
+                "Skipping work order %s until an exact #dispatch thread is found",
+                work_order_id,
+            )
+            continue
+        if (
+            getattr(ops, "supports_extended_sync", False)
+            and not sync_work_order_to_ops(
+                state, ops, ops_work_order_id, record
+            )
+        ):
+            continue
         state_key = f"{channel}:{root_ts}"
-        thread_state = thread_states.setdefault(
-            state_key,
-            {
-                "last_message_ts": root_ts,
+        if state_key not in thread_states:
+            watermark = str(
+                record.get("latest_ingested_slack_ts") or ""
+            ).strip()
+            has_watermark = bool(
+                re.fullmatch(r"[0-9]+\.[0-9]+", watermark)
+                and slack_ts_number(watermark) >= slack_ts_number(root_ts)
+            )
+            initial_cursor = (
+                watermark if has_watermark else root_ts
+            )
+            thread_states[state_key] = {
+                "last_message_ts": initial_cursor,
                 "work_order_id": work_order_id,
-            },
-        )
+                "ops_work_order_id": ops_work_order_id,
+                "state_record_id": state_record_id,
+                "watermark_source": (
+                    "magmo_latest_ingested_slack_ts"
+                    if has_watermark
+                    else "dispatch_root"
+                ),
+                **(
+                    {
+                        "parent_seed_through_ts": initial_cursor,
+                    }
+                    if has_watermark
+                    else {}
+                ),
+            }
+        thread_state = thread_states[state_key]
         last_message_ts = str(thread_state.get("last_message_ts") or root_ts)
 
         try:
@@ -5095,9 +7929,38 @@ def scan_ops_threads(
             or time.time() - last_parent_check
             >= max(5, settings.ops_parent_scan_seconds)
         )
+        parent_message = None
         if parent_due:
             try:
                 parent_message = slack.thread_parent(channel, root_ts)
+                parent_identity_invalid = (
+                    str(parent_message.get("ts") or "").strip() != root_ts
+                    or not is_exact_work_order_root(
+                        parent_message,
+                        work_order_id,
+                        service_request_id,
+                    )
+                )
+                if parent_identity_invalid:
+                    record.pop("ops_conversation_verified_identity", None)
+                    record.pop("ops_thread_lookup_attempted_at", None)
+                    if str(record.get("ops_conversation_ts") or "") == root_ts:
+                        record["ops_conversation_ts"] = ""
+                        record["ops_conversation_permalink"] = ""
+                    if str(record.get("slack_ts") or "") == root_ts:
+                        record["slack_ts"] = ""
+                        record["slack_permalink"] = ""
+                    record["ops_thread_lookup_error"] = (
+                        "The saved Dispatch root no longer matches this work order; "
+                        "exact-root discovery will retry."
+                    )
+                    state.save()
+                    logging.warning(
+                        "Saved Dispatch root no longer verifies work order %s; "
+                        "cleared the local link for rediscovery",
+                        work_order_id,
+                    )
+                    continue
                 edited_ts = str(
                     (parent_message.get("edited") or {}).get("ts") or ""
                 ).strip()
@@ -5115,27 +7978,45 @@ def scan_ops_threads(
                     ).encode("utf-8")
                 ).hexdigest()
                 if parent_signature != thread_state.get("parent_signature"):
-                    outcome = sync_ops_slack_message(
-                        slack,
-                        ops,
-                        work_order_id,
-                        record,
-                        channel,
-                        root_ts,
-                        parent_message,
-                        event_ts=edited_ts or root_ts,
-                    )
+                    parent_event_ts = edited_ts or root_ts
+                    seed_through_ts = str(
+                        thread_state.get("parent_seed_through_ts") or ""
+                    ).strip()
+                    if (
+                        not thread_state.get("parent_signature")
+                        and slack_ts_number(seed_through_ts)
+                        >= slack_ts_number(parent_event_ts)
+                    ):
+                        # The API watermark proves this root version was
+                        # already ingested. Capture its signature read-only.
+                        outcome = "seeded"
+                    else:
+                        outcome = sync_ops_slack_message(
+                            slack,
+                            ops,
+                            ops_work_order_id,
+                            record,
+                            channel,
+                            root_ts,
+                            parent_message,
+                            event_ts=parent_event_ts,
+                        )
+                    if outcome in {"closed", "deleted"}:
+                        thread_state["closed_at"] = utc_now_iso()
+                        state.save()
+                        continue
                     thread_state["parent_signature"] = parent_signature
-                    thread_state["parent_last_event_ts"] = edited_ts or root_ts
+                    thread_state["parent_last_event_ts"] = parent_event_ts
+                    thread_state.pop("parent_seed_through_ts", None)
                     thread_state["last_activity_at"] = utc_now_iso()
-                    if outcome in {"synced", "service_complete", "completed"}:
+                    if outcome in {"synced", "note", "service_complete", "completed"}:
                         sent_count += 1
                     if outcome == "completed":
                         thread_state["completed_at"] = utc_now_iso()
-                        thread_state["parent_checked_at"] = time.time()
-                        state.save()
-                        continue
                 thread_state["parent_checked_at"] = time.time()
+            except SlackRateLimited as exc:
+                defer_scan(exc, offset)
+                break
             except Exception as exc:
                 logging.warning(
                     "Slack parent-message sync failed for work order %s; "
@@ -5147,11 +8028,21 @@ def scan_ops_threads(
                 continue
 
         try:
-            replies = slack.thread_replies(
-                channel,
-                root_ts,
-                oldest=last_message_ts,
+            # A freshly fetched root includes the latest reply timestamp. An
+            # unchanged thread needs no second conversations.replies request.
+            # Missing metadata is not evidence of an empty thread.
+            latest_reply = str((parent_message or {}).get("latest_reply") or "")
+            replies_unchanged = parent_message is not None and (
+                (bool(re.fullmatch(r"[0-9]+\.[0-9]+", latest_reply))
+                 and slack_ts_number(latest_reply) <= slack_ts_number(last_message_ts))
+                or parent_message.get("reply_count") == 0
             )
+            replies = [] if replies_unchanged else slack.thread_replies(
+                channel, root_ts, oldest=last_message_ts,
+            )
+        except SlackRateLimited as exc:
+            defer_scan(exc, offset)
+            break
         except Exception as exc:
             logging.warning(
                 "Slack thread scan failed for work order %s; it will retry: %s",
@@ -5179,22 +8070,27 @@ def scan_ops_threads(
                 outcome = sync_ops_slack_message(
                     slack,
                     ops,
-                    work_order_id,
+                    ops_work_order_id,
                     record,
                     channel,
                     root_ts,
                     message,
                 )
+                if outcome in {"closed", "deleted"}:
+                    thread_state["closed_at"] = utc_now_iso()
+                    break
                 thread_state["last_message_ts"] = message_ts
                 thread_state["last_activity_at"] = utc_now_iso()
-                if outcome in {"synced", "service_complete", "completed"}:
+                if outcome in {"synced", "note", "service_complete", "completed"}:
                     sent_count += 1
                 if outcome == "completed":
                     thread_state["completed_at"] = utc_now_iso()
-                    break
+            except SlackRateLimited as exc:
+                defer_scan(exc, offset)
+                break
             except Exception as exc:
                 logging.warning(
-                    "Firebase Ops message sync failed for work order %s at %s; "
+                    "Magmo Ops message sync failed for work order %s at %s; "
                     "the message will retry: %s",
                     work_order_id,
                     message_ts,
@@ -5203,7 +8099,14 @@ def scan_ops_threads(
                 break
 
         state.save()
+        if rate_deferred:
+            break
 
+    health = state.data.setdefault("health", {})
+    if not rate_deferred:
+        scans = health.setdefault("last_slack_scan", {})
+        scans[settings.ops_conversation_channel_id] = utc_now_iso()
+    state.save()
     return sent_count
 
 
@@ -5246,38 +8149,6 @@ def append_slack_post_log(
         logging.warning("Failed writing Slack post log %s: %s", path, exc)
 
 
-def send_single_slack_test(settings: Settings, slack: SlackClient) -> Tuple[str, str, str]:
-    title = settings.test_work_order_subject or "DUMMY TEST"
-    work_order_number = settings.test_work_order_number or "9769"
-    work_order_url = settings.test_work_order_url or "https://app.bluefolder.com/workOrder/9769"
-    channel, ts = slack.post_dispatch_message(
-        title_text=title,
-        bluefolder_url=work_order_url,
-        work_order_number=work_order_number,
-        mention_user_ids=settings.slack_user_ids,
-        mention_text=settings.slack_mention_text,
-    )
-    append_slack_post_log(
-        settings,
-        channel=channel,
-        ts=ts,
-        work_order_number=work_order_number,
-        title=title,
-        source="test_single_slack_send",
-    )
-    permalink = ""
-    try:
-        permalink = slack.get_permalink(channel, ts)
-    except Exception as exc:
-        logging.warning(
-            "Slack test message posted, but permalink lookup failed: %s | channel=%s ts=%s",
-            exc,
-            channel,
-            ts,
-        )
-    return channel, ts, permalink
-
-
 def process_once(
     settings: Settings,
     state: StateStore,
@@ -5286,15 +8157,45 @@ def process_once(
     ops: Optional[FirebaseOpsClient] = None,
 ) -> int:
     global RUNTIME_BASELINE_DONE
+    if ops and callable(getattr(ops, "refresh_capabilities", None)):
+        try:
+            ops.refresh_capabilities()
+        except Exception as exc:
+            # Preserve the last verified capability state. Imports remain off if
+            # the contract has never been verified, while existing message sync
+            # can continue through a transient health-check failure.
+            logging.warning("Could not refresh Magmo Ops capabilities: %s", exc)
+    import_available = bool(
+        ops
+        and callable(getattr(ops, "import_work_order", None))
+        and getattr(ops, "supports_bluefolder_import", False)
+    )
+    state.set_bluefolder_intake_sync_available(import_available)
     work_orders = bluefolder.list_recent_work_orders()
     logging.info("%s work orders found", len(work_orders))
+    state.mark_poll_success(len(work_orders))
+    state.save()
     work_orders = sort_by_created_at_desc(work_orders)
-    if ops and not settings.dry_run:
+    if (
+        ops
+        and getattr(ops, "supports_message_sync", False)
+        and not getattr(ops, "supports_extended_sync", False)
+    ):
+        remember_bluefolder_context_candidates(settings, state, work_orders)
+    if (
+        ops
+        and not settings.dry_run
+        and getattr(ops, "supports_assignment_sync", True)
+    ):
         sync_bluefolder_assignment_updates(settings, work_orders, state, bluefolder, ops)
 
     # Establish a startup baseline once per process so we only react to
     # work orders created after this listener starts.
-    if (settings.baseline_on_startup or not settings.dry_run) and not RUNTIME_BASELINE_DONE:
+    if (
+        settings.baseline_on_startup
+        and not state.baseline_initialized()
+        and not RUNTIME_BASELINE_DONE
+    ):
         newest_created_at: Optional[str] = None
         baseline_count = 0
         for item in work_orders:
@@ -5314,6 +8215,10 @@ def process_once(
 
         if newest_created_at:
             state.set_last_seen_created_at(newest_created_at)
+        state.mark_baseline_initialized(
+            source="startup",
+            captured_count=baseline_count,
+        )
         state.save()
         RUNTIME_BASELINE_DONE = True
         logging.info(
@@ -5322,7 +8227,7 @@ def process_once(
         )
         return 0
 
-    new_items = filter_new_items(work_orders, state)
+    new_items = filter_new_items(work_orders, state, settings)
 
     if not new_items:
         return 0
@@ -5337,75 +8242,171 @@ def process_once(
         title = build_slack_title(fields)
         bluefolder_link = fields["link"]
         bluefolder_assignees = bluefolder.assigned_users(item)
-        external_id = nested_value_by_key(item, "externalId")
-        permalink = existing_slack_permalink(item)
-        if external_id.startswith("AIS-WEB-") and not permalink:
-            try:
-                detail = bluefolder.get_work_order(work_order_id)
-                permalink = existing_slack_permalink(detail)
-            except Exception as exc:
-                logging.debug(
-                    "Website intake %s is waiting for its Magmo-created Slack link: %s",
-                    work_order_id,
-                    exc,
+        if not ops or not callable(getattr(ops, "work_order_context", None)):
+            reason = "Authoritative Magmo ownership lookup is unavailable."
+            state.mark_pending_magmo_import(work_order_id, fields, reason)
+            state.save()
+            logging.warning(
+                "Deferring work order %s: %s",
+                work_order_id,
+                reason,
+            )
+            continue
+
+        try:
+            context, resolved_ops_id = fetch_authoritative_work_order_context(
+                ops,
+                work_order_id,
+                work_order_number,
+            )
+        except Exception as exc:
+            reason = f"Magmo ownership lookup failed: {exc}"
+            state.mark_pending_magmo_import(work_order_id, fields, reason)
+            state.save()
+            logging.warning(
+                "Deferring work order %s: Magmo ownership lookup failed: %s",
+                work_order_id,
+                exc,
+            )
+            continue
+
+        channel = ""
+        ts = ""
+        permalink = ""
+        dispatch_owner = ""
+        log_source = ""
+        receipt_verified = False
+        magmo_owned = context is not None
+
+        if magmo_owned:
+            if state.clear_pending_magmo_import(work_order_id):
+                state.save()
+            channel, ts, permalink = magmo_dispatch_receipt(
+                context, work_order_number
+            )
+            if channel and ts:
+                try:
+                    dispatch_root = slack.thread_parent(channel, ts)
+                    receipt_verified = dispatch_root_proves_work_order(
+                        dispatch_root,
+                        work_order_number,
+                        work_order_id,
+                    )
+                except Exception as exc:
+                    logging.warning(
+                        "Could not verify Magmo's saved Dispatch root for %s; "
+                        "background monitoring will retry: %s",
+                        work_order_number,
+                        exc,
+                    )
+                if not receipt_verified:
+                    logging.warning(
+                        "Magmo's saved Dispatch receipt for %s is not an exact "
+                        "root; exact Dispatch discovery will retry.",
+                        work_order_number,
+                    )
+                elif not permalink:
+                    try:
+                        permalink = slack.get_permalink(channel, ts)
+                    except Exception as exc:
+                        logging.warning(
+                            "Could not resolve the adopted Magmo Dispatch "
+                            "permalink for %s: %s",
+                            work_order_id,
+                            exc,
+                        )
+            else:
+                logging.warning(
+                    "Magmo work order %s has no Dispatch receipt yet; exact "
+                    "Dispatch discovery will remain retryable.",
+                    work_order_number,
                 )
-            if not permalink:
-                logging.info(
-                    "Deferring website intake work order %s until Magmo acceptance finishes its testing Slack thread.",
+            dispatch_owner = "magmo"
+            log_source = "magmo_dispatch_adopted" if receipt_verified else ""
+        else:
+            if not import_available:
+                reason = (
+                    "Magmo has no record and its current Ops API exposes no "
+                    "Slack-free BlueFolder intake contract. Dispatch posting by "
+                    "the Python listener is permanently disabled."
+                )
+                state.mark_pending_magmo_import(work_order_id, fields, reason)
+                state.save()
+                logging.warning(
+                    "Deferring BlueFolder work order %s: %s",
                     work_order_id,
+                    reason,
                 )
                 continue
 
-        logging.info(
-            "New work order detected | id=%s number=%s subject=%s",
-            work_order_id,
-            work_order_number,
-            title,
-        )
+            import_record = bluefolder_import_record(
+                fields,
+                bluefolder_assignees,
+            )
+            try:
+                import_result = ops.import_work_order(work_order_id, import_record)
+                record_successful_bluefolder_import(
+                    state,
+                    work_order_id,
+                    import_record,
+                    import_result,
+                )
+            except MagmoOpsRequestError as exc:
+                if exc.status_code in {401, 403}:
+                    # Authentication/authorization failures affect every item;
+                    # stop this poll rather than hammering the endpoint.
+                    raise
+                retryable = exc.status_code not in {400, 404}
+                reason = f"Slack-free Magmo import failed: {exc}"
+                state.mark_pending_magmo_import(
+                    work_order_id,
+                    fields,
+                    reason,
+                    retryable=retryable,
+                )
+                state.save()
+                logging.warning(
+                    "Deferring BlueFolder work order %s after Magmo import failure: %s",
+                    work_order_id,
+                    exc,
+                )
+                continue
+            except Exception as exc:
+                reason = f"Slack-free Magmo import failed: {exc}"
+                state.mark_pending_magmo_import(work_order_id, fields, reason)
+                state.save()
+                logging.warning(
+                    "Deferring BlueFolder work order %s after Magmo import failure: %s",
+                    work_order_id,
+                    exc,
+                )
+                continue
 
-        adopted_channel, adopted_ts = slack_thread_from_permalink(permalink)
-        if permalink and adopted_channel and adopted_ts:
-            channel = adopted_channel
-            ts = adopted_ts
+            created_at = fields["created_at"]
+            current_dt = parse_dt(created_at)
+            newest_dt = parse_dt(newest_created_at)
+            if current_dt and (not newest_dt or current_dt > newest_dt):
+                newest_created_at = created_at
+            processed_count += 1
             logging.info(
-                "Adopted existing Slack thread for work order %s | channel=%s ts=%s",
+                "Imported BlueFolder work order %s into Magmo | created=%s replay=%s request=%s applied_changes=%s",
+                work_order_number,
+                bool(import_result.get("created")),
+                bool(import_result.get("idempotentReplay")),
+                str(import_result.get("requestId") or "")[:120],
+                ",".join(sorted((import_result.get("appliedChanges") or {}).keys()))
+                or "none",
+            )
+            continue
+
+        if receipt_verified:
+            logging.info(
+                "Resolved Dispatch ownership for work order %s | owner=%s "
+                "channel=%s ts=%s",
                 work_order_id,
+                dispatch_owner,
                 channel,
                 ts,
-            )
-        elif settings.dry_run:
-            mentions = " ".join(f"<@{user_id}>" for user_id in settings.slack_user_ids).strip()
-            if not mentions and settings.slack_mention_text.strip():
-                mentions = settings.slack_mention_text.strip()
-            parent_preview = "\n".join(
-                part
-                for part in [
-                    f"#{work_order_number}",
-                    f"<{bluefolder_link}|{title}>",
-                ]
-                if part.strip()
-            )
-            logging.info(
-                "[DRY RUN] New work order preview | id=%s number=%s subject=%s url=%s",
-                work_order_id,
-                work_order_number,
-                title,
-                bluefolder_link,
-            )
-            logging.info("[DRY RUN] Slack parent message preview:\n%s", parent_preview)
-            if mentions:
-                logging.info("[DRY RUN] Slack thread reply preview:\n%s", mentions)
-            logging.info("[DRY RUN] Would post Slack message for work order %s", work_order_id)
-            permalink = "https://slack.com/app_redirect?channel=dry-run"
-            channel = settings.slack_channel_id
-            ts = "0.000000"
-        else:
-            channel, ts = slack.post_dispatch_message(
-                title_text=title,
-                bluefolder_url=bluefolder_link,
-                work_order_number=work_order_number,
-                mention_user_ids=settings.slack_user_ids,
-                mention_text=settings.slack_mention_text,
             )
             append_slack_post_log(
                 settings,
@@ -5413,31 +8414,13 @@ def process_once(
                 ts=ts,
                 work_order_number=work_order_number,
                 title=title,
-                source="listener",
+                source=log_source,
             )
-            permalink = ""
-            try:
-                permalink = slack.get_permalink(channel, ts)
-            except Exception as exc:
-                logging.warning(
-                    "Slack message posted, but permalink lookup failed: %s | channel=%s ts=%s",
-                    exc,
-                    channel,
-                    ts,
-                )
-            try:
-                if permalink:
-                    bluefolder.update_slack_link(work_order_id, permalink)
-            except Exception as exc:
-                logging.warning(
-                    "Failed to write Slack link back to BlueFolder for work order %s: %s",
-                    work_order_id,
-                    exc,
-                )
 
         created_at = fields["created_at"]
         processed_payload = {
             "number": work_order_number,
+            "service_request_id": work_order_id,
             "subject": title,
             "description": fields.get("description") or "",
             "customer": fields.get("customer") or "",
@@ -5446,10 +8429,29 @@ def process_once(
             "slack_channel": channel,
             "slack_ts": ts,
             "slack_permalink": permalink,
+            "dispatch_owner": dispatch_owner,
             "bluefolder_assignees": bluefolder_assignees,
             "bluefolder_assignment_synced_at": utc_now_iso(),
             "processed_at": utc_now_iso(),
         }
+        if magmo_owned:
+            # The context read proves the Magmo record already exists; do not
+            # replay work_order.created or rewrite its authoritative receipt.
+            processed_payload["ops_created_at"] = utc_now_iso()
+            processed_payload["ops_work_order_id"] = str(
+                context.get("workOrderId") or resolved_ops_id or work_order_id
+            ).strip()
+            processed_payload["ops_status"] = str(
+                context.get("status") or ""
+            ).strip()
+            processed_payload["ops_workflow_status"] = str(
+                context.get("workflowStatus") or ""
+            ).strip()
+            processed_payload["latest_ingested_slack_ts"] = str(
+                context.get("latestIngestedSlackTs") or ""
+            ).strip()
+            processed_payload["discovered_from_existing_magmo"] = True
+            processed_payload["ops_context_refreshed_at"] = utc_now_iso()
         state.mark_processed(work_order_id, processed_payload)
 
         current_dt = parse_dt(created_at)
@@ -5458,8 +8460,15 @@ def process_once(
             newest_created_at = created_at
 
         processed_count += 1
+        state.mark_latest_processed_work_order(work_order_number)
         state.save()
-        if ops and not settings.dry_run and channel and ts:
+        if (
+            ops
+            and not settings.dry_run
+            and channel
+            and ts
+            and not magmo_owned
+        ):
             sync_work_order_to_ops(
                 state,
                 ops,
@@ -5513,47 +8522,28 @@ def main() -> int:
     lock_path = acquire_single_instance_lock(settings.listener_lock_file)
     logging.info("Single listener lock acquired: %s", lock_path)
 
-    if settings.test_single_slack_send:
-        slack = SlackClient(settings)
-        logging.info("TEST_SINGLE_SLACK_SEND enabled. Sending one Slack test message and exiting.")
-        channel, ts, permalink = send_single_slack_test(settings, slack)
-        if settings.ops_track_assignments:
-            ops = FirebaseOpsClient(settings)
-            ops.create_work_order(
-                settings.test_work_order_number,
-                {
-                    "number": settings.test_work_order_number,
-                    "subject": settings.test_work_order_subject,
-                    "customer": "",
-                    "created_at": utc_now_iso(),
-                    "bluefolder_url": settings.test_work_order_url,
-                    "slack_channel": channel,
-                    "slack_ts": ts,
-                    "slack_permalink": permalink,
-                },
-            )
-            logging.info(
-                "Added test work order %s to the Magmo Ops queue",
-                settings.test_work_order_number,
-            )
-        logging.info(
-            "Slack test sent successfully | channel=%s ts=%s permalink=%s",
-            channel,
-            ts,
-            permalink,
-        )
-        return 0
-
     if not settings.enable_bluefolder:
-        logging.info("ENABLE_BLUEFOLDER is false and TEST_SINGLE_SLACK_SEND is false. Nothing to do.")
+        logging.info("ENABLE_BLUEFOLDER is false. Nothing to do.")
         return 0
 
     state = StateStore(settings.state_file)
     bluefolder = BlueFolderClient(settings)
     slack = SlackClient(settings)
-    ops = FirebaseOpsClient(settings) if settings.ops_track_assignments else None
+    ops = create_ops_client(settings) if settings.ops_track_assignments else None
 
-    logging.info("Starting BlueFolder -> Slack listener")
+    logging.info("Starting BlueFolder -> Magmo intake and Slack evidence listener")
+    logging.info(
+        "Slack work-order root ownership: Magmo only; Python chat.postMessage is disabled"
+    )
+    if ops and getattr(ops, "supports_bluefolder_import", False):
+        logging.info(
+            "BlueFolder-only Magmo intake: enabled through Slack-free work_order.imported"
+        )
+    else:
+        logging.warning(
+            "BlueFolder-only Magmo intake: waiting for Magmo to advertise the Slack-free work_order.imported contract"
+        )
+    logging.info("BlueFolder Slack-link write-back: disabled")
     logging.info("BlueFolder polling every %s seconds", settings.poll_seconds)
     logging.info(
         "BlueFolder list endpoint: %s (status=%s)",
@@ -5562,14 +8552,22 @@ def main() -> int:
     )
     logging.info("State file: %s", settings.state_file)
     if ops:
-        logging.info(
-            "Ops tracking enabled via direct Firestore; source channel=%s conversation channel=%s poll=%ss",
-            settings.ops_testing_channel_id or settings.slack_channel_name,
-            settings.ops_conversation_channel_id
-            or settings.ops_testing_channel_id
-            or settings.slack_channel_name,
-            settings.ops_message_poll_seconds,
-        )
+        if getattr(ops, "supports_extended_sync", True):
+            logging.info(
+                "Ops tracking enabled via direct Firestore; source channel=%s conversation channel=%s poll=%ss",
+                settings.ops_testing_channel_id or settings.slack_channel_name,
+                settings.ops_conversation_channel_id
+                or settings.ops_testing_channel_id
+                or settings.slack_channel_name,
+                settings.ops_message_poll_seconds,
+            )
+        else:
+            health = getattr(ops, "health", {}) or {}
+            logging.info(
+                "Ops creation and Slack evidence sync enabled via secure ingest API; API version=%s deployed=%s",
+                health.get("apiVersion") or "unknown",
+                health.get("deployedVersion") or "unknown",
+            )
 
     next_bluefolder_poll = 0.0
     while True:
@@ -5577,27 +8575,41 @@ def main() -> int:
             now = time.monotonic()
             if now >= next_bluefolder_poll:
                 next_bluefolder_poll = now + max(1, settings.poll_seconds)
-                processed = process_once(
-                    settings,
-                    state,
-                    bluefolder,
-                    slack,
-                    ops,
-                )
-                if processed:
-                    logging.info("Processed %s new work order(s)", processed)
+                try:
+                    processed = process_once(
+                        settings,
+                        state,
+                        bluefolder,
+                        slack,
+                        ops,
+                    )
+                    if processed:
+                        logging.info("Processed %s new work order(s)", processed)
+                except Exception as exc:
+                    # BlueFolder intake and Dispatch evidence monitoring have
+                    # independent checkpoints. A BlueFolder outage must never
+                    # stop Slack message retries for existing work orders.
+                    logging.exception(
+                        "BlueFolder intake poll failed; Dispatch monitoring "
+                        "will continue: %s",
+                        exc,
+                    )
+                    state.mark_error(exc)
+                    state.save()
 
-            if ops:
+            if ops and getattr(ops, "supports_extended_sync", True):
                 matched_requests = ops.process_pending_service_request_matches()
                 if matched_requests:
                     logging.info(
                         "Matched %s website service request(s) to Client DB candidates",
                         matched_requests,
                     )
-                hydrated_threads = hydrate_intake_threads_from_ops(state, ops)
+                hydrated_threads = hydrate_intake_threads_from_ops(
+                    settings, state, ops
+                )
                 if hydrated_threads:
                     logging.info(
-                        "Connected %s accepted website intake Slack thread(s) to the Python analyzer",
+                        "Refreshed %s non-Closed Magmo work order(s) for Dispatch monitoring",
                         hydrated_threads,
                     )
                 sync_pending_work_orders(settings, state, ops)
@@ -5635,11 +8647,45 @@ def main() -> int:
                         "Synced %s new Slack Ops event(s)",
                         synced_messages,
                     )
+            elif ops:
+                if getattr(ops, "supports_message_sync", False):
+                    refreshed_contexts = hydrate_work_order_contexts_from_ops_api(
+                        settings,
+                        state,
+                        ops,
+                    )
+                    if refreshed_contexts:
+                        logging.info(
+                            "Refreshed %s Magmo work-order context(s) through "
+                            "the secure API",
+                            refreshed_contexts,
+                        )
+                    synced_messages = scan_ops_threads(
+                        settings,
+                        state,
+                        slack,
+                        ops,
+                        batch_size_override=settings.ops_api_thread_scan_batch,
+                    )
+                    if synced_messages:
+                        logging.info(
+                            "Synced %s new Slack Ops event(s) through secure ingest",
+                            synced_messages,
+                        )
+            health = state.data.setdefault("health", {})
+            health["last_successful_loop"] = utc_now_iso()
+            health["pid"] = os.getpid()
+            last_magmo_request = getattr(ops, "last_request", None) if ops else None
+            if isinstance(last_magmo_request, dict) and last_magmo_request:
+                health["last_magmo_request"] = dict(last_magmo_request)
+            state.save()
         except KeyboardInterrupt:
             logging.info("Stopped by user")
             return 0
         except Exception as exc:
             logging.exception("Listener loop error: %s", exc)
+            state.mark_error(exc)
+            state.save()
 
         time.sleep(
             max(
