@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-09-24T18:19:45.001Z",
+  "revision": "nextserverwest-00056-xum",
+  "apiVersion": "2026-09-24.1",
+  "capability": {
+    "version": "2026-09-24.1",
+    "equipmentIds": true,
+    "equipmentNames": true,
+    "existingOnly": true,
+    "preservesManualAssets": true,
+    "rejectsUnresolvedInventoryMachine": true
+  },
+  "closeStatusSyncPreserved": true,
+  "schemaVerified": true,
+  "authenticatedNegativeProbe": {
+    "status": 400,
+    "code": "bluefolder_equipment_identity_invalid",
+    "rejectedBeforeDatabaseAccess": true
+  },
+  "realWorkOrder": {
+    "workOrderId": "10664",
+    "contextStatus": 200,
+    "clientId": "AIS50849",
+    "machineId": "AIS21467",
+    "destinationVerifiedBy": "read-only Firestore GET"
+  },
+  "unauthenticatedChecks": [
+    {
+      "route": "options",
+      "status": 401
+    },
+    {
+      "route": "confirm",
+      "status": 401
+    },
+    {
+      "route": "scan-sessions",
+      "status": 401
+    }
+  ],
+  "clientAssetSHA256": "31372590b5701129adfbf55639d260393503ae87d11692d40e324a572a7b77dc",
+  "newBuildId": "wo-machine-link-31372590b5701129",
+  "noDataWrites": true,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true
+}

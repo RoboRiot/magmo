@@ -12,5 +12,6 @@ releases/2026-09-24-work-order-machine-link/source/** -text
 releases/2026-09-24-work-order-machine-link/tools/** -text
 releases/2026-09-24-work-order-machine-link/tests/** -text
 releases/2026-09-24-work-order-machine-link/scripts/** -text
+releases/2026-09-24-work-order-machine-link/receipts/** -text
 releases/2026-09-24-work-order-machine-link/composition-report.json -text
 releases/2026-09-24-work-order-machine-link/baseline.json -text

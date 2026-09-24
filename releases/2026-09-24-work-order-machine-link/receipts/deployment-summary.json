@@ -1,0 +1,59 @@
+{
+  "status": "complete",
+  "verifiedAt": "2026-09-24T18:20:29.6107051Z",
+  "website": {
+    "revision": "nextserverwest-00056-xum",
+    "previousRevision": "nextserverwest-00055-yom",
+    "deployedAt": "2026-09-24T18:19:31.569Z",
+    "artifactSha256": "b94cc8e088e28afe5af8c09421d2e63fca14898816a5c74b54041e3e362f5ce2",
+    "liveVerifiedAt": "2026-09-24T18:19:45.001Z",
+    "unrelatedConfigurationPreserved": true,
+    "closeStatusSyncPreserved": true,
+    "liveApiSchemaAndClientAssetVerified": true,
+    "scannerAuthenticationVerified": true
+  },
+  "listener": {
+    "installedAt": "2026-09-24T18:20:20.2153981Z",
+    "version": "2026.09.24-bluefolder-machine-link.1",
+    "sourceSha256": "81df567ea140cba4551b3b205c1cf9ac151df6cee24982b1275cec1a9426bccc",
+    "baselineSha256": "2aa035388dc7ab025d3c0db75ba9e8471e8cf17716d897f356192c7b0a2b1019",
+    "serverBackupPath": "C:\\Users\\Owner\\Desktop\\warehouse\\.warehouse_runtime\\deployments\\work-order-machine-link-20260924\\backup-20260924T182012Z",
+    "listenerPid": 1172,
+    "commandWorkerPids": [18088, 19252],
+    "healthy": true,
+    "stateOverwritten": false,
+    "checkpointCount": 570,
+    "checkpointsPreserved": true,
+    "commandWorkersUnchanged": true,
+    "pendingImports": 0,
+    "equipmentSyncedCountAtVerification": 6,
+    "equipmentPendingCountAtVerification": 0,
+    "historicalCloseBaselinePreserved": true
+  },
+  "dataRepair": {
+    "repairId": "bluefolder-machine-link-repair-20260924",
+    "appliedAt": "2026-09-24T18:14:21.814Z",
+    "machineMappings": 5,
+    "workOrders": 9,
+    "items": 2,
+    "verifiedDocuments": 26,
+    "unrelatedFieldDifferences": 0,
+    "historyPreserved": true,
+    "manuallyCorrectedItemPreserved": true
+  },
+  "backup": {
+    "directory": "outputs/firestore-backups/2026-09-24-work-order-machine-link-predeploy",
+    "documentCount": 185801,
+    "collectionCount": 989,
+    "bytes": 1794959173,
+    "dataSha256": "edfbe0c1de56457273185dd9b2d2080f0f05126223b0a2ebfe683185fd59c004",
+    "manifestSha256": "4fad3a180f4d049795d76a83eb5fc6092b75929169c67410400d19aeeeef7d5f",
+    "firestoreOnly": true
+  },
+  "verification": {
+    "sourceTestsPassed": 207,
+    "exactWebsiteArtifactTestsPassed": 60,
+    "listenerTestsPassedOnServer": 92,
+    "zipEntriesVerified": 481
+  }
+}
