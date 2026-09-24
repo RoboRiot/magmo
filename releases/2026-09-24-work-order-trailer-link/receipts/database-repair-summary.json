@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "repairId": "work-order-10659-trailer-link-20260924",
+  "appliedAt": "2026-09-24T18:53:37.850Z",
+  "workOrderId": "10659",
+  "clientId": "AIS78594",
+  "trailerId": "AIS20",
+  "machineId": "AIS82553",
+  "equipmentId": "EC91B7DD-18D1-487C-B4E6-9F43EA837248",
+  "changedTargetDocumentCount": 2,
+  "inventoryItemsModified": 0,
+  "clientAndTrailerDocumentsUnchanged": true,
+  "localNamesModelsLocationsWorkflowAndExistingHistoriesPreserved": true,
+  "fullBackup": {
+    "completedAt": "2026-09-24T18:13:39.634Z",
+    "documents": 185801,
+    "collectionPaths": 989,
+    "dataSha256": "edfbe0c1de56457273185dd9b2d2080f0f05126223b0a2ebfe683185fd59c004",
+    "manifestRetainedOutsideGit": true
+  },
+  "freshTargetPreimagesRetainedOutsideGit": true,
+  "repairReceiptPath": "DataRepairReceipts/work-order-10659-trailer-link-20260924",
+  "rawDocumentDataIncluded": false
+}

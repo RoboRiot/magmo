@@ -1,0 +1,2 @@
+# Keep this release's checksum-verified archival files byte-exact on all hosts.
+* -text whitespace=cr-at-eol

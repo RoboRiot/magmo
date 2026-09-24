@@ -1,0 +1,26 @@
+{
+  "preparedAt": "2026-09-24T18:52:38.964Z",
+  "scope": "Work order trailer association: one external machine-link helper only",
+  "sourceDirectory": "scoped-source",
+  "baselineRevision": "nextserverwest-00056-xum",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790273787945297"
+    }
+  },
+  "unrelatedFilesPreserved": true,
+  "entries": [
+    {
+      "path": "machine-link/workOrderMachineLink.cjs",
+      "before": "76807bc038a62aba5ed9145368c31daa7b89c2c9942d125f764c90b0ae6d869d",
+      "after": "e4527fcc0747fe265da22f24fa00134c57e6ac37a456b77ca3b26ef5d00def76"
+    }
+  ],
+  "sourceHashes": {
+    "lib/ops/workOrderMachineLink.cjs": "e4527fcc0747fe265da22f24fa00134c57e6ac37a456b77ca3b26ef5d00def76"
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "fileCount": 481
+}

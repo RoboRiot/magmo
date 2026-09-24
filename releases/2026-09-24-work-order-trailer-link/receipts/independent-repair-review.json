@@ -1,0 +1,23 @@
+{
+  "reviewedAt": "2026-09-24T18:55:24.125Z",
+  "independentVerified": true,
+  "artifactDirectory": "outputs/work-order-10659-trailer-link-20260924/apply-2026-09-24T18-53-37-850Z",
+  "checkedDocuments": 4,
+  "comparedTopLevelFields": 163,
+  "unexpectedFieldDifferences": [],
+  "mutationPaths": [
+    "Machine/AIS82553",
+    "OpsWorkOrders/10659"
+  ],
+  "receiptPath": "DataRepairReceipts/work-order-10659-trailer-link-20260924",
+  "inventoryItemsModified": 0,
+  "clientAndTrailerDocumentsUnchanged": true,
+  "localNamesModelsLocationsWorkflowAndExistingHistoriesPreserved": true,
+  "typedDestination": {
+    "clientId": "AIS78594",
+    "trailerId": "AIS20",
+    "machineId": "AIS82553"
+  },
+  "pureRepairValidationTestsPassed": 7,
+  "relatedMatcherImportMovementTestsPassed": 55
+}

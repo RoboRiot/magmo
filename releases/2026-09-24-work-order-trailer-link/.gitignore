@@ -1,0 +1,12 @@
+# Operational artifacts must stay outside this source record.
+*.zip
+.env
+.env.*
+*preimages*.json
+*planned-patches*.json
+/verification.json
+/production-archive/
+/runtime-state/
+*.pem
+*.key
+*service-account*.json

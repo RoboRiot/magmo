@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "description": "SHA-256 of exact allowlisted source and verification-tool snapshots; raw production artifacts and data are excluded.",
+  "files": {
+    "scripts/repair-work-order-10659-trailer-link-2026-09-24.mjs": "5a18abd9488c2ee62ea17961e6a867f24fa32356c75119195046a7419f63c733",
+    "source/lib/ops/workOrderMachineLink.cjs": "e4527fcc0747fe265da22f24fa00134c57e6ac37a456b77ca3b26ef5d00def76",
+    "tests/work-order-10659-trailer-repair.test.cjs": "d11bda07aa44f7656f95453cc0f250371b17f67c1e6b7a4ec9537df2d3582256",
+    "tests/work-order-add-service.test.cjs": "2abb02614ebef99cdf76baa79fe95254c75abe6c06ff40a166133dbdab225039",
+    "tests/work-order-machine-import.test.cjs": "92e26dbccd22ed5e40a855e0fcd85bd336f73684555e68a6d5bbb76f681fcd87",
+    "tests/work-order-machine-link.test.cjs": "b433a59442d94f497a2bf0158c849e5ad3544d7eac68dc89fbfb7fe5cf4bb8e1",
+    "tools/compose.cjs": "d6cbd93bb69f5fd8b5c0de350d829bcb522e11eaf2865429d2c265e646018efa",
+    "tools/deploy.cjs": "5b26c93edd018203c18fd46d43390e678be3b02a50a64525638223a6c826e068",
+    "tools/package.ps1": "8745e8780b26a33c13b736df0c3b2e27afd8a4f6f6eb39607ab8c0bf81295590",
+    "tools/rollback.cjs": "aa8fda02dbcd5fa377e8bcbe672d32c6c609482c202aa2533e58e17b1ad02c42",
+    "tools/snapshot.cjs": "c3b974a76b26fb58644b27536172b1698f4f2471934618e41d37a16ed62cf5ed",
+    "tools/verify-artifact.test.cjs": "c954f5c366c92dca58700db9cf9b0e70fbe488f050aee34afd196eb20095ddd6",
+    "tools/verify-live.cjs": "3bd2498376cf3cb415d0b1e0fbce57631563472633cc034d78ed2a4dd2eb8900"
+  },
+  "exactProductionArtifactSHA256": "c9d419b251b2669fd255a2caadaf2fd2a9fabeb7fd7c13d266c8bbfde74f5c4e",
+  "rollbackProductionArtifactSHA256": "b94cc8e088e28afe5af8c09421d2e63fca14898816a5c74b54041e3e362f5ce2"
+}

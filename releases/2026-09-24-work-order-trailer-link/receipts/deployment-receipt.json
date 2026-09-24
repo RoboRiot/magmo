@@ -1,0 +1,27 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-24T18:56:10.676Z",
+  "originalRevision": "nextserverwest-00056-xum",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790273787945297"
+    }
+  },
+  "artifactSHA256": "c9d419b251b2669fd255a2caadaf2fd2a9fabeb7fd7c13d266c8bbfde74f5c4e",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Work order trailer association: one external machine-link helper only",
+  "rollbackArchive": "source.zip",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790276172405-65c3f274e5b65-287f9cb5-ac73638a",
+  "completedAt": "2026-09-24T19:00:28.725Z",
+  "revision": "nextserverwest-00057-lip",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790276173369344"
+    }
+  },
+  "unrelatedConfigurationPreserved": true
+}

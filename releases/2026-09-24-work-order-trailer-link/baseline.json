@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-09-24T18:51:25.346Z",
+  "revision": "nextserverwest-00056-xum",
+  "updateTime": "2026-09-24T18:19:26.880715278Z",
+  "source": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790273787945297"
+    }
+  },
+  "archiveSHA256": "b94cc8e088e28afe5af8c09421d2e63fca14898816a5c74b54041e3e362f5ce2",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest"
+}

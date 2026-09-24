@@ -1,0 +1,9 @@
+{
+  "rootReviewed": true,
+  "zipEntriesVerified": 481,
+  "exactArtifactTestsPassed": true,
+  "artifactSHA256": "c9d419b251b2669fd255a2caadaf2fd2a9fabeb7fd7c13d266c8bbfde74f5c4e",
+  "ok": true,
+  "packagedAt": "2026-09-24T18:55:49.1289807Z",
+  "exactArtifactTestCount": 78
+}
