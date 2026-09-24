@@ -110,7 +110,7 @@ except ImportError:  # pragma: no cover
     load_dotenv = None
 
 
-LISTENER_VERSION = "2026.09.23-bluefolder-destination-link.1"
+LISTENER_VERSION = "2026.09.24-bluefolder-close-status-only.1"
 PRODUCTION_DISPATCH_CHANNEL_ID = "C07EPLKV9JT"
 REPORT_LISTENER_EXACT_COMMANDS = frozenset(
     {"!complete", "!done", "!hours", "!parts", "!trailer"}
@@ -240,9 +240,10 @@ def ops_record_is_closed(record: Any) -> bool:
         return current_stage == "closed"
     if str(entry.get("ops_closed_at") or "").strip():
         return True
-    if str(entry.get("bluefolder_date_time_closed") or "").strip():
-        return True
-    for key in ("ops_status", "bluefolder_workflow_stage"):
+    # A BlueFolder close observation is not yet an acknowledged Magmo close.
+    # Keep ingesting final evidence until the status-only API confirms it.
+    # Historical dateTimeClosed can also remain populated after reopening.
+    for key in ("ops_status",):
         stage = re.sub(
             r"[\s-]+", "_", str(entry.get(key) or "").strip().lower()
         ).strip("_")
@@ -450,6 +451,8 @@ class Settings:
     dry_run: bool = getenv_bool("DRY_RUN", False)
     baseline_on_startup: bool = getenv_bool("BASELINE_ON_STARTUP", True)
     enable_bluefolder: bool = getenv_bool("ENABLE_BLUEFOLDER", True)
+    bluefolder_close_sync_enabled: bool = getenv_bool("BLUEFOLDER_CLOSE_SYNC_ENABLED", True)
+    bluefolder_close_detail_batch: int = int(os.getenv("BLUEFOLDER_CLOSE_DETAIL_BATCH", "6"))
     def __post_init__(self) -> None:
         # Keep backward compatibility with earlier env naming.
         if not self.bluefolder_api_token and self.bluefolder_api_key:
@@ -864,6 +867,31 @@ class BlueFolderClient:
             return payload
         raise RuntimeError(f"Unexpected BlueFolder detail payload for work order {work_order_id}")
 
+    def get_work_order_for_status_sync(self, service_request_id: str) -> Dict[str, Any]:
+        """Read the exact current source row; Classic API reads require XML POST.
+
+        This deliberately uses only get.aspx, never add/edit/comment endpoints.
+        Keep this separate from the legacy adapter used by other listener lanes.
+        """
+        if not re.fullmatch(r"[0-9]+", str(service_request_id)):
+            raise ValueError("A numeric immutable BlueFolder service-request ID is required.")
+        response = self._request(
+            "POST", "/serviceRequests/get.aspx",
+            data=("<request><serviceRequestId>" + xml_escape(service_request_id)
+                  + "</serviceRequestId><groupItemsByType>false</groupItemsByType></request>").encode("utf-8"),
+            headers={"Content-Type": "text/xml", "Accept": "text/xml, application/xml, application/json"},
+        )
+        if self._payload_error_message(response) or not self._payload_status_ok(response):
+            raise RuntimeError("BlueFolder status detail read was not successful.")
+        payload = self._parse_payload(response)
+        rows = self._extract_collection(payload)
+        if len(rows) != 1:
+            raise RuntimeError("BlueFolder status detail did not return exactly one record.")
+        row = rows[0]
+        if extract_work_order_fields(row, self.settings)["id"] != service_request_id:
+            raise RuntimeError("BlueFolder status detail identity mismatch.")
+        return row
+
     def user_names_by_id(self, force_refresh: bool = False) -> Dict[str, str]:
         cache_seconds = max(60, int(os.getenv("BLUEFOLDER_USER_CACHE_SECONDS", "3600")))
         if (
@@ -1099,6 +1127,7 @@ class MagmoOpsIngestClient:
         self.supports_bluefolder_import = self._bluefolder_import_available(
             self.health
         )
+        self.supports_bluefolder_status_sync = self._bluefolder_status_available(self.health)
 
     def verify_capabilities(self) -> Dict[str, Any]:
         response = requests.get(self.health_url, timeout=30)
@@ -1172,7 +1201,39 @@ class MagmoOpsIngestClient:
         health = self.verify_capabilities()
         self.health = health
         self.supports_bluefolder_import = self._bluefolder_import_available(health)
+        self.supports_bluefolder_status_sync = self._bluefolder_status_available(health)
         return health
+
+    @staticmethod
+    def _bluefolder_status_available(health: Dict[str, Any]) -> bool:
+        contract = health.get("bluefolderStatusSync") or {}
+        return bool(
+            "work_order.bluefolder_status" in (health.get("supportedEventTypes") or [])
+            and isinstance(contract, dict)
+            and contract.get("statusOnly") is True
+            and contract.get("createsSlackPosts") is False
+            and contract.get("writesSlack") is False
+            and contract.get("writesBlueFolder") is False
+            and contract.get("deletesMessages") is False
+            and contract.get("modifiesHours") is False
+            and contract.get("createsWorkOrders") is False
+        )
+
+    def sync_bluefolder_closed_status(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.supports_bluefolder_status_sync:
+            raise RuntimeError("Magmo has not advertised the status-only BlueFolder close contract.")
+        result = self._request(payload)
+        identity = str((payload.get("blueFolder") or {}).get("serviceRequestId") or "")
+        if (
+            result.get("eventType") != "work_order.bluefolder_status"
+            or result.get("workOrderId") != payload.get("workOrderId")
+            or str((result.get("blueFolder") or {}).get("serviceRequestId") or "") != identity
+            or result.get("created") is not False
+            or not isinstance(result.get("after"), dict)
+            or not isinstance(result.get("appliedChanges"), dict)
+        ):
+            raise RuntimeError("Magmo returned an invalid status-only synchronization acknowledgement.")
+        return result
 
     def _request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
@@ -8220,6 +8281,7 @@ def scan_ops_threads(
             key=lambda message: slack_ts_number(message.get("ts")),
         )
 
+        scan_complete = True
         for message in new_messages:
             message_ts = str(message.get("ts") or "").strip()
             if not message_ts:
@@ -8236,6 +8298,7 @@ def scan_ops_threads(
                 )
                 if outcome in {"closed", "deleted"}:
                     thread_state["closed_at"] = utc_now_iso()
+                    scan_complete = False
                     break
                 thread_state["last_message_ts"] = message_ts
                 thread_state["last_activity_at"] = utc_now_iso()
@@ -8245,6 +8308,7 @@ def scan_ops_threads(
                     thread_state["completed_at"] = utc_now_iso()
             except SlackRateLimited as exc:
                 defer_scan(exc, offset)
+                scan_complete = False
                 break
             except Exception as exc:
                 logging.warning(
@@ -8254,8 +8318,11 @@ def scan_ops_threads(
                     message_ts,
                     exc,
                 )
+                scan_complete = False
                 break
 
+        if scan_complete:
+            thread_state["last_successful_scan_at"] = utc_now_iso()
         state.save()
         if rate_deferred:
             break
@@ -8307,6 +8374,227 @@ def append_slack_post_log(
         logging.warning("Failed writing Slack post log %s: %s", path, exc)
 
 
+def observe_bluefolder_close_statuses(
+    settings: Settings, state: StateStore, bluefolder: BlueFolderClient,
+    ops: Any, work_orders: List[Dict[str, Any]],
+) -> int:
+    """Read-only detection; old closures are reviewed, never mass-applied.
+
+    The list includes every lifecycle. A rotating detail-read lane also checks
+    known Magmo identities outside the list's historical window. Neither lane
+    depends on a Slack receipt, assignment, work-order age, or Done status.
+    """
+    if not settings.bluefolder_close_sync_enabled:
+        return 0
+    sync = state.data.setdefault("bluefolder_close_sync", {})
+    observations = sync.setdefault("observations", {})
+    pending = sync.setdefault("pending", {})
+    review = sync.setdefault("historical_review", {})
+    known = {}
+    for state_key, record in state.data.get("processed_work_order_ids", {}).items():
+        if not isinstance(record, dict) or ops_record_is_deleted(record):
+            continue
+        if not (record.get("ops_created_at") or record.get("discovered_from_existing_magmo")):
+            continue
+        service_id = monitoring_service_request_id(str(state_key), record)
+        if service_id:
+            known[service_id] = (str(state_key), record)
+    items = {}
+    for item in work_orders:
+        service_id = extract_work_order_fields(item, settings)["id"]
+        if service_id:
+            items[service_id] = item
+    outside = sorted(
+        service_id for service_id, (_, record) in known.items()
+        if service_id not in items and not ops_record_is_closed(record)
+    )
+    if outside:
+        start = int(sync.get("detail_index") or 0) % len(outside)
+        for offset in range(min(max(1, settings.bluefolder_close_detail_batch), len(outside))):
+            service_id = outside[(start + offset) % len(outside)]
+            sync["detail_index"] = (start + offset + 1) % len(outside)
+            try:
+                item = bluefolder.get_work_order_for_status_sync(service_id)
+                if extract_work_order_fields(item, settings)["id"] != service_id:
+                    raise RuntimeError("BlueFolder detail identity mismatch")
+                items[service_id] = item
+            except Exception as exc:
+                # Never advance a status checkpoint on failed or ambiguous reads.
+                logging.warning("BlueFolder closure detail read deferred for %s: %s", service_id, type(exc).__name__)
+    queued = 0
+    now = utc_now_iso()
+    sync.setdefault("started_at", now)
+    for service_id, item in items.items():
+        fields = extract_work_order_fields(item, settings)
+        status = str(fields.get("bluefolder_status") or "").strip().lower()
+        if not status:
+            continue
+        previous = observations.get(service_id)
+        closed_at = fields.get("bluefolder_date_time_closed") or ""
+        if status != "closed":
+            pending.pop(service_id, None)
+            review.pop(service_id, None)
+        record_entry = known.get(service_id)
+        eligible = bool(record_entry and not ops_record_is_closed(record_entry[1]))
+        if status == "closed" and eligible:
+            previous_close = parse_dt(previous.get("dateTimeClosed")) if previous else None
+            current_close = parse_dt(closed_at)
+            newer_closure = bool(previous_close and current_close and current_close > previous_close)
+            acknowledged_close = parse_dt((sync.get("acknowledged", {}).get(service_id) or {}).get("dateTimeClosed"))
+            started_at = parse_dt(sync.get("started_at"))
+            # Context hydration may lag the source poll: a cached Magmo Closed
+            # row can be manually reopened before we observe a fresh source
+            # closure. Re-evaluate an unacknowledged post-start closure after
+            # hydration, with the API enforcing the authoritative reopen guard.
+            fresh_unacknowledged = bool(
+                previous and current_close and started_at and current_close >= started_at
+                and (not acknowledged_close or current_close > acknowledged_close)
+            )
+            if not previous or (
+                previous.get("status") == "closed" and not newer_closure
+                and not fresh_unacknowledged and service_id not in sync.get("acknowledged", {})
+            ):
+                review.setdefault(service_id, {
+                    "workOrderId": monitoring_ops_work_order_id(*record_entry),
+                    "number": fields["number"], "dateTimeClosed": closed_at,
+                    "observedAt": now, "reason": "closed_before_status_sync_baseline",
+                })
+            elif (previous.get("status") != "closed" or newer_closure or fresh_unacknowledged) and service_id not in pending:
+                review.pop(service_id, None)
+                payload = {
+                    "eventType": "work_order.bluefolder_status",
+                    "workOrderId": monitoring_ops_work_order_id(*record_entry),
+                    "blueFolder": {"serviceRequestId": service_id, "status": "Closed"},
+                    "observedAt": now,
+                }
+                if closed_at:
+                    payload["blueFolder"]["dateTimeClosed"] = closed_at
+                pending[service_id] = {
+                    "payload": payload, "state_record_id": record_entry[0],
+                    "number": fields["number"], "attempts": 0,
+                }
+                queued += 1
+        observations[service_id] = {
+            "status": status, "dateTimeClosed": closed_at, "checkedAt": now,
+        }
+    sync["last_observed_at"] = now
+    state.data.setdefault("health", {})["bluefolder_status_sync"] = {
+        "capability_available": bool(getattr(ops, "supports_bluefolder_status_sync", False)),
+        "pending_count": len(pending), "historical_review_count": len(review),
+        "last_observed_at": now, "status_only": True,
+    }
+    state.save()
+    return queued
+
+
+def flush_bluefolder_close_statuses(
+    settings: Settings, state: StateStore, bluefolder: BlueFolderClient, ops: Any,
+) -> int:
+    """Write only the dedicated Magmo status contract after durable evidence sync."""
+    if (settings.dry_run or not settings.bluefolder_close_sync_enabled
+            or not getattr(ops, "supports_bluefolder_status_sync", False)
+            or not callable(getattr(ops, "sync_bluefolder_closed_status", None))):
+        return 0
+    sync = state.data.setdefault("bluefolder_close_sync", {})
+    pending = sync.setdefault("pending", {})
+    acknowledged = 0
+    candidates = sorted(pending.items(), key=lambda pair: pair[1].get("last_checked_at", ""))
+    started = time.monotonic()
+    for service_id, entry in candidates[:max(1, settings.bluefolder_close_detail_batch)]:
+        if time.monotonic() - started >= 20:
+            break
+        last_attempt = parse_dt(entry.get("last_checked_at"))
+        if last_attempt and (datetime.now(timezone.utc) - last_attempt).total_seconds() < 60:
+            continue
+        payload = entry["payload"]
+        entry["last_checked_at"] = utc_now_iso()
+        try:
+            # A current source read prevents a queued closure from winning over
+            # a BlueFolder reopening while Magmo or the network was unavailable.
+            detail = extract_work_order_fields(bluefolder.get_work_order_for_status_sync(service_id), settings)
+            if detail["id"] != service_id:
+                raise RuntimeError("BlueFolder detail identity mismatch")
+            if str(detail.get("bluefolder_status") or "").strip().lower() != "closed":
+                if detail.get("bluefolder_status"):
+                    pending.pop(service_id, None)
+                    sync.setdefault("observations", {})[service_id] = {
+                        "status": str(detail["bluefolder_status"]).lower(), "checkedAt": utc_now_iso(),
+                    }
+                    state.save()
+                continue
+            current_closed_at = detail.get("bluefolder_date_time_closed") or ""
+            if current_closed_at != payload["blueFolder"].get("dateTimeClosed", ""):
+                payload["observedAt"] = utc_now_iso()
+                payload["blueFolder"].pop("dateTimeClosed", None)
+                if current_closed_at:
+                    payload["blueFolder"]["dateTimeClosed"] = current_closed_at
+            context = ops.work_order_context(payload["workOrderId"])
+            context_identity = str((context.get("blueFolder") or {}).get("serviceRequestId") or "") if context else ""
+            if not context or context.get("workOrderId") != payload["workOrderId"]:
+                raise RuntimeError("Magmo closure context identity mismatch")
+            if context_identity and context_identity != service_id:
+                raise RuntimeError("Magmo BlueFolder identity mismatch")
+            if context.get("deleted") is True:
+                pending.pop(service_id, None)
+                state.save()
+                continue
+            channel, thread_ts, _ = magmo_dispatch_receipt(context, entry["number"])
+            if (not channel or not thread_ts) and any(context.get(key) for key in ("slackChannel", "slackThreadTs", "slackPermalink")):
+                raise RuntimeError("Magmo has an incomplete or non-Dispatch receipt; closure requires review.")
+            local_record = state.data.get("processed_work_order_ids", {}).get(entry["state_record_id"], {})
+            if not channel and not thread_ts and any(local_record.get(key) for key in (
+                "ops_conversation_channel", "ops_conversation_ts", "slack_channel", "slack_ts", "slack_permalink",
+            )):
+                channel = str(local_record.get("ops_conversation_channel") or local_record.get("slack_channel") or "")
+                thread_ts = str(local_record.get("ops_conversation_ts") or local_record.get("slack_ts") or "")
+                verified_identity = f"{entry['number']}:{service_id}:{channel}:{thread_ts}"
+                if (channel != PRODUCTION_DISPATCH_CHANNEL_ID or slack_ts_number(thread_ts) <= 0
+                        or local_record.get("ops_conversation_verified_identity") != verified_identity):
+                    raise RuntimeError("Locally discovered Dispatch thread requires exact verification before closure.")
+            if channel and thread_ts and context.get("workflowStatus") != "closed":
+                thread = state.data.get("ops_thread_state", {}).get(f"{channel}:{thread_ts}", {})
+                scanned = parse_dt(thread.get("last_successful_scan_at"))
+                observed = parse_dt(payload["observedAt"])
+                if not scanned or not observed or scanned < observed:
+                    # The normal scanner keeps running and ingests all pending
+                    # messages first. This status path never deletes evidence.
+                    entry["waiting_for_final_evidence_scan"] = True
+                    continue
+            entry.pop("waiting_for_final_evidence_scan", None)
+            entry["last_attempt_at"] = utc_now_iso()
+            entry["attempts"] = int(entry.get("attempts") or 0) + 1
+            state.save()  # Save the exact retry payload before sending.
+            result = ops.sync_bluefolder_closed_status(payload)
+            after = result["after"]
+            record = state.data.get("processed_work_order_ids", {}).get(entry["state_record_id"])
+            if isinstance(record, dict):
+                if after.get("workflowStatus"):
+                    record["ops_workflow_status"] = after["workflowStatus"]
+                if after.get("status"):
+                    record["ops_status"] = after["status"]
+                if after.get("workflowStatus") == "closed":
+                    record["ops_closed_at"] = utc_now_iso()
+            sync.setdefault("acknowledged", {})[service_id] = {
+                "at": utc_now_iso(), "reason": result.get("reason"),
+                "requestId": result.get("requestId"), "statusChanged": result.get("statusChanged"),
+                "dateTimeClosed": payload["blueFolder"].get("dateTimeClosed", ""),
+            }
+            pending.pop(service_id, None)
+            acknowledged += 1
+            state.save()
+        except Exception as exc:
+            entry["last_error"] = type(exc).__name__
+            entry["last_attempt_at"] = utc_now_iso()
+            state.save()
+            logging.warning("BlueFolder status-only close deferred for %s: %s", service_id, type(exc).__name__)
+    health = state.data.setdefault("health", {}).setdefault("bluefolder_status_sync", {})
+    health["pending_count"] = len(pending)
+    if acknowledged:
+        health["last_acknowledged_at"] = utc_now_iso()
+    state.save()
+    return acknowledged
+
+
 def process_once(
     settings: Settings,
     state: StateStore,
@@ -8340,6 +8628,7 @@ def process_once(
         and not getattr(ops, "supports_extended_sync", False)
     ):
         remember_bluefolder_context_candidates(settings, state, work_orders)
+    observe_bluefolder_close_statuses(settings, state, bluefolder, ops, work_orders)
     if (
         ops
         and not settings.dry_run
@@ -8839,6 +9128,8 @@ def main() -> int:
                             "Synced %s new Slack Ops event(s) through secure ingest",
                             synced_messages,
                         )
+            if ops:
+                flush_bluefolder_close_statuses(settings, state, bluefolder, ops)
             health = state.data.setdefault("health", {})
             health["last_successful_loop"] = utc_now_iso()
             health["pid"] = os.getpid()
