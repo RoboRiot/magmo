@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-09-24T18:04:25.503Z",
+  "revision": "nextserverwest-00055-yom",
+  "updateTime": "2026-09-24T17:11:41.228503873Z",
+  "source": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790269752982539"
+    }
+  },
+  "archiveSHA256": "2899a83f3e6c8a0e45cb89fa5368961a6836b9317eadee5e7d77b3028f705100",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest"
+}

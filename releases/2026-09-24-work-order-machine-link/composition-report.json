@@ -1,0 +1,418 @@
+{
+  "composedAt": "2026-09-24T18:08:17.996Z",
+  "sourceDirectory": "scoped-source-v2",
+  "artifactFile": "artifact.zip",
+  "oldAsset": "static/chunks/pages/NewSearch/mainSearch-bac7249c2f16ebb5.js",
+  "newAsset": "static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js",
+  "oldBuildId": "_0x7a4YQ7YpRcvvZEMt2d",
+  "newBuildId": "wo-machine-link-31372590b5701129",
+  "immutableAssetsPreserved": true,
+  "sourceHashes": {
+    "lib/ops/workOrderMachineLink.cjs": "76807bc038a62aba5ed9145368c31daa7b89c2c9942d125f764c90b0ae6d869d",
+    "lib/ops/workOrderClientLink.cjs": "4cc58a389d7289501b169bfa39f4d6744769bd33f66c3d60069fc4316418a2ff",
+    "lib/ops/clientDirectory.cjs": "081416a8ba803a33cfa75df84857ed9328176f2a93591ad7044850c986c7f08f",
+    "lib/ops/trailerClientLinks.cjs": "42606bf5a0e760e9b2f3d95363f803e67bd5c091efdfbdf8dcd672b1e42ec3eb",
+    "lib/ops/blueFolderImportContract.cjs": "43e541a395cb331c0b01901b78797921c23fd4c20b6a925fd199ae414751771a",
+    "lib/ops/workOrders.js": "74de198c0ba3d9ab6adb201994faf4804f94f45b31f92350a5c157f3d2ab7f07",
+    "lib/ops/ingestContract.cjs": "8d684ce3906cfd1f4e9418724db31716eae1f95802d00e904b5a08d0a296fc64",
+    "lib/inventory/workOrderAddService.cjs": "58d4157fc4ae51dac0ddd1ea3f8fcf5725a4d513ccea3930681d362e43434d82",
+    "lib/inventory/workOrderScannerCapture.cjs": "19cb82dc78e2dfec8997d1bb2d7dfc4f629e774b9812ecce69bcb14a45045998",
+    "lib/inventory/workOrderAddOptions.js": "88ac50948c2a01ae35287ed3cdccdde9dce5b8650f536ef86f47f43dc0cb728c",
+    "components/WorkOrderAddModal.js": "e22b8f61b11b14dcaccf4c0c850365275a7fa5f15feb92d32b717d33d6a662c1",
+    "tmp/work-order-machine-link-20260924/contract-overlay.cjs": "426adab6d71c64b7f3e0960912d657a97962034cc824d3e3fbb3413c583a1c6c"
+  },
+  "entries": [
+    {
+      "path": ".next/server/chunks/8806.js",
+      "before": "c05e401ae925bc1970a8583318220b158b80b2ae583d21e883527f637d5f44e3",
+      "after": "41154dafc8d91b899e9cfba93b373e9916675446a367ace428ef044746ad1596"
+    },
+    {
+      "path": ".next/server/pages/api/cron/trailer-slack-monitor.js",
+      "before": "844254d8c3a33f8c2f9329a5b11af29b7cbb102315609768cfa773b7e183cf60",
+      "after": "0df045b20670f7eef97ea6c29d3324cb75841750a679a69b1b4c684d97260e45"
+    },
+    {
+      "path": ".next/server/pages/api/ops/health.js",
+      "before": "b0f27f0d8d764bcc0cc1b997f8352f4c0d33369ae7a40907a7c7ce2e281674c1",
+      "after": "531afb6c78c765f1eee0a2fe7af4cec5cf9f547e3c95e84c2323f942b6738d01"
+    },
+    {
+      "path": ".next/server/pages/api/ops/openapi.js",
+      "before": "1a8862c5b1db725d6527d9a7f3b557302a2e8e7a6dd2c2d2a4247cbee8d42d8c",
+      "after": "a5d874e747da812ea8c6aa4d71ad0324d94a13e72257cdcc9f5849ec6f99f4b5"
+    },
+    {
+      "path": ".next/server/chunks/6681.js",
+      "before": "16df6fab3ad709c09f3a6a429f75d3dac978afda11256da30d84bf178369c4d6",
+      "after": "ec9e231abea6f7211db60a8aa7b8f038b2e25e12c902b4b237ccbbfc7ce38e12"
+    },
+    {
+      "path": ".next/server/chunks/4354.js",
+      "before": "fde703b41c64c9ef4120cc7d8fe2557bce7382f5da98b9db8bc7b5283a7b34e9",
+      "after": "5ba540a6a1b6c855a4635521c0ad66286184465f616f9805aa78ca58d6b07459"
+    },
+    {
+      "path": ".next/server/chunks/428.js",
+      "before": "a5be2112807009daad3590556ee055035798e47481460287a64db6b25d138227",
+      "after": "ea555c27486899033cc4e995995623663a0a6075d62c58f030e0ceb321cd9840"
+    },
+    {
+      "path": ".next/server/pages/api/items/work-order-add/options.js",
+      "before": "fdad9ebfc17d3870ae53693ebb0d2068e99c27e8a427e1f43ff54cfbb99ae87d",
+      "after": "94a82ee065569f7469ace41bdef5a8cf5d78aca20adbb64f21e1736e0d3b9d58"
+    },
+    {
+      "path": ".next/static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js",
+      "before": null,
+      "after": "31372590b5701129adfbf55639d260393503ae87d11692d40e324a572a7b77dc"
+    },
+    {
+      "path": ".next/build-manifest.json",
+      "before": "5eb1464d6db5988e29ca649fb1fbbf22b6d2aecab9da4670b84ed7020c692c33",
+      "after": "1a4e6e640121cd71b0bef1f28f27937f78643599f2a340e850c05401850b48bd"
+    },
+    {
+      "path": ".next/routes-manifest.json",
+      "before": "2fed15dcfcdba8e5b3192c8763a8b4ecaf5b9f4b6e89cb9fa02b82387fc961a7",
+      "after": "f1111e772a779ac9398c2ba1846866201d58b24844e18659ad0b81c1b910e00d"
+    },
+    {
+      "path": ".next/server/middleware-build-manifest.js",
+      "before": "12fc7a1e9bc60c90415479578997a7c3dfe0336d81f821bf5269eba78c836cea",
+      "after": "25cd617cf487d76c8db11c40fc33c4b70f99c5fd2eedef7d32566dbf48c31da5"
+    },
+    {
+      "path": ".next/server/pages/404.html",
+      "before": "0d95dd5913c18022b51d1597c8bc44a709091d2a4c87be3c738517cfd7755619",
+      "after": "18ecc9ccfc177199763de8d4f9f9db876853324fb324f2da7141c9ce11da6623"
+    },
+    {
+      "path": ".next/server/pages/500.html",
+      "before": "5af07882f22b2e8f48dd54f17cbdcff52deea732525ac21797d113a7514bf82a",
+      "after": "1f04e16ecfc6a4c4b5a4023881c387e9e654be5ac6674ed0e50af8f3bedd41f4"
+    },
+    {
+      "path": ".next/server/pages/AskMagmo.html",
+      "before": "57678af60ae879ab7bead3e800ed06ef483b7bfe703eb25aeaf2b09e42883e3d",
+      "after": "4510fc50e315486256b157b2f30dbd74007342e2dadb9caa0e668e168c0781ac"
+    },
+    {
+      "path": ".next/server/pages/BlueFolder/bluefolder.html",
+      "before": "2fe939e5665376a0231dd1e480645c33e34b00ab9e3ec160004649c05bd9d7c3",
+      "after": "7680c18f2a0ef08cc1959062294e3a3153c6953927e8891bd5938050310ade65"
+    },
+    {
+      "path": ".next/server/pages/dashboard.html",
+      "before": "16f2c591181cad4e2e322b541ef981676aaf047de623186dad90387868a772d5",
+      "after": "41e344ca2272813b5aad21518d61b489e7612b33f5edd6dfd96b299364be86b8"
+    },
+    {
+      "path": ".next/server/pages/drive.html",
+      "before": "fa6461e5b791c401bcb3121d2c9ff2cfc80a8957a4c34bc0affc2769ef98b584",
+      "after": "5d7024641ff1033fa3fdb18499ab0c8436393c23da8f280a506af04af19c5fc7"
+    },
+    {
+      "path": ".next/server/pages/index.html",
+      "before": "1c25def26a4d430991f63f255f5c9d5a2b807d1ec11a176cc595d6613e0b0a0e",
+      "after": "f147b7425f2270d97c1232e3423b211501484010b0160cca8ae4d9ebeb7a741d"
+    },
+    {
+      "path": ".next/server/pages/LoggedIn.html",
+      "before": "3df63de5d4bdd3abeb9db3d9387eefeaaa09e7a7ece814f2c1eea289222f7c2e",
+      "after": "098acdbd7452bec765d8696641546c7ab7e3f02a08ac142f51f87cff2cb5d507"
+    },
+    {
+      "path": ".next/server/pages/logs.html",
+      "before": "ff1754118f4292d69cf4acfe3acbb33cffc4ba564be7afea2b2d462d40308523",
+      "after": "797f12cd65f18a3b3adcb425d5dac550ab8b11f7ee5908ec8a59da3b4d3e1273"
+    },
+    {
+      "path": ".next/server/pages/Magmonitor.html",
+      "before": "22dae3b0b44ed6a08cbd69fe5bb2ef2f168a7d2cc7a13655b6375cb6e22a9b14",
+      "after": "bb024a3bb1057f1ea7f576ecdbb1c4c0f46c622e64bec329d7a880040dedb38f"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/AddItem/NewItem.html",
+      "before": "a48b9a6cd3ff745943154e279394648ce74ccf50c21f4990402aa1869e3facd2",
+      "after": "68e624891c59feae0e409a1eceb4ede46296d14c0ab06e2c512781ef4ef6c6fc"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/AddItem/parentModal.html",
+      "before": "31f235ffc16559fefde46f475f043b66313115baa64aca1ebd50de3ff002a825",
+      "after": "963ca1e950c509c6a5d899994b021b7f3d1f24dc20a87c28a4cac2a997067c9f"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/client/[id]/addClient.html",
+      "before": "017b63c203cea9e8a1f18892c023bd2885f7946b58561cd88f9f615170049093",
+      "after": "e1c975b64d834b3632ae4a3861882d307ca8afd6f12b589a5d757de1074f8218"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/ClientInfoModal.html",
+      "before": "db854434a205cfee6aee03b6f25d349d70fb93578c5db69352b36b3d9312ee7e",
+      "after": "8a29294453e113a318716fa18644b0c38f65d2689e36e1f0560d96159b08fb8e"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/email/EmailForm.html",
+      "before": "c848da54b8cd2bcd20013cf37d743a63a7df6fe9efff66d2c90248a26e35ab44",
+      "after": "d0123b22bfa5f8b40b7d13390a141b1a10380d8100025531bfd5a7b1c9f51311"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/email/imageTest.html",
+      "before": "4d9c4882cd43aee97428d72ecba70292970bb8f9630cce3ffc2d1bd85cba8312",
+      "after": "1ed060dbe7fd577f832da7c37779be65a0b10c0b7af18306567014a5fc640070"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/email/sendEmail.html",
+      "before": "afade393548f7657b3dcef0172772920fcab3868bd7af7a8d188329cee211c40",
+      "after": "25ee435af93d35461a4c55851f4bf77226cd3e467e6b67a1cbd3efad230ec673"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/InfoModal.html",
+      "before": "ed67107e30f78cd5f5880b2b26fe39b61288c810e3a12c78c49d9a25b86f9341",
+      "after": "fa2810cbf82806083f395b7573efc8f6f437d8652f6b1a1aa1c65ac68e1e8833"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/inventory/groups/[id].html",
+      "before": "73bb8e374645a6f339169f11a71cf662edfd6166c6c4350cd5240973f2d82fee",
+      "after": "9dfcf456e8acd1e0aef7da9f17e3eca1ce5e4210ea47e30815cc43e336a5ae5d"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/inventory/inventoryManage.html",
+      "before": "608fa60cbc9bef9191b0eef70088f7133ffe081e9c1c3c9515771f05589fc0a5",
+      "after": "e21a43840679bd11c1801759e129e53b6b2f664dbe1f4f3c80088af7fe437a78"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/inventory/registerShipment.html",
+      "before": "7ddb0dc1c13649afea85d543a65e7bc20d9a33962ff25cc1ffe4e82514153bde",
+      "after": "bf34d40901f93333a38e90dd39cf3c6591ed16213d6b949316cf108e2e2aba38"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/inventory/storage/[id].html",
+      "before": "ec603b125811d84f0776b5654a17bf32cb3fdd9a65db0eceb70dd840761a200d",
+      "after": "c271e6c83bb73bde2389b9fdb11054db1e777d200ecaf4ef8ee99e267a8688b9"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/item/[id]/MachineSelectionModal.html",
+      "before": "59f8356f5ced3bf14dc39ec1c7a57aa113e6b7349e05595a1a76bb24011b7706",
+      "after": "2fc24c00eb8820648c34d6477ab32cf52c9df367d08bb6ec1677be871fa4305b"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/item/[id]/NewLocal.html",
+      "before": "03980b48b84527d1e7deb7a6d46e658275951a0db0945ce91f68d27a2d5b48ff",
+      "after": "2b1797a9eb5d74bf3e9b2876bcd6c5cb2a3af350461265bab49f362781556597"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/LoadingButton.html",
+      "before": "30b41046f2e35727738dbe4a5485fa477a940e0bab4b1f501eecb659a6121967",
+      "after": "205063d0c8d060e78ffc12e923810eceff21cbd815d60f340fdda3c94405329d"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/MachineCreationModal.html",
+      "before": "8e527607e36c25e22dcd5f4e63932b871c832fb696549335581bdb1a99b01717",
+      "after": "c2dd70a2422cc6d387072041fe1a596e3d19d884c15a5ddae57be55c4f2d3798"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/MachineEditModal.html",
+      "before": "df72005ccc1e02774c610886a556fd8a1641be0f334bd4a6f25ccd809f2167d2",
+      "after": "c246d12dc2ad3a2ff03375835dab0205ffb0627ad03994437e47ef611c640177"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/mainSearch - Copy.html",
+      "before": "a99916e003d18e7be8508c4e7cac8a0f0fac947fe6bcc0d8611823f6c014e6a1",
+      "after": "86b5ee90ce60dc2418934f6e668f6d042ed4756db5ee40b2f922eda674f0e2f9"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/mainSearch.html",
+      "before": "8e4ec8f2f9baaa0f252dd73efd889fa199932c034e1f1e40f5b6b8584c9c287d",
+      "after": "2ecc7dbba6201462dc346f1bab2e8dd43b948eda6e0d92f808243b9d00972bdd"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/searchTest.html",
+      "before": "8edc07997d639fdc5864ccbc8282e2dea4ba015d4f8fc22c26c2dadc50e0d292",
+      "after": "73f5d2d32595991d1366bfe43a81893d6d8c16f289bf8acfd350ce65527ea0ee"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/TestImage.html",
+      "before": "4dc01504da0c1316ed4ba35e982c003c193252822a265b93153d1b7a6942b235",
+      "after": "b3310ec1b190cdaa77d440f71c61c6adae93dfbf6dd94a4ca9b03895436f19f1"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/TestPrint.html",
+      "before": "bdfe37116b3068731a17b0748ab0dc215b61273c8ee61b63f793daf45c8f9e11",
+      "after": "a26105539b94835091e54dfc592e3dc8d1a5269704b8127b09e52c05df9b960a"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/Tools/[id].html",
+      "before": "5a9bacc28d6ab7a2db3580ad2c9fe8681789105aacc89dc80ce1bdaf97a46c6b",
+      "after": "9f74dbf402ebd11a4a30dac11c0dc6cadc15fb50820f46b1043291fac873b88d"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/Tools.html",
+      "before": "e10381bf458e6224750548c3dedb5e6e5a59547dedec3fd7a1d8ae0e9725c540",
+      "after": "7465f4fcf6aceac5a98bcf3e500ee384cbe07b4d9bd6e385a0d79c6e7e992968"
+    },
+    {
+      "path": ".next/server/pages/NewSearch/Trailers/[id].html",
+      "before": "8bed727dc4fe1cb07a0d40acd48779d86779c4558587a86127b92e5afaf86ff8",
+      "after": "c6cea1e45a4314d7c006689c4c7b2862638bee45fac9d123d8fb9cc1b87c61e4"
+    },
+    {
+      "path": ".next/server/pages/notes/gKeep.html",
+      "before": "2f475b93e520559df3904682789b22ed66fbf1ca61bfa67b79838e2c5fc1461f",
+      "after": "f48b990044a4de7747c8024545ba0f3bbcbf814537bf115c57a47c9a761739d5"
+    },
+    {
+      "path": ".next/server/pages/Ops/calendar.html",
+      "before": "8898b7c0ae39229595aa11b91358c21052677e497e8cda93faaad867499ffc53",
+      "after": "d1b2c56d9ad7851a0f160e6add7803392a1ca2ad2accd81b5ebe4a0ee3a1e7e2"
+    },
+    {
+      "path": ".next/server/pages/Ops-General.html",
+      "before": "c6eb4b4ea07c510032d085cc8b4263812a7a246de06decad3045c18f977c5370",
+      "after": "3dd097dd3b339e2614ac9f8506ab93379cc6f2ca0ae56c73ca915cab90937606"
+    },
+    {
+      "path": ".next/server/pages/Ops.html",
+      "before": "b06eb8e5f9b206df5a6049c38615a22bd2d70fe23988ccb897f9abda9a54f7a6",
+      "after": "50842402582ec61d1fc6c11928272808c99ca939f6e4c2ac523b4536a25c7e1d"
+    },
+    {
+      "path": ".next/server/pages/schedule/interview.html",
+      "before": "31dc41e1cb78b703f1983d5d3c281b5ce2488f6908acd0a063b9535b331a6ce3",
+      "after": "4137bf426b589130553118fb79b82992bb19c39ccc91d34ca283f3c543e791a3"
+    },
+    {
+      "path": ".next/server/pages/schedule/pm.html",
+      "before": "35fc318ca73f170930439d79d81b57e6312ee0c13926a9bc474b4bc905bf07ea",
+      "after": "1d1b3d264219fba48491cdf731e37963cac3652127c91ea6a4a96a1f71bcfb4c"
+    },
+    {
+      "path": ".next/server/pages/ServiceDocs/Explorer.html",
+      "before": "8153ef7ce874ca7ca64e19e4ac47329cf8ac0a4d519119357db09830bd8efdd1",
+      "after": "8900ac8a18420617a179da38d2cebaf9fce0f761192c7878d73208c692c07e33"
+    },
+    {
+      "path": ".next/server/pages/ServiceDocs/ServiceSelect.html",
+      "before": "78db416e03261bcf4f3fb3882193ab72751bf1ac285d85d7d0654ff9c4cbc411",
+      "after": "7d825c699bb9d8cc4034ff08a4b861c1410d1f81674fea7d19ea53a3b1d9a296"
+    },
+    {
+      "path": ".next/server/pages/Signup.html",
+      "before": "ba8f8992730372ea8b5f7c46017ef2fab831656617b1dc0c195f31f3b51990ea",
+      "after": "b0064fe58243fd3e278e7bb0b1c5545603f26b2b5223abf97bd83b7f11b6cd08"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/AdminSettings.html",
+      "before": "ef6cd5b120f5572164aee6088afd2cf59435bc37ca2955dc0779f45fcd80b61a",
+      "after": "4597f7c9b659b46383eedf644d7b04afb9abc03f2724b48d396d4d644ca893d1"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/client/[id].html",
+      "before": "0240173ee175a2fefdf79c9e946fb512460bce94647db89c82eb4a7507f8bf27",
+      "after": "547d79a94acac67388f9e69e0b027f2c4d2b478f2c9c6953ba146aca305b181c"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/ClientList.html",
+      "before": "75f5029f5600bdc98c8e2013c042991c1be65dd4fcb543c0f015ecc22a2cea1b",
+      "after": "15e285958715c621b9180e0e1ecad7efef378b7e6d8a51a8d897c2e683606e37"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/display.html",
+      "before": "737f671b78b12a52eba324be53979e9a0593643607adec2f6d5e2cca5b8c2a46",
+      "after": "01f65f651e342c62bd44a6c26921c754153d5a863c88664f2ba143bf9bf5fc40"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/item/[id].html",
+      "before": "8a84b27edae6881e5e04faee9451dbe0525b1245216f0173ffa21e3dc9db38d6",
+      "after": "4f70dd2020c398c91dd934fa16a6a546b8adc3f4bf2712313b761f61fc98ab4b"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/machine/[id].html",
+      "before": "aba0edf59732e1f2737cfbcbd537fa529dfdb6bfcdc7afe12e8ad81fcdec3759",
+      "after": "cfcff38d3343d617b4b95c26d79014883ef9d9275134ae78b67fc3c11a339522"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/ModItem.html",
+      "before": "1dc591d32f2d4123277d4bfe69fc29dc9511afd66888f08f6582fb04e4e2b637",
+      "after": "cd150cceeacd384de2a1b86eb6924c678a9aa9e8c501d4b4c3f184284a47c2ac"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/TrailerSetup.html",
+      "before": "7a57053347199a47ce6dc9171c00831366d1eff23156d947f9693c834dc42bdf",
+      "after": "070c710915f9d8bffa62791e47d91213409785194ba1c67fbba3f0bdce0b8c7c"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/WarehouseList.html",
+      "before": "c6cb91482b541c44df8b71984a369e3d1fe3fe9742739c8220eee6fe089a0949",
+      "after": "7279fc27c87e4666c7a1c38a9bfa78a8c23d761861c9e9ca9ca0c26bfbca72b6"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/WarehouseScan.html",
+      "before": "f614f7bc0d6bd794728110d249b95a76fb234415e304218baae9bda9aec85c63",
+      "after": "6c68c207514cc9f071ada1b58c4ade74e8c09fc49d894b83e18c9e81d54479b3"
+    },
+    {
+      "path": ".next/server/pages/Warehousedb/WarehouseSelect.html",
+      "before": "b7c7214ab3377cb17f71f6bc253e157f20e17bc9af85a22ab1be576f13906eeb",
+      "after": "22553f45c17475419c5bee8d7e61e9564a27f2af191be4bc192a069d7fa007b9"
+    },
+    {
+      "path": ".next/server/pages/website-analysis.html",
+      "before": "b41e31c4f01149f064572d28500158cb12af2ca00f2549895dcbd6bc0833fdc0",
+      "after": "de661ec5e3f467d6669dcd792ead4a6380d57a18d35e174184bcfe59dfbe58bd"
+    },
+    {
+      "path": ".next/BUILD_ID",
+      "before": "3acd723aa37a426970e4e9d4bd55c2d53c1236e29c5e39bd77bfa824a5066a42",
+      "after": "7bbbea2e13727abc7a488b5e620964487eacf7d16cdae558890e4c513a3c62f6"
+    },
+    {
+      "path": ".next/static/wo-machine-link-31372590b5701129/_buildManifest.js",
+      "before": null,
+      "after": "babd9fb9157a90aa6e434c1a97096580674f2a51cb4a1cbea738e844afd66c06"
+    },
+    {
+      "path": ".next/static/wo-machine-link-31372590b5701129/_ssgManifest.js",
+      "before": null,
+      "after": "678f6ce2cb80b1fe72fc67e7412be6e2ab6ada083111b64f7c40d35e3cba5e00"
+    },
+    {
+      "path": "machine-link/workOrderMachineLink.cjs",
+      "before": null,
+      "after": "76807bc038a62aba5ed9145368c31daa7b89c2c9942d125f764c90b0ae6d869d"
+    },
+    {
+      "path": "machine-link/workOrderClientLink.cjs",
+      "before": null,
+      "after": "4cc58a389d7289501b169bfa39f4d6744769bd33f66c3d60069fc4316418a2ff"
+    },
+    {
+      "path": "machine-link/clientDirectory.cjs",
+      "before": null,
+      "after": "081416a8ba803a33cfa75df84857ed9328176f2a93591ad7044850c986c7f08f"
+    },
+    {
+      "path": "machine-link/trailerClientLinks.cjs",
+      "before": null,
+      "after": "42606bf5a0e760e9b2f3d95363f803e67bd5c091efdfbdf8dcd672b1e42ec3eb"
+    },
+    {
+      "path": "machine-link/blueFolderImportContract.cjs",
+      "before": null,
+      "after": "43e541a395cb331c0b01901b78797921c23fd4c20b6a925fd199ae414751771a"
+    },
+    {
+      "path": "machine-link/contract-overlay.cjs",
+      "before": null,
+      "after": "426adab6d71c64b7f3e0960912d657a97962034cc824d3e3fbb3413c583a1c6c"
+    },
+    {
+      "path": "machine-link/equipment-schema.json",
+      "before": null,
+      "after": "7f08932c798b1a3cf6314c960a11a5bb0541bf2d7121c03b1b267626181b0697"
+    }
+  ],
+  "unrelatedFilesPreserved": true,
+  "scope": "BlueFolder selected-equipment machine linking during work-order import; fail-safe scan/movement guards and explanatory option label; preserve all existing features and data"
+}

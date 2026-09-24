@@ -1,0 +1,16 @@
+# Retain exact deployment-source bytes for release hash verification on Windows.
+scripts/bluefolder_slack_listener_v2.py -text
+scripts/test_bluefolder_equipment_link.py -text
+scripts/test_bluefolder_destination_link.py -text
+scripts/test_bluefolder_close_status.py -text
+scripts/test_bluefolder_listener.py -text
+scripts/test_confirmed_tombstones.py -text
+scripts/test_dispatch_root_formatting_20260921.py -text
+scripts/test_split_dispatch_ownership.py -text
+scripts/slack_part_references.py -text
+releases/2026-09-24-work-order-machine-link/source/** -text
+releases/2026-09-24-work-order-machine-link/tools/** -text
+releases/2026-09-24-work-order-machine-link/tests/** -text
+releases/2026-09-24-work-order-machine-link/scripts/** -text
+releases/2026-09-24-work-order-machine-link/composition-report.json -text
+releases/2026-09-24-work-order-machine-link/baseline.json -text

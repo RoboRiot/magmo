@@ -110,7 +110,7 @@ except ImportError:  # pragma: no cover
     load_dotenv = None
 
 
-LISTENER_VERSION = "2026.09.24-bluefolder-close-status-only.1"
+LISTENER_VERSION = "2026.09.24-bluefolder-machine-link.1"
 PRODUCTION_DISPATCH_CHANNEL_ID = "C07EPLKV9JT"
 REPORT_LISTENER_EXACT_COMMANDS = frozenset(
     {"!complete", "!done", "!hours", "!parts", "!trailer"}
@@ -453,6 +453,7 @@ class Settings:
     enable_bluefolder: bool = getenv_bool("ENABLE_BLUEFOLDER", True)
     bluefolder_close_sync_enabled: bool = getenv_bool("BLUEFOLDER_CLOSE_SYNC_ENABLED", True)
     bluefolder_close_detail_batch: int = int(os.getenv("BLUEFOLDER_CLOSE_DETAIL_BATCH", "6"))
+    bluefolder_equipment_sync_batch: int = int(os.getenv("BLUEFOLDER_EQUIPMENT_SYNC_BATCH", "6"))
     def __post_init__(self) -> None:
         # Keep backward compatibility with earlier env naming.
         if not self.bluefolder_api_token and self.bluefolder_api_key:
@@ -737,6 +738,7 @@ class StateStore:
             value = str(fields.get(key) or "").strip()
             if value:
                 pending_record[key] = value[:maximum]
+        pending_record.update(copy_bluefolder_equipment_fields(fields))
         pending[str(work_order_id)] = pending_record
         self.data.setdefault("health", {})["pending_magmo_import_count"] = len(
             pending
@@ -1052,6 +1054,19 @@ class BlueFolderClient:
                                 assignment[field.tag] = (field.text or "").strip()
                         assignments.append(assignment)
                     item[child.tag] = assignments
+                elif child.tag.lower() in {
+                    "equipmenttoservice", "equipmentitems", "equipmentitem"
+                }:
+                    # Keep selected equipment IDs inside nested XML. Flattening
+                    # child.text here silently discarded the machine identity.
+                    value = bluefolder_equipment_xml_value(child)
+                    if child.tag in item:
+                        previous = item[child.tag]
+                        item[child.tag] = (
+                            [*previous, value] if isinstance(previous, list) else [previous, value]
+                        )
+                    else:
+                        item[child.tag] = value
                 else:
                     item[child.tag] = (child.text or "").strip()
             # Normalize legacy workOrder fields into service-request-like keys.
@@ -1389,7 +1404,7 @@ class MagmoOpsIngestClient:
                 "A BlueFolder import requires its immutable service-request ID and number."
             )
 
-        bluefolder_identity: Dict[str, str] = {
+        bluefolder_identity: Dict[str, Any] = {
             "serviceRequestId": service_request_id,
         }
         for api_name, record_name in (
@@ -1406,6 +1421,14 @@ class MagmoOpsIngestClient:
             value = str(record.get(record_name) or "").strip()
             if value:
                 bluefolder_identity[api_name] = value
+        for record_name, api_name in (
+            ("bluefolder_equipment_ids", "equipmentIds"),
+            ("bluefolder_equipment_names", "equipmentNames"),
+        ):
+            if record_name in record:
+                bluefolder_identity[api_name] = normalized_equipment_values(
+                    record.get(record_name)
+                )
 
         payload: Dict[str, Any] = {
             "eventType": "work_order.imported",
@@ -1413,6 +1436,10 @@ class MagmoOpsIngestClient:
             "blueFolder": bluefolder_identity,
             "number": number,
         }
+        if record.get("existing_only") is True:
+            # Enforced transactionally by Magmo as well as our preceding
+            # context read, so a concurrent deletion cannot be resurrected.
+            payload["existingOnly"] = True
         optional_fields = {
             "subject": "subject",
             "description": "description",
@@ -6420,6 +6447,85 @@ def safe_get(d: Dict[str, Any], *keys: str, default: str = "") -> str:
     return default
 
 
+def normalized_equipment_values(value: Any) -> List[str]:
+    """Deduplicate selected scalar identities without choosing a first machine."""
+    values = value if isinstance(value, (list, tuple)) else [value]
+    result: List[str] = []
+    for entry in values:
+        if not isinstance(entry, (str, int, float)) or isinstance(entry, bool):
+            continue
+        normalized = str(entry).strip()
+        if normalized and normalized not in result:
+            result.append(normalized)
+    return result
+
+
+def bluefolder_equipment_xml_value(node: ET.Element) -> Any:
+    """Preserve repeats/attributes in the equipment subtree only."""
+    children = list(node)
+    if not children and not node.attrib:
+        return (node.text or "").strip()
+    result: Dict[str, Any] = dict(node.attrib)
+    for child in children:
+        value = bluefolder_equipment_xml_value(child)
+        if child.tag in result:
+            previous = result[child.tag]
+            result[child.tag] = (
+                [*previous, value] if isinstance(previous, list) else [previous, value]
+            )
+        else:
+            result[child.tag] = value
+    return result
+
+
+def extract_bluefolder_equipment_fields(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Missing evidence stays missing; an explicitly empty selection stays []."""
+    id_keys = {"equipmentid", "equipment_id", "equipmentids"}
+    name_keys = {"equipname", "equipmentname", "equipmentnames"}
+    container_keys = {"equipmenttoservice", "equipmentitems", "equipmentitem"}
+    ids: List[Any] = []
+    names: List[Any] = []
+    ids_present = False
+    names_present = False
+
+    def collect(node: Any, *, nested: bool = False) -> None:
+        nonlocal ids_present, names_present
+        if isinstance(node, list):
+            for child in node:
+                collect(child, nested=nested)
+        elif isinstance(node, dict):
+            for key, value in node.items():
+                key_lower = str(key).lower()
+                if key_lower in id_keys:
+                    ids_present = True
+                    ids.extend(normalized_equipment_values(value))
+                elif key_lower in name_keys or (nested and key_lower == "name"):
+                    names_present = True
+                    names.extend(normalized_equipment_values(value))
+                elif key_lower in container_keys:
+                    ids_present = names_present = True
+                    collect(value, nested=True)
+                elif nested and isinstance(value, (dict, list)):
+                    collect(value, nested=True)
+
+    collect(item)
+    result: Dict[str, Any] = {}
+    if ids_present:
+        result["bluefolder_equipment_ids"] = normalized_equipment_values(ids)
+    if names_present:
+        result["bluefolder_equipment_names"] = normalized_equipment_values(names)
+    return result
+
+
+def copy_bluefolder_equipment_fields(record: Dict[str, Any]) -> Dict[str, Any]:
+    # Do not turn a legacy payload without equipment into an explicit clear.
+    return {
+        key: normalized_equipment_values(record.get(key))
+        for key in ("bluefolder_equipment_ids", "bluefolder_equipment_names")
+        if key in record
+    }
+
+
 def extract_bluefolder_assignee_user_ids(item: Dict[str, Any]) -> List[str]:
     assignments = item.get("assignments")
     if not isinstance(assignments, list):
@@ -6652,6 +6758,7 @@ def extract_work_order_fields(item: Dict[str, Any], settings: Settings) -> Dict[
         "bluefolder_date_time_closed": bluefolder_date_time_closed,
         "bluefolder_workflow_status": bluefolder_workflow_status,
         "bluefolder_assignee_user_ids": extract_bluefolder_assignee_user_ids(item),
+        **extract_bluefolder_equipment_fields(item),
     }
 
 
@@ -6704,6 +6811,7 @@ def bluefolder_import_record(
             fields.get("bluefolder_workflow_status") or ""
         )[:220],
         "bluefolder_assignees": list(assignees or []),
+        **copy_bluefolder_equipment_fields(fields),
     }
 
 
@@ -6784,12 +6892,131 @@ def record_successful_bluefolder_import(
             ),
             "magmo_authoritative_after": dict(result.get("after") or {}),
             "dispatch_owner": saved.get("dispatch_owner") or "magmo_pending",
+            **copy_bluefolder_equipment_fields(record),
         }
     )
+    remember_equipment_sync(saved, record, result)
     state.mark_processed(str(work_order_id), saved)
     state.clear_pending_magmo_import(str(work_order_id))
     state.mark_latest_processed_work_order(record.get("number") or work_order_id)
     state.save()
+
+
+def equipment_sync_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Metadata-only replay: never resend workflow, subject, or Slack evidence."""
+    equipment = copy_bluefolder_equipment_fields(record)
+    if not equipment:
+        return {}
+    payload = {
+        "service_request_id": str(record.get("service_request_id") or "").strip(),
+        "number": str(record.get("number") or "").strip(),
+        "existing_only": True,
+        **equipment,
+    }
+    for key in (
+        "bluefolder_customer_id", "bluefolder_customer_name",
+        "bluefolder_location_id", "bluefolder_location_name",
+        "bluefolder_address_street", "bluefolder_address_city",
+        "bluefolder_address_state", "bluefolder_address_postal_code",
+        "bluefolder_address_country",
+    ):
+        if record.get(key):
+            payload[key] = record[key]
+    return payload
+
+
+def equipment_sync_fingerprint(record: Dict[str, Any]) -> str:
+    payload = equipment_sync_record(record)
+    if not payload:
+        return ""
+    for key in ("bluefolder_equipment_ids", "bluefolder_equipment_names"):
+        if key in payload:
+            payload[key] = sorted(payload[key])
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def remember_equipment_sync(
+    saved: Dict[str, Any], record: Dict[str, Any], result: Dict[str, Any]
+) -> None:
+    fingerprint = equipment_sync_fingerprint(record)
+    if not fingerprint:
+        return
+    saved.update(copy_bluefolder_equipment_fields(record))
+    saved.update({
+        "bluefolder_equipment_synced_fingerprint": fingerprint,
+        "bluefolder_equipment_synced_at": utc_now_iso(),
+        "bluefolder_equipment_sync_request_id": str(result.get("requestId") or "")[:180],
+    })
+
+
+def sync_bluefolder_equipment_updates(
+    settings: Settings, state: StateStore, work_orders: List[Dict[str, Any]], ops: Any
+) -> int:
+    """Bounded, durable identity refresh for known Magmo records only.
+
+    A missing equipment field is not evidence of an empty selection. Changed
+    identities retry until confirmed, and unchanged successful identities are
+    not reimported. Tombstones and startup-only baseline records are excluded.
+    """
+    if (settings.dry_run or not ops
+            or not getattr(ops, "supports_bluefolder_import", False)
+            or not callable(getattr(ops, "import_work_order", None))
+            or not callable(getattr(ops, "work_order_context", None))):
+        return 0
+    records = state.data.get("processed_work_order_ids", {})
+    pending = state.data.setdefault("bluefolder_equipment_sync_pending", {})
+    candidates = []
+    for item in work_orders:
+        fields = extract_work_order_fields(item, settings)
+        service_id = fields["id"]
+        saved = records.get(service_id)
+        if not isinstance(saved, dict) or ops_record_is_deleted(saved):
+            continue
+        if not any(saved.get(key) for key in ("ops_created_at", "magmo_imported_at", "ops_work_order_id")):
+            continue
+        if str(saved.get("number") or fields["number"]) != fields["number"]:
+            continue
+        record = equipment_sync_record(bluefolder_import_record(fields, []))
+        fingerprint = equipment_sync_fingerprint(record)
+        if not fingerprint or saved.get("bluefolder_equipment_synced_fingerprint") == fingerprint:
+            continue
+        previous = pending.get(service_id) or {}
+        if previous.get("fingerprint") == fingerprint and previous.get("retryable") is False:
+            continue
+        candidates.append((service_id, saved, record, fingerprint))
+    if not candidates:
+        return 0
+    start = int(state.data.get("bluefolder_equipment_sync_index") or 0) % len(candidates)
+    completed = 0
+    for offset in range(min(max(1, settings.bluefolder_equipment_sync_batch), len(candidates))):
+        service_id, saved, record, fingerprint = candidates[(start + offset) % len(candidates)]
+        state.data["bluefolder_equipment_sync_index"] = start + offset + 1
+        try:
+            context, _ = fetch_authoritative_work_order_context(ops, service_id, record["number"])
+            if context is None or context.get("deleted") is True or ops_record_is_deleted(context):
+                # Never let a metadata refresh create/resurrect an order that
+                # disappeared from Magmo after the local state was saved.
+                raise RuntimeError("No active exact Magmo identity for equipment metadata refresh.")
+            result = ops.import_work_order(service_id, record)
+            remember_equipment_sync(saved, record, result)
+            pending.pop(service_id, None)
+            completed += 1
+        except Exception as exc:
+            if isinstance(exc, MagmoOpsRequestError) and exc.status_code in {401, 403}:
+                state.save()
+                raise
+            pending[service_id] = {
+                "fingerprint": fingerprint,
+                "record": record,
+                "last_checked_at": utc_now_iso(),
+                "retryable": not isinstance(exc, MagmoOpsRequestError) or exc.status_code != 400,
+                "reason": str(exc)[:600],
+            }
+            logging.warning("BlueFolder equipment metadata refresh deferred for %s: %s", service_id, type(exc).__name__)
+        state.save()
+    return completed
 
 
 def build_slack_title(fields: Dict[str, str]) -> str:
@@ -8629,6 +8856,7 @@ def process_once(
     ):
         remember_bluefolder_context_candidates(settings, state, work_orders)
     observe_bluefolder_close_statuses(settings, state, bluefolder, ops, work_orders)
+    sync_bluefolder_equipment_updates(settings, state, work_orders, ops)
     if (
         ops
         and not settings.dry_run
@@ -8724,8 +8952,29 @@ def process_once(
         log_source = ""
         receipt_verified = False
         magmo_owned = context is not None
+        equipment_import_result = None
+        equipment_record = equipment_sync_record(bluefolder_import_record(fields, []))
 
         if magmo_owned:
+            # A Magmo-created order can already exist before the listener sees
+            # BlueFolder's selected equipment. Refresh identity only; Dispatch
+            # ownership and work-order lifecycle remain entirely authoritative.
+            if (equipment_record and not settings.dry_run
+                    and context.get("deleted") is not True
+                    and not ops_record_is_deleted(context)):
+                try:
+                    if not import_available:
+                        raise RuntimeError("Magmo equipment identity import is unavailable.")
+                    equipment_import_result = ops.import_work_order(work_order_id, equipment_record)
+                except Exception as exc:
+                    if isinstance(exc, MagmoOpsRequestError) and exc.status_code in {401, 403}:
+                        raise
+                    state.mark_pending_magmo_import(
+                        work_order_id, fields, "Equipment identity refresh failed: " + str(exc),
+                        retryable=not isinstance(exc, MagmoOpsRequestError) or exc.status_code != 400,
+                    )
+                    state.save()
+                    continue
             if state.clear_pending_magmo_import(work_order_id):
                 state.save()
             channel, ts, permalink = magmo_dispatch_receipt(
@@ -8880,6 +9129,7 @@ def process_once(
             "bluefolder_address_state": fields.get("bluefolder_address_state") or "",
             "bluefolder_address_postal_code": fields.get("bluefolder_address_postal_code") or "",
             "bluefolder_address_country": fields.get("bluefolder_address_country") or "",
+            **copy_bluefolder_equipment_fields(fields),
             "created_at": created_at,
             "bluefolder_url": bluefolder_link,
             "slack_channel": channel,
@@ -8891,6 +9141,8 @@ def process_once(
             "processed_at": utc_now_iso(),
         }
         if magmo_owned:
+            if equipment_import_result is not None:
+                remember_equipment_sync(processed_payload, equipment_record, equipment_import_result)
             # The context read proves the Magmo record already exists; do not
             # replay work_order.created or rewrite its authoritative receipt.
             processed_payload["ops_created_at"] = utc_now_iso()
