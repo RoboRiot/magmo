@@ -1,0 +1,27 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-25T19:57:54.259Z",
+  "originalRevision": "nextserverwest-00059-vak",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790360606589691"
+    }
+  },
+  "artifactSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Reject cross-site client healing when a work order retains an existing typed asset",
+  "rollbackArchive": "source.zip",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790366275164-65c5421d95a06-5fcdf4dc-3c2c8df8",
+  "completedAt": "2026-09-25T20:01:15.259Z",
+  "revision": "nextserverwest-00060-tod",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790366275981207"
+    }
+  },
+  "unrelatedConfigurationPreserved": true
+}

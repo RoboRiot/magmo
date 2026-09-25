@@ -1,0 +1,323 @@
+{
+  "checkedAt": "2026-09-25T20:56:33.302Z",
+  "apiRevision": "nextserverwest-00061-rej",
+  "apiDeploymentReceiptSha256": "8b9019140b8af20dbce13d49e6cf074c2c61188fee3ec9699e72253823dcc962",
+  "apiArtifactSha256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "apiSourceGeneration": "1790369259300423",
+  "apiConfigurationSha256": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "backupManifestSha256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc",
+  "proofSha256": "772e5275877bd18e1faf43539cf83e3d2e097e63018a233930b02044107c4ee2",
+  "liveListenerSha256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+  "workOrderCount": 8,
+  "createdClientIds": [
+    "AIS12854",
+    "AIS26295",
+    "AIS50904",
+    "AIS56092"
+  ],
+  "existingClientsUnchanged": true,
+  "createdClientsMatchReviewedDirectoryProof": true,
+  "orders": [
+    {
+      "workOrderId": "10480",
+      "clientId": "AIS12854",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    },
+    {
+      "workOrderId": "10486",
+      "clientId": "AIS56092",
+      "changedFields": [
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "not_selected"
+    },
+    {
+      "workOrderId": "10516",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    },
+    {
+      "workOrderId": "10618",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    },
+    {
+      "workOrderId": "10619",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    },
+    {
+      "workOrderId": "10676",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "not_selected"
+    },
+    {
+      "workOrderId": "10569",
+      "clientId": "AIS83192",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    },
+    {
+      "workOrderId": "10648",
+      "clientId": "AIS50904",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "workflowAssetsHistoryPreserved": true,
+      "selectedEquipmentPreserved": true,
+      "expectedEquipmentStatus": "unresolved"
+    }
+  ],
+  "inventoryDestinations": [
+    {
+      "workOrderId": "10480",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    },
+    {
+      "workOrderId": "10486",
+      "inventoryDestination": "site_ready",
+      "expected": true
+    },
+    {
+      "workOrderId": "10516",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    },
+    {
+      "workOrderId": "10618",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    },
+    {
+      "workOrderId": "10619",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    },
+    {
+      "workOrderId": "10676",
+      "inventoryDestination": "site_ready",
+      "expected": true
+    },
+    {
+      "workOrderId": "10569",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    },
+    {
+      "workOrderId": "10648",
+      "inventoryDestination": "blocked_missing_machine",
+      "expected": true
+    }
+  ],
+  "pendingClientOrderIds": [
+    "10480",
+    "10516",
+    "10648"
+  ],
+  "transientAckIds": [
+    "10480",
+    "10516",
+    "10648"
+  ],
+  "httpResults": [
+    {
+      "workOrderId": "10480",
+      "requestId": "415aeee5e129b6c2862eba3f",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS12854",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "work_order_client_missing"
+    },
+    {
+      "workOrderId": "10486",
+      "requestId": "9e9755a0be2fd71c09848ea2",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS56092",
+      "equipmentLinkStatus": "not_selected",
+      "equipmentLinkIssue": ""
+    },
+    {
+      "workOrderId": "10516",
+      "requestId": "4a05cd148839166e761a4d94",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS26295",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "work_order_client_missing"
+    },
+    {
+      "workOrderId": "10618",
+      "requestId": "86b2abbc218a1dc45c43650e",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS26295",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10619",
+      "requestId": "f86d48364957ea8c8ce24602",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS26295",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10676",
+      "requestId": "1ef07cea2e6fe55d39175263",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS26295",
+      "equipmentLinkStatus": "not_selected",
+      "equipmentLinkIssue": ""
+    },
+    {
+      "workOrderId": "10569",
+      "requestId": "936d72b53e27ffb56ba21d2d",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS83192",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10648",
+      "requestId": "d300e0b0548a0a8c31c01853",
+      "created": false,
+      "idempotentReplay": false,
+      "clientId": "AIS50904",
+      "equipmentLinkStatus": "unresolved",
+      "equipmentLinkIssue": "work_order_client_missing"
+    }
+  ],
+  "existingOnly": true,
+  "equipmentFieldsOmitted": true,
+  "selectedEquipmentPreserved": true,
+  "parentCacheWrites": false,
+  "daemonStateWritten": false,
+  "listenerLoopStarted": false,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true,
+  "noItemWrites": true
+}

@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-25T21:01:07.555Z",
+  "independentVerificationPassed": true,
+  "readOnlyVerification": true,
+  "apiRevision": "nextserverwest-00061-rej",
+  "apiArtifactSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "workOrderCount": 8,
+  "exactCreatedClientCount": 4,
+  "exactExistingClientPreimagesPreserved": 264,
+  "selectedEquipmentOrdersPreserved": 6,
+  "siteOnlyOrdersPreserved": 2,
+  "transientFirstCreateAcknowledgements": [
+    "10480",
+    "10516",
+    "10648"
+  ],
+  "automaticRetriesPerformed": 0,
+  "unexpectedWorkOrderFieldChanges": 0,
+  "protectedWorkflowAssetHistoryChanges": 0,
+  "existingClientChanges": 0,
+  "inventoryItemChanges": 0,
+  "parentClientChanges": 0,
+  "createdClientIds": [
+    "AIS12854",
+    "AIS26295",
+    "AIS50904",
+    "AIS56092"
+  ],
+  "workOrders": [
+    {
+      "workOrderId": "10480",
+      "clientId": "AIS12854",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "1aadfbaa4aab58e1897f7ec49bfad8eb733e0de347e9d3c2c3e11fd3a35a6ca6",
+      "afterSHA256": "98595add74a5ee6022dc7898f04c9575eef5518e89671bba0e4d31315cb28600",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10486",
+      "clientId": "AIS56092",
+      "changedFields": [
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "58ac7aa8c291789220433f074d974eb58901a1434809dc40c2bfe0680e6cc0c2",
+      "afterSHA256": "6a98c02b62c26120e9feae37b3e1e54b173ce84412303986631c7c1928241e59",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "not_selected",
+      "durableEquipmentLinkIssue": ""
+    },
+    {
+      "workOrderId": "10516",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "508caa94eb278bb24aed744eb443df54cf854e8da3cbb0ad3e19b8bc4d454666",
+      "afterSHA256": "f2e26383a6bef98a2e91413f79352a0f49874a95a8d712048a9804a0a41edadf",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10618",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "d7a9dcc9d86aa62eed037176fb65b93f70aefb17272f87f24de0fe3ca2a10176",
+      "afterSHA256": "49eacb6c6b258a9ba2054d516900962f2d6e3831083d93ded9d2bc697960593c",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10619",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "9467b1517a492af25e93bbb0045a37e96222b83eb8d603a8729732949fc5edc3",
+      "afterSHA256": "f31ff1d435061d85430649e644c4e7ef0a530937dad7268c481079c9a18eb2e4",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10676",
+      "clientId": "AIS26295",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "268673aecb8c9e8dd517c78ec7bc18bd76f7c3c58e3cfb4c109af56c44cbb4a6",
+      "afterSHA256": "9d0ae99983c880f4b4d3aef1a0f8efbdc294e1c4afde8e8626e2d815ba101af3",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "not_selected",
+      "durableEquipmentLinkIssue": ""
+    },
+    {
+      "workOrderId": "10569",
+      "clientId": "AIS83192",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "updatedAt"
+      ],
+      "beforeSHA256": "4457254fb0be926446a8d0e63d81c40ca6830602f44b5936675e75460781f145",
+      "afterSHA256": "c0e649b935fa0cce64f66c9c0504983f12b3607fd4925e0351a06496a82026d2",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    },
+    {
+      "workOrderId": "10648",
+      "clientId": "AIS50904",
+      "changedFields": [
+        "bluefolderImportFingerprint",
+        "bluefolderImportUpdatedAt",
+        "bluefolderImportUpdatedAtIso",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "clientRef",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "updatedAt"
+      ],
+      "beforeSHA256": "ba1f6172ac499fd8fd9e8ed879d7a315827b0fb00dd7f784c14e9755866d5a69",
+      "afterSHA256": "7b6c44db0c9691bc0fe8c2cdc1f41bdf4ab51ef390604348af00b8622ffdcc88",
+      "selectedEquipmentPreserved": true,
+      "workflowAssetsHistoryPreserved": true,
+      "durableEquipmentLinkStatus": "unresolved",
+      "durableEquipmentLinkIssue": "bluefolder_equipment_not_mapped"
+    }
+  ],
+  "inventoryDestinations": [
+    {
+      "workOrderId": "10480",
+      "result": "blocked_missing_machine"
+    },
+    {
+      "workOrderId": "10486",
+      "result": "site_ready"
+    },
+    {
+      "workOrderId": "10516",
+      "result": "blocked_missing_machine"
+    },
+    {
+      "workOrderId": "10618",
+      "result": "blocked_missing_machine"
+    },
+    {
+      "workOrderId": "10619",
+      "result": "blocked_missing_machine"
+    },
+    {
+      "workOrderId": "10676",
+      "result": "site_ready"
+    },
+    {
+      "workOrderId": "10569",
+      "result": "blocked_missing_machine"
+    },
+    {
+      "workOrderId": "10648",
+      "result": "blocked_missing_machine"
+    }
+  ],
+  "fullBackup": {
+    "documentCount": 187443,
+    "collectionCount": 1015,
+    "dataSHA256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e",
+    "manifestSHA256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc",
+    "targetPreimagesPresent": 8,
+    "selectedEquipmentEvidenceMatchesReviewedProof": true
+  },
+  "liveSnapshotsEqualProtectedAfterImages": true,
+  "noDatabaseWritesDuringIndependentVerification": true
+}

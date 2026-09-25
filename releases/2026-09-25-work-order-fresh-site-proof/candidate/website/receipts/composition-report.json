@@ -1,0 +1,50 @@
+{
+  "preparedAt": "2026-09-25T20:38:48.781Z",
+  "scope": "Resolve newly added verified nonprimary BlueFolder locations without mutating cached parent Clients",
+  "sourceDirectory": "scoped-source",
+  "baselineRevision": "nextserverwest-00060-tod",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790366275981207"
+    }
+  },
+  "baselineArchiveSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+  "baselineConfigHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "unrelatedFilesPreserved": true,
+  "entries": [
+    {
+      "path": "machine-link/blueFolderCustomerLookup.cjs",
+      "before": null,
+      "after": "3977545bf88b79db793f6f9fdf0fb56dda8a47db9ef2259ae2363737c3f401d3"
+    },
+    {
+      "path": "machine-link/workOrderSiteLink.cjs",
+      "before": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f",
+      "after": "b60431f15c74d038611f9a6903b9676cc1e4cd14262965203ec7814e25f1230f"
+    },
+    {
+      "path": ".next/server/chunks/8806.js",
+      "before": "cf22d28f299e7dbcc0b2ac6c858afa2f6a06e934436a6ea42a27332d4cbb8b4a",
+      "after": "218a069f424806c8bc455a671de85595f0aa69f2158bc103a29446f9659510fa"
+    }
+  ],
+  "sourceHashes": {
+    "lib/ops/blueFolderCustomerLookup.cjs": "3977545bf88b79db793f6f9fdf0fb56dda8a47db9ef2259ae2363737c3f401d3",
+    "lib/ops/workOrderSiteLink.cjs": "b60431f15c74d038611f9a6903b9676cc1e4cd14262965203ec7814e25f1230f",
+    "lib/ops/workOrders.js": "cbd172cdb05fb59dbdd583fd0c9a2649924595a1c0c18376652fda938304244a",
+    "test/bluefolder-customer-lookup.test.cjs": "90dea8765eeea5ab16d8d6d92d2d2d3182b420e2766bf1373dc731325b834d4c",
+    "test/work-order-nested-site-link.test.cjs": "593c8502220cf41a9eea35dadb7977e1f7fd0d570a9c74932c1e9dbcdf05c458",
+    "test/work-order-machine-import.test.cjs": "0d7b30ee4808335982499cb2873736d7cf5603932e1c4f3a717f9b440d6c46d0"
+  },
+  "overlay": {
+    "oldStart": "async function ao(a={}){let b=E(a?.blueFolder?.serviceRequestId||a.workOrderId);if(!b)throw Error(\"A valid BlueFolder service-request ID is required.\");let c=af(b),d=new Date().toISOString(),f=B(),g=await f.runTransaction(async g=>{let h=await g.get(c),i=h.exists&&h.data()||{};if(i.deletedAt||(a.existingOnly===true&&!h.exists)){const error=new Error(i.deletedAt?\"The work order was deleted; BlueFolder metadata cannot restore it.\":\"The work order no longer exists; metadata refresh cannot create it.\");error.code=i.deletedAt?\"work_order_deleted\":\"work_order_not_found\";error.statusCode=i.deletedAt?409:404;throw error;}let j=h.exists?ag(h):null,k={...a,blueFolder:{...a.blueFolder&&\"object\"==typeof a.blueFolder&&!Array.isArray(a.blueFolder)?a.blueFolder:{},serviceRequestId:b}},l={};",
+    "newStart": "async function ao(a={}){let b=E(a?.blueFolder?.serviceRequestId||a.workOrderId);if(!b)throw Error(\"A valid BlueFolder service-request ID is required.\");let c=af(b),d=new Date().toISOString(),f=B(),freshImportPayload={...a,blueFolder:{...a.blueFolder&&\"object\"==typeof a.blueFolder&&!Array.isArray(a.blueFolder)?a.blueFolder:{},serviceRequestId:b}},freshCustomerProof=null,freshSiteLookupIssue=\"\",freshSiteEligibility=await f.runTransaction(async transaction=>{let snapshot=await transaction.get(c),existing=snapshot.exists&&snapshot.data()||{};if(existing.deletedAt)return{eligible:!1,reason:\"work_order_deleted\"};if(a.existingOnly===true&&!snapshot.exists)return{eligible:!1,reason:\"work_order_not_found\"};bi(existing,freshImportPayload);return require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\").assessFreshSiteLookupInTransaction(transaction,f,existing,freshImportPayload)});if(freshSiteEligibility.eligible){let lookup;try{lookup=await require(process.cwd()+\"/machine-link/blueFolderCustomerLookup.cjs\").getVerifiedBlueFolderLocation(freshSiteEligibility.identity.customerId,freshSiteEligibility.identity.customerLocationId)}catch{lookup={ok:!1,reason:\"bluefolder_customer_lookup_unavailable\"}}lookup?.ok&&lookup.proof?freshCustomerProof=lookup.proof:freshSiteLookupIssue=C(lookup?.reason||\"bluefolder_customer_lookup_unavailable\",120)}let g=await f.runTransaction(async g=>{let h=await g.get(c),i=h.exists&&h.data()||{};if(i.deletedAt||(a.existingOnly===true&&!h.exists)){const error=new Error(i.deletedAt?\"The work order was deleted; BlueFolder metadata cannot restore it.\":\"The work order no longer exists; metadata refresh cannot create it.\");error.code=i.deletedAt?\"work_order_deleted\":\"work_order_not_found\";error.statusCode=i.deletedAt?409:404;throw error;}let j=h.exists?ag(h):null,k=freshImportPayload,l={};",
+    "oldGuard": "l={};let siteCreation=null,clientLinkResolutionReason=\"\",protectedExistingAsset=!1;if(!E(i.clientId)){const siteLink=await require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\").resolveWorkOrderSiteLinkInTransaction(g,f,k,{linkedAtIso:d});l=siteLink.patch;siteCreation=siteLink.creation;if(l.clientId){const assetSiteGuard=await require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\").validateExistingWorkOrderAssetSiteInTransaction(g,f,i,l,{clientData:siteCreation?.data});protectedExistingAsset=assetSiteGuard.hasExistingAsset;if(!assetSiteGuard.allowed){clientLinkResolutionReason=assetSiteGuard.reason;l={};siteCreation=null;}}}let m=bi(i,k)",
+    "newGuard": "l={};let siteCreation=null,clientLinkResolutionReason=\"\",protectedExistingAsset=!1;if(!E(i.clientId)){const siteLinkHelpers=require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\"),finalFreshPreconditions=freshCustomerProof?siteLinkHelpers.freshSiteLookupPreconditions(i,k):null,siteLink=await siteLinkHelpers.resolveWorkOrderSiteLinkInTransaction(g,f,k,{linkedAtIso:d,freshCustomerProof:finalFreshPreconditions?.eligible?freshCustomerProof:null});l=siteLink.patch;siteCreation=siteLink.creation;if(!l.clientId&&(freshCustomerProof||freshSiteLookupIssue)){clientLinkResolutionReason=(\"bluefolder_nested_site_not_verified\"===siteLink.reason?freshSiteLookupIssue:\"\")||(!finalFreshPreconditions?.eligible&&finalFreshPreconditions?.reason)||siteLink.reason}if(l.clientId){const assetSiteGuard=await require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\").validateExistingWorkOrderAssetSiteInTransaction(g,f,i,l,{clientData:siteCreation?.data});protectedExistingAsset=assetSiteGuard.hasExistingAsset;if(!assetSiteGuard.allowed){clientLinkResolutionReason=assetSiteGuard.reason;l={};siteCreation=null;}}}let m=bi(i,k)"
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "preservedMachineHelperSHA256": "f8664402bfecd7ebb828fb44729c748671c86aa6aa31a090154a731f26463382",
+  "fileCount": 483
+}

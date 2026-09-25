@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "purpose": "Scoped fresh BlueFolder non-primary site proof, eight reviewed destination links, verification, and rollback record",
+  "git": {
+    "branch": "codex/work-order-site-only-recovery-20260925",
+    "startingCommit": "45c0fb44ddc19372fa765f33e87ee5249e000e4b",
+    "preReleaseTag": "pre-work-order-fresh-site-proof-20260925",
+    "deployedTag": "deployed-work-order-fresh-site-proof-20260925",
+    "phaseOneRecordPreserved": true
+  },
+  "website": {
+    "state": "ACTIVE",
+    "baselineRevision": "nextserverwest-00060-tod",
+    "baselineSourceGeneration": "1790366275981207",
+    "baselineArtifactSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+    "activeRevision": "nextserverwest-00061-rej",
+    "activeSourceGeneration": "1790369259300423",
+    "artifactSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+    "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+    "buildIdPreserved": true,
+    "fileCount": 483,
+    "fullRebuildEquivalent": false,
+    "overlay": {
+      "changedEntryCount": 3,
+      "newLookupPath": "machine-link/blueFolderCustomerLookup.cjs",
+      "newLookupSHA256": "3977545bf88b79db793f6f9fdf0fb56dda8a47db9ef2259ae2363737c3f401d3",
+      "siteHelperPath": "machine-link/workOrderSiteLink.cjs",
+      "siteHelperSourceSHA256": "b60431f15c74d038611f9a6903b9676cc1e4cd14262965203ec7814e25f1230f",
+      "compiledChunkPath": ".next/server/chunks/8806.js",
+      "compiledChunkSHA256": "218a069f424806c8bc455a671de85595f0aa69f2158bc103a29446f9659510fa"
+    },
+    "sourceSnapshots": {
+      "lib/ops/blueFolderCustomerLookup.cjs": "3977545bf88b79db793f6f9fdf0fb56dda8a47db9ef2259ae2363737c3f401d3",
+      "lib/ops/workOrderSiteLink.cjs": "b60431f15c74d038611f9a6903b9676cc1e4cd14262965203ec7814e25f1230f",
+      "lib/ops/workOrders.js": "cbd172cdb05fb59dbdd583fd0c9a2649924595a1c0c18376652fda938304244a",
+      "test/bluefolder-customer-lookup.test.cjs": "90dea8765eeea5ab16d8d6d92d2d3182b420e2766bf1373dc731325b834d4c",
+      "test/work-order-nested-site-link.test.cjs": "593c8502220cf41a9eea35dadb7977e1f7fd0d570a9c74932c1e9dbcdf05c458",
+      "test/work-order-machine-import.test.cjs": "0d7b30ee4808335982499cb2873736d7cf5603932e1c4f3a717f9b440d6c46d0",
+      "test/work-order-machine-link.test.cjs": "c3f7ce660c8588761ddadda21adc376db1b13405475dde255076ee8c2221a91e"
+    },
+    "tests": {
+      "focusedSourceTestsPassed": 115,
+      "exactCompiledArtifactAndPostconditionTestsPassed": 105,
+      "verifiedZipEntries": 483
+    },
+    "receiptHashes": {
+      "candidate/website/receipts/composition-report.json": "7a569b4384c9ea5c8baf4857e9ba8f53b9acb9715b8950ab0492e250247609dc",
+      "candidate/website/receipts/package-gates.json": "24c18f70e6be8cfde1a2f4e86f7fe90690cbdd9b2bfc84c2a4e9ddda9e9dc41c",
+      "candidate/website/receipts/deployment-receipt.json": "8b9019140b8af20dbce13d49e6cf074c2c61188fee3ec9699e72253823dcc962",
+      "candidate/website/receipts/live-verification.json": "4f18165cbb8cf9172e38a2243a34a1ce913614aec7a60e54b63afac66f9fa2bc"
+    }
+  },
+  "listener": {
+    "changedInThisPhase": false,
+    "state": "ACTIVE",
+    "version": "2026.09.25-bluefolder-destination-retry.1",
+    "sourceSHA256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+    "statePreserved": true,
+    "workersPreserved": true,
+    "receiptHashes": {
+      "baseline/listener/receipts/listener-live-verification.json": "bd77597dbc4626780e2e8d87cd11516961a221c01dbea87f7aa4fc9817818cbc"
+    }
+  },
+  "databaseRecovery": {
+    "backup": {
+      "documentCount": 187443,
+      "collectionPathCount": 1015,
+      "bytes": 1797326062,
+      "dataSHA256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e",
+      "manifestSHA256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc"
+    },
+    "reviewedWorkOrdersLinked": 8,
+    "newNestedSiteClients": 4,
+    "exactExistingNestedSiteClientsReused": 1,
+    "existingClientDocumentsPreserved": 264,
+    "selectedEquipmentOrdersPreserved": 6,
+    "siteOnlyOrders": 2,
+    "inventoryDestinationsReady": 2,
+    "inventoryDestinationsBlockedMissingMachine": 6,
+    "transientFirstCreateAcknowledgementIds": ["10480", "10516", "10648"],
+    "automaticRetries": 0,
+    "inventoryItemsModified": 0,
+    "inventoryHistoryDocumentsModified": 0,
+    "unexpectedWorkflowAssetHistoryChanges": 0,
+    "parentClientChanges": 0,
+    "independentVerificationPassed": true,
+    "cumulativeRecovery": {
+      "siteLinksRepaired": 43,
+      "inventoryDestinationsReady": 37,
+      "blockedMissingMachine": 6
+    },
+    "remainingBoundedReview": {
+      "totalMissingAnyLink": 147,
+      "withoutSafeClientProof": 46,
+      "clientLinkedWithoutSafeMachineProof": 101,
+      "automaticallyGuessed": 0
+    },
+    "tests": {
+      "boundedRecoveryNodeTestsPassed": 18,
+      "offlinePythonRemoteGuardTestsPassed": 1
+    },
+    "receiptHashes": {
+      "candidate/database/receipts/fresh-site-preflight.json": "32f866b0088ff29e1703547f489e3b9ab8af129f10cdeb8e7f9525a99e57290a",
+      "candidate/database/receipts/fresh-site-wire-verification.json": "a6e6ed5450bf090b23eb3c4b97bf096f232f66ba19b765f8e66615e3ea20f17a",
+      "candidate/database/receipts/fresh-site-recovery-receipt.json": "707251bad7bfdbc7942e859a52f85958b68c0d666b31bbd38581c70853366a73",
+      "candidate/database/receipts/fresh-site-independent-verification.json": "996b83c679af6736f992d238b5129ab90fa783d23ea56eeb46586d9f947653a5",
+      "candidate/database/receipts/fresh-site-postdeployment-controls.json": "243f325744de89062983ab2f4f756f35e71abc9218e6b4ff92b261200758c33d",
+      "candidate/database/receipts/live-repair-summary.json": "65e29a42a4e5170d6d673ac71d00824c2fe827e122efb39b4ad6540854035125"
+    }
+  },
+  "rollback": {
+    "websiteSourceOnly": true,
+    "websiteBaselineRevision": "nextserverwest-00060-tod",
+    "websiteBaselineGeneration": "1790366275981207",
+    "websiteExternalArchivePath": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-fresh-site-proof-20260925\\source.zip",
+    "websiteExternalArchiveSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+    "runtimeConfigurationPreserved": true,
+    "listenerRollbackNeeded": false,
+    "databaseAutomaticRollback": false
+  },
+  "excluded": [
+    "environment files and credentials",
+    "raw database documents, preimages, full backups, and private attribution evidence",
+    "raw BlueFolder XML and responses",
+    "production website ZIP archives and compiled chunks",
+    "listener runtime state, logs, locks, and raw operational snapshots",
+    "unrelated dirty-root files"
+  ]
+}

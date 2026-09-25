@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-25T21:01:40.157Z",
+  "readOnly": true,
+  "verificationScope": "Prior repaired destination links, immediate repair preservation, full-backup immutable controls, and separately attributed concurrent activity",
+  "backupManifestSha256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc",
+  "backupDataSha256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e",
+  "backupDocumentsRechecked": 187443,
+  "boundedEightRecoveryReceiptSha256": "707251bad7bfdbc7942e859a52f85958b68c0d666b31bbd38581c70853366a73",
+  "privateAttributionReportSha256": "5c172711f0930af5f71973346e057cea099b434e166d210a332a125007f7bda4",
+  "privateAttributionSummarySha256": "1be238af78f287f710d1499174ea0d976797bc039b96d36a158d4aa6f229dae5",
+  "priorRepairedWorkOrders": 35,
+  "priorInventoryDestinationsReady": 35,
+  "parentClientsUnchangedFromFullBackup": ["AIS75099", "AIS94132", "AIS40687", "AIS93109"],
+  "itemControl": {
+    "id": "AIS23663",
+    "documentUnchangedFromFullBackup": true,
+    "workOrderAddHistoryUnchangedFromFullBackup": true,
+    "workOrderAddHistoryEntries": 1,
+    "inventoryOperationUnchangedFromFullBackup": true
+  },
+  "workOrderControls": [
+    {"id": "10659", "clientId": "AIS78594", "machineId": "AIS82553", "trailerId": "AIS20", "destinationChainPreserved": true, "wholeDocUnchanged": true},
+    {"id": "10677", "clientId": "AIS79109", "machineId": "AIS32820", "trailerId": "", "destinationChainPreserved": true, "wholeDocUnchanged": false}
+  ],
+  "concurrentActivity": [
+    {"workOrderId": "10483", "wholeDocUnchanged": false, "immediateRepairProtectedFieldsPreserved": true, "occurredAt": "2026-09-25T20:37:27.633Z", "source": "bluefolder_import", "workflowBeforeAndImmediatelyAfterRepair": "inactive", "workflowCurrent": "service_complete"},
+    {"workOrderId": "10658", "wholeDocUnchanged": false, "immediateRepairProtectedFieldsPreserved": true, "firstNewShippingEntryAt": "2026-09-25T20:41:20.263Z", "lastNewShippingEntryAt": "2026-09-25T20:46:14.280Z", "newShippingEntries": 4, "sourceEvidence": "Inventory movement receipt IDs and recordedAtIso timestamps", "workflowUnchanged": true},
+    {"workOrderId": "10634", "wholeDocUnchanged": false, "immediateRepairProtectedFieldsPreserved": true, "activityAt": "2026-09-25T20:42:11.050Z", "analysisAt": "2026-09-25T20:42:14.365Z", "sourceEvidence": "AI participation history and verified dispatch-coordinate timestamps", "messageCountBefore": 52, "messageCountAfter": 53, "calendarEntryCountBefore": 17, "calendarEntryCountAfter": 18, "workflowUnchanged": true},
+    {"workOrderId": "10677", "wholeDocUnchanged": false, "notATargetOfThe16Or19Or8Repairs": true, "activityAt": "2026-09-25T20:39:14.819Z", "analysisAt": "2026-09-25T20:39:11.449Z", "sourceEvidence": "AI participation history and verified dispatch-coordinate timestamps", "messageCountBefore": 14, "messageCountAfter": 29, "calendarEntryCountBefore": 14, "calendarEntryCountAfter": 29, "workflowUnchanged": true}
+  ],
+  "allListedConcurrentActivityPredatesEightOrderApply": true,
+  "eightOrderApplyStartedAt": "2026-09-25T20:56:18.004Z",
+  "expectedDirectRepairMarkerVerified": "recent-work-order-site-links-20260925",
+  "noConcurrentChangesRolledBack": true,
+  "noExtraImports": true,
+  "noDatabaseWritesByThisVerification": true,
+  "noDaemonStateWrites": true,
+  "wholeDatabaseUnchangedClaimed": false
+}

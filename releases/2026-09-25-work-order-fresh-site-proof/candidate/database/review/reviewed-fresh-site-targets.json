@@ -1,0 +1,244 @@
+{
+  "repairId": "reviewed-fresh-site-links-20260925",
+  "checkedAt": "2026-09-25T20:17:32.095Z",
+  "readOnly": true,
+  "cutoff": "2026-08-26T07:00:00.000Z",
+  "workOrderCount": 8,
+  "siteCount": 5,
+  "parentCount": 4,
+  "selectedEquipmentOrders": 6,
+  "siteOnlyOrders": 2,
+  "payloadEquipmentFields": "omitted_to_preserve_exact_stored_selection",
+  "sites": [
+    {
+      "customerId": "35312679",
+      "locationId": "40585560",
+      "expectedClientId": "AIS12854",
+      "parentClientId": "AIS75099",
+      "workOrderIds": [
+        "10480"
+      ],
+      "location": {
+        "bluefolderLocationId": "40585560",
+        "name": "Mobile Medical Technologies",
+        "addressStreet": "15345 Manila St",
+        "city": "Fontana",
+        "state": "CA",
+        "postalCode": "92337",
+        "country": "United States",
+        "isPrimary": false,
+        "formattedAddress": "15345 Manila St, Fontana, CA 92337, United States"
+      },
+      "customerName": "Platinum Mobile Imaging Inc"
+    },
+    {
+      "customerId": "34860431",
+      "locationId": "40585835",
+      "expectedClientId": "AIS56092",
+      "parentClientId": "AIS94132",
+      "workOrderIds": [
+        "10486"
+      ],
+      "location": {
+        "bluefolderLocationId": "40585835",
+        "name": "Penn Highlands Huntingdon",
+        "addressStreet": "1225 Warm Springs Ave.",
+        "city": "Huntingdon",
+        "state": "PA",
+        "postalCode": "16652",
+        "country": "United States",
+        "isPrimary": false,
+        "formattedAddress": "1225 Warm Springs Ave., Huntingdon, PA 16652, United States"
+      },
+      "customerName": "MXR Imaging Inc"
+    },
+    {
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "expectedClientId": "AIS26295",
+      "parentClientId": "AIS40687",
+      "workOrderIds": [
+        "10516",
+        "10618",
+        "10619",
+        "10676"
+      ],
+      "location": {
+        "bluefolderLocationId": "40587885",
+        "name": "SimonMed Imaging - Spring Valley",
+        "addressStreet": "5608 S Rainbow Blvd #103",
+        "city": "Las Vegas",
+        "state": "NV",
+        "postalCode": "89118",
+        "country": "United States",
+        "isPrimary": false,
+        "formattedAddress": "5608 S Rainbow Blvd #103, Las Vegas, NV 89118, United States"
+      },
+      "customerName": "SimonMed Imaging"
+    },
+    {
+      "customerId": "34579885",
+      "locationId": "40590331",
+      "expectedClientId": "AIS83192",
+      "parentClientId": "AIS40687",
+      "workOrderIds": [
+        "10569"
+      ],
+      "location": {
+        "bluefolderLocationId": "40590331",
+        "name": "SimonMed Imaging - Porterville",
+        "addressStreet": "99 W Putnam Ave",
+        "city": "Porterville",
+        "state": "CA",
+        "postalCode": "93257",
+        "country": "United States",
+        "isPrimary": false,
+        "formattedAddress": "99 W Putnam Ave, Porterville, CA 93257, United States"
+      },
+      "customerName": "SimonMed Imaging"
+    },
+    {
+      "customerId": "35110050",
+      "locationId": "35997300",
+      "expectedClientId": "AIS50904",
+      "parentClientId": "AIS93109",
+      "workOrderIds": [
+        "10648"
+      ],
+      "location": {
+        "bluefolderLocationId": "35997300",
+        "name": "Accent 3T MRI - Korean Town",
+        "addressStreet": "3755 Beverly Blvd, #300",
+        "city": "Los Angeles",
+        "state": "CA",
+        "postalCode": "90004",
+        "country": "",
+        "isPrimary": false,
+        "formattedAddress": "3755 Beverly Blvd, #300, Los Angeles, CA 90004"
+      },
+      "customerName": "Accent 3T MRI Inc"
+    }
+  ],
+  "targets": [
+    {
+      "id": "10480",
+      "customerId": "35312679",
+      "locationId": "40585560",
+      "expectedClientId": "AIS12854",
+      "parentClientId": "AIS75099",
+      "equipmentIds": [
+        "E0DC83C8-8E87-4499-843D-8D7A2E962965"
+      ],
+      "equipmentNames": [
+        "Siemens Espree"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10486",
+      "customerId": "34860431",
+      "locationId": "40585835",
+      "expectedClientId": "AIS56092",
+      "parentClientId": "AIS94132",
+      "equipmentIds": [],
+      "equipmentNames": [],
+      "expectedStatus": "not_selected",
+      "expectedIssue": "",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10516",
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "expectedClientId": "AIS26295",
+      "parentClientId": "AIS40687",
+      "equipmentIds": [
+        "E3B97CFB-E099-4AA5-ACA8-4F78A8A93E7A"
+      ],
+      "equipmentNames": [
+        "Siemens Verio"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10618",
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "expectedClientId": "AIS26295",
+      "parentClientId": "AIS40687",
+      "equipmentIds": [
+        "E3B97CFB-E099-4AA5-ACA8-4F78A8A93E7A"
+      ],
+      "equipmentNames": [
+        "Siemens Verio"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10619",
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "expectedClientId": "AIS26295",
+      "parentClientId": "AIS40687",
+      "equipmentIds": [
+        "E3B97CFB-E099-4AA5-ACA8-4F78A8A93E7A"
+      ],
+      "equipmentNames": [
+        "Siemens Verio"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10676",
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "expectedClientId": "AIS26295",
+      "parentClientId": "AIS40687",
+      "equipmentIds": [],
+      "equipmentNames": [],
+      "expectedStatus": "not_selected",
+      "expectedIssue": "",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10569",
+      "customerId": "34579885",
+      "locationId": "40590331",
+      "expectedClientId": "AIS83192",
+      "parentClientId": "AIS40687",
+      "equipmentIds": [
+        "FA3FA6FA-4FE5-43C7-A476-98A2B19E72BF"
+      ],
+      "equipmentNames": [
+        "GE lightspeed 16 4x"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    },
+    {
+      "id": "10648",
+      "customerId": "35110050",
+      "locationId": "35997300",
+      "expectedClientId": "AIS50904",
+      "parentClientId": "AIS93109",
+      "equipmentIds": [
+        "ADA3E97A-E5B3-4847-8F89-403EE6E50458"
+      ],
+      "equipmentNames": [
+        "GE 3T HDxt"
+      ],
+      "expectedStatus": "unresolved",
+      "expectedIssue": "bluefolder_equipment_not_mapped",
+      "storedSelectionExact": true
+    }
+  ]
+}

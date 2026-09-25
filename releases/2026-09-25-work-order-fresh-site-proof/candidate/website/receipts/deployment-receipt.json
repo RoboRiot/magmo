@@ -1,0 +1,34 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-25T20:47:37.474Z",
+  "originalRevision": "nextserverwest-00060-tod",
+  "originalUpdateTime": "2026-09-25T20:00:44.797176060Z",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790366275981207"
+    }
+  },
+  "artifactSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "rollbackArchiveSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "scope": "Resolve newly added verified nonprimary BlueFolder locations without mutating cached parent Clients",
+  "rollbackArchive": "source.zip",
+  "sourceOnly": true,
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790369258439-65c54d3aa8294-77b60b08-d35217c1",
+  "completedAt": "2026-09-25T20:50:47.426Z",
+  "revision": "nextserverwest-00061-rej",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790369259300423"
+    }
+  },
+  "deployedUpdateTime": "2026-09-25T20:50:18.699913775Z",
+  "unrelatedConfigurationPreserved": true
+}

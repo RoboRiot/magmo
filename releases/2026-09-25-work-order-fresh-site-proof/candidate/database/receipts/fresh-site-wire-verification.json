@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-09-25T20:34:50.405Z",
+  "readOnly": true,
+  "helperSha256": "3977545bf88b79db793f6f9fdf0fb56dda8a47db9ef2259ae2363737c3f401d3",
+  "customerReads": 4,
+  "selectedLocations": 5,
+  "actualXmlParserVerified": true,
+  "rawResponsesSaved": false,
+  "credentialsTransferred": false,
+  "rows": [
+    {
+      "customerId": "35312679",
+      "locationId": "40585560",
+      "ok": true,
+      "reason": "bluefolder_customer_lookup_verified",
+      "rawInactive": "0",
+      "rawActive": "",
+      "rawSelectedIsPrimary": "0",
+      "normalizedActive": true,
+      "normalizedIsPrimary": false,
+      "normalizedLocationId": "40585560",
+      "normalizedCountry": "United States",
+      "reviewedLocationExact": true
+    },
+    {
+      "customerId": "34860431",
+      "locationId": "40585835",
+      "ok": true,
+      "reason": "bluefolder_customer_lookup_verified",
+      "rawInactive": "0",
+      "rawActive": "",
+      "rawSelectedIsPrimary": "0",
+      "normalizedActive": true,
+      "normalizedIsPrimary": false,
+      "normalizedLocationId": "40585835",
+      "normalizedCountry": "United States",
+      "reviewedLocationExact": true
+    },
+    {
+      "customerId": "34579885",
+      "locationId": "40587885",
+      "ok": true,
+      "reason": "bluefolder_customer_lookup_verified",
+      "rawInactive": "0",
+      "rawActive": "",
+      "rawSelectedIsPrimary": "0",
+      "normalizedActive": true,
+      "normalizedIsPrimary": false,
+      "normalizedLocationId": "40587885",
+      "normalizedCountry": "United States",
+      "reviewedLocationExact": true
+    },
+    {
+      "customerId": "34579885",
+      "locationId": "40590331",
+      "ok": true,
+      "reason": "bluefolder_customer_lookup_verified",
+      "rawInactive": "0",
+      "rawActive": "",
+      "rawSelectedIsPrimary": "0",
+      "normalizedActive": true,
+      "normalizedIsPrimary": false,
+      "normalizedLocationId": "40590331",
+      "normalizedCountry": "United States",
+      "reviewedLocationExact": true
+    },
+    {
+      "customerId": "35110050",
+      "locationId": "35997300",
+      "ok": true,
+      "reason": "bluefolder_customer_lookup_verified",
+      "rawInactive": "0",
+      "rawActive": "",
+      "rawSelectedIsPrimary": "0",
+      "normalizedActive": true,
+      "normalizedIsPrimary": false,
+      "normalizedLocationId": "35997300",
+      "normalizedCountry": "",
+      "reviewedLocationExact": true
+    }
+  ]
+}

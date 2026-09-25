@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "rootReviewed": true,
+  "rootIndependentCompiledTestsPassed": 104,
+  "rootArtifactHashVerified": true,
+  "exactArtifactTestsPassed": true,
+  "exactArtifactTestCount": 104,
+  "zipEntriesVerified": 483,
+  "packagedAt": "2026-09-25T20:41:06.172Z",
+  "artifactSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "baselineRevision": "nextserverwest-00060-tod",
+  "baselineArchiveSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+  "baselineConfigHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc"
+}
