@@ -1,0 +1,37 @@
+{
+  "preparedAt": "2026-09-24T23:28:27.170Z",
+  "scope": "Exact BlueFolder nested-site destination link: one new helper and narrow import transaction overlay",
+  "sourceDirectory": "scoped-source",
+  "baselineRevision": "nextserverwest-00057-lip",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790276173369344"
+    }
+  },
+  "unrelatedFilesPreserved": true,
+  "entries": [
+    {
+      "path": "machine-link/workOrderSiteLink.cjs",
+      "before": null,
+      "after": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f"
+    },
+    {
+      "path": ".next/server/chunks/8806.js",
+      "before": "41154dafc8d91b899e9cfba93b373e9916675446a367ace428ef044746ad1596",
+      "after": "5fd84080e367a554d066ab6b1f464211f763e33a415aa0c0992fba6222b1e06f"
+    }
+  ],
+  "sourceHashes": {
+    "lib/ops/workOrderSiteLink.cjs": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f",
+    "lib/ops/workOrders.js": "70d8f9509ff5f3488a0ebc1f36273d025a1eeecfb9348f6502e31b7c208917e2"
+  },
+  "overlay": {
+    "oldGuard": "if(!E(i.clientId)){let a=a5(k),b=a.customerLocationId?\"bluefolderLocationId\":a.customerId?\"bluefolderCustomerId\":\"\";if(b){let c=[f.collection(\"Client\").where(b,\"==\",\"bluefolderLocationId\"===b?a.customerLocationId:a.customerId).limit(2),f.collection(\"Client\").where(\"bluefolderLocationId\"===b?\"blueFolderLocationId\":\"blueFolderCustomerId\",\"==\",\"bluefolderLocationId\"===b?a.customerLocationId:a.customerId).limit(2)],e=a7(a.customerId,a.customerLocationId);e&&c.push(f.collection(\"Client\").where(\"bluefolderLocationAliasKeys\",\"array-contains\",e).limit(2));let h=await Promise.all(c.map(a=>g.get(a))),i=new Map;h.forEach(a=>{a.docs.forEach(a=>{i.set(a.id,{id:a.id,data:a.data()||{},ref:a.ref})})});let j=a6([...i.values()],a,{allowCustomerFallback:!1});j.match&&(l=a4(j,{clientRef:j.match.ref,linkedAtIso:d}))}}",
+    "replacement": "let siteCreation=null;if(!E(i.clientId)){const siteLink=await require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\").resolveWorkOrderSiteLinkInTransaction(g,f,k,{linkedAtIso:d});l=siteLink.patch;siteCreation=siteLink.creation;}",
+    "writePrefix": "(siteCreation&&g.create(siteCreation.ref,siteCreation.data)),"
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "fileCount": 482
+}

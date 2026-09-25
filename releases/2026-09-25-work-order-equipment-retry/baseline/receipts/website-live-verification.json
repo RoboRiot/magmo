@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-09-24T23:33:54.810Z",
+  "revision": "nextserverwest-00058-mex",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790292582304947"
+    }
+  },
+  "artifactSHA256": "1f3ef2ce160bf1ec0f8d391942799f85f4a266e64b7782453cf616ce27b69e87",
+  "helperSHA256": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f",
+  "unrelatedConfigurationPreserved": true,
+  "equipmentCapability": {
+    "version": "2026-09-24.1",
+    "equipmentIds": true,
+    "equipmentNames": true,
+    "existingOnly": true,
+    "preservesManualAssets": true,
+    "rejectsUnresolvedInventoryMachine": true
+  },
+  "closeStatusSyncPreserved": true,
+  "schemaPreserved": true,
+  "verifiedOrders": [
+    {
+      "workOrderId": "10659",
+      "clientId": "AIS78594",
+      "machineId": "AIS82553",
+      "trailerId": "AIS20",
+      "verifiedBy": "read-only Firestore REST GET"
+    },
+    {
+      "workOrderId": "10664",
+      "clientId": "AIS50849",
+      "machineId": "AIS21467",
+      "trailerId": "",
+      "verifiedBy": "read-only Firestore REST GET"
+    }
+  ],
+  "authBoundaries": [
+    {
+      "route": "options",
+      "status": 401
+    },
+    {
+      "route": "confirm",
+      "status": 401
+    },
+    {
+      "route": "scan-sessions",
+      "status": 401
+    }
+  ],
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "noDataWrites": true,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "purpose": "Rollback provenance before the bounded BlueFolder equipment retry release",
+  "gitStartingCommit": "a2555cf3669c4f2ed6adc9a90f6b21b8ef99ff57",
+  "website": {
+    "activeRevision": "nextserverwest-00058-mex",
+    "sourceGeneration": "1790292582304947",
+    "verifiedArtifactSHA256": "1f3ef2ce160bf1ec0f8d391942799f85f4a266e64b7782453cf616ce27b69e87",
+    "buildId": "wo-machine-link-31372590b5701129",
+    "exactRetainedHelper": {
+      "path": "website/workOrderSiteLink.cjs",
+      "sha256": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f"
+    },
+    "workOrdersSource": {
+      "sha256AtComposition": "70d8f9509ff5f3488a0ebc1f36273d025a1eeecfb9348f6502e31b7c208917e2",
+      "retainedInGit": false,
+      "reason": "The exact raw source was hash-recorded during composition but was not retained. It must not be guessed or reconstructed from compiled output."
+    },
+    "fullRollbackArchive": {
+      "retainedOutsideGit": true,
+      "localPathAtVerification": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-equipment-link-20260925\\source.zip",
+      "sha256": "1f3ef2ce160bf1ec0f8d391942799f85f4a266e64b7782453cf616ce27b69e87",
+      "requiredForRollback": true
+    }
+  },
+  "listener": {
+    "path": "listener/bluefolder_slack_listener_v2.py",
+    "sha256": "81df567ea140cba4551b3b205c1cf9ac151df6cee24982b1275cec1a9426bccc",
+    "source": "fresh exact production-server snapshot"
+  },
+  "receiptHashes": {
+    "receipts/website-composition-report.json": "cb12b6e805f27cc8577016ad95246f46da3f6b143bb79bb0aa7738644c02cf64",
+    "receipts/website-deployment-receipt.json": "4bb4933c83f5776b20cc66fdb1d7bfda35bf8818fe43ad33159fa7a5b3068cac",
+    "receipts/website-live-verification.json": "3e2d2dbf3ff3e74c72f1a7fca0143f60eb2f11a8bc8bfa594a9c70c0d6cd9119"
+  },
+  "excluded": [
+    "environment files and credentials",
+    "raw database documents and repair preimages",
+    "production ZIP archives",
+    "listener runtime state, logs, and locks",
+    "compiled website chunks"
+  ]
+}
