@@ -1,0 +1,131 @@
+{
+  "checkedAt": "2026-09-25T20:01:04.690Z",
+  "mode": "--dry-run",
+  "readOnly": true,
+  "apiRevision": "nextserverwest-00060-tod",
+  "proofSha256": "8368119f835fc4a44b73699422fa869ce5ec93aad985d69d73c37a1357999012",
+  "backupManifestSha256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc",
+  "baselineListenerSha256": "d9f9fa8c6ef543a9d5062f3a8c2a3cafd043644519aea4b9354d2989e07a148f",
+  "stagedListenerSha256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+  "workOrderCount": 19,
+  "expectedNewClients": 14,
+  "existingClientCount": 243,
+  "equipmentFieldsOmitted": true,
+  "existingOnly": true,
+  "plans": [
+    {
+      "id": "10482",
+      "clientId": "AIS64878",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10505",
+      "clientId": "AIS31972",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10511",
+      "clientId": "AIS47983",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10526",
+      "clientId": "AIS87201",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10527",
+      "clientId": "AIS85164",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10531",
+      "clientId": "AIS71999",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10533",
+      "clientId": "AIS49474",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10552",
+      "clientId": "AIS87201",
+      "reason": "bluefolder_location_alias",
+      "createsClient": false
+    },
+    {
+      "id": "10560",
+      "clientId": "AIS18156",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10574",
+      "clientId": "AIS99104",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10575",
+      "clientId": "AIS86870",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10580",
+      "clientId": "AIS87201",
+      "reason": "bluefolder_location_alias",
+      "createsClient": false
+    },
+    {
+      "id": "10581",
+      "clientId": "AIS31972",
+      "reason": "bluefolder_location_alias",
+      "createsClient": false
+    },
+    {
+      "id": "10582",
+      "clientId": "AIS67301",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10610",
+      "clientId": "AIS71999",
+      "reason": "bluefolder_location_alias",
+      "createsClient": false
+    },
+    {
+      "id": "10617",
+      "clientId": "AIS40220",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10634",
+      "clientId": "AIS17602",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10641",
+      "clientId": "AIS26936",
+      "reason": "bluefolder_verified_nested_site",
+      "createsClient": true
+    },
+    {
+      "id": "10662",
+      "clientId": "AIS47983",
+      "reason": "bluefolder_location_alias",
+      "createsClient": false
+    }
+  ]
+}

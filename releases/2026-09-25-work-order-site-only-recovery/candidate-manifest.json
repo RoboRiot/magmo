@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "purpose": "Scoped site-only destination recovery, existing-asset guard, reviewed data repairs, and rollback record",
+  "git": {
+    "branch": "codex/work-order-site-only-recovery-20260925",
+    "startingCommit": "565bef4ab54c3d304f99bfed93cd1aca52c887a1",
+    "preReleaseTag": "pre-work-order-site-only-recovery-20260925",
+    "deployedTag": "deployed-work-order-site-only-recovery-20260925"
+  },
+  "website": {
+    "state": "ACTIVE",
+    "baselineRevision": "nextserverwest-00059-vak",
+    "baselineSourceGeneration": "1790360606589691",
+    "baselineArtifactSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+    "activeRevision": "nextserverwest-00060-tod",
+    "activeSourceGeneration": "1790366275981207",
+    "artifactSHA256": "7dbdf5a70f5f4c1e94e1549f191adcef6b1234d4270e4f7d4e10ec6b468db99e",
+    "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+    "buildId": "wo-machine-link-31372590b5701129",
+    "fileCount": 482,
+    "fullRebuildEquivalent": false,
+    "overlay": {
+      "helperPath": "machine-link/workOrderMachineLink.cjs",
+      "helperSHA256": "f8664402bfecd7ebb828fb44729c748671c86aa6aa31a090154a731f26463382",
+      "compiledChunkPath": ".next/server/chunks/8806.js",
+      "compiledChunkSHA256": "cf22d28f299e7dbcc0b2ac6c858afa2f6a06e934436a6ea42a27332d4cbb8b4a",
+      "siteHelperPreservedSHA256": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f"
+    },
+    "sourceSnapshots": {
+      "lib/ops/workOrderMachineLink.cjs": "f8664402bfecd7ebb828fb44729c748671c86aa6aa31a090154a731f26463382",
+      "lib/ops/workOrders.js": "936e128c2d1dbb93eabd50002748909c37757bc7fbef306123e55a24b2357971",
+      "test/work-order-machine-link.test.cjs": "c3f7ce660c8588761ddadda21adc376db1b13405475dde255076ee8c2221a91e",
+      "test/work-order-machine-import.test.cjs": "baf6d7d6c9e96643c1abd898058b1a8b1719f77ea92bf106a9107bf45788d76e"
+    },
+    "tests": {
+      "sourceAndRepairRegressionTestsPassed": 149,
+      "exactCompiledArtifactTestsPassed": 63,
+      "verifiedZipEntries": 482
+    },
+    "receiptHashes": {
+      "candidate/website/receipts/composition-report.json": "8b42d5f914943f85d7d01a4130f07764d4f33008d2e6e1d9143dc04c83a395ae",
+      "candidate/website/receipts/package-gates.json": "88c39cb2f16619e1dc373da21103da83a5e97e84eae7bce51efdd845db7dc0b9",
+      "candidate/website/receipts/deployment-receipt.json": "73c1fb24f78eeb601123d3cf61cec060026fec622ce96d001dcac82e139d2970",
+      "candidate/website/receipts/live-verification.json": "5a6075b106b3148a473556cab4f021f78ce0d71cd1c40843062d82b648c36ea9"
+    }
+  },
+  "listener": {
+    "state": "ACTIVE",
+    "baselineVersion": "2026.09.25-bluefolder-equipment-retry.1",
+    "baselineSourceSHA256": "d9f9fa8c6ef543a9d5062f3a8c2a3cafd043644519aea4b9354d2989e07a148f",
+    "version": "2026.09.25-bluefolder-destination-retry.1",
+    "sourceSHA256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+    "serviceRoot": "C:\\Users\\Owner\\Desktop\\warehouse\\bluefolder_listener",
+    "backupPath": "C:\\Users\\Owner\\Desktop\\warehouse\\.warehouse_runtime\\deployments\\work-order-site-only-retry-20260925\\backup-20260925T200300Z",
+    "listenerPid": 12600,
+    "commandWorkerPids": [18088, 19252],
+    "checkpointCountPreserved": 582,
+    "testsPassed": 117,
+    "stateOverwritten": false,
+    "receiptHashes": {
+      "candidate/listener/receipts/listener-deployment-receipt.json": "a16289f2e8af39d295250cc4d59ac95406145ad941b8a374d104fd80bc820618",
+      "candidate/listener/receipts/listener-live-verification.json": "a28f04d2d6aa6f9ccc5275cc1a49499dfbc358e184055c620acb069697556a39",
+      "candidate/listener/receipts/destination-context-verification.json": "96335f1e557f3850d9ffbb3f93bfcaef3f8be42c2c6ea6f0940a4487f4725635"
+    }
+  },
+  "databaseRecovery": {
+    "backup": {
+      "completedAt": "2026-09-25T19:51:01.336Z",
+      "documentCount": 187443,
+      "collectionPathCount": 1015,
+      "bytes": 1797326062,
+      "dataSHA256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e",
+      "manifestSHA256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc"
+    },
+    "reviewedWorkOrdersRepaired": 35,
+    "directExistingClientLinks": 16,
+    "metadataOnlyNestedSiteLinks": 19,
+    "nestedSiteClientsCreated": 14,
+    "inventoryItemsModified": 0,
+    "inventoryHistoryDocumentsModified": 0,
+    "workflowAssetHistoryChanges": 0,
+    "independentVerificationPassed": true,
+    "concurrentClientsObservedAndPreserved": ["AIS21602", "AIS66964", "AIS89329"],
+    "workOrder10658": {
+      "clientId": "AIS94688",
+      "clientRefPresent": false,
+      "clientRefRequiredByWorkOrderAdd": false,
+      "machineId": "",
+      "trailerId": "",
+      "equipmentLinkStatus": "not_selected"
+    },
+    "remainingBoundedReview": {
+      "total": 149,
+      "clientLinkedWithoutSafeAssetProof": 95,
+      "withoutSafeClientProof": 54,
+      "automaticallyGuessed": 0
+    },
+    "receiptHashes": {
+      "candidate/website/receipts/database-repair-receipt.json": "a006de9f478ff2012b436020f0068b2c841c2f4a7ba3c1519643ab55a943114b",
+      "candidate/website/receipts/database-repair-independent-verification.json": "4c1f87fec93392fe2153197f33cce9ecfb683ffb9ccb7ab38f7edb31aca3489e",
+      "candidate/listener/receipts/nested-site-recovery-receipt.json": "e54a37a6e7a28763896161ceb0238cd4e61d269297bcb290a10eb446e3f1e726",
+      "candidate/website/receipts/nested-site-independent-verification.json": "46ba8f2c132fbef86c40c432d1eae6e2642bc4afa64fc548db3c1dba79bf8daa",
+      "candidate/website/receipts/live-repair-summary.json": "0e625473e40c311180e8336ef6141db382fd46b6ac2768aed1637dc14100516d"
+    }
+  },
+  "rollback": {
+    "websiteSourceOnly": true,
+    "websiteBaselineRevision": "nextserverwest-00059-vak",
+    "websiteBaselineGeneration": "1790360606589691",
+    "websiteExternalArchivePath": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-existing-asset-site-guard-20260925\\source.zip",
+    "websiteExternalArchiveSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+    "listenerSourceOnly": true,
+    "listenerStatePreserved": true,
+    "databaseAutomaticRollback": false
+  },
+  "excluded": [
+    "environment files and credentials",
+    "raw database documents, preimages, and full backup artifacts",
+    "production website ZIP archives and compiled chunks",
+    "listener runtime state, logs, locks, and raw operational snapshots",
+    "unrelated dirty-root files"
+  ]
+}

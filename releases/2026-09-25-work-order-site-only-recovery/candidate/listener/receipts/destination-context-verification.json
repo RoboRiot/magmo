@@ -1,0 +1,138 @@
+{
+  "checkedAt": "2026-09-25T20:05:27.842136+00:00",
+  "readOnly": true,
+  "contextChecks": [
+    {
+      "workOrderId": "10658",
+      "httpContext": {
+        "workOrderId": "10658",
+        "number": "10658"
+      },
+      "contextFieldNames": [
+        "assigneeNames",
+        "assignees",
+        "bluefolderAssignees",
+        "customer",
+        "deleted",
+        "deletedAt",
+        "description",
+        "dispatchStatus",
+        "dispatchedAt",
+        "dispatchedBy",
+        "latestIngestedSlackTs",
+        "latestOpsSummary",
+        "latestPartsSummary",
+        "number",
+        "participants",
+        "partsLastSlackTs",
+        "priorityContext",
+        "priorityLabel",
+        "priorityReason",
+        "priorityTier",
+        "slackChannel",
+        "slackPermalink",
+        "slackThreadTs",
+        "subject",
+        "summaryLastSlackTs",
+        "workOrderId",
+        "workflowStatus"
+      ],
+      "listenerCheckpoint": {
+        "resolution": null,
+        "after": {}
+      }
+    },
+    {
+      "workOrderId": "10482",
+      "httpContext": {
+        "workOrderId": "10482",
+        "number": "10482"
+      },
+      "contextFieldNames": [
+        "assigneeNames",
+        "assignees",
+        "bluefolderAssignees",
+        "customer",
+        "deleted",
+        "deletedAt",
+        "description",
+        "dispatchStatus",
+        "dispatchedAt",
+        "dispatchedBy",
+        "latestIngestedSlackTs",
+        "latestOpsSummary",
+        "latestPartsSummary",
+        "number",
+        "participants",
+        "partsLastSlackTs",
+        "priorityContext",
+        "priorityLabel",
+        "priorityReason",
+        "priorityTier",
+        "slackChannel",
+        "slackPermalink",
+        "slackThreadTs",
+        "subject",
+        "summaryLastSlackTs",
+        "workOrderId",
+        "workflowStatus"
+      ],
+      "listenerCheckpoint": {
+        "resolution": null,
+        "after": {}
+      }
+    }
+  ],
+  "normalDaemonSiteOnlyAcknowledgements": [
+    {
+      "workOrderId": "10286",
+      "clientId": "AIS69677",
+      "status": "not_selected",
+      "issue": "",
+      "acknowledgedAt": "2026-09-25T20:03:08.997402+00:00"
+    },
+    {
+      "workOrderId": "10290",
+      "clientId": "AIS94688",
+      "status": "not_selected",
+      "issue": "",
+      "acknowledgedAt": "2026-09-25T20:04:10.978886+00:00"
+    },
+    {
+      "workOrderId": "10295",
+      "clientId": "AIS89914",
+      "status": "not_selected",
+      "issue": "",
+      "acknowledgedAt": "2026-09-25T20:04:14.478633+00:00"
+    }
+  ],
+  "stateWritten": false,
+  "noImportRequests": true,
+  "contextEndpointOmitsDestinationFields": true,
+  "firestoreReadChecks": [
+    {
+      "workOrderId": "10658",
+      "clientId": "AIS94688",
+      "clientReferencePresent": false,
+      "clientReferenceValid": null,
+      "machineId": "",
+      "trailerId": "",
+      "computedWithDeployedHelper": {
+        "equipmentLinkStatus": "not_selected",
+        "equipmentLinkIssue": ""
+      }
+    },
+    {
+      "workOrderId": "10482",
+      "clientId": "AIS64878",
+      "clientReferencePresent": true,
+      "clientReferenceValid": true,
+      "machineId": "",
+      "trailerId": "",
+      "computedWithDeployedHelper": {
+        "equipmentLinkStatus": "not_selected",
+        "equipmentLinkIssue": ""
+      }
+    }
+  ]
+}

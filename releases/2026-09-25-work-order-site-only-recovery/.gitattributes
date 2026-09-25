@@ -1,0 +1,9 @@
+# Preserve byte-for-byte release evidence and source snapshots across platforms.
+*.cjs -text
+*.js -text
+*.json -text
+*.mjs -text
+*.ps1 -text
+*.py -text
+candidate/website/source/lib/ops/workOrders.js whitespace=-blank-at-eol
+baseline/website/source/lib/ops/workOrders.js whitespace=-blank-at-eol

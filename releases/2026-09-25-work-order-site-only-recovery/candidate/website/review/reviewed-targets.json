@@ -1,0 +1,22 @@
+{
+  "repairId": "recent-work-order-site-links-20260925",
+  "cutoff": "2026-08-26T07:00:00.000Z",
+  "targets": [
+    { "id": "10483", "clientId": "AIS78723", "machineId": "", "trailerId": "", "customerId": "34579885", "locationId": "38226558", "equipmentIds": [] },
+    { "id": "10525", "clientId": "AIS31753", "machineId": "", "trailerId": "", "customerId": "34579885", "locationId": "40534579", "equipmentIds": [] },
+    { "id": "10534", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10540", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10579", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10583", "clientId": "AIS24933", "machineId": "", "trailerId": "", "customerId": "34579885", "locationId": "40467661", "equipmentIds": [] },
+    { "id": "10587", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10590", "clientId": "AIS46541", "machineId": "", "trailerId": "", "customerId": "34579885", "locationId": "37295052", "equipmentIds": [] },
+    { "id": "10598", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10599", "clientId": "AIS15358", "machineId": "", "trailerId": "", "customerId": "34579885", "locationId": "35472747", "equipmentIds": [] },
+    { "id": "10604", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10658", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10668", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10669", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10670", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] },
+    { "id": "10671", "clientId": "AIS94688", "machineId": "", "trailerId": "", "customerId": "34579389", "locationId": "39226291", "equipmentIds": [] }
+  ]
+}

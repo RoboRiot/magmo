@@ -1,0 +1,43 @@
+{
+  "preparedAt": "2026-09-25T19:52:40.544Z",
+  "scope": "Reject cross-site client healing when a work order retains an existing typed asset",
+  "sourceDirectory": "scoped-source",
+  "baselineRevision": "nextserverwest-00059-vak",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790360606589691"
+    }
+  },
+  "unrelatedFilesPreserved": true,
+  "entries": [
+    {
+      "path": "machine-link/workOrderMachineLink.cjs",
+      "before": "c877bd3da2888a27cf48cf46d7d8b503515315d721d4156249477ab9252ca94d",
+      "after": "f8664402bfecd7ebb828fb44729c748671c86aa6aa31a090154a731f26463382"
+    },
+    {
+      "path": ".next/server/chunks/8806.js",
+      "before": "432b417ddb8e2c75e720137f4e8775feaa462dc7f56b201a75e474ad3ebebf54",
+      "after": "cf22d28f299e7dbcc0b2ac6c858afa2f6a06e934436a6ea42a27332d4cbb8b4a"
+    }
+  ],
+  "sourceHashes": {
+    "lib/ops/workOrderMachineLink.cjs": "f8664402bfecd7ebb828fb44729c748671c86aa6aa31a090154a731f26463382",
+    "lib/ops/workOrders.js": "936e128c2d1dbb93eabd50002748909c37757bc7fbef306123e55a24b2357971",
+    "test/work-order-machine-link.test.cjs": "c3f7ce660c8588761ddadda21adc376db1b13405475dde255076ee8c2221a91e",
+    "test/work-order-machine-import.test.cjs": "baf6d7d6c9e96643c1abd898058b1a8b1719f77ea92bf106a9107bf45788d76e"
+  },
+  "overlay": {
+    "oldGuard": "l={};let siteCreation=null;if(!E(i.clientId)){const siteLink=await require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\").resolveWorkOrderSiteLinkInTransaction(g,f,k,{linkedAtIso:d});l=siteLink.patch;siteCreation=siteLink.creation;}let m=bi(i,k),n=!h.exists,o=n?{patch:{},targetStage:\"\",applied:!1}:bh(i,a);let resolvedMachine=null,resolvedMachinePatch={};const effectiveWorkOrder={...i,...m.patch,...l},machineLinkHelpers=require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\");if(!E(effectiveWorkOrder.machineId)&&!E(effectiveWorkOrder.trailerId)&&machineLinkHelpers.hasSelectedBlueFolderEquipment(effectiveWorkOrder))",
+    "newGuard": "l={};let siteCreation=null,clientLinkResolutionReason=\"\",protectedExistingAsset=!1;if(!E(i.clientId)){const siteLink=await require(process.cwd()+\"/machine-link/workOrderSiteLink.cjs\").resolveWorkOrderSiteLinkInTransaction(g,f,k,{linkedAtIso:d});l=siteLink.patch;siteCreation=siteLink.creation;if(l.clientId){const assetSiteGuard=await require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\").validateExistingWorkOrderAssetSiteInTransaction(g,f,i,l,{clientData:siteCreation?.data});protectedExistingAsset=assetSiteGuard.hasExistingAsset;if(!assetSiteGuard.allowed){clientLinkResolutionReason=assetSiteGuard.reason;l={};siteCreation=null;}}}let m=bi(i,k),n=!h.exists,o=n?{patch:{},targetStage:\"\",applied:!1}:bh(i,a);let resolvedMachine=null,resolvedMachinePatch={};const effectiveWorkOrder={...i,...m.patch,...l},machineLinkHelpers=require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\");if(!protectedExistingAsset&&!E(effectiveWorkOrder.machineId)&&!E(effectiveWorkOrder.trailerId)&&machineLinkHelpers.hasSelectedBlueFolderEquipment(effectiveWorkOrder))",
+    "oldReplay": "machineLinkHelpers.workOrderEquipmentLinkStatus({...effectiveWorkOrder,...resolvedMachinePatch},{unresolvedReason:resolvedMachine?.reason||\"\"})",
+    "newReplay": "machineLinkHelpers.workOrderEquipmentLinkStatus({...effectiveWorkOrder,...resolvedMachinePatch},{unresolvedReason:clientLinkResolutionReason||resolvedMachine?.reason||\"\"})",
+    "oldCompletion": "equipmentLinkResolutionReason:resolvedMachine?.reason||\"\"",
+    "newCompletion": "equipmentLinkResolutionReason:clientLinkResolutionReason||resolvedMachine?.reason||\"\""
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "preservedSiteHelperSHA256": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f",
+  "fileCount": 482
+}

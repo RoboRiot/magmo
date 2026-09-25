@@ -1,0 +1,27 @@
+{
+  "installedAt": "2026-09-25T18:27:32.0593566+00:00",
+  "version": "2026.09.25-bluefolder-equipment-retry.1",
+  "sourceSha256": "D9F9FA8C6EF543A9D5062F3A8C2A3CAFD043644519AEA4B9354D2989E07A148F",
+  "baselineSha256": "81DF567EA140CBA4551B3B205C1CF9AC151DF6CEE24982B1275CEC1A9426BCCC",
+  "backupPath": "C:\\Users\\Owner\\Desktop\\warehouse\\.warehouse_runtime\\deployments\\work-order-equipment-retry-20260925\\backup-20260925T182724Z",
+  "verifiedFirestoreBackupManifestSha": "0896c1b886048f30e4dd602798151526bf852ca4371886d88ce989a1aaa9498a",
+  "verifiedAppRevision": "nextserverwest-00059-vak",
+  "stateOverwritten": false,
+  "listenerPid": 13284,
+  "commandWorkerPids": [
+    18088,
+    19252
+  ],
+  "checkpointCount": 581,
+  "pendingImports": 0,
+  "statusSync": {
+    "capability_available": true,
+    "historical_review_count": 169,
+    "last_observed_at": "2026-09-25T18:27:31.419266+00:00",
+    "pending_count": 0,
+    "status_only": true
+  },
+  "equipmentSync": null,
+  "historicalBaselineAutoApplied": false,
+  "testsPassed": 107
+}

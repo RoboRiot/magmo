@@ -1,0 +1,27 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-25T18:23:24.852Z",
+  "originalRevision": "nextserverwest-00058-mex",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790292582304947"
+    }
+  },
+  "artifactSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Bounded BlueFolder equipment structured-model link plus authoritative import response status",
+  "rollbackArchive": "source.zip",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790360605736-65c52cfecbf64-d5dd362f-bcd7bbf0",
+  "completedAt": "2026-09-25T18:26:54.817Z",
+  "revision": "nextserverwest-00059-vak",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790360606589691"
+    }
+  },
+  "unrelatedConfigurationPreserved": true
+}

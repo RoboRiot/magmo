@@ -1,0 +1,62 @@
+{
+  "verified": true,
+  "readOnly": true,
+  "checkedAt": "2026-09-25T20:05:58.9924398+00:00",
+  "checks": {
+    "sourceHash": true,
+    "version": true,
+    "healthy": true,
+    "heartbeatFresh": true,
+    "bluefolderPollFresh": true,
+    "slackPostingDisabled": true,
+    "statusCapability": true,
+    "statusOnly": true,
+    "historicalBaselinePresent": true,
+    "checkpointsPreserved": true,
+    "commandWorkersUnchanged": true,
+    "equipmentAckNotResolution": true
+  },
+  "sourceSha256": "7F28A4C93327EF111B02C6D068CC86BB4EC0561B55DC06A697BCFC5FCC76C71C",
+  "listenerPid": 12600,
+  "version": "2026.09.25-bluefolder-destination-retry.1",
+  "commandWorkerPids": [
+    18088,
+    19252
+  ],
+  "lastSuccessfulLoop": "2026-09-25T20:05:30.179729+00:00",
+  "lastSuccessfulBluefolderPoll": "2026-09-25T20:05:15.073113+00:00",
+  "pendingImports": 0,
+  "checkpointCount": 582,
+  "statusSync": {
+    "capability_available": true,
+    "historical_review_count": 169,
+    "last_observed_at": "2026-09-25T20:05:16.203332+00:00",
+    "pending_count": 0,
+    "status_only": true
+  },
+  "equipmentSync": {
+    "last_unresolved_reason": "bluefolder_equipment_not_mapped",
+    "metadata_acknowledgement_is_resolution": false,
+    "next_retry_at": "2026-09-25T18:51:12.364766+00:00",
+    "pending_retry_count": 360,
+    "status_counts": {
+      "manual": 1,
+      "needs_review": 0,
+      "not_selected": 3,
+      "resolved": 31,
+      "site_unresolved": 59,
+      "unresolved": 301
+    },
+    "unresolved_count": 360
+  },
+  "observedCount": 958,
+  "historicalReviewCount": 169,
+  "acknowledgedCount": 4,
+  "equipmentSyncedCount": 35,
+  "equipmentPendingCount": 360,
+  "workOrder10658": {
+    "authoritativeAfter": null,
+    "syncedFingerprint": null,
+    "resolution": null
+  }
+}

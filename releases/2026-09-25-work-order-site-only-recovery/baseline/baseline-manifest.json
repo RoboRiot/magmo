@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "startingGitCommit": "565bef4ab54c3d304f99bfed93cd1aca52c887a1",
+  "website": {
+    "state": "ACTIVE",
+    "revision": "nextserverwest-00059-vak",
+    "sourceGeneration": "1790360606589691",
+    "artifactSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+    "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+    "buildId": "wo-machine-link-31372590b5701129",
+    "fileCount": 482,
+    "helperSHA256": "c877bd3da2888a27cf48cf46d7d8b503515315d721d4156249477ab9252ca94d",
+    "workOrdersSourceSnapshotSHA256": "7c8608fb18c1e5997dd0add4bac41e62abd053bbf6023faab69276d313657712",
+    "externalRollbackArchivePath": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-existing-asset-site-guard-20260925\\source.zip",
+    "alsoRetainedAt": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-equipment-link-20260925\\source.zip",
+    "externalRollbackArchiveSHA256": "1f3ef2ce160bf1ec0f8d391942799f85f4a266e64b7782453cf616ce27b69e87",
+    "fullRebuildEquivalent": false
+  },
+  "listener": {
+    "state": "ACTIVE",
+    "version": "2026.09.25-bluefolder-equipment-retry.1",
+    "sourceSHA256": "d9f9fa8c6ef543a9d5062f3a8c2a3cafd043644519aea4b9354d2989e07a148f",
+    "serviceRoot": "C:\\Users\\Owner\\Desktop\\warehouse\\bluefolder_listener",
+    "sourceOnlyRollback": true,
+    "runtimeStatePreserved": true
+  },
+  "notes": [
+    "This baseline is the exact verified production state immediately before the site-only recovery deployment.",
+    "The website rollback authority is the externally retained full production archive, not this source snapshot or a Git rebuild.",
+    "The raw workOrders.js source for revision 00058 was never retained; the current source snapshot remains explanatory and testable but is not a byte-equivalent full rebuild of production."
+  ]
+}

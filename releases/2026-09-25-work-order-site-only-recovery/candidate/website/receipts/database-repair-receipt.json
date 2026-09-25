@@ -1,0 +1,30 @@
+{
+  "repairId": "recent-work-order-site-links-20260925",
+  "apply": true,
+  "createdAtIso": "2026-09-25T19:51:50.351Z",
+  "cutoff": "2026-08-26T07:00:00.000Z",
+  "workOrderIds": [
+    "10483",
+    "10525",
+    "10534",
+    "10540",
+    "10579",
+    "10583",
+    "10587",
+    "10590",
+    "10598",
+    "10599",
+    "10604",
+    "10658",
+    "10668",
+    "10669",
+    "10670",
+    "10671"
+  ],
+  "workOrdersPatched": 16,
+  "inventoryItemsModified": 0,
+  "directoryDocumentsModified": 0,
+  "workflowAndHistoryPreserved": true,
+  "backupManifest": "C:\\Users\\mack2\\Desktop\\code\\outputs\\firestore-backups\\2026-09-25-site-only-recovery-predeploy\\manifest.json",
+  "backupSha256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e"
+}

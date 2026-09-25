@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-25T19:55:32.460Z",
+  "repairId": "recent-work-order-site-links-20260925",
+  "independentVerificationPassed": true,
+  "targetCount": 16,
+  "exactPreimagePlusPatchCount": 16,
+  "unexpectedChangedFields": 0,
+  "protectedOperationalFieldChanges": 0,
+  "inventoryItemsModified": 0,
+  "directoryDocumentsModified": 0,
+  "workOrderAddDestinationsVerifiedByApply": 16,
+  "backup": {
+    "documentCount": 187443,
+    "collectionCount": 1015,
+    "artifactSHA256": "661c286a5fd2ab183f4ec89afcd85f7fe8da67aa47dbebf6e6394db69be4374e",
+    "manifestSHA256": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc"
+  },
+  "targets": [
+    {
+      "workOrderId": "10483",
+      "clientId": "AIS78723",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "b83a6b862ca72de9b551a99b53de6692b4c3960055b886a8931890f4c360f7b6",
+      "afterSHA256": "6967b38c3d6d03ea0e8a44eb18640adfffb4126905dfa9324f24bcfcf80558c3"
+    },
+    {
+      "workOrderId": "10525",
+      "clientId": "AIS31753",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "ba69c1aacc21c6d008bee747d414fc67299a571f97c416ae7f02b0b822d80709",
+      "afterSHA256": "1a77ef9ff236148ec26695b2a6150354c8e99e3584f7f26c4c136999f021fdd6"
+    },
+    {
+      "workOrderId": "10534",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "6d1103845a8d822d54db63c509f55dc51d5307fed635697f9123bbaa4c0edf20",
+      "afterSHA256": "99d88c200092455ade1a5840cff495642ba6409b6a9eaf50d2be4893eb3a2d62"
+    },
+    {
+      "workOrderId": "10540",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "6778b0a6d219ef7b367e25981f90498a36e008c51e11f427d8d75c92620aaf11",
+      "afterSHA256": "fb5311e4767278ac5107bf2e374998d49b4efc0302dea0adbc884781aeb5c15f"
+    },
+    {
+      "workOrderId": "10579",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "47d89acae63176e84764682761b94cfc7ae75a68bc5b0e3692ecc4f54f69176c",
+      "afterSHA256": "660c782d5cc3c63b80c89373fa11861ae6833ad7a5aea77fd49c83caa1fbaa06"
+    },
+    {
+      "workOrderId": "10583",
+      "clientId": "AIS24933",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "0e8ca1ba6a3bf12f5a3d6de0e66de7e8c3cd32446d5b83378f8d9cc9e49b02ad",
+      "afterSHA256": "b69a5cd4d796604ec24bc4b2223d3c41f48b4dd24bd32edb7e9c79b2e9c27fb0"
+    },
+    {
+      "workOrderId": "10587",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "f1d7c472fce3df96b2c0c977b7aa53730c4dbdbc3386f2835a9deb828e6eae94",
+      "afterSHA256": "0c9012788dde2966df9705fe6a2b4680d8102f6c88cde1331769f44079ee3bd3"
+    },
+    {
+      "workOrderId": "10590",
+      "clientId": "AIS46541",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "7bbbdd5abf992ea4963e60ef5418577313b6e99ec6a33e47056da4a249f67c25",
+      "afterSHA256": "a024924cb5ff4198b7454bcc2125fb6c4838d1a2c48f5a645979866cb446df04"
+    },
+    {
+      "workOrderId": "10598",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "614bfe66fa525cdcc7dabc05e25a2b748d7d454e4829bd85901c15f6ddd803ca",
+      "afterSHA256": "81ad418c5ad6e4e09a659b4656ab4ae463f3e75f1b60446f6129f027f58f5f42"
+    },
+    {
+      "workOrderId": "10599",
+      "clientId": "AIS15358",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "f00cbc9b1201ca0e2172dc125756260e3b3611ef623947fc2593c9896297d7f5",
+      "afterSHA256": "a89ec60a5cc08a1ef990c7e01d786d98026d7134807c97c782fc0280a3eeff2a"
+    },
+    {
+      "workOrderId": "10604",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "9c1b42d0b843b998bf34a49f738391599b7b31281b40a183aea975df4517f1b3",
+      "afterSHA256": "aff6c5c1db1edaf0774bd078b3a1f4be34fa095b2fc684190c04dffa01c5eb4c"
+    },
+    {
+      "workOrderId": "10658",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "bluefolderCustomerId",
+        "bluefolderCustomerName",
+        "bluefolderLocationId",
+        "bluefolderLocationName",
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "c297cfd4f9ce967d617df25224fa02daaf16bac9c10a427c2cd44bf1e0e85810",
+      "afterSHA256": "5836cee131a788e92e58670c70a41ea2bb284ebe208116bfc0189ccbc36633cd"
+    },
+    {
+      "workOrderId": "10668",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "e380c37698917f6c53191ba1f23be5c2e0670184f68504a2f0adacda37335141",
+      "afterSHA256": "b96112d3d89cc1025bb707520735eefcef6a51ad43ba89a3971ce7c7676301de"
+    },
+    {
+      "workOrderId": "10669",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "05a6f96b83b52a36876f13018d49e78071b2f2a6a7b2342fa67ee83a7723a096",
+      "afterSHA256": "4225e2619973540d6dd20b8dbadc590da6e0c27c5588d9072c5468d38fd42e54"
+    },
+    {
+      "workOrderId": "10670",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "b86b1f43ecadfd4c4beec6eaaa9e332a4737e092dd65f68a3725917ca628dacc",
+      "afterSHA256": "3ed287633d7e5153c57c6dbc599ec5e8a7a26d8c73e34d3f2466369026d8823b"
+    },
+    {
+      "workOrderId": "10671",
+      "clientId": "AIS94688",
+      "changedKeys": [
+        "clientId",
+        "clientLinkMatchReason",
+        "clientLinkSource",
+        "clientLinkedAtIso",
+        "clientLocation",
+        "clientName",
+        "connectionsUpdatedAt",
+        "connectionsUpdatedBy",
+        "recentLinksRepairId",
+        "updatedAt"
+      ],
+      "beforeSHA256": "d4840bf9df6515b8469ba5d88d60bf2e9626bfdcd163357b25621c9965061d1e",
+      "afterSHA256": "1ef0bd264c09e57f932a3249c79adf35a0dd5808591b6f00b82dc9366876826e"
+    }
+  ],
+  "protectedControls": [
+    {
+      "path": "Client/AIS78723",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "4ef399fef32a24b434bcc4035fa9e681310256f7286da75d87e5d9b9dc23e44d",
+      "liveSHA256": "4ef399fef32a24b434bcc4035fa9e681310256f7286da75d87e5d9b9dc23e44d"
+    },
+    {
+      "path": "Client/AIS31753",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "53f37e1c52f26da9b86e4929051fc623c7436d9bddfdaa693fcc068644bb5d42",
+      "liveSHA256": "53f37e1c52f26da9b86e4929051fc623c7436d9bddfdaa693fcc068644bb5d42"
+    },
+    {
+      "path": "Client/AIS94688",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "5d1585a486c2ef9f1a1db588cff766213b1f11843dd61be70a235a49c5eea013",
+      "liveSHA256": "5d1585a486c2ef9f1a1db588cff766213b1f11843dd61be70a235a49c5eea013"
+    },
+    {
+      "path": "Client/AIS24933",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "df96d2e65d6377e989c61111934862c5ecf8e2ec8b93f976f2f23d5a5c6e7312",
+      "liveSHA256": "df96d2e65d6377e989c61111934862c5ecf8e2ec8b93f976f2f23d5a5c6e7312"
+    },
+    {
+      "path": "Client/AIS46541",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "3bbd79469027ad05aff32014a6335f7ea44900f81dc960dac857d5fe429378d7",
+      "liveSHA256": "3bbd79469027ad05aff32014a6335f7ea44900f81dc960dac857d5fe429378d7"
+    },
+    {
+      "path": "Client/AIS15358",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "126958e1913168b25fe59f98572ce13c8a070c79d6a4f661bdd1b7b911a2a328",
+      "liveSHA256": "126958e1913168b25fe59f98572ce13c8a070c79d6a4f661bdd1b7b911a2a328"
+    },
+    {
+      "path": "Client/AIS17182",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "60eb29cca2d5e6d688964a3178f369773513678201db92a4121001cceed9677a",
+      "liveSHA256": "60eb29cca2d5e6d688964a3178f369773513678201db92a4121001cceed9677a"
+    },
+    {
+      "path": "Test/AIS23663",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "092895989eff84abb4b5529398535bab3a9a24c0d2a251b5f64dc32c2a5f3782",
+      "liveSHA256": "092895989eff84abb4b5529398535bab3a9a24c0d2a251b5f64dc32c2a5f3782"
+    },
+    {
+      "path": "Test/AIS23663/WorkOrderAddHistory/67e2deaf-ca06-4b71-a8f8-4bb2ea159cc1",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "4c2c7322a385af264e8e17a946f7450125ffbd6015eb11ea19b91c578a2fefb1",
+      "liveSHA256": "4c2c7322a385af264e8e17a946f7450125ffbd6015eb11ea19b91c578a2fefb1"
+    },
+    {
+      "path": "InventoryWorkOrderAddOperations/67e2deaf-ca06-4b71-a8f8-4bb2ea159cc1",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "51510bb789a41c9284434cdbe3060d4765b3488bef5a9b2a4d2cbb0cf32ded91",
+      "liveSHA256": "51510bb789a41c9284434cdbe3060d4765b3488bef5a9b2a4d2cbb0cf32ded91"
+    },
+    {
+      "path": "OpsWorkOrders/10659",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "d05dff40b1cf165aaa92fe59ddf3c43e9d62fe7f29df36a6ba3e01f01de16de2",
+      "liveSHA256": "d05dff40b1cf165aaa92fe59ddf3c43e9d62fe7f29df36a6ba3e01f01de16de2"
+    },
+    {
+      "path": "OpsWorkOrders/10677",
+      "unchanged": true,
+      "changedKeys": [],
+      "backupSHA256": "0cba598186f77755f5e36ad6e7ac38386681245a55aad5f06c23f9312973b08e",
+      "liveSHA256": "0cba598186f77755f5e36ad6e7ac38386681245a55aad5f06c23f9312973b08e"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "installedAt": "2026-09-25T20:03:06.2719303+00:00",
+  "version": "2026.09.25-bluefolder-destination-retry.1",
+  "sourceSha256": "7F28A4C93327EF111B02C6D068CC86BB4EC0561B55DC06A697BCFC5FCC76C71C",
+  "baselineSha256": "D9F9FA8C6EF543A9D5062F3A8C2A3CAFD043644519AEA4B9354D2989E07A148F",
+  "backupPath": "C:\\Users\\Owner\\Desktop\\warehouse\\.warehouse_runtime\\deployments\\work-order-site-only-retry-20260925\\backup-20260925T200300Z",
+  "verifiedFirestoreBackupManifestSha": "5144876dba6ca86c5ae8b84e051b9c10f9e60e0ade8afaca424e0cafe54d67cc",
+  "verifiedAppRevision": "nextserverwest-00060-tod",
+  "stateOverwritten": false,
+  "listenerPid": 12600,
+  "commandWorkerPids": [
+    18088,
+    19252
+  ],
+  "checkpointCount": 582,
+  "pendingImports": 0,
+  "statusSync": {
+    "capability_available": true,
+    "historical_review_count": 169,
+    "last_observed_at": "2026-09-25T20:02:20.659403+00:00",
+    "pending_count": 0,
+    "status_only": true
+  },
+  "equipmentSync": {
+    "last_unresolved_reason": "bluefolder_equipment_not_mapped",
+    "metadata_acknowledgement_is_resolution": false,
+    "next_retry_at": "2026-09-25T18:50:06.887621+00:00",
+    "pending_retry_count": 356,
+    "status_counts": {
+      "manual": 1,
+      "needs_review": 0,
+      "not_selected": 0,
+      "resolved": 31,
+      "site_unresolved": 55,
+      "unresolved": 301
+    },
+    "unresolved_count": 356
+  },
+  "historicalBaselineAutoApplied": false,
+  "testsPassed": 117
+}

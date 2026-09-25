@@ -1,0 +1,43 @@
+{
+  "preparedAt": "2026-09-25T18:16:56.827Z",
+  "scope": "Bounded BlueFolder equipment structured-model link plus authoritative import response status",
+  "sourceDirectory": "scoped-source",
+  "baselineRevision": "nextserverwest-00058-mex",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790292582304947"
+    }
+  },
+  "unrelatedFilesPreserved": true,
+  "entries": [
+    {
+      "path": "machine-link/workOrderMachineLink.cjs",
+      "before": "e4527fcc0747fe265da22f24fa00134c57e6ac37a456b77ca3b26ef5d00def76",
+      "after": "c877bd3da2888a27cf48cf46d7d8b503515315d721d4156249477ab9252ca94d"
+    },
+    {
+      "path": ".next/server/chunks/8806.js",
+      "before": "5fd84080e367a554d066ab6b1f464211f763e33a415aa0c0992fba6222b1e06f",
+      "after": "432b417ddb8e2c75e720137f4e8775feaa462dc7f56b201a75e474ad3ebebf54"
+    }
+  ],
+  "sourceHashes": {
+    "lib/ops/workOrderMachineLink.cjs": "c877bd3da2888a27cf48cf46d7d8b503515315d721d4156249477ab9252ca94d",
+    "lib/ops/workOrders.js": "7c8608fb18c1e5997dd0add4bac41e62abd053bbf6023faab69276d313657712",
+    "test/work-order-machine-link.test.cjs": "92a468bb41194b30de84dcaeefa81a8eea36e76c06449cd324678310b57f9a1f",
+    "test/work-order-machine-import.test.cjs": "cda7620c5e528cd54f7bd4f7b00be34269728237a600b3e0dd4342a0336d814a"
+  },
+  "overlay": {
+    "oldResolution": "let resolvedMachinePatch={};const effectiveWorkOrder={...i,...m.patch,...l},machineLinkHelpers=require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\");if(!E(effectiveWorkOrder.machineId)&&!E(effectiveWorkOrder.trailerId)&&machineLinkHelpers.hasSelectedBlueFolderEquipment(effectiveWorkOrder)){const resolvedMachine=await machineLinkHelpers.resolveWorkOrderMachineLinkInTransaction(g,f,effectiveWorkOrder,E(effectiveWorkOrder.clientId));resolvedMachinePatch=machineLinkHelpers.buildWorkOrderMachineLinkPatch(resolvedMachine,{linkedAtIso:d});}",
+    "newResolution": "let resolvedMachine=null,resolvedMachinePatch={};const effectiveWorkOrder={...i,...m.patch,...l},machineLinkHelpers=require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\");if(!E(effectiveWorkOrder.machineId)&&!E(effectiveWorkOrder.trailerId)&&machineLinkHelpers.hasSelectedBlueFolderEquipment(effectiveWorkOrder)){resolvedMachine=await machineLinkHelpers.resolveWorkOrderMachineLinkInTransaction(g,f,effectiveWorkOrder,E(effectiveWorkOrder.clientId));resolvedMachinePatch=machineLinkHelpers.buildWorkOrderMachineLinkPatch(resolvedMachine,{linkedAtIso:d});}",
+    "oldReplay": "return{before:j,after:j,created:!1,idempotentReplay:!0,serviceRequestId:b}",
+    "newReplay": "return{before:j,after:{...j,...machineLinkHelpers.workOrderEquipmentLinkStatus({...effectiveWorkOrder,...resolvedMachinePatch},{unresolvedReason:resolvedMachine?.reason||\"\"})},created:!1,idempotentReplay:!0,serviceRequestId:b}",
+    "oldCompletion": "{before:j,after:null,created:n,idempotentReplay:!1,serviceRequestId:b}});if(g.idempotentReplay)return g;let h=ag(await c.get());return{...g,after:h}}",
+    "newCompletion": "{before:j,after:null,created:n,idempotentReplay:!1,serviceRequestId:b,equipmentLinkResolutionReason:resolvedMachine?.reason||\"\"}});if(g.idempotentReplay)return g;let h=await c.get(),i=ag(h),{equipmentLinkResolutionReason:j,...k}=g;return{...k,after:{...i,...require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\").workOrderEquipmentLinkStatus(h.data()||{},{unresolvedReason:j})}}}"
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "preservedSiteHelperSHA256": "e62fda7488b4f7a5d60c67fd474f771e7b95b369863c2b5ff4f963ce12933f1f",
+  "fileCount": 482
+}
