@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "checkedDate": "2026-09-25",
+  "website": {
+    "sourceInventoryRepairTestsPassed": 117,
+    "targetSnapshotTestsPassed": 51,
+    "exactCompiledArtifactTestsPassed": 47,
+    "exactCompiledArtifactZipEntriesVerified": 482,
+    "liveVerificationPassed": true,
+    "activeRevision": "nextserverwest-00059-vak",
+    "unchangedBuildId": "wo-machine-link-31372590b5701129"
+  },
+  "listener": {
+    "moduleTestsPassed": 95,
+    "astFormattingTestsPassed": 12,
+    "totalTestsPassed": 107,
+    "serverStagingPreflightPassed": true,
+    "runtimeChecksPassed": 12,
+    "explicitMetadataOnly10677SmokePassed": true,
+    "candidateSHA256": "d9f9fa8c6ef543a9d5062f3a8c2a3cafd043644519aea4b9354d2989e07a148f"
+  },
+  "databaseRepair": {
+    "guardTestsPassed": 9,
+    "independentPostApplyVerificationPassed": true,
+    "databaseWritesDuringVerification": false
+  }
+}

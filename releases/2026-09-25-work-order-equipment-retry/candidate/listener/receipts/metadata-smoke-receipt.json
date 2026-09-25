@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-09-25T18:31:27.000Z",
+  "method": "single_explicit_metadata_only_smoke",
+  "workOrderId": "10677",
+  "existingOnly": true,
+  "daemonStateWritten": false,
+  "listenerLoopStarted": false,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true,
+  "created": false,
+  "idempotentReplay": false,
+  "requestId": "3d783cc2ce17842bd5e4d551",
+  "apiVersion": "2026-09-24.1",
+  "after": {
+    "workOrderId": "10677",
+    "number": "10677",
+    "clientId": "AIS79109",
+    "machineId": "AIS32820",
+    "trailerId": "",
+    "equipmentLinkStatus": "resolved",
+    "equipmentLinkIssue": ""
+  },
+  "appliedChangeKeys": [
+    "updatedAt",
+    "equipmentLinkStatus",
+    "equipmentLinkIssue"
+  ],
+  "changedDocumentFields": [
+    "bluefolderImportFingerprint",
+    "bluefolderImportUpdatedAt",
+    "bluefolderImportUpdatedAtIso",
+    "updatedAt"
+  ],
+  "beforeFieldsSha256": "5481e1a4790b82db752d3da1765a1fbe7b9f06a05183641cc2b5cc0c9af01a79",
+  "afterFieldsSha256": "46ebf0e2f59bf763847de8ee14a895c759773f4510febe1fcaa0c405affab006",
+  "allFieldsUnchanged": false,
+  "allNonBookkeepingFieldsUnchanged": true,
+  "workflowAndHistoryUnchanged": true,
+  "assetsUnchanged": true,
+  "inventoryMovementsUnchanged": true,
+  "comparisonVerifiedAt": "2026-09-25T18:32:42.048Z",
+  "protectedFieldsSHA256": "766299e0572d2e1617d261247e93163c79d9a874fb455fd9342acd479164d379"
+}

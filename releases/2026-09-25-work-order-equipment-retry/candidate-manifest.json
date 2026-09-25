@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "purpose": "Scoped website, listener, and reviewed data-repair release record",
+  "git": {
+    "branch": "codex/work-order-equipment-retry-20260925",
+    "startingCommit": "a2555cf3669c4f2ed6adc9a90f6b21b8ef99ff57",
+    "preReleaseTag": "pre-work-order-equipment-retry-20260925"
+  },
+  "website": {
+    "state": "ACTIVE",
+    "baselineRevision": "nextserverwest-00058-mex",
+    "activeRevision": "nextserverwest-00059-vak",
+    "sourceGeneration": "1790360606589691",
+    "artifactSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+    "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+    "buildId": "wo-machine-link-31372590b5701129",
+    "fileCount": 482,
+    "overlay": {
+      "helperPath": "machine-link/workOrderMachineLink.cjs",
+      "helperSHA256": "c877bd3da2888a27cf48cf46d7d8b503515315d721d4156249477ab9252ca94d",
+      "compiledChunkPath": ".next/server/chunks/8806.js",
+      "compiledChunkSHA256": "432b417ddb8e2c75e720137f4e8775feaa462dc7f56b201a75e474ad3ebebf54"
+    },
+    "sourceSnapshot": {
+      "workOrdersSHA256": "7c8608fb18c1e5997dd0add4bac41e62abd053bbf6023faab69276d313657712",
+      "rawBaseline00058WorkOrdersRetained": false,
+      "rawBaseline00058WorkOrdersRecordedSHA256": "70d8f9509ff5f3488a0ebc1f36273d025a1eeecfb9348f6502e31b7c208917e2",
+      "fullRebuildEquivalent": false
+    },
+    "receiptHashes": {
+      "candidate/website/receipts/composition-report.json": "8e2020d4ffea8c3bed7232c4a87da6ccdecaf0c6989cee668f8b4386755f04c1",
+      "candidate/website/receipts/package-gates.json": "ce3b77da418e3db8401bfbc82e36b2cc628043e3bfe7ba0baab472b50f285263",
+      "candidate/website/receipts/deployment-receipt.json": "259b9f0b81b1cbe1262c1d99225d64a62bb248ca4e534a7be132281be73ee881",
+      "candidate/website/receipts/live-verification.json": "903fc0a31b24519889e9229825b4abf1540fb36a2abeb467e9998b711ca41f8f"
+    }
+  },
+  "listener": {
+    "state": "ACTIVE",
+    "version": "2026.09.25-bluefolder-equipment-retry.1",
+    "baselineSHA256": "81df567ea140cba4551b3b205c1cf9ac151df6cee24982b1275cec1a9426bccc",
+    "sourceSHA256": "d9f9fa8c6ef543a9d5062f3a8c2a3cafd043644519aea4b9354d2989e07a148f",
+    "serviceRoot": "C:\\Users\\Owner\\Desktop\\warehouse\\bluefolder_listener",
+    "backupPath": "C:\\Users\\Owner\\Desktop\\warehouse\\.warehouse_runtime\\deployments\\work-order-equipment-retry-20260925\\backup-20260925T182724Z",
+    "verifiedFirestoreBackupManifestSHA256": "0896c1b886048f30e4dd602798151526bf852ca4371886d88ce989a1aaa9498a",
+    "deploymentReceiptSHA256": "7da9435bc5c250b383944380611d506922b12849d9a6319036c1d509c2625a48",
+    "liveVerificationReceiptSHA256": "f20d94d59c6f51cebd0bb302df45cfb55679410c54a38ccfdc762a749bef1e9a",
+    "metadataSmokeReceiptSHA256": "39a94f89909b76492a3c5ef4c6e16e3d80aafeb2dbc576bdff1dd66e5e10c8ac",
+    "testsPassed": 107,
+    "checkpointCountPreserved": 581,
+    "stateOverwritten": false,
+    "initialPostDeployAudit": {
+      "healthy": true,
+      "resolvedCount": 2,
+      "retryCount": 28,
+      "workOrder10677DaemonAcknowledgement": "pending_backlog_smoke"
+    },
+    "explicitMetadataOnlySmoke": {
+      "checkedAt": "2026-09-25T18:31:27.000Z",
+      "workOrderId": "10677",
+      "existingOnly": true,
+      "created": false,
+      "clientId": "AIS79109",
+      "machineId": "AIS32820",
+      "trailerId": "",
+      "equipmentLinkStatus": "resolved",
+      "allNonBookkeepingFieldsUnchanged": true,
+      "daemonStateWritten": false,
+      "noSlackWrites": true,
+      "noBlueFolderWrites": true
+    }
+  },
+  "databaseRepair": {
+    "repairId": "torrance-equipment-link-20260925",
+    "applied": true,
+    "changedDocumentCount": 4,
+    "inventoryItemsModified": 0,
+    "inventoryHistoryDocumentsModified": 0,
+    "backupArtifactSHA256": "20da9d404076d4cfa17f0e6a8743a29a235906ee9de221a22aca5ad758ef7495",
+    "independentVerificationPassed": true,
+    "activeUnresolvedAfterRepair": 282,
+    "activeUnresolvedUniqueEquipmentIdsAfterRepair": 117
+  },
+  "rollback": {
+    "websiteExternalArchivePath": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-equipment-link-20260925\\source.zip",
+    "websiteExternalArchiveSHA256": "1f3ef2ce160bf1ec0f8d391942799f85f4a266e64b7782453cf616ce27b69e87",
+    "listenerSourceOnly": true,
+    "listenerStatePreserved": true,
+    "databaseAutomaticRollback": false
+  },
+  "excluded": [
+    "environment files and credentials",
+    "raw database documents, preimages, and backup artifacts",
+    "production website ZIP archives and compiled chunks",
+    "listener runtime state, logs, locks, and raw operational snapshots",
+    "unrelated dirty-root files"
+  ]
+}

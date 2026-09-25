@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-09-25T18:27:29.913Z",
+  "revision": "nextserverwest-00059-vak",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790360606589691"
+    }
+  },
+  "artifactSHA256": "f12adcb6fa2a4abcbd7c3de24671dcdeae9bb48924b452450026188d1b7d9427",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "unrelatedConfigurationPreserved": true,
+  "workOrder10677": {
+    "clientId": "AIS79109",
+    "machineId": "AIS32820",
+    "computedFromDeployedHelper": {
+      "equipmentLinkStatus": "resolved",
+      "equipmentLinkIssue": ""
+    }
+  },
+  "preservedWorkOrder10659": {
+    "clientId": "AIS78594",
+    "machineId": "AIS82553",
+    "trailerId": "AIS20"
+  },
+  "unchangedBuildId": "wo-machine-link-31372590b5701129",
+  "noDataWrites": true,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true
+}

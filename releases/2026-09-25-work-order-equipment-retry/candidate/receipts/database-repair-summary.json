@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "repairId": "torrance-equipment-link-20260925",
+  "appliedAt": "2026-09-25T18:19:56.661Z",
+  "scope": "Reviewed Prohealth Torrance Espree equipment mapping and three exact work orders",
+  "backup": {
+    "completedAt": "2026-09-25T18:17:24.318Z",
+    "localManifestPath": "C:\\Users\\mack2\\Desktop\\code\\outputs\\firestore-backups\\2026-09-25-work-order-equipment-retry-predeploy\\manifest.json",
+    "firestoreOnly": true,
+    "documentCount": 187230,
+    "collectionCount": 1013,
+    "artifactBytes": 1796972332,
+    "artifactSHA256": "20da9d404076d4cfa17f0e6a8743a29a235906ee9de221a22aca5ad758ef7495"
+  },
+  "changedDocuments": [
+    "Machine/AIS32820",
+    "OpsWorkOrders/9837",
+    "OpsWorkOrders/10456",
+    "OpsWorkOrders/10677"
+  ],
+  "destination": {
+    "clientId": "AIS79109",
+    "machineId": "AIS32820",
+    "trailerId": "",
+    "bluefolderEquipmentId": "09859C69-CD50-4277-BB40-60A696300768"
+  },
+  "independentVerification": {
+    "checkedAt": "2026-09-25T18:23:01.085Z",
+    "allChecksPassed": true,
+    "exactExpectedDataPassedForAllChangedDocuments": true,
+    "changedKeysExactlyAllowlisted": true,
+    "preservedUnchanged": [
+      "Client/AIS79109",
+      "Test/AIS23663",
+      "Test/AIS23663/WorkOrderAddHistory/67e2deaf-ca06-4b71-a8f8-4bb2ea159cc1",
+      "InventoryWorkOrderAddOperations/67e2deaf-ca06-4b71-a8f8-4bb2ea159cc1"
+    ],
+    "preservedControlWorkOrders": {
+      "10659": {
+        "clientId": "AIS78594",
+        "machineId": "AIS82553",
+        "trailerId": "AIS20"
+      },
+      "10664": {
+        "clientId": "AIS50849",
+        "clientName": "Ramin Ashtiani",
+        "machineId": "AIS21467",
+        "trailerId": ""
+      }
+    }
+  },
+  "inventoryItemsModified": 0,
+  "inventoryHistoryDocumentsModified": 0,
+  "coverageAfterRepair": {
+    "activeSelectedEquipmentWorkOrders": 292,
+    "activeUnresolvedCount": 282,
+    "activeUnresolvedUniqueEquipmentIdCount": 117,
+    "note": "These are bounded legacy review cases; this release does not claim they are all safe to auto-link."
+  },
+  "excludedWorkOrder": {
+    "id": "10202",
+    "reason": "Live BlueFolder had no selected equipment, so its existing site-only destination was intentionally preserved."
+  },
+  "rollbackPolicy": "No automatic database rollback. Any rollback must be a separately reviewed field-level restore of only the four changed documents from the verified preimages, while preserving concurrent updates. Inventory and history were never changed and must not be rolled back."
+}
