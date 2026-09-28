@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-09-28T22:32:10.356Z",
+  "status": "PASS",
+  "productionWrites": false,
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "baselineRevision": "nextserverwest-00064-miz",
+  "activeFactorySHA256": "2406f7f0dda0e8cc8e8716e39c9880895c345bfbf6df4d7c576bc2833af58f03",
+  "candidateFactorySHA256": "a21140f31e07fb8a5b832aed31c7c345110303b33f42aaa2c309edb0adc25d62",
+  "boundaries": {
+    "start": 75,
+    "activeModal": 79,
+    "candidateModal": 79
+  },
+  "unchangedHostProof": {
+    "structurallyEquivalentPrefixStatementCount": 75,
+    "structurallyEquivalentSuffixStatementCount": 18,
+    "prefix": {
+      "shapeSHA256": "157197f409230d795755ffc7ece604eb61472c957d697bc14598313c999db9fc",
+      "topologySHA256": "a04dc229e342eb400242b102990911334721579d945a89ac4f03e30e1ccdc762",
+      "identifierOccurrences": 6766
+    },
+    "suffixShapeSHA256": "9d9d51deedade507c9685542daccfa52a73afd6db9eefcda35df57057da2b100",
+    "defaultExport": {
+      "shapeSHA256": "4d9ca58f641ef91b39826bc3bf6c0235c758a439152b7f241ea30f0fc1e68fce",
+      "topologySHA256": "4aeefba66195c949cf5ab141cec13cdbedb11e372dcd3f09bdde64fd4cc1dad2",
+      "identifierOccurrences": 2514
+    },
+    "optionRenderer": {
+      "shapeSHA256": "6c55c6da01c1bfaa6f4c1e19f99b8bb4971f2fd88a95aed5b4666feea322e4c9",
+      "topologySHA256": "8924f1193491492c16d855bf946a2b46129682a0f58d4f6610f045a0ff51b3de",
+      "identifierOccurrences": 51
+    },
+    "stagedRowRenderer": {
+      "shapeSHA256": "b674dfab793346a930090502427d5ecc2cf4a3b9076c5cf2421888b45cdd1030",
+      "topologySHA256": "66b85145be092de6bead6eb3c5d1b67dfddef7afae2bd638b46f9a0057ad6e39",
+      "identifierOccurrences": 73
+    },
+    "requestHelper": {
+      "shapeSHA256": "24f9f52a8f1dcf4ec302b88cd6a4be13c656614e52caf02e16004b4f0b73273d",
+      "topologySHA256": "ce60c118ebd760e40de8406c46481113c42576c13a31ee179d5511a75ac4000f",
+      "identifierOccurrences": 65
+    },
+    "onlyChangedRegionBindingUsedByHost": "WorkOrderAddModal",
+    "externalBefore": {
+      "tA": 0,
+      "tk": 0,
+      "tM": 0,
+      "tT": 0,
+      "tI": 1
+    },
+    "externalAfter": {
+      "tA": 0,
+      "tk": 0,
+      "tM": 0,
+      "tT": 0,
+      "tI": 1
+    }
+  },
+  "intendedRegionProof": {
+    "threadLinkOnlyInsideModalRegion": true,
+    "slackRequestOnlyInsideModalRegion": true
+  },
+  "priorProofToolSHA256": "24572c27e3753b75dad533adc18996354a1896229205bca84da5f71d11122e9a"
+}

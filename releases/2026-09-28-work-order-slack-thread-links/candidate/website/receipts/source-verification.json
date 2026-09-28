@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-28T22:29:22Z",
+  "result": "PASS",
+  "focusedRegressionTestsPassed": 157,
+  "focusedRegressionTestsFailed": 0,
+  "sourceBrowserInteractionTestsPassed": 1,
+  "sourceBrowserInteractionTestsSkipped": 0,
+  "testFiles": [
+    "test/work-order-add-contract.test.cjs",
+    "test/work-order-add-options.test.cjs",
+    "test/work-order-add-service.test.cjs",
+    "test/work-order-add-route.test.cjs",
+    "test/work-order-add-ui-contract.test.cjs",
+    "test/work-order-add-slack.test.cjs",
+    "test/work-order-add-slack-route.test.cjs",
+    "test/work-order-add-slack-thread.test.cjs",
+    "test/work-order-scanner-capture.test.cjs",
+    "test/work-order-scanner-routes.test.cjs",
+    "test/fast-scan-drain-ui.test.cjs",
+    "test/firestore-work-order-add-rules.test.cjs"
+  ],
+  "browserTest": "test/work-order-add-slack-ui.browser.test.cjs",
+  "mobileScreenshotVisuallyReviewed": true,
+  "inventoryWrites": 0,
+  "liveSlackPosts": 0,
+  "productionMutations": 0,
+  "note": "Tests use synthetic inventory/Slack data. Browser uses a local harness. Exact compiled artifact verification is a separate deployment gate."
+}

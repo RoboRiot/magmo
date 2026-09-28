@@ -1,0 +1,29 @@
+{
+  "result": "PASS",
+  "packagedAt": "2026-09-28T22:38:47.409Z",
+  "artifactSHA256": "3c75cafd95f44e95f9cc0adb7bfd20305d2e5c7bd58c603fb81774a6da9d3807",
+  "artifactBytes": 3609902,
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "candidateBuildId": "wo-slack-thread-a9f57ab17f63440a",
+  "noDeletedFiles": true,
+  "unchangedFilesVerified": true,
+  "compiledTestsPassed": true,
+  "compiledTestCount": 38,
+  "compiledUiPassed": true,
+  "compiledUiScopePassed": true,
+  "independentReviewPassed": true,
+  "zipEntriesVerified": 507,
+  "sourceOnly": true,
+  "receiptHashes": {
+    "compiled-verification.json": "2a226ec8df681c98a7675fa152e76282b28ef9b742ec8181c8179302c991d638",
+    "compiled-ui-verification.json": "c12fa4c9c3b3dacc0431abae20edb51ff99b4e83aebff054fb195ce3e97f670e",
+    "compiled-ui-scope-verification.json": "8e93d1e4597dcb9c36e7ac23b22f2f8c22141995ca7fed2c54d0e685966755b5",
+    "source-verification.json": "c12e539214627bee7ecfd693a3bc309cafeecc23e0035cdc0c845f575b9bfff5",
+    "independent-artifact-review.json": "46b17011bbc266162f0f93c56b9a681c88023369a8b71cde67eef9650c54112b",
+    "root-independent-verification.json": "8a9118032473e71c8116f399896e428ec8d5e344e8da8308c91bc8893ceea088"
+  },
+  "frozenInputsSHA256": "1a8fdee0c1a338703393ddd8aaecc698109075a5012ab61014943b9c12bf4ac2",
+  "candidateInventorySHA256": "d5ee77725f1625fc5e716e9775b5d61fde2b05ff0e4d8f6b0d346dd3fafabf52"
+}

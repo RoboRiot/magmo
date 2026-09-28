@@ -1,0 +1,9 @@
+{
+  "ready": true,
+  "changed": false,
+  "currentRevision": "nextserverwest-00065-cav",
+  "sourceOnly": true,
+  "rollbackArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "restoredFromRevision": "nextserverwest-00064-miz",
+  "dataWillBeRestored": false
+}

@@ -1,0 +1,123 @@
+{
+  "checkedAt": "2026-09-28T22:35:08.601Z",
+  "result": "PASS",
+  "readOnlyArtifactInspection": true,
+  "productionNetworkRequests": 0,
+  "liveInventoryWrites": 0,
+  "liveSlackPosts": 0,
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "candidateBuildId": "wo-slack-thread-a9f57ab17f63440a",
+  "candidatePage": {
+    "path": "static/chunks/pages/NewSearch/mainSearch-a9f57ab17f63440a.js",
+    "sha256": "a9f57ab17f63440a2ae2069f4b1b09e12e2041e8879b3b634a3db7edfffa8d5e",
+    "targetModuleId": 60992,
+    "targetFactorySHA256": "a21140f31e07fb8a5b832aed31c7c345110303b33f42aaa2c309edb0adc25d62",
+    "moduleCount": 15,
+    "unrelatedModulesPreserved": true,
+    "routeDependenciesByteIdenticalToBaseline": true,
+    "astDerivedModalBinding": "tI",
+    "astDerivedHostDefaultBinding": "tZ",
+    "testInstrumentationOnlyAddsNamedModalExport": true,
+    "controlModule21704SHA256": "84185ba38b3141c60a3c8b93dc02987ae032ce814b0776bf33d8a394c333dabb"
+  },
+  "candidateCss": {
+    "path": "static/css/61047211a1a88937.css",
+    "sha256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+    "unchangedFromBaseline": true,
+    "harnessLoadedAssets": [
+      "static/css/dfe188d46577aea3.css",
+      "static/css/2cf9a67acd9d0b33.css",
+      "static/css/61047211a1a88937.css"
+    ],
+    "externalImportAssetsLoadedWithOnlyRemoteFontImportRemoved": [
+      "static/css/2cf9a67acd9d0b33.css",
+      "static/css/61047211a1a88937.css"
+    ]
+  },
+  "compiledImports": {
+    "directImportIds": [
+      5312,
+      6384,
+      9306,
+      14232,
+      14873,
+      17236,
+      18447,
+      18847,
+      21060,
+      21581,
+      21704,
+      23316,
+      25856,
+      25986,
+      31394,
+      35224,
+      37242,
+      37477,
+      37876,
+      39520,
+      41306,
+      44837,
+      48230,
+      52321,
+      54782,
+      56749,
+      58048,
+      58629,
+      59601,
+      61193,
+      66768,
+      66953,
+      69732,
+      71343,
+      74742,
+      77475,
+      82964,
+      84705,
+      87299,
+      87856,
+      88504,
+      89099,
+      91694,
+      92557,
+      97923,
+      99373,
+      99506
+    ],
+    "missingImportIds": [],
+    "actualReactModuleId": 14232,
+    "actualReactDomModuleId": 24279,
+    "actualReactBootstrapModuleIds": [
+      14873,
+      39520
+    ],
+    "firebaseModule9306StubbedOnlyInsideLocalHarness": true
+  },
+  "interaction": {
+    "syntheticWorkOrder": true,
+    "warehousePreviewRendered": true,
+    "savePopupBlockedBackground": true,
+    "slackRequestsBeforeOptIn": 0,
+    "noChoiceSlackRequests": 0,
+    "yesChoiceCanonicalItemIds": [
+      "AIS10001",
+      "AIS10002",
+      "AIS10003"
+    ],
+    "maximumSlackConcurrency": 1,
+    "duplicateYesPrevented": true,
+    "retryFailedOnly": true,
+    "unknownStatusCheckedOnly": true,
+    "threadLinkStatusLabelsVerified": [
+      "Sent + linked",
+      "Link failed",
+      "Check link"
+    ],
+    "consentMentionsListThreadAndNoThreadImages": true,
+    "failedLinkRetryUsesOnlyOriginalOperationAndItemIds": true,
+    "inventoryConfirmCalls": 1,
+    "scannerSessionCalls": 0
+  }
+}

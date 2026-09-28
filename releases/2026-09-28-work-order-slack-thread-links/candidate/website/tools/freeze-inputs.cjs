@@ -1,0 +1,13 @@
+"use strict";
+const fs = require("node:fs"), path = require("node:path"), crypto = require("node:crypto"), assert = require("node:assert/strict");
+const here = __dirname, root = path.resolve(here, "../../.."), sha256 = (bytes) => crypto.createHash("sha256").update(bytes).digest("hex");
+const file = (name) => path.join(here, name), read = (name) => JSON.parse(fs.readFileSync(file(name), "utf8"));
+const scope = read("scope.json"), baseline = read("baseline.json");
+assert(!fs.existsSync(file("frozen-inputs.json")), "Do not overwrite frozen inputs.");
+assert.equal(sha256(fs.readFileSync(file("source.zip"))), baseline.archiveSHA256);
+const hashFiles = (files) => Object.fromEntries(files.map((relative) => [relative, sha256(fs.readFileSync(path.join(root, relative)))]));
+const inputs = hashFiles(scope.inputs), controls = hashFiles(scope.unchangedControls), dependencies = hashFiles(scope.dependencyInputs);
+const compilerInputs = hashFiles(["next.config.js", "package.json", "package-lock.json"]);
+const frozen = { frozenAt: new Date().toISOString(), baselineRevision: baseline.revision, baselineArchiveSHA256: baseline.archiveSHA256, baselineConfigSHA256: baseline.configHash, scopeSHA256: sha256(fs.readFileSync(file("scope.json"))), inputs, controls, dependencies, compilerInputs, authorization: "compiler and local artifact preparation only" };
+fs.writeFileSync(file("frozen-inputs.json"), JSON.stringify(frozen, null, 2) + "\n", { flag: "wx" });
+console.log(JSON.stringify(frozen, null, 2));

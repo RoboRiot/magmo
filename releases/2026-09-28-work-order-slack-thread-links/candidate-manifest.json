@@ -1,0 +1,257 @@
+{
+  "createdAt": "2026-09-28T22:45:10.090Z",
+  "state": "prepared_pending_final_release_review",
+  "productionDeploymentState": "ACTIVE",
+  "previousGitRecord": "a223d6f579cc865392d933082ba4aabb602f0583",
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "scope": "Four changed production source snapshots, unchanged pure dependency, focused tests, docs, tools, and sanitized evidence; not a complete source rebuild or rollback archive.",
+  "omittedPendingReceipts": [],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 8,
+      "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da"
+    },
+    {
+      "path": "baseline/baseline-analysis.json",
+      "bytes": 12851,
+      "sha256": "7fb07fa86057530fd9af6609242e208f321b224a40859f2ab24918b7d6880e62"
+    },
+    {
+      "path": "baseline/baseline-files.json",
+      "bytes": 86556,
+      "sha256": "1f180d04bf414d85682fe2409a543a2ee81654540626722b9a4b3bdabf27d70c"
+    },
+    {
+      "path": "candidate/docs/work-order-slack-thread-links.md",
+      "bytes": 2517,
+      "sha256": "f64fc72fee7bdba0a38b20f66b6ec0f3ca999b04fbccbce5918f64959536c44b"
+    },
+    {
+      "path": "candidate/evidence/independent-review.json",
+      "bytes": 1677,
+      "sha256": "efed3f70ed04a81274d1b4de1fc46eacbf9b03730aee308830e4aeaf6a7a795d"
+    },
+    {
+      "path": "candidate/evidence/live-root-verification.json",
+      "bytes": 1583,
+      "sha256": "1097f4a159152980a88dd99f7e6ea4b47ccb30fbc00908cc9248d07d7f59aea7"
+    },
+    {
+      "path": "candidate/evidence/native-link-capabilities.json",
+      "bytes": 581,
+      "sha256": "2123c0d4d8acc3a48587c399eb2d4b136d179a4be35d3f384b782ed055b16841"
+    },
+    {
+      "path": "candidate/website/receipts/baseline.json",
+      "bytes": 751,
+      "sha256": "041103ad6df1e821620481879c31c13432106eb545ebdf37888156311067190f"
+    },
+    {
+      "path": "candidate/website/receipts/compiled-ui-scope-verification.json",
+      "bytes": 2466,
+      "sha256": "8e93d1e4597dcb9c36e7ac23b22f2f8c22141995ca7fed2c54d0e685966755b5"
+    },
+    {
+      "path": "candidate/website/receipts/compiled-ui-verification.json",
+      "bytes": 3268,
+      "sha256": "c12fa4c9c3b3dacc0431abae20edb51ff99b4e83aebff054fb195ce3e97f670e"
+    },
+    {
+      "path": "candidate/website/receipts/compiled-verification.json",
+      "bytes": 825,
+      "sha256": "2a226ec8df681c98a7675fa152e76282b28ef9b742ec8181c8179302c991d638"
+    },
+    {
+      "path": "candidate/website/receipts/composition-report.json",
+      "bytes": 10720,
+      "sha256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce"
+    },
+    {
+      "path": "candidate/website/receipts/deployment-receipt.json",
+      "bytes": 1360,
+      "sha256": "826b51ab317c961a2e1c33632cf63787b5af8af79ffcbce3e1cdc5ec6f13a2f1"
+    },
+    {
+      "path": "candidate/website/receipts/frozen-inputs.json",
+      "bytes": 2023,
+      "sha256": "1a8fdee0c1a338703393ddd8aaecc698109075a5012ab61014943b9c12bf4ac2"
+    },
+    {
+      "path": "candidate/website/receipts/independent-artifact-review.json",
+      "bytes": 6476,
+      "sha256": "46b17011bbc266162f0f93c56b9a681c88023369a8b71cde67eef9650c54112b"
+    },
+    {
+      "path": "candidate/website/receipts/live-verification.json",
+      "bytes": 1953,
+      "sha256": "014013283d7f79b716dc76b6acae454fa93617eb8f77e107a696e3a48d66b07a"
+    },
+    {
+      "path": "candidate/website/receipts/package-gates.json",
+      "bytes": 1599,
+      "sha256": "8f1d3da553b32618aacf49f911bb8f599f873b384fb03f312e2bbb5f1bd63a49"
+    },
+    {
+      "path": "candidate/website/receipts/rollback-preflight.json",
+      "bytes": 291,
+      "sha256": "67c34d5cade7cae00f5a5f98f51ab74322bc53f30c61eb2763ea7a7bbf44490a"
+    },
+    {
+      "path": "candidate/website/receipts/root-approval.json",
+      "bytes": 1188,
+      "sha256": "c4050c07910c3c4fe067954c3c128122c722380805e05cf2497fce1a0f915848"
+    },
+    {
+      "path": "candidate/website/receipts/root-independent-verification.json",
+      "bytes": 1253,
+      "sha256": "8a9118032473e71c8116f399896e428ec8d5e344e8da8308c91bc8893ceea088"
+    },
+    {
+      "path": "candidate/website/receipts/scope.json",
+      "bytes": 752,
+      "sha256": "72147a2007323e746129ca8c0c8fb1ca6c39ba1bdc7b9f7e1fd29ec0bfd57ed8"
+    },
+    {
+      "path": "candidate/website/receipts/source-verification.json",
+      "bytes": 1135,
+      "sha256": "c12e539214627bee7ecfd693a3bc309cafeecc23e0035cdc0c845f575b9bfff5"
+    },
+    {
+      "path": "candidate/website/source/components/WorkOrderAddModal.js",
+      "bytes": 89595,
+      "sha256": "59bacad386c17e7281657ca42e8ad026369018bad47af7c8e7233cec48b4a8dc"
+    },
+    {
+      "path": "candidate/website/source/lib/inventory/workOrderAddSlack.cjs",
+      "bytes": 14046,
+      "sha256": "34ff8d8b950d658035d85535498dff4e74ce537d47f1bb0f5c524329dc94ce35"
+    },
+    {
+      "path": "candidate/website/source/lib/inventory/workOrderAddSlackThread.cjs",
+      "bytes": 19896,
+      "sha256": "95d4c79dc5e4d3f741c5fa30c1efeb120eb92d2ef47473e0ddf0314a4310bc27"
+    },
+    {
+      "path": "candidate/website/source/lib/ops/dispatchReceipt.cjs",
+      "bytes": 5105,
+      "sha256": "66491b89c0c3ce6a47678f1ec8a88465851305b78f97564b340283cdb7780d51"
+    },
+    {
+      "path": "candidate/website/source/pages/api/items/work-order-add/slack.js",
+      "bytes": 2481,
+      "sha256": "378a8bd426ba3caf3a32da09c3d5ddf21c29f6323c2d046103384e17987d7032"
+    },
+    {
+      "path": "candidate/website/tests/work-order-add-slack-route.test.cjs",
+      "bytes": 9640,
+      "sha256": "d50cd1563fc8a5b18775b00b560189ece3b8a82d891f0c7121382ad3e09be037"
+    },
+    {
+      "path": "candidate/website/tests/work-order-add-slack-thread.test.cjs",
+      "bytes": 17244,
+      "sha256": "a9f86b310d11b956e0ccca899c2a87ce21ca45f858329817e9aa5d84494c7287"
+    },
+    {
+      "path": "candidate/website/tests/work-order-add-slack-ui.browser.test.cjs",
+      "bytes": 15827,
+      "sha256": "9ab533d98c49c657675aa6e4f7124afd4d57de1381f0addddb93473857d3516d"
+    },
+    {
+      "path": "candidate/website/tests/work-order-add-slack.test.cjs",
+      "bytes": 17834,
+      "sha256": "29b80197f7e78e7c1c9cb51ddda857401d836d7f4979da950e80ded809ec1be3"
+    },
+    {
+      "path": "candidate/website/tools/analyze-baseline.cjs",
+      "bytes": 2165,
+      "sha256": "98b6331ec34fa64007e61ec93b502b016aa4a541c00e2ab90cbcecccbe6e7ca4"
+    },
+    {
+      "path": "candidate/website/tools/analyze-oracle.cjs",
+      "bytes": 2775,
+      "sha256": "b0009f98263dc99ca93830d2162448de981f80c433229160bb75dfd01516d4f7"
+    },
+    {
+      "path": "candidate/website/tools/cloud-common.cjs",
+      "bytes": 2334,
+      "sha256": "d79a74e7e02782a852e5b8ff9b89be7e54b64ea80c57b3e38a3a2a7d1dabbb74"
+    },
+    {
+      "path": "candidate/website/tools/compose.cjs",
+      "bytes": 11516,
+      "sha256": "58a9f93f458d3d6abceb0ef76a7ed661905b7cbb9ba1f493900ab4459627db05"
+    },
+    {
+      "path": "candidate/website/tools/deploy.cjs",
+      "bytes": 6093,
+      "sha256": "31ec90bc2249f02f4bca8232528c03fba98a42ff619b8d64ebb8fe82a930aa56"
+    },
+    {
+      "path": "candidate/website/tools/freeze-inputs.cjs",
+      "bytes": 1502,
+      "sha256": "cf25d8238d96dfa392ff81ffd2abef2c49a71f21b6cb6c44e30aa2a5b6b15cde"
+    },
+    {
+      "path": "candidate/website/tools/independent-artifact-audit.cjs",
+      "bytes": 12309,
+      "sha256": "baf71184651747a171cfe1a741bedc795f729b2aac6fa24e79b11423daab2cf4"
+    },
+    {
+      "path": "candidate/website/tools/inspect-current.cjs",
+      "bytes": 2157,
+      "sha256": "5b48c87e80f37e1751514f1b785793b8921d5bf96c2c451d4fe1bb8239197451"
+    },
+    {
+      "path": "candidate/website/tools/package.cjs",
+      "bytes": 5347,
+      "sha256": "07f5ac3e0b6f33c23a60fb387c2afc66f8f8c5d08d937100ef303c7b83d4f353"
+    },
+    {
+      "path": "candidate/website/tools/rollback.cjs",
+      "bytes": 4845,
+      "sha256": "0087f46cc9933a3f8a12e4325766c66436d179cc0ac3437c67f08d876c5a3735"
+    },
+    {
+      "path": "candidate/website/tools/run-compiled-tests.cjs",
+      "bytes": 1610,
+      "sha256": "05886c36cc7a2627e209bf5ed03302bdef6b3a7effb35fedeecc4da311a3dfe8"
+    },
+    {
+      "path": "candidate/website/tools/run-compiler.cjs",
+      "bytes": 2344,
+      "sha256": "8164fcc8260215ca03a6b7b512dba76247c719f5af1eb08ad039794dc0348ed7"
+    },
+    {
+      "path": "candidate/website/tools/snapshot.cjs",
+      "bytes": 4493,
+      "sha256": "dc503bc8f2cab128d42c94ecd1823348589b128427c2065ba64a1af3eba4fbe5"
+    },
+    {
+      "path": "candidate/website/tools/test-compiled-backend.test.cjs",
+      "bytes": 8895,
+      "sha256": "706aec588bfb29bf903ab3d29de09e420ee8d4c05f20d0d5757ed8669af51116"
+    },
+    {
+      "path": "candidate/website/tools/test-compiled-ui-scope.cjs",
+      "bytes": 4770,
+      "sha256": "f6fe3c3517954c6825aba06c992f636d5353450760331f68fe060af7bf17afea"
+    },
+    {
+      "path": "candidate/website/tools/test-compiled-ui.cjs",
+      "bytes": 29141,
+      "sha256": "797de22ef9dbe587b95350c516a1b5648c5f025bd19e161a96057dc7370e445e"
+    },
+    {
+      "path": "candidate/website/tools/verify-live.cjs",
+      "bytes": 3375,
+      "sha256": "1741168d0e93f479d2ee87591804a434227f8b9e2a6c2f0e0167439fb2bc7371"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6840,
+      "sha256": "625cfece4384663b1c032d8622eaa0923f684eefe9e1b386d5117ef7d7f3463f"
+    }
+  ]
+}

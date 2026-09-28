@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-09-28T22:21:48.088Z",
+  "readOnly": true,
+  "databaseWrites": 0,
+  "slackWrites": 0,
+  "functionRevision": "nextserverwest-00064-miz",
+  "capabilities": {
+    "chatWrite": true,
+    "listsRead": true,
+    "channelsHistory": true,
+    "groupsHistory": true
+  },
+  "nativeLink": {
+    "workOrderNumber": "10691",
+    "type": "list_record",
+    "requiredIdentityFields": [
+      "file_id",
+      "record_id"
+    ],
+    "textObserved": true
+  },
+  "sanitization": "Raw message bodies, attachments, file URLs, bot credentials, and actual user content omitted."
+}

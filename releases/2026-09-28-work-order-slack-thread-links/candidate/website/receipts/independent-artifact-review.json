@@ -1,0 +1,153 @@
+{
+  "checkedAt": "2026-09-28T22:38:07.444Z",
+  "result": "PASS",
+  "independentOfComposeHelpers": true,
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "baselineArchiveEntriesMatchedByteForByte": 504,
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "composeToolSHA256": "58a9f93f458d3d6abceb0ef76a7ed661905b7cbb9ba1f493900ab4459627db05",
+  "beforeFiles": 504,
+  "afterFiles": 507,
+  "deletedFiles": [],
+  "addedFiles": [
+    ".next/static/chunks/pages/NewSearch/mainSearch-a9f57ab17f63440a.js",
+    ".next/static/wo-slack-thread-a9f57ab17f63440a/_buildManifest.js",
+    ".next/static/wo-slack-thread-a9f57ab17f63440a/_ssgManifest.js"
+  ],
+  "modifiedFiles": 61,
+  "exactReversibleMetadataChanges": 60,
+  "oldImmutableStaticFilesPreserved": 139,
+  "sharedServerChunksPreserved": 44,
+  "preservedOtControls": [
+    ".next/server/pages/api/cron/magmonitor-alerts.js",
+    ".next/server/pages/api/cron/magmonitor-alerts.js.nft.json",
+    ".next/server/pages/api/ops/engineer-notifications.js",
+    ".next/server/pages/api/ops/engineer-notifications.js.nft.json",
+    ".next/server/pages/api/ops/ot-coverage.js",
+    ".next/server/pages/api/ops/ot-coverage.js.nft.json",
+    ".next/server/pages/api/ops/ot-swaps.js",
+    ".next/server/pages/api/ops/ot-swaps.js.nft.json",
+    ".next/static/chunks/pages/Ops-General-688014bb5d051b35.js",
+    ".next/static/chunks/pages/Ops-General-882d1a358c3de74c.js",
+    ".next/static/chunks/pages/Ops-General-dec761acab68c8ef.js"
+  ],
+  "originalSingleItemSlackSenderByteIdentical": true,
+  "apiRegistry": {
+    "beforeCount": 20,
+    "afterCount": 22,
+    "replaced": [
+      10985,
+      99397
+    ],
+    "added": [
+      97306,
+      92765
+    ],
+    "preserved": [
+      7879,
+      9801,
+      10295,
+      14276,
+      24803,
+      29021,
+      35567,
+      42311,
+      46566,
+      52771,
+      55511,
+      56472,
+      66712,
+      71486,
+      75600,
+      77598,
+      81067,
+      95098
+    ],
+    "wrapperSHA256": "c799d817d03524eac82a45b886bd517ff33dde41aaed879aa1312fe679aa4699",
+    "hashes": {
+      "7879": "2adea825dc4001489497b9e0111fdc1bbfd787bcc09123e3078f9413f1d1f25f",
+      "9801": "0785cfab7106db11193bde70238728fdb2704af45ee1d27051559480881941d6",
+      "10295": "3eece3786523910b647471fe2634adf5d1d4c386651b192cdf3ca34599012af5",
+      "10985": "eee77c96238bfbc8d4f3aab37f272980b91802bc1ebc7f8f46fa40225a038db4",
+      "14276": "b0abe324468b168ea71041208fc6c25074f7bc167b30055a800efdc275e6154a",
+      "24803": "6d32e65bbfba13311d3e8674694e8dd80696c6b34684926dc101283feee26b7e",
+      "29021": "ee59e384d0799c3c99736408a77981e3eb846adc56b54302dd58fd071fb956ba",
+      "35567": "9459d6ba453fe9284a1c196597102bab3dfc011462cdfa9faf62aa5807ff15c1",
+      "42311": "6d5df05223f7d76cae2c0ffa72088c6017bbad39a76075fcf5b21561c1a5bbd9",
+      "46566": "7fcebc94c919227de21a88142e4fe95ffbf1ff5597aa91480a1f85b102ebf560",
+      "52771": "08b50e395c4423b0e15abedb296ae2c3425c66488a729d6e474981cde4c5a114",
+      "55511": "be3ea5ca6401ff5a72d2e1552388b020786965532623e70dd2f3b0189088c05e",
+      "56472": "ac829bac76566303c2b5e945cdf2c8bab73c0111de9aa8d68c08770f83d43db3",
+      "66712": "2861dd46d74949a7eea897a2591859cebce8f422ca04b3ab224bc6b41344a587",
+      "71486": "6bbd345ba8dff9efc7c168444da82e86909adf685070224edea4db8f7bb9b8ce",
+      "75600": "fa27e549abfc1dfe8c6b9bf1f5feee51e1da59c261c014b66804016423000451",
+      "77598": "f86b77cb9d153d87bfa09f5367b3ca2fd975df30d1411df138db54940bd17c1c",
+      "81067": "ab844939ba82c4df037b6a1ef2ce2bee869dc7033c327adfd1e390060965a74d",
+      "92765": "346a955ad47a7db7412fba6a6a761ae09be7df3aa3bdcfaec9560108c31a0523",
+      "95098": "fc4863951bed942f39b7396f180154dc6126017befd9ad2c64236b80aa4be453",
+      "97306": "46a196dc11e811973a91cf5b4c1a3b9c80060d67c508c7a4b89311010648905a",
+      "99397": "7ae27f64d6794729e409c5a15db80878f5e2d9689f2227052787f092ec21daff"
+    }
+  },
+  "uiRegistry": {
+    "beforeCount": 15,
+    "afterCount": 15,
+    "replaced": [
+      60992
+    ],
+    "added": [],
+    "preserved": [
+      14370,
+      17236,
+      21581,
+      21704,
+      37948,
+      41306,
+      58629,
+      66768,
+      66953,
+      77475,
+      84705,
+      87856,
+      90164,
+      99373
+    ],
+    "wrapperSHA256": "65a4d0fb5c101c278751184133b7907f4c5030ec55c3fccf740eb6d56ab99116",
+    "hashes": {
+      "14370": "2d084c4877a215de80d8f368a353a43c4e47f341b50af836130d9b13f33acccd",
+      "17236": "92cb59e0a18a302dd1392c18533a36e55bc34ab5287da2098015d2a6ea379353",
+      "21581": "f5e8787bddb2016982e1e7820b5c4c8a1a143f281afe9de9f282a3f01857abe5",
+      "21704": "84185ba38b3141c60a3c8b93dc02987ae032ce814b0776bf33d8a394c333dabb",
+      "37948": "a1f0c06c46b7e41d8add5004d0d17ce186459cec1c5154bbf19607f6dbdd2878",
+      "41306": "73ceb70d4e0a3c5d0a10ae3c2434fe448bdbc3ac233f8c67488bd0a81bc88288",
+      "58629": "5e892f5606194045f14a7f6cce8835f1ecd7389b6b6bdd2bbf2df73dc99d0751",
+      "60992": "a21140f31e07fb8a5b832aed31c7c345110303b33f42aaa2c309edb0adc25d62",
+      "66768": "bf0fecbd36a6456acdf1f47c09bcac05fcdf6c0c81a0ca8a863fb511ad4a3172",
+      "66953": "a5b0f1b0ae82fc818a8d08991704e516f48605e10c2d4f91b26c7e2eaae7d68a",
+      "77475": "fc8d2b8c06ee12a59b92803fd19afa4719bb4d05b9bf7dbb78da9c2240f49ed2",
+      "84705": "7dc2cd92546d90aa3dcabfc65c4cb060a6ad669f8ecde601718064688068b022",
+      "87856": "15fe23dec1f3b008395e0ecbe07fb1a6e70bd4964941c23d1871697042f5b5b0",
+      "90164": "a55fc6988e1490e2c41c356460a4a4bcdd8e2ceabf68ca48f966c46da9878b33",
+      "99373": "f9c2aff47d121bc07872e300140ce82cbfbfd6f2e6a6c95452ffa33549363299"
+    }
+  },
+  "changedFactoriesMatchCompilerOracle": true,
+  "newDispatchHelperMatchesExistingActiveCopy": true,
+  "composeAlgorithmReview": {
+    "result": "PASS",
+    "blockers": [],
+    "notes": [
+      "Copies captured baseline only; does not copy fresh compiler tree",
+      "Exact registry replacements and additive helpers preserve route wrapper and loader bytes",
+      "Immutable static assets remain; three candidate static assets added",
+      "Metadata changes are literal reversible filename/build-ID substitutions, independently verified",
+      "Intra-factory UI scope remains separately covered by AST topology proof"
+    ]
+  },
+  "forbiddenCredentialFilenames": [],
+  "networkRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "artifactTreeWrites": 0
+}

@@ -1,0 +1,68 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-28T22:43:51.712Z",
+  "revision": "nextserverwest-00065-cav",
+  "source": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790635179814978"
+    }
+  },
+  "buildId": "wo-slack-thread-a9f57ab17f63440a",
+  "artifactSHA256": "3c75cafd95f44e95f9cc0adb7bfd20305d2e5c7bd58c603fb81774a6da9d3807",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "pageSHA256": "a9f57ab17f63440a2ae2069f4b1b09e12e2041e8879b3b634a3db7edfffa8d5e",
+  "cssSHA256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+  "checks": [
+    {
+      "url": "https://magmo.cloud/api/ops/health",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "url": "https://magmo.cloud/NewSearch/mainSearch",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "url": "https://magmo.cloud/_next/static/chunks/pages/NewSearch/mainSearch-a9f57ab17f63440a.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "url": "https://magmo.cloud/_next/static/css/61047211a1a88937.css",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "url": "https://magmo.cloud/api/items/work-order-add/slack",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "url": "https://magmo.cloud/api/items/work-order-add/slack",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "url": "https://magmo.cloud/api/slack/add-to-list",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "url": "https://magmo.cloud/api/items/work-order-add/confirm",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "url": "https://magmo.cloud/api/items/work-order-add/options",
+      "method": "POST",
+      "status": 405
+    }
+  ],
+  "authenticatedApplicationRequests": 0,
+  "databaseWrites": 0,
+  "liveSlackPosts": 0,
+  "configurationPreserved": true
+}

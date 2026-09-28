@@ -1,0 +1,54 @@
+"use strict";
+// Read-only unless root has written hash-bound approval AND --apply is explicit.
+// Once a PATCH has been journaled, only --status is permitted. Never resubmit.
+const { fs, assert, request, CF, parent, functionName, file, json, sha256, configHash, getFunction, archiveHash, checkBaseline, writeReceipt } = require("./cloud-common.cjs");
+let phase = "preflight", receipt;
+(async () => {
+  const baseline = json("baseline.json");
+  assert.equal(baseline.revision, "nextserverwest-00064-miz");
+  assert.equal(baseline.archiveSHA256, "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8");
+  assert.equal(sha256(fs.readFileSync(file("source.zip"))), baseline.archiveSHA256);
+  if (process.argv.includes("--status")) {
+    receipt = json("deployment-receipt.json");
+    assert(receipt.operation, "Ambiguous submission: do not resubmit; inspect Cloud Functions status.");
+    const operation = await request(CF + receipt.operation);
+    if (!operation.done) { console.log(JSON.stringify({ state: "DEPLOYING", stages: operation.metadata?.stages?.map(({ name, state }) => ({ name, state })) })); return; }
+    assert(!operation.error, "Cloud deployment failed; preserve receipt and inspect operation.");
+    const after = await getFunction();
+    assert.equal(after.state, "ACTIVE"); assert.notEqual(after.serviceConfig.revision, baseline.revision);
+    assert.equal(after.buildConfig.runtime, baseline.runtime); assert.equal(after.buildConfig.entryPoint, baseline.entryPoint);
+    assert.equal(configHash(after), baseline.configHash); assert.equal(await archiveHash(after), receipt.artifactSHA256);
+    Object.assign(receipt, { state: "ACTIVE", completedAt: new Date().toISOString(), revision: after.serviceConfig.revision, deployedSource: after.buildConfig.source, deployedUpdateTime: after.updateTime, unrelatedConfigurationPreserved: true });
+    writeReceipt("deployment-receipt.json", receipt); console.log(JSON.stringify(receipt, null, 2)); return;
+  }
+  assert(!fs.existsSync(file("deployment-receipt.json")), "Deployment receipt exists; use --status only.");
+  const report = json("composition-report.json"), gates = json("package-gates.json"), approval = json("root-approval.json");
+  const bytes = fs.readFileSync(file("artifact.zip")), artifactSHA256 = sha256(bytes), reportHash = sha256(fs.readFileSync(file("composition-report.json")));
+  assert.equal(gates.result, "PASS"); assert.equal(gates.artifactSHA256, artifactSHA256);
+  assert.equal(gates.compositionReportSHA256, reportHash);
+  assert.equal(gates.noDeletedFiles, true); assert.equal(gates.unchangedFilesVerified, true);
+  assert.equal(gates.compiledTestsPassed, true); assert.equal(gates.compiledUiPassed, true);
+  assert.equal(gates.compiledUiScopePassed, true); assert.equal(gates.independentReviewPassed, true);
+  assert.equal(approval.sourceOnlyApproved, true); assert.equal(approval.artifactSHA256, artifactSHA256);
+  assert.equal(approval.packageGatesSHA256, sha256(fs.readFileSync(file("package-gates.json"))));
+  assert.equal(approval.compositionReportSHA256, reportHash); assert.equal(approval.baselineArchiveSHA256, baseline.archiveSHA256);
+  assert.equal(approval.baselineRevision, baseline.revision); assert.equal(approval.configHash, baseline.configHash);
+  assert.equal(approval.databaseWritesAllowed, false); assert.equal(approval.testSlackPostsAllowed, false);
+  for (const name of ["deploy.cjs", "cloud-common.cjs", "rollback.cjs"]) assert.equal(approval.toolHashes?.[name], sha256(fs.readFileSync(file(name))), `Unreviewed tool: ${name}`);
+  for (const [name, expected] of Object.entries(gates.receiptHashes || {})) assert.equal(sha256(fs.readFileSync(file(name))), expected, `Gate changed: ${name}`);
+  assert.equal(report.baselineArchiveSHA256, baseline.archiveSHA256); assert.equal(report.baselineRevision, baseline.revision);
+  assert.equal(report.runtimeConfigChanged, false); assert.equal(report.unrelatedFilesPreserved, true); assert.equal(report.noDeletedFiles, true);
+  assert.deepEqual(report.forbiddenNames, []); assert.deepEqual(report.embeddedSensitiveNames, []); assert.deepEqual(report.buildWorkspaceLeaks, []);
+  const before = await getFunction(); checkBaseline(before, baseline);
+  if (!process.argv.includes("--apply")) { console.log(JSON.stringify({ ok: true, mode: "read_only", baselineRevision: baseline.revision, artifactSHA256, sourceOnly: true, configHash: configHash(before), rollbackArchiveSHA256: baseline.archiveSHA256 }, null, 2)); return; }
+  phase = "upload";
+  const upload = await request(CF + `${parent}/functions:generateUploadUrl`, "POST", {});
+  const sent = await fetch(upload.uploadUrl, { method: "PUT", headers: { "Content-Type": "application/zip" }, body: bytes, signal: AbortSignal.timeout(60000) });
+  assert(sent.ok, "Source upload failed."); checkBaseline(await getFunction(), baseline);
+  receipt = { state: "SUBMITTING", startedAt: new Date().toISOString(), originalRevision: baseline.revision, originalSource: baseline.source, originalUpdateTime: baseline.updateTime, artifactSHA256, compositionReportSHA256: reportHash, configHash: baseline.configHash, scope: "Optional Work Order Add Slack list-item links in existing work-order thread", sourceOnly: true, rollbackArchive: "source.zip", databaseWrites: 0, testSlackPosts: 0 };
+  writeReceipt("deployment-receipt.json", receipt, true);
+  phase = "patch";
+  const operation = await request(CF + functionName, "PATCH", { name: functionName, buildConfig: { source: { storageSource: upload.storageSource } } }, { updateMask: "buildConfig.source" });
+  Object.assign(receipt, { state: "DEPLOYING", operation: operation.name }); writeReceipt("deployment-receipt.json", receipt);
+  console.log(JSON.stringify({ state: receipt.state, operation: receipt.operation, sourceOnly: true }));
+})().catch((error) => { console.error(JSON.stringify({ ok: false, phase, error: "deployment_guard_or_request_failed", status: error.response?.status || null, detail: error instanceof assert.AssertionError ? error.message : undefined, operation: receipt?.operation || null })); process.exitCode = 1; });

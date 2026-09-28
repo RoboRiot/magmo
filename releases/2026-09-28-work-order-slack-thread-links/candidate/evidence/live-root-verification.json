@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-09-28T22:27:50.292Z",
+  "readOnly": true,
+  "result": "PASS",
+  "helperSha256": "95d4c79dc5e4d3f741c5fa30c1efeb120eb92d2ef47473e0ddf0314a4310bc27",
+  "functionRevision": "nextserverwest-00064-miz",
+  "databaseWrites": 0,
+  "slackWrites": 0,
+  "syntheticOperationsPersisted": false,
+  "workOrders": [
+    {
+      "id": "10691",
+      "number": "10691",
+      "resolveThread": "PASS",
+      "target": {
+        "workOrderId": "10691",
+        "workOrderNumber": "10691",
+        "channel": "C07EPLKV9JT",
+        "threadTs": "1790611696.872509"
+      },
+      "verifyRoot": "PASS"
+    },
+    {
+      "id": "10677",
+      "number": "10677",
+      "resolveThread": "PASS",
+      "target": {
+        "workOrderId": "10677",
+        "workOrderNumber": "10677",
+        "channel": "C07EPLKV9JT",
+        "threadTs": "1790354633.824369"
+      },
+      "verifyRoot": "PASS"
+    },
+    {
+      "id": "10659",
+      "number": "10659",
+      "resolveThread": "PASS",
+      "target": {
+        "workOrderId": "10659",
+        "workOrderNumber": "10659",
+        "channel": "C07EPLKV9JT",
+        "threadTs": "1790181843.541349"
+      },
+      "verifyRoot": "PASS"
+    },
+    {
+      "id": "10658",
+      "number": "10658",
+      "resolveThread": "PASS",
+      "target": {
+        "workOrderId": "10658",
+        "workOrderNumber": "10658",
+        "channel": "C07EPLKV9JT",
+        "threadTs": "1790116567.211589"
+      },
+      "verifyRoot": "PASS"
+    }
+  ],
+  "sanitization": "Actual Slack message text, business titles, raw payloads, and database documents omitted."
+}

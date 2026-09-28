@@ -1,0 +1,406 @@
+{
+  "checkedAt": "2026-09-28T22:23:05.889Z",
+  "currentFiles": 504,
+  "previousFiles": 490,
+  "added": [
+    ".next/server/chunks/1248.js",
+    ".next/server/pages/api/ops/engineer-notifications.js",
+    ".next/server/pages/api/ops/engineer-notifications.js.nft.json",
+    ".next/server/pages/api/ops/ot-swaps.js",
+    ".next/server/pages/api/ops/ot-swaps.js.nft.json",
+    ".next/static/chunks/pages/Ops-General-688014bb5d051b35.js",
+    ".next/static/chunks/pages/Ops-General-882d1a358c3de74c.js",
+    ".next/static/css/a3dc349674610073.css",
+    ".next/static/css/f63dd8f2beebaa8f.css",
+    ".next/static/ops-ot-4ff2526bd45fd820/_buildManifest.js",
+    ".next/static/ops-ot-4ff2526bd45fd820/_ssgManifest.js",
+    ".next/static/ops-ot-collapse-ba090bd8698ef94f/_buildManifest.js",
+    ".next/static/ops-ot-collapse-ba090bd8698ef94f/_ssgManifest.js",
+    "public/sw.js"
+  ],
+  "changed": [
+    ".next/build-manifest.json",
+    ".next/BUILD_ID",
+    ".next/routes-manifest.json",
+    ".next/server/middleware-build-manifest.js",
+    ".next/server/pages/404.html",
+    ".next/server/pages/500.html",
+    ".next/server/pages/api/cron/magmonitor-alerts.js",
+    ".next/server/pages/api/cron/magmonitor-alerts.js.nft.json",
+    ".next/server/pages/api/ops/ot-coverage.js",
+    ".next/server/pages/api/ops/ot-coverage.js.nft.json",
+    ".next/server/pages/AskMagmo.html",
+    ".next/server/pages/BlueFolder/bluefolder.html",
+    ".next/server/pages/dashboard.html",
+    ".next/server/pages/drive.html",
+    ".next/server/pages/index.html",
+    ".next/server/pages/LoggedIn.html",
+    ".next/server/pages/logs.html",
+    ".next/server/pages/Magmonitor.html",
+    ".next/server/pages/NewSearch/AddItem/NewItem.html",
+    ".next/server/pages/NewSearch/AddItem/parentModal.html",
+    ".next/server/pages/NewSearch/client/[id]/addClient.html",
+    ".next/server/pages/NewSearch/ClientInfoModal.html",
+    ".next/server/pages/NewSearch/email/EmailForm.html",
+    ".next/server/pages/NewSearch/email/imageTest.html",
+    ".next/server/pages/NewSearch/email/sendEmail.html",
+    ".next/server/pages/NewSearch/InfoModal.html",
+    ".next/server/pages/NewSearch/inventory/groups/[id].html",
+    ".next/server/pages/NewSearch/inventory/inventoryManage.html",
+    ".next/server/pages/NewSearch/inventory/registerShipment.html",
+    ".next/server/pages/NewSearch/inventory/storage/[id].html",
+    ".next/server/pages/NewSearch/item/[id]/MachineSelectionModal.html",
+    ".next/server/pages/NewSearch/item/[id]/NewLocal.html",
+    ".next/server/pages/NewSearch/LoadingButton.html",
+    ".next/server/pages/NewSearch/MachineCreationModal.html",
+    ".next/server/pages/NewSearch/MachineEditModal.html",
+    ".next/server/pages/NewSearch/mainSearch - Copy.html",
+    ".next/server/pages/NewSearch/mainSearch.html",
+    ".next/server/pages/NewSearch/searchTest.html",
+    ".next/server/pages/NewSearch/TestImage.html",
+    ".next/server/pages/NewSearch/TestPrint.html",
+    ".next/server/pages/NewSearch/Tools/[id].html",
+    ".next/server/pages/NewSearch/Tools.html",
+    ".next/server/pages/NewSearch/Trailers/[id].html",
+    ".next/server/pages/notes/gKeep.html",
+    ".next/server/pages/Ops/calendar.html",
+    ".next/server/pages/Ops-General.html",
+    ".next/server/pages/Ops.html",
+    ".next/server/pages/schedule/interview.html",
+    ".next/server/pages/schedule/pm.html",
+    ".next/server/pages/ServiceDocs/Explorer.html",
+    ".next/server/pages/ServiceDocs/ServiceSelect.html",
+    ".next/server/pages/Signup.html",
+    ".next/server/pages/Warehousedb/AdminSettings.html",
+    ".next/server/pages/Warehousedb/client/[id].html",
+    ".next/server/pages/Warehousedb/ClientList.html",
+    ".next/server/pages/Warehousedb/display.html",
+    ".next/server/pages/Warehousedb/item/[id].html",
+    ".next/server/pages/Warehousedb/machine/[id].html",
+    ".next/server/pages/Warehousedb/ModItem.html",
+    ".next/server/pages/Warehousedb/TrailerSetup.html",
+    ".next/server/pages/Warehousedb/WarehouseList.html",
+    ".next/server/pages/Warehousedb/WarehouseScan.html",
+    ".next/server/pages/Warehousedb/WarehouseSelect.html",
+    ".next/server/pages/website-analysis.html",
+    ".next/server/pages-manifest.json"
+  ],
+  "oldFilesPreserved": true,
+  "workOrderSlackUnchanged": true,
+  "routes": [
+    {
+      "relative": ".next/server/pages/api/items/work-order-add/slack.js",
+      "sha256": "ae585ef8bb622e870bf98a872b7a74401f5987a7ff5d810d642847cf523d9e66",
+      "loaderChunks": [
+        5030,
+        4354,
+        1572
+      ],
+      "modules": [
+        {
+          "id": 7879,
+          "sha256": "2adea825dc4001489497b9e0111fdc1bbfd787bcc09123e3078f9413f1d1f25f",
+          "bytes": 49,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 9801,
+          "sha256": "0785cfab7106db11193bde70238728fdb2704af45ee1d27051559480881941d6",
+          "bytes": 43,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 10295,
+          "sha256": "3eece3786523910b647471fe2634adf5d1d4c386651b192cdf3ca34599012af5",
+          "bytes": 1208,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 10985,
+          "sha256": "9a3bb42f60123f894923ae8d522aacb332e9d608babb11a836fc7987cc063a5a",
+          "bytes": 1529,
+          "requires": [
+            52771,
+            66712,
+            99397,
+            1572
+          ],
+          "excerpts": [
+            "sendConfirmedItemToSlack",
+            "sendSlackListItem",
+            "WorkOrderSlackError"
+          ]
+        },
+        {
+          "id": 14276,
+          "sha256": "b0abe324468b168ea71041208fc6c25074f7bc167b30055a800efdc275e6154a",
+          "bytes": 44,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 24803,
+          "sha256": "6d32e65bbfba13311d3e8674694e8dd80696c6b34684926dc101283feee26b7e",
+          "bytes": 47,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 29021,
+          "sha256": "ee59e384d0799c3c99736408a77981e3eb846adc56b54302dd58fd071fb956ba",
+          "bytes": 28,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 35567,
+          "sha256": "9459d6ba453fe9284a1c196597102bab3dfc011462cdfa9faf62aa5807ff15c1",
+          "bytes": 48,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 42311,
+          "sha256": "6d5df05223f7d76cae2c0ffa72088c6017bbad39a76075fcf5b21561c1a5bbd9",
+          "bytes": 1209,
+          "requires": [],
+          "excerpts": [
+            "lease"
+          ]
+        },
+        {
+          "id": 46566,
+          "sha256": "7fcebc94c919227de21a88142e4fe95ffbf1ff5597aa91480a1f85b102ebf560",
+          "bytes": 32,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 52771,
+          "sha256": "08b50e395c4423b0e15abedb296ae2c3425c66488a729d6e474981cde4c5a114",
+          "bytes": 1976,
+          "requires": [
+            29021,
+            9801,
+            35567,
+            7879,
+            24803
+          ],
+          "excerpts": []
+        },
+        {
+          "id": 55511,
+          "sha256": "be3ea5ca6401ff5a72d2e1552388b020786965532623e70dd2f3b0189088c05e",
+          "bytes": 32,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 56472,
+          "sha256": "ac829bac76566303c2b5e945cdf2c8bab73c0111de9aa8d68c08770f83d43db3",
+          "bytes": 44,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 66712,
+          "sha256": "2861dd46d74949a7eea897a2591859cebce8f422ca04b3ab224bc6b41344a587",
+          "bytes": 1335,
+          "requires": [
+            81067,
+            10295
+          ],
+          "excerpts": []
+        },
+        {
+          "id": 71486,
+          "sha256": "6bbd345ba8dff9efc7c168444da82e86909adf685070224edea4db8f7bb9b8ce",
+          "bytes": 2323,
+          "requires": [
+            29046,
+            8667,
+            33480,
+            86435,
+            10985,
+            58112,
+            18766,
+            61006
+          ],
+          "excerpts": [
+            "lease"
+          ]
+        },
+        {
+          "id": 75600,
+          "sha256": "fa27e549abfc1dfe8c6b9bf1f5feee51e1da59c261c014b66804016423000451",
+          "bytes": 82,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 77598,
+          "sha256": "f86b77cb9d153d87bfa09f5367b3ca2fd975df30d1411df138db54940bd17c1c",
+          "bytes": 37,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 81067,
+          "sha256": "ab844939ba82c4df037b6a1ef2ce2bee869dc7033c327adfd1e390060965a74d",
+          "bytes": 538,
+          "requires": [
+            9801,
+            14276
+          ],
+          "excerpts": []
+        },
+        {
+          "id": 95098,
+          "sha256": "fc4863951bed942f39b7396f180154dc6126017befd9ad2c64236b80aa4be453",
+          "bytes": 2034,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 99397,
+          "sha256": "8b01fe5169c0bdb744e5a167587af8fec454dc65a532aa6410cb75699c76fe4c",
+          "bytes": 7213,
+          "requires": [
+            77598,
+            92631,
+            42311
+          ],
+          "excerpts": [
+            "sendConfirmedItemToSlack",
+            "WorkOrderSlackError",
+            "lease"
+          ]
+        }
+      ]
+    },
+    {
+      "relative": ".next/server/pages/api/slack/add-to-list.js",
+      "sha256": "9f4c10e5494c89e70900cf37e6ae0d1e69a2c909596f18c67317f970c1a3bb1b",
+      "loaderChunks": [
+        5030,
+        1572
+      ],
+      "modules": [
+        {
+          "id": 7879,
+          "sha256": "2adea825dc4001489497b9e0111fdc1bbfd787bcc09123e3078f9413f1d1f25f",
+          "bytes": 49,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 9801,
+          "sha256": "0785cfab7106db11193bde70238728fdb2704af45ee1d27051559480881941d6",
+          "bytes": 43,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 14276,
+          "sha256": "b0abe324468b168ea71041208fc6c25074f7bc167b30055a800efdc275e6154a",
+          "bytes": 44,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 24803,
+          "sha256": "6d32e65bbfba13311d3e8674694e8dd80696c6b34684926dc101283feee26b7e",
+          "bytes": 47,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 29021,
+          "sha256": "ee59e384d0799c3c99736408a77981e3eb846adc56b54302dd58fd071fb956ba",
+          "bytes": 28,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 35567,
+          "sha256": "9459d6ba453fe9284a1c196597102bab3dfc011462cdfa9faf62aa5807ff15c1",
+          "bytes": 48,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 46566,
+          "sha256": "7fcebc94c919227de21a88142e4fe95ffbf1ff5597aa91480a1f85b102ebf560",
+          "bytes": 32,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 55511,
+          "sha256": "be3ea5ca6401ff5a72d2e1552388b020786965532623e70dd2f3b0189088c05e",
+          "bytes": 32,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 56472,
+          "sha256": "ac829bac76566303c2b5e945cdf2c8bab73c0111de9aa8d68c08770f83d43db3",
+          "bytes": 44,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 71800,
+          "sha256": "ef4e45b233e42ee368942322535745d2ec61dd6e3f1acf1f2cfe87f9a069acbd",
+          "bytes": 2206,
+          "requires": [
+            29046,
+            8667,
+            33480,
+            86435,
+            1572,
+            58112,
+            18766,
+            61006
+          ],
+          "excerpts": [
+            "lease"
+          ]
+        },
+        {
+          "id": 75600,
+          "sha256": "fa27e549abfc1dfe8c6b9bf1f5feee51e1da59c261c014b66804016423000451",
+          "bytes": 82,
+          "requires": [],
+          "excerpts": []
+        },
+        {
+          "id": 77598,
+          "sha256": "f86b77cb9d153d87bfa09f5367b3ca2fd975df30d1411df138db54940bd17c1c",
+          "bytes": 37,
+          "requires": [],
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "relative": ".next/server/chunks/1572.js",
+      "sha256": "21eaa59c091bf2c4a332be3098e6bba8b36492df978213704eb14c73c43615c5",
+      "loaderChunks": [],
+      "modules": [
+        {
+          "id": 1572,
+          "sha256": "16b30b501d34218a536a5a563a64e416f8010e4758b4414558aeac81a38b3146",
+          "bytes": 11277,
+          "requires": [],
+          "excerpts": [
+            "sendSlackListItem"
+          ]
+        }
+      ]
+    }
+  ]
+}

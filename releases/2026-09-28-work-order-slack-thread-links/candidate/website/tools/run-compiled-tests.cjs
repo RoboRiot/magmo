@@ -1,0 +1,8 @@
+"use strict";
+const fs = require("node:fs"), path = require("node:path"), crypto = require("node:crypto"), assert = require("node:assert/strict"), { spawnSync } = require("node:child_process");
+const here = __dirname, root = path.resolve(here, "../../.."), sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+const result = spawnSync(process.execPath, ["--test", path.join(here, "test-compiled-backend.test.cjs")], { cwd: root, env: { ...process.env }, encoding: "utf8", timeout: 60000, windowsHide: true });
+process.stdout.write(result.stdout || ""); process.stderr.write(result.stderr || ""); assert.equal(result.status, 0); assert.match(result.stdout, /# fail 0(?:\r?\n|$)/);
+const count = Number(result.stdout.match(/# pass (\d+)/)?.[1]); assert.equal(count, 38);
+const receipt = { result: "PASS", checkedAt: new Date().toISOString(), compositionReportSHA256: sha256(fs.readFileSync(path.join(here, "composition-report.json"))), tests: { passed: count, failed: 0 }, exactCompiledFactories: [10985, 99397, 97306, 92765], actualColdRuntimeLoaded: true, noLiveNetworkRequests: true, productionDatabaseWrites: 0, liveSlackPosts: 0, testHashes: Object.fromEntries([path.join(here, "test-compiled-backend.test.cjs"), path.join(root, "test/work-order-add-slack.test.cjs"), path.join(root, "test/work-order-add-slack-thread.test.cjs")].map((file) => [path.relative(root, file).replaceAll("\\", "/"), sha256(fs.readFileSync(file))])) };
+fs.writeFileSync(path.join(here, "compiled-verification.json"), JSON.stringify(receipt, null, 2) + "\n"); console.log(JSON.stringify(receipt, null, 2));

@@ -1,0 +1,18 @@
+{
+  "reviewedAt": "2026-09-28T22:39:00Z",
+  "sourceOnlyApproved": true,
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "artifactSHA256": "3c75cafd95f44e95f9cc0adb7bfd20305d2e5c7bd58c603fb81774a6da9d3807",
+  "packageGatesSHA256": "8f1d3da553b32618aacf49f911bb8f599f873b384fb03f312e2bbb5f1bd63a49",
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "toolHashes": {
+    "deploy.cjs": "31ec90bc2249f02f4bca8232528c03fba98a42ff619b8d64ebb8fe82a930aa56",
+    "cloud-common.cjs": "d79a74e7e02782a852e5b8ff9b89be7e54b64ea80c57b3e38a3a2a7d1dabbb74",
+    "rollback.cjs": "0087f46cc9933a3f8a12e4325766c66436d179cc0ac3437c67f08d876c5a3735"
+  },
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "scope": "One guarded source-only function deployment for opted-in Work Order Add Slack list-record links in the existing matching work-order thread. No historical backfill, database migration, runtime configuration change, or unrelated deployment."
+}

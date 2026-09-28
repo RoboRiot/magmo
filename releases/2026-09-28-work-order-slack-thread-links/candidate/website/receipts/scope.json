@@ -1,0 +1,21 @@
+{
+  "purpose": "Work Order Add post-save opt-in links saved Slack list items into the exact existing work-order Slack thread, without photo attachments",
+  "inputs": [
+    "lib/inventory/workOrderAddSlackThread.cjs",
+    "lib/inventory/workOrderAddSlack.cjs",
+    "pages/api/items/work-order-add/slack.js",
+    "components/WorkOrderAddModal.js"
+  ],
+  "unchangedControls": [
+    "pages/api/slack/add-to-list.js",
+    "components/WorkOrderAddModal.module.css",
+    "lib/inventory/workOrderAddUiContract.js",
+    "lib/inventory/workOrderAddContract.cjs",
+    "lib/inventory/workOrderAddService.cjs",
+    "lib/inventory/workOrderAddOptions.js"
+  ],
+  "dependencyInputs": [
+    "lib/ops/dispatchReceipt.cjs"
+  ],
+  "productionMutationsAuthorized": false
+}

@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-28T22:37:06Z",
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "baselineRevision": "nextserverwest-00064-miz",
+  "baselineArchiveSHA256": "cbbfd0dc99d439b1110a25fc36cc455bed84771400feebbca9c2af8622b744f8",
+  "deletedFiles": 0,
+  "immutableOldAssetsPreserved": 139,
+  "baselineFiles": 504,
+  "candidateFiles": 507,
+  "reversibleMetadataChanges": 60,
+  "rootReviewed": [
+    "Thread helper source and deployment composition algorithm",
+    "Source-only deployment, no-resubmit journal, configuration guard and rollback tools",
+    "Package allowlist, immutable ZIP extraction/hash validation and live read-only verifier",
+    "Actual compiled browser harness and backend behavior/byte-scope harness"
+  ],
+  "rootExecuted": {
+    "compiledBackend": { "passed": 38, "failed": 0, "skipped": 0 },
+    "compiledBrowser": { "passed": 1, "failed": 0, "skipped": 0 },
+    "intraFactoryUiScope": "PASS: 75 prefix and 18 suffix statements structurally preserved with reference topology"
+  },
+  "sharedSenderAndChunksPreserved": true,
+  "interveningOtChangesPreserved": true,
+  "databaseWrites": 0,
+  "liveSlackPosts": 0,
+  "deploymentAuthorizedByThisReceipt": false
+}

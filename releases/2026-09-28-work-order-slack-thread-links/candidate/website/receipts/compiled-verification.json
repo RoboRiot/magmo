@@ -1,0 +1,24 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-28T22:34:45.730Z",
+  "compositionReportSHA256": "ec36b09ff5c6ab34542e73b0267266584185d1ec4561493c45678ea6cc0439ce",
+  "tests": {
+    "passed": 38,
+    "failed": 0
+  },
+  "exactCompiledFactories": [
+    10985,
+    99397,
+    97306,
+    92765
+  ],
+  "actualColdRuntimeLoaded": true,
+  "noLiveNetworkRequests": true,
+  "productionDatabaseWrites": 0,
+  "liveSlackPosts": 0,
+  "testHashes": {
+    "tmp/work-order-slack-thread-link-20260928/deployment/test-compiled-backend.test.cjs": "706aec588bfb29bf903ab3d29de09e420ee8d4c05f20d0d5757ed8669af51116",
+    "test/work-order-add-slack.test.cjs": "29b80197f7e78e7c1c9cb51ddda857401d836d7f4979da950e80ded809ec1be3",
+    "test/work-order-add-slack-thread.test.cjs": "a9f86b310d11b956e0ccca899c2a87ce21ca45f858329817e9aa5d84494c7287"
+  }
+}
