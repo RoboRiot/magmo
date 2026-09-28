@@ -1,0 +1,138 @@
+{
+  "inspectedAt": "2026-09-25T21:36:54.063Z",
+  "revision": "nextserverwest-00061-rej",
+  "archiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "buildId": "wo-machine-link-31372590b5701129",
+  "mainSearch": {
+    "route": "/NewSearch/mainSearch",
+    "assets": [
+      "static/chunks/webpack-0e4290ce213ed12f.js",
+      "static/chunks/framework-32a7466d5cae4a81.js",
+      "static/chunks/main-9b88a952025a6e80.js",
+      "static/chunks/7161-fbab5101e3c6fcd3.js",
+      "static/chunks/8230-deb01d3ac4ed7c96.js",
+      "static/chunks/9520-9723bb1a3e2cdf4a.js",
+      "static/chunks/2317-7d26aa15d5eb547d.js",
+      "static/chunks/4514-241f5f861018e722.js",
+      "static/chunks/1060-bc95950d8c7e80b6.js",
+      "static/chunks/2855-64d7b5e5d5f48103.js",
+      "static/chunks/314-151c92c859013d86.js",
+      "static/chunks/2321-4da2cda4fdfa4ff5.js",
+      "static/chunks/5986-4a56a3bc3c70ad00.js",
+      "static/css/2cf9a67acd9d0b33.css",
+      "static/chunks/5375-7ea5a8c4346427cb.js",
+      "static/chunks/6001-cd624421ead8d87b.js",
+      "static/css/2bf04de3ae20c184.css",
+      "static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js"
+    ],
+    "pageAsset": ".next/static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js",
+    "pageAssetSHA256": "31372590b5701129adfbf55639d260393503ae87d11692d40e324a572a7b77dc",
+    "htmlSHA256": "2ecc7dbba6201462dc346f1bab2e8dd43b948eda6e0d92f808243b9d00972bdd"
+  },
+  "workOrderRoutes": {
+    "/api/items/work-order-add/confirm": "pages/api/items/work-order-add/confirm.js",
+    "/api/items/work-order-add/options": "pages/api/items/work-order-add/options.js",
+    "/api/items/work-order-add/resolve": "pages/api/items/work-order-add/resolve.js",
+    "/api/items/work-order-add/scan-sessions": "pages/api/items/work-order-add/scan-sessions.js",
+    "/api/items/work-order-add/scan-sessions/[id]": "pages/api/items/work-order-add/scan-sessions/[id].js",
+    "/api/items/work-order-add/scan-sessions/[id]/drain": "pages/api/items/work-order-add/scan-sessions/[id]/drain.js",
+    "/api/items/work-order-add/scan-sessions/[id]/events": "pages/api/items/work-order-add/scan-sessions/[id]/events.js",
+    "/api/items/work-order-add/scan-sessions/[id]/stop": "pages/api/items/work-order-add/scan-sessions/[id]/stop.js"
+  },
+  "routeFiles": {
+    "/api/items/work-order-add/confirm": {
+      "file": ".next/server/pages/api/items/work-order-add/confirm.js",
+      "sha256": "2ab523389c247456a839f21c66be1d2bf5d28af8d94967d471da54c6b39f79df",
+      "nft": ".next/server/pages/api/items/work-order-add/confirm.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/1621.js",
+        ".next/server/chunks/4354.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/options": {
+      "file": ".next/server/pages/api/items/work-order-add/options.js",
+      "sha256": "94a82ee065569f7469ace41bdef5a8cf5d78aca20adbb64f21e1736e0d3b9d58",
+      "nft": ".next/server/pages/api/items/work-order-add/options.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/5030.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/resolve": {
+      "file": ".next/server/pages/api/items/work-order-add/resolve.js",
+      "sha256": "61b1ccf73456f41225120dcb69e00ddbcdf078ac93f3470263d2c10ce13df936",
+      "nft": ".next/server/pages/api/items/work-order-add/resolve.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/1621.js",
+        ".next/server/chunks/4354.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/scan-sessions": {
+      "file": ".next/server/pages/api/items/work-order-add/scan-sessions.js",
+      "sha256": "1e7daf9471faa64b3450c940e74b19512001ed278acef93200c72a93594e4e5f",
+      "nft": ".next/server/pages/api/items/work-order-add/scan-sessions.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/428.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/scan-sessions/[id]": {
+      "file": ".next/server/pages/api/items/work-order-add/scan-sessions/[id].js",
+      "sha256": "9655f9939f1f7de780865511a0c79030a390a8be4f1a68e663655b3222f72524",
+      "nft": ".next/server/pages/api/items/work-order-add/scan-sessions/[id].js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/428.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/scan-sessions/[id]/drain": {
+      "file": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/drain.js",
+      "sha256": "43ab435f28b196dc2bbec6fb0ff17637ff7e538601fac31da2ec596e2936a908",
+      "nft": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/drain.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/428.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/scan-sessions/[id]/events": {
+      "file": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/events.js",
+      "sha256": "0ff84469cfaf202c0b7bf2129ef95f372751e0253b2415d057eb778ac9f2d516",
+      "nft": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/events.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/428.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    },
+    "/api/items/work-order-add/scan-sessions/[id]/stop": {
+      "file": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/stop.js",
+      "sha256": "96f20d6d7e84eebf72e7fc482e0c84f4601c2a03845deb1fa9b6105422a3ea65",
+      "nft": ".next/server/pages/api/items/work-order-add/scan-sessions/[id]/stop.js.nft.json",
+      "serverFiles": [
+        ".next/server/chunks/428.js",
+        ".next/server/chunks/5030.js",
+        ".next/server/chunks/7581.js",
+        ".next/server/webpack-api-runtime.js"
+      ]
+    }
+  },
+  "pagesManifestSHA256": "3c695ed67bc35b927f268395ce7288d2120f7788b5be3af7f8da5491511b7306",
+  "buildManifestSHA256": "1a4e6e640121cd71b0bef1f28f27937f78643599f2a340e850c05401850b48bd",
+  "packageSHA256": "ffad6c14f78356caafaec7766b5b13048124ad6896ffeb789ae87d36e5e1f183",
+  "packageLockSHA256": "8d7298e8aa6b011b5364274c4c98c71c7bf75e77b93538561f0d5f55dc10e3ce",
+  "fileCount": 483,
+  "sourceUploadCredentialFiles": []
+}

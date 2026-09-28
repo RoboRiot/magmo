@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-09-25T21:56:01.860Z",
+  "readOnly": true,
+  "result": "PASS",
+  "readPaths": [
+    "OpsWorkOrders/10658",
+    "OpsWorkOrders/10658",
+    "Client/AIS89914",
+    "Client/AIS25097",
+    "Machine/AIS12954",
+    "Client/AIS89914",
+    "Client/AIS25097",
+    "Machine/AIS12954",
+    "OpsWorkOrders/10646",
+    "Client/AIS89914"
+  ],
+  "workOrderId": "10658",
+  "sourceClientId": "AIS89914",
+  "destination": {
+    "schemaVersion": 2,
+    "associationType": "machine",
+    "clientId": "AIS25097",
+    "clientNameSnapshot": "NorCal Warehouse - Lathrop",
+    "clientLocationSnapshot": "",
+    "machineId": "AIS12954",
+    "machineNameSnapshot": "interior NorCal",
+    "trailerId": "",
+    "trailerNameSnapshot": "",
+    "effectiveAt": "2026-09-25T21:56:01.536Z",
+    "effectiveAtSource": "work-order-add",
+    "resolutionSource": "work-order-warehouse-interior-default",
+    "warehouseInteriorDefault": true,
+    "workOrderClientId": "AIS89914",
+    "workOrderClientNameSnapshot": "Advanced Imaging Services, Inc."
+  },
+  "lathropLiveIdentity": {
+    "alias": "AIS89914",
+    "canonicalClientId": "AIS25097",
+    "interiorMachineId": "AIS12954",
+    "exactAddressAndOwnership": true
+  },
+  "selectedEquipmentControl": {
+    "workOrderId": "10646",
+    "status": "work_order_machine_not_linked",
+    "defaultNotApplied": true
+  },
+  "mutations": 0
+}

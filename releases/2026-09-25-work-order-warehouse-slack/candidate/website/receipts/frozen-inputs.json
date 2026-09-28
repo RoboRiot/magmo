@@ -1,0 +1,15 @@
+{
+  "baselineRevision": "nextserverwest-00061-rej",
+  "baselineArchiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "inputs": {
+    "components/WorkOrderAddModal.js": "e0d227b60886472bdc257af8edc2cb6b973a20d185ecf678182a35b8972c7e1f",
+    "components/WorkOrderAddModal.module.css": "f44f906b9fb69fa5a0ebf6d1c7eed189b0b3705ccea7abf7447454d4ba9515fb",
+    "lib/inventory/workOrderAddUiContract.js": "56ceecea94decf4eee7974f0fc484ba911b3e9512e9000ef196180c9b4c86c7b",
+    "lib/inventory/workOrderAddContract.cjs": "125519c9ae4cea132107e85bebaa31f8b131fcf4660f47f41264d8026bb879d1",
+    "lib/inventory/workOrderAddService.cjs": "42464ac0541a614042d9ed4903d3e86f558f80a204e4e4c876d68c9b74400dda",
+    "lib/inventory/workOrderAddOptions.js": "3e5d186881b0926bb1775fa81a07ea464f584faf611ae58911e37be1fc0efea2",
+    "lib/inventory/workOrderAddSlack.cjs": "c2f58f49e1dd7c2fc09a62a0d97253d18ed08b37862f75eec7ef99c1fc12d680",
+    "pages/api/items/work-order-add/slack.js": "f96b77ad29ea4b0b22dd25f39c204f792097d818b992cb0ac1eadc80a9fca698",
+    "pages/api/slack/add-to-list.js": "fb8d608e775b77925c3b5a23893f406b11061af9688727abe38f003a171e5efb"
+  }
+}

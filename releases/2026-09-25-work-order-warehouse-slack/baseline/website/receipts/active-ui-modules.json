@@ -1,0 +1,39 @@
+{
+  "inspectedAt": "2026-09-25T21:40:14.993Z",
+  "route": "/NewSearch/mainSearch",
+  "buildId": "wo-machine-link-31372590b5701129",
+  "assets": [
+    "static/chunks/webpack-0e4290ce213ed12f.js",
+    "static/chunks/framework-32a7466d5cae4a81.js",
+    "static/chunks/main-9b88a952025a6e80.js",
+    "static/chunks/7161-fbab5101e3c6fcd3.js",
+    "static/chunks/8230-deb01d3ac4ed7c96.js",
+    "static/chunks/9520-9723bb1a3e2cdf4a.js",
+    "static/chunks/2317-7d26aa15d5eb547d.js",
+    "static/chunks/4514-241f5f861018e722.js",
+    "static/chunks/1060-bc95950d8c7e80b6.js",
+    "static/chunks/2855-64d7b5e5d5f48103.js",
+    "static/chunks/314-151c92c859013d86.js",
+    "static/chunks/2321-4da2cda4fdfa4ff5.js",
+    "static/chunks/5986-4a56a3bc3c70ad00.js",
+    "static/css/2cf9a67acd9d0b33.css",
+    "static/chunks/5375-7ea5a8c4346427cb.js",
+    "static/chunks/6001-cd624421ead8d87b.js",
+    "static/css/2bf04de3ae20c184.css",
+    "static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js"
+  ],
+  "matches": [
+    {
+      "asset": "static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js",
+      "assetSHA256": "31372590b5701129adfbf55639d260393503ae87d11692d40e324a572a7b77dc",
+      "moduleId": 60992,
+      "factorySHA256": "22d07a6a14c37ad1703987e560233200ce4ade330c385b4e8e46b98a41031a77",
+      "requiredModuleIds": [],
+      "anchors": [
+        "Inventory movement",
+        "/api/items/work-order-add/options",
+        "Destination not linked"
+      ]
+    }
+  ]
+}

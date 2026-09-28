@@ -1,0 +1,23 @@
+{
+  "repairId": "work-order-10658-current-bluefolder-warehouse-20260925",
+  "checkedAt": "2026-09-25T21:55:46.278Z",
+  "writes": 1,
+  "changedFields": [
+    "clientId",
+    "clientLinkMatchReason",
+    "clientLinkSource",
+    "clientLinkedAtIso",
+    "clientLocation",
+    "clientName",
+    "clientRef",
+    "updatedAt",
+    "warehouseDestinationRepairId",
+    "warehouseDestinationRepairedAtIso"
+  ],
+  "clientId": "AIS89914",
+  "inventoryClientId": "AIS25097",
+  "inventoryMachineId": "AIS12954",
+  "workflowHistoryPreserved": true,
+  "clientsAndMachinesUnchanged": true,
+  "inventoryWrites": 0
+}

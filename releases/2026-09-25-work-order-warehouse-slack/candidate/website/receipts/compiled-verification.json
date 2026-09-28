@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-09-25T22:20:15.413Z",
+  "candidateDirectory": "scoped-source",
+  "compositionReportSHA256": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+  "command": "node --test tmp\\work-order-warehouse-slack-20260925\\deployment\\verify-artifact.test.cjs tmp\\work-order-warehouse-slack-20260925\\deployment\\test-compiled-sender.test.cjs tmp\\work-order-warehouse-slack-20260925\\deployment\\test-options-cold-load.test.cjs",
+  "tests": {
+    "passed": 21,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "scriptSHA256": {
+    "verify-artifact.test.cjs": "35bd66f055fc7c601013e0879a209499a08e2e1a55b3504cd0563492355b8144",
+    "test-compiled-sender.test.cjs": "e0b55a5eb5733faa8d19724506cb22f2499c225f3cd9dc9cda635cc3919514e6",
+    "test-options-cold-load.test.cjs": "25abb4d8d740a9fdd80e197b753d5d3bd1d65618cd7f3de4a04f5fa489a08244"
+  },
+  "artifactEvidence": {
+    "senderChunk1572SHA256": "21eaa59c091bf2c4a332be3098e6bba8b36492df978213704eb14c73c43615c5",
+    "workOrderSlackRouteSHA256": "ae585ef8bb622e870bf98a872b7a74401f5987a7ff5d810d642847cf523d9e66",
+    "legacyAddToListRouteSHA256": "9f4c10e5494c89e70900cf37e6ae0d1e69a2c909596f18c67317f970c1a3bb1b"
+  },
+  "networkDisabled": true,
+  "productionCredentialsRemoved": true,
+  "liveSlackCalls": 0,
+  "databaseWrites": 0,
+  "result": "PASS"
+}

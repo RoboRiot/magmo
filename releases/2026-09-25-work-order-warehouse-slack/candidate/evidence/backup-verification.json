@@ -1,0 +1,20 @@
+{
+  "valid": true,
+  "status": "complete",
+  "backupDirectory": "outputs/firestore-backups/2026-09-25-work-order-warehouse-slack-predeploy",
+  "manifestPath": "outputs/firestore-backups/2026-09-25-work-order-warehouse-slack-predeploy/manifest.json",
+  "manifestSHA256": "7a985e323e116c337ad3ce6e7aa5c08c91031eb9b5aebc1b8a57aae7b8c9b367",
+  "documentPath": "outputs/firestore-backups/2026-09-25-work-order-warehouse-slack-predeploy/firestore-documents.jsonl",
+  "documentCount": 187637,
+  "collectionCount": 1023,
+  "bytes": 1797824111,
+  "sha256": "a13848f036432e573a5454345149bef7d9d6bd15cbbb88931991044ba95ec068",
+  "scope": {
+    "firestoreIncluded": true,
+    "firestoreOnly": true,
+    "storageIncluded": false,
+    "storageModified": false,
+    "authIncluded": false
+  },
+  "verificationCommand": "node scripts/backup-firestore-local.mjs --verify=outputs/firestore-backups/2026-09-25-work-order-warehouse-slack-predeploy"
+}

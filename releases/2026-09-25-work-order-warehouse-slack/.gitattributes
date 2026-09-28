@@ -1,0 +1,6 @@
+*.cjs text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+candidate/website/source/pages/api/slack/add-to-list.js -text whitespace=cr-at-eol,-blank-at-eof
+candidate/website/tools/rollback.cjs whitespace=-blank-at-eof

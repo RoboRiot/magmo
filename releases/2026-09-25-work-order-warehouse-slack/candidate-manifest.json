@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-09-25",
+  "purpose": "Scoped Work Order Add warehouse-default, post-save Slack opt-in, one-work-order metadata correction, and rollback record",
+  "git": {
+    "branch": "codex/work-order-warehouse-slack-20260925",
+    "startingCommit": "b1fce73a912f9320c8cff5d54cf45a248d41f094",
+    "preReleaseTag": "pre-work-order-warehouse-slack-20260925",
+    "deployedTag": "deployed-work-order-warehouse-slack-20260925"
+  },
+  "website": {
+    "state": "ACTIVE",
+    "baselineRevision": "nextserverwest-00061-rej",
+    "baselineSourceGeneration": "1790369259300423",
+    "baselineArtifactSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+    "activeRevision": "nextserverwest-00062-zaf",
+    "activeSourceGeneration": "1790375521464078",
+    "activeUpdateTime": "2026-09-25T22:34:46.503810566Z",
+    "artifactSHA256": "6f935144fd33c757f85f3083025b4be3a8564a45f69465fd7137dddca0124378",
+    "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+    "buildId": "wo-warehouse-slack-b13cffa6e1541257",
+    "fileCount": 490,
+    "fullRebuildEquivalent": false,
+    "sourceOnlyDeployment": true,
+    "sourceSnapshots": {
+      "components/WorkOrderAddModal.js": "e0d227b60886472bdc257af8edc2cb6b973a20d185ecf678182a35b8972c7e1f",
+      "components/WorkOrderAddModal.module.css": "f44f906b9fb69fa5a0ebf6d1c7eed189b0b3705ccea7abf7447454d4ba9515fb",
+      "lib/inventory/workOrderAddUiContract.js": "56ceecea94decf4eee7974f0fc484ba911b3e9512e9000ef196180c9b4c86c7b",
+      "lib/inventory/workOrderAddContract.cjs": "125519c9ae4cea132107e85bebaa31f8b131fcf4660f47f41264d8026bb879d1",
+      "lib/inventory/workOrderAddService.cjs": "42464ac0541a614042d9ed4903d3e86f558f80a204e4e4c876d68c9b74400dda",
+      "lib/inventory/workOrderAddOptions.js": "3e5d186881b0926bb1775fa81a07ea464f584faf611ae58911e37be1fc0efea2",
+      "lib/inventory/workOrderAddSlack.cjs": "c2f58f49e1dd7c2fc09a62a0d97253d18ed08b37862f75eec7ef99c1fc12d680",
+      "pages/api/items/work-order-add/slack.js": "f96b77ad29ea4b0b22dd25f39c204f792097d818b992cb0ac1eadc80a9fca698",
+      "pages/api/slack/add-to-list.js": "fb8d608e775b77925c3b5a23893f406b11061af9688727abe38f003a171e5efb"
+    },
+    "compiledUiScope": {
+      "moduleId": 60992,
+      "candidateFactorySHA256": "2406f7f0dda0e8cc8e8716e39c9880895c345bfbf6df4d7c576bc2833af58f03",
+      "prefixStatementsPreserved": 75,
+      "suffixStatementsPreserved": 18,
+      "defaultExportIdentifierOccurrencesPreserved": 2514,
+      "onlyChangedRegionBindingUsedByHost": "WorkOrderAddModal"
+    },
+    "tests": {
+      "focusedSourceRouteServiceUiScannerRulesRepairPassed": 141,
+      "compiledBackendArtifactPassed": 21,
+      "sourceBrowserInteractionsPassed": 1,
+      "compiledBrowserInteractionsPassed": 1,
+      "verifiedZipEntries": 490
+    },
+    "receiptHashes": {
+      "candidate/website/receipts/composition-report.json": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+      "candidate/website/receipts/package-gates.json": "11839ec2f9d08e6c00a17611628d419d3b7454cd1f21fbcd05dfdf537b8af16a",
+      "candidate/website/receipts/root-approval.json": "947ce2fb9d8e8564e17de23d55eb8cc7d47579e1be53fd9b9d641ea6bc942321",
+      "candidate/website/receipts/compiled-verification.json": "15e0eb26d8404f858b92f153476f7d8e8ab2e3aae0409af258bd2d313704409f",
+      "candidate/website/receipts/compiled-ui-verification.json": "a7f7b409cdf10046fdd518c637155b68f0f91dc25043a6b70c0ed1fbd14bc841",
+      "candidate/website/receipts/compiled-ui-scope-verification.json": "925d1136be2bb6c67b0b7d1715c3703b93bcddd6e6670d866ce86b99030d3bdb",
+      "candidate/website/receipts/independent-backend-review.json": "7dc20700b90a6d30c500a6fe97e90daf935e0088dada90eea0603f2eb8b1f40f",
+      "candidate/website/receipts/artifact-independent-verification.json": "791667e814733460f0da36bb42ae4090405bdd910abaace3f896839c1248cb92",
+      "candidate/website/receipts/deployment-receipt.json": "d988bf190bd11a9de9eba2b47068c27a39887e98c1f6b683cbc406c847c2e030",
+      "candidate/website/receipts/live-verification.json": "b1939017f586614e7d2f553aa5a6b91561906c54878a36c113bd2f53ca0e9784",
+      "candidate/website/receipts/live-independent-verification.json": "1a7a0f4b5a5a935fbcceca353bb0f65bce0d6bc3cf2c21423ab8eb5ba654bd51",
+      "candidate/website/receipts/rollback-preflight.json": "c54c323be1f0f37622257bb31dea742c248f59cc25755b190e3996ae2a4ecc80"
+    }
+  },
+  "database": {
+    "backup": {
+      "documentCount": 187637,
+      "collectionPathCount": 1023,
+      "bytes": 1797824111,
+      "dataSHA256": "a13848f036432e573a5454345149bef7d9d6bd15cbbb88931991044ba95ec068",
+      "manifestSHA256": "7a985e323e116c337ad3ce6e7aa5c08c91031eb9b5aebc1b8a57aae7b8c9b367",
+      "scope": "Firestore only"
+    },
+    "workOrder10658": {
+      "fieldsChanged": 10,
+      "sourceClientId": "AIS89914",
+      "canonicalInventoryClientId": "AIS25097",
+      "canonicalInteriorMachineId": "AIS12954",
+      "inventoryItemsModified": 0,
+      "inventoryHistoryDocumentsModified": 0,
+      "controlDocumentsModified": 0,
+      "verificationReceiptSHA256": "41464fa6440bfdb79f025070ad187347764b7e13a2f91009d2ebc056cd804b47"
+    }
+  },
+  "liveVerification": {
+    "healthStatus": 200,
+    "exactPageAndCssHashes": true,
+    "methodAndAuthenticationGates": "PASS",
+    "authenticatedAppRequests": 0,
+    "databaseWrites": 0,
+    "slackPosts": 0,
+    "blueFolderWrites": 0,
+    "physicalSlackAcceptancePerformed": false
+  },
+  "rollback": {
+    "websiteSourceOnly": true,
+    "websiteBaselineRevision": "nextserverwest-00061-rej",
+    "websiteBaselineGeneration": "1790369259300423",
+    "websiteExternalArchivePath": "C:\\Users\\mack2\\Desktop\\code\\tmp\\work-order-warehouse-slack-20260925\\deployment\\source.zip",
+    "websiteExternalArchiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+    "rollbackPreflightPassed": true,
+    "rollbackApplied": false,
+    "databaseAutomaticRollback": false,
+    "slackOrInventoryAuditRecordsDeletedByRollback": false
+  },
+  "excluded": [
+    "environment files and credentials",
+    "raw database documents, preimages, and full backup artifacts",
+    "BlueFolder XML and raw responses",
+    "production website ZIP archives and compiled chunks",
+    "build logs and runtime state",
+    "desktop/mobile/dark-mode screenshot binaries",
+    "unrelated dirty-root files"
+  ]
+}

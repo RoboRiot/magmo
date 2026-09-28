@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-09-25T22:36:16.875Z",
+  "result": "PASS",
+  "mode": "read_only",
+  "ready": true,
+  "changed": false,
+  "currentRevision": "nextserverwest-00062-zaf",
+  "currentSourceGeneration": "1790375521464078",
+  "deploymentReceiptSHA256": "d988bf190bd11a9de9eba2b47068c27a39887e98c1f6b683cbc406c847c2e030",
+  "rollbackToolSHA256": "786a930e91f6f476be730fa28d3036103d6555a0d9e20f5a1382c6c0dbd4993e",
+  "rollbackArchiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "restoresRevisionSource": "nextserverwest-00061-rej",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "sourceOnly": true,
+  "dataWillBeRestored": false,
+  "rollbackApplied": false
+}

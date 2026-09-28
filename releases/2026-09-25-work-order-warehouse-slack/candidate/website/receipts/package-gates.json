@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "rootReviewed": true,
+  "exactArtifactTestsPassed": true,
+  "exactArtifactTestCount": 21,
+  "compiledUiPassed": true,
+  "compiledUiScopePassed": true,
+  "independentBackendReviewPassed": true,
+  "rootIndependentByteVerificationPassed": true,
+  "zipEntriesVerified": 490,
+  "packagedAt": "2026-09-25T22:31:42.828Z",
+  "artifactSHA256": "6f935144fd33c757f85f3083025b4be3a8564a45f69465fd7137dddca0124378",
+  "compositionReportSHA256": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+  "baselineRevision": "nextserverwest-00061-rej",
+  "baselineUpdateTime": "2026-09-25T20:50:18.699913775Z",
+  "baselineArchiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "baselineConfigSHA256": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "candidateBuildId": "wo-warehouse-slack-b13cffa6e1541257",
+  "sourceOnly": true
+}

@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-09-25T21:58:09.077Z",
+  "readOnly": true,
+  "dataSource": "Six actual live Client/Machine documents; four explicitly synthetic minimal work orders, never persisted",
+  "frozenSourceHashes": {
+    "lib/inventory/workOrderAddContract.cjs": "125519c9ae4cea132107e85bebaa31f8b131fcf4660f47f41264d8026bb879d1",
+    "lib/inventory/workOrderAddService.cjs": "42464ac0541a614042d9ed4903d3e86f558f80a204e4e4c876d68c9b74400dda",
+    "lib/inventory/workOrderAddOptions.js": "3e5d186881b0926bb1775fa81a07ea464f584faf611ae58911e37be1fc0efea2"
+  },
+  "liveReadPaths": [
+    "Client/AIS17182",
+    "Client/AIS94688",
+    "Client/AIS25097",
+    "Client/AIS89914",
+    "Machine/AIS42516",
+    "Machine/AIS12954"
+  ],
+  "checks": [
+    {
+      "sourceClientId": "AIS17182",
+      "clientId": "AIS17182",
+      "clientName": "SoCalWarehouse - Lake Forest",
+      "machineId": "AIS42516",
+      "machineName": "Interior SoCal",
+      "result": "PASS"
+    },
+    {
+      "sourceClientId": "AIS94688",
+      "clientId": "AIS17182",
+      "clientName": "SoCalWarehouse - Lake Forest",
+      "machineId": "AIS42516",
+      "machineName": "Interior SoCal",
+      "result": "PASS"
+    },
+    {
+      "sourceClientId": "AIS25097",
+      "clientId": "AIS25097",
+      "clientName": "NorCal Warehouse - Lathrop",
+      "machineId": "AIS12954",
+      "machineName": "interior NorCal",
+      "result": "PASS"
+    },
+    {
+      "sourceClientId": "AIS89914",
+      "clientId": "AIS25097",
+      "clientName": "NorCal Warehouse - Lathrop",
+      "machineId": "AIS12954",
+      "machineName": "interior NorCal",
+      "result": "PASS"
+    }
+  ],
+  "allFourPassed": true,
+  "databaseWrites": 0,
+  "workOrderWrites": 0,
+  "inventoryWrites": 0
+}

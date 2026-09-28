@@ -1,0 +1,37 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-25T22:31:59.547Z",
+  "originalRevision": "nextserverwest-00061-rej",
+  "originalUpdateTime": "2026-09-25T20:50:18.699913775Z",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790369259300423"
+    }
+  },
+  "artifactSHA256": "6f935144fd33c757f85f3083025b4be3a8564a45f69465fd7137dddca0124378",
+  "compositionReportSHA256": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+  "candidateBuildId": "wo-warehouse-slack-b13cffa6e1541257",
+  "rollbackArchiveSHA256": "075a5c40481f4e9f8b83261995cecd8be22c435d8ba89badf40f27cf97e9ae77",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "scope": "work-order warehouse defaults and opt-in post-save Slack popup",
+  "rollbackArchive": "source.zip",
+  "sourceOnly": true,
+  "databaseWrites": 0,
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790375520565-65c5648eaf8a2-3ebc01b3-a5452bbf",
+  "completedAt": "2026-09-25T22:35:26.675Z",
+  "revision": "nextserverwest-00062-zaf",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790375521464078"
+    }
+  },
+  "deployedUpdateTime": "2026-09-25T22:34:46.503810566Z",
+  "unrelatedConfigurationPreserved": true
+}

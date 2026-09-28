@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-09-25T22:04:48Z",
+  "browserTest": "test/work-order-add-slack-ui.browser.test.cjs",
+  "result": "PASS",
+  "testsPassed": 1,
+  "testsFailed": 0,
+  "testsSkipped": 0,
+  "network": "local harness only; all non-harness requests blocked",
+  "liveSlackPosts": 0,
+  "liveInventoryWrites": 0,
+  "screenshotsRetainedOutsideGit": [
+    {
+      "name": "desktop-slack-opt-in.png",
+      "viewport": "1280x900",
+      "sha256": "4d675423e1efd72f06f8d9c212e16e34868f22d8d5ece16f1abfff82c5145e5e",
+      "visualReview": "PASS"
+    },
+    {
+      "name": "mobile-slack-opt-in.png",
+      "viewport": "390x844",
+      "sha256": "a62c4465a28ef3ce9af19f278e1180aa08134ea39562fb57e2d27cc47a716e84",
+      "visualReview": "PASS"
+    },
+    {
+      "name": "desktop-dark-slack-opt-in.png",
+      "viewport": "1280x900",
+      "sha256": "ee323bd5916a1abfe5a40e33b3784598a1883274b55561be09cad8c83768d3a9",
+      "visualReview": "PASS; close control is readable after the scoped contrast fix"
+    }
+  ]
+}

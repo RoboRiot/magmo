@@ -1,0 +1,8 @@
+{
+  "checkedAt": "2026-09-25T21:45:05.402Z",
+  "readOnly": true,
+  "rulesetName": "projects/magmo-ac10c/rulesets/1013dd6d-c090-40db-949c-46da696f52ba",
+  "rulesSha256": "539c6c984bf2b1e46d5ce94b8eda52171eac5a03714d0811582204fe869b6525",
+  "operationSubcollectionsServerOnly": true,
+  "genericRuleExclusions": 2
+}

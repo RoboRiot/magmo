@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-09-25T22:35:43.227Z",
+  "state": "ACTIVE",
+  "revision": "nextserverwest-00062-zaf",
+  "sourceGeneration": "1790375521464078",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "liveArchiveSHA256": "6f935144fd33c757f85f3083025b4be3a8564a45f69465fd7137dddca0124378",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "candidateBuildId": "wo-warehouse-slack-b13cffa6e1541257",
+  "exactReviewedArtifact": true,
+  "unrelatedConfigurationPreserved": true,
+  "healthStatus": 200,
+  "closeStatusSyncPreserved": true,
+  "publicAssetsVerified": [
+    "static/chunks/pages/NewSearch/mainSearch-0c0d46f5b39be6d0.js",
+    "static/css/61047211a1a88937.css"
+  ],
+  "publicChecks": [
+    {
+      "name": "workOrderSlackMethod",
+      "status": 405
+    },
+    {
+      "name": "workOrderSlackAuth",
+      "status": 401
+    },
+    {
+      "name": "legacySlackMethod",
+      "status": 405
+    },
+    {
+      "name": "optionsMethod",
+      "status": 405
+    },
+    {
+      "name": "confirmMethod",
+      "status": 405
+    }
+  ],
+  "noAuthenticatedRequests": true,
+  "noDataWrites": true,
+  "noSlackWrites": true,
+  "noBlueFolderWrites": true
+}

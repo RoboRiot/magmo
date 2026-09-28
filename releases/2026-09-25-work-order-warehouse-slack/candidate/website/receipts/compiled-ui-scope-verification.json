@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-09-25T22:30:08.425Z",
+  "status": "PASS",
+  "scope": "compiled client module 60992 host-mainSearch isolation",
+  "productionWrites": false,
+  "compositionReportSHA256": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+  "activePage": "static/chunks/pages/NewSearch/mainSearch-31372590b5701129.js",
+  "candidatePage": "static/chunks/pages/NewSearch/mainSearch-0c0d46f5b39be6d0.js",
+  "moduleId": 60992,
+  "activeFactorySHA256": "22d07a6a14c37ad1703987e560233200ce4ade330c385b4e8e46b98a41031a77",
+  "candidateFactorySHA256": "2406f7f0dda0e8cc8e8716e39c9880895c345bfbf6df4d7c576bc2833af58f03",
+  "boundaries": {
+    "active": {
+      "start": 75,
+      "modal": 78,
+      "defaultExport": 96
+    },
+    "candidate": {
+      "start": 75,
+      "request": 76,
+      "modal": 79,
+      "defaultExport": 97
+    }
+  },
+  "unchangedHostProof": {
+    "structurallyEquivalentPrefixStatementCount": 75,
+    "prefix": {
+      "shapeSHA256": "157197f409230d795755ffc7ece604eb61472c957d697bc14598313c999db9fc",
+      "topologySHA256": "a04dc229e342eb400242b102990911334721579d945a89ac4f03e30e1ccdc762",
+      "identifierOccurrences": 6766
+    },
+    "structurallyEquivalentSuffixStatementCount": 18,
+    "suffixCombinedShapeSHA256": "71580374bc18d4f84cc93a876f962b31df50d984029b0dd320ec087ff6cd793c",
+    "suffixCombinedTopologySHA256": "c3153161cf7297b6908bf38e1d5bf1355e9ab0fd37bed6ea55b6ac9d1f55d16d",
+    "defaultExport": {
+      "shapeSHA256": "4d9ca58f641ef91b39826bc3bf6c0235c758a439152b7f241ea30f0fc1e68fce",
+      "topologySHA256": "4aeefba66195c949cf5ab141cec13cdbedb11e372dcd3f09bdde64fd4cc1dad2",
+      "identifierOccurrences": 2514
+    },
+    "optionRenderer": {
+      "shapeSHA256": "6c55c6da01c1bfaa6f4c1e19f99b8bb4971f2fd88a95aed5b4666feea322e4c9",
+      "topologySHA256": "8924f1193491492c16d855bf946a2b46129682a0f58d4f6610f045a0ff51b3de",
+      "identifierOccurrences": 51
+    },
+    "stagedRowRenderer": {
+      "shapeSHA256": "b674dfab793346a930090502427d5ecc2cf4a3b9076c5cf2421888b45cdd1030",
+      "topologySHA256": "66b85145be092de6bead6eb3c5d1b67dfddef7afae2bd638b46f9a0057ad6e39",
+      "identifierOccurrences": 73
+    },
+    "onlyChangedRegionBindingUsedByHost": "WorkOrderAddModal",
+    "activeExternalReferenceCounts": {
+      "tA": 0,
+      "tM": 0,
+      "tk": 0,
+      "tT": 1
+    },
+    "candidateExternalReferenceCounts": {
+      "tA": 0,
+      "tk": 0,
+      "tM": 0,
+      "tT": 0,
+      "tI": 1
+    }
+  },
+  "intendedRegionProof": {
+    "activeStatementCount": 4,
+    "candidateStatementCount": 5,
+    "candidateHasConfirmedItemNormalizer": true,
+    "candidateHasScoped240SecondSlackTimeout": true,
+    "candidateHasSlackEndpoint": true,
+    "candidateHasPostSaveSlackPrompt": true,
+    "SlackEndpointOutsideIntendedRegion": false
+  },
+  "assertions": [
+    "All 75 statements before the Work Order Add region preserve AST shape, literals, property names, and identifier-reference topology.",
+    "All 18 statements after the Work Order Add region preserve AST shape, literals, property names, and identifier-reference topology.",
+    "The host mainSearch default export preserves its 2,514-identifier reference topology.",
+    "Only the WorkOrderAddModal binding from the changed region is referenced by host code.",
+    "The optional Slack endpoint and prompt occur only inside the intended Work Order Add region."
+  ]
+}

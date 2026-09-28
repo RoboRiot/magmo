@@ -1,0 +1,104 @@
+{
+  "inspectedAt": "2026-09-25T21:44:08.245Z",
+  "files": [
+    "chunks/1621.js",
+    "chunks/4354.js",
+    "chunks/5030.js",
+    "chunks/7581.js"
+  ],
+  "matches": [
+    {
+      "file": "chunks/1621.js",
+      "fileSHA256": "f5fa8d0ac66b077711b71298d553d4b17a06b6bd02f33701575eece2d83b40fb",
+      "moduleId": 70809,
+      "factorySHA256": "bc5d4233a23e32a6a6a89049c0ed924d0b3a59c32d26bd5d10237c6c67277e97",
+      "bytes": 4727,
+      "anchors": [
+        "storage_unit",
+        "warehouse"
+      ]
+    },
+    {
+      "file": "chunks/1621.js",
+      "fileSHA256": "f5fa8d0ac66b077711b71298d553d4b17a06b6bd02f33701575eece2d83b40fb",
+      "moduleId": 71621,
+      "factorySHA256": "5e6cd7f2b561aba3f82540d79ee8c849fd0fe6100228a94f5b877fda0548dfb3",
+      "bytes": 19339,
+      "anchors": [
+        "storage_unit",
+        "warehouse"
+      ]
+    },
+    {
+      "file": "chunks/4354.js",
+      "fileSHA256": "5ba540a6a1b6c855a4635521c0ad66286184465f616f9805aa78ca58d6b07459",
+      "moduleId": 54354,
+      "factorySHA256": "f334881ebc5e49968bd0afc169472c67cddf29a4916c4c9da79dbeb22d9a6044",
+      "bytes": 19549,
+      "anchors": [
+        "work_order_destination",
+        "workOrderAdd",
+        "work-order-add",
+        "storage_unit",
+        "machineLink",
+        "warehouse",
+        "destination"
+      ]
+    },
+    {
+      "file": "chunks/4354.js",
+      "fileSHA256": "5ba540a6a1b6c855a4635521c0ad66286184465f616f9805aa78ca58d6b07459",
+      "moduleId": 92631,
+      "factorySHA256": "7f1958c79af40d673c2ce34e155f7d48b4bce78dbc5c04b6a279b2363e5c9eda",
+      "bytes": 23170,
+      "anchors": [
+        "work_order_destination",
+        "workOrderAdd",
+        "work-order-add",
+        "warehouse",
+        "destination"
+      ]
+    },
+    {
+      "file": "chunks/5030.js",
+      "fileSHA256": "a1c7af895580261020839749c901b32d427d13de6d30a63d5f99b8de6580f018",
+      "moduleId": 29046,
+      "factorySHA256": "b368eae3010c6076d297ef7168ee2917616868ca4676e4fb7834fde26bc0f183",
+      "bytes": 2481,
+      "anchors": [
+        "destination"
+      ]
+    },
+    {
+      "file": "chunks/7581.js",
+      "fileSHA256": "e759a633908df4a71a46a0dc9a74acfdef7da34606b2c84ed395e70661d3493f",
+      "moduleId": 61324,
+      "factorySHA256": "490d25f9b6b0d418ec8f4f8485d4e53a728b629163ee5db101bffcf8cd23dfee",
+      "bytes": 20790,
+      "anchors": [
+        "warehouse"
+      ]
+    },
+    {
+      "file": "chunks/7581.js",
+      "fileSHA256": "e759a633908df4a71a46a0dc9a74acfdef7da34606b2c84ed395e70661d3493f",
+      "moduleId": 66712,
+      "factorySHA256": "2861dd46d74949a7eea897a2591859cebce8f422ca04b3ab224bc6b41344a587",
+      "bytes": 1335,
+      "anchors": [
+        "warehouse"
+      ]
+    },
+    {
+      "file": "chunks/7581.js",
+      "fileSHA256": "e759a633908df4a71a46a0dc9a74acfdef7da34606b2c84ed395e70661d3493f",
+      "moduleId": 95098,
+      "factorySHA256": "fc4863951bed942f39b7396f180154dc6126017befd9ad2c64236b80aa4be453",
+      "bytes": 2034,
+      "anchors": [
+        "storage_unit",
+        "destination"
+      ]
+    }
+  ]
+}

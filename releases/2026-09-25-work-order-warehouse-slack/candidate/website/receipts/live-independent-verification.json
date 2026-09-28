@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-09-25T22:35:42.192Z",
+  "readOnly": true,
+  "result": "PASS",
+  "revision": "nextserverwest-00062-zaf",
+  "buildId": "wo-warehouse-slack-b13cffa6e1541257",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "configurationUnchanged": true,
+  "origin": "https://magmo.cloud",
+  "pagePath": "/_next/static/chunks/pages/NewSearch/mainSearch-0c0d46f5b39be6d0.js",
+  "pageSHA256": "0c0d46f5b39be6d0eafb86c627495283730c02cd208d45cad7ae2285a492a15f",
+  "cssPath": "/_next/static/css/61047211a1a88937.css",
+  "cssSHA256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+  "checks": [
+    {
+      "route": "/api/items/work-order-add/slack",
+      "method": "GET",
+      "status": 405,
+      "expected": 405
+    },
+    {
+      "route": "/api/items/work-order-add/slack",
+      "method": "POST",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "route": "/api/items/work-order-add/confirm",
+      "method": "GET",
+      "status": 405,
+      "expected": 405
+    },
+    {
+      "route": "/api/items/work-order-add/options",
+      "method": "GET",
+      "status": 401,
+      "expected": 401
+    }
+  ],
+  "authenticatedAppRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

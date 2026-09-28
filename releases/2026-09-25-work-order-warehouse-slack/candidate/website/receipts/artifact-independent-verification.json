@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-09-25T22:21:05.793Z",
+  "result": "PASS",
+  "readOnly": true,
+  "baselineRevision": "nextserverwest-00061-rej",
+  "buildId": "wo-warehouse-slack-b13cffa6e1541257",
+  "baselineFiles": 483,
+  "candidateFiles": 490,
+  "addedFiles": 7,
+  "modifiedFiles": 66,
+  "metadataOnlyFiles": 60,
+  "immutableOldAssetsPreserved": 127,
+  "deletedFiles": 0,
+  "unrelatedRoutesPreserved": true,
+  "pageSHA256": "0c0d46f5b39be6d0eafb86c627495283730c02cd208d45cad7ae2285a492a15f",
+  "cssSHA256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+  "compositionReportSHA256": "542d24338a164c47e2c2085c2ffb9bbd624fa30f037e82fba47084e514b20371",
+  "databaseWrites": 0,
+  "slackPosts": 0
+}
