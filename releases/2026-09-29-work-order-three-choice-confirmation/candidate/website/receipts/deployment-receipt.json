@@ -1,0 +1,33 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-29T23:13:50.378Z",
+  "originalRevision": "nextserverwest-00070-liw",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790707920911481"
+    }
+  },
+  "originalUpdateTime": "2026-09-29T18:55:39.909232541Z",
+  "artifactSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "compositionReportSHA256": "4b8eaf84dec8440c507dbccb9e79ae76c29f1a8f918fd2143c452fe6ff9b6b5f",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Work Order Add single three-choice confirmation popup and matching CSS module mapping only",
+  "sourceOnly": true,
+  "rollbackArchive": "source.zip",
+  "databaseWrites": 0,
+  "testSlackPosts": 0,
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790723626070-65ca7559f7034-9b5df26a-87d2ee3e",
+  "completedAt": "2026-09-29T23:17:53.207Z",
+  "revision": "nextserverwest-00071-zot",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790723626923081"
+    }
+  },
+  "deployedUpdateTime": "2026-09-29T23:17:28.038170336Z",
+  "unrelatedConfigurationPreserved": true
+}

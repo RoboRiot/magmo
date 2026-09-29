@@ -1,0 +1,20 @@
+{
+  "frozenAt": "2026-09-29T22:57:00.564Z",
+  "baselineRevision": "nextserverwest-00070-liw",
+  "baselineUpdateTime": "2026-09-29T18:55:39.909232541Z",
+  "baselineGeneration": "1790707920911481",
+  "baselineArchiveSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "baselineConfigSHA256": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scopeSHA256": "763cf987492cbc78d63db1d8a74f87b1253b5ba2858c9b3f7a5e96e6523e1b87",
+  "hashes": {
+    "components/WorkOrderAddModal.js": "79b7beab86cead810a3f1ade5b272d24874e275ce42d618700f8a091c5514b24",
+    "components/WorkOrderAddModal.module.css": "f44f906b9fb69fa5a0ebf6d1c7eed189b0b3705ccea7abf7447454d4ba9515fb",
+    "lib/inventory/workOrderAddUiContract.js": "56ceecea94decf4eee7974f0fc484ba911b3e9512e9000ef196180c9b4c86c7b",
+    "lib/inventory/scanResolutionQueue.cjs": "39d2c2cdb847cf58774206fa7089222b370598226ce432e353b27ef842d99d7a",
+    "pages/NewSearch/mainSearch.js": "8a026a252748a47422ffa742daa9705b5f7fd45cb92d2b565fd489e415f30014",
+    "next.config.js": "a89af5249daef7d6a206a7593d3754bbb9ae760e8b3cd8ac5fe16af10206a2d8",
+    "package.json": "2d11557489a1d347467117570c6b4bc4ff0257f77e6b09e7b81c6cb10d99d80b",
+    "package-lock.json": "ad7272cc995c3a741bea217493bc6c1138db863f82239106485d980dbd3e3bbe"
+  },
+  "authorization": "isolated compiler and local artifact preparation only; no deployment"
+}

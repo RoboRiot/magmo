@@ -1,0 +1,246 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T23:18:01.444Z",
+  "revision": "nextserverwest-00071-zot",
+  "source": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790723626923081"
+    }
+  },
+  "buildId": "wo-three-choice-cf82a97caaee43f0",
+  "pageSHA256": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f",
+  "cssSHA256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+  "artifactSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "compositionReportSHA256": "4b8eaf84dec8440c507dbccb9e79ae76c29f1a8f918fd2143c452fe6ff9b6b5f",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "checks": [
+    {
+      "path": "/api/ops/health",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/NewSearch/mainSearch",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/webpack-0e4290ce213ed12f.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/framework-32a7466d5cae4a81.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/main-9b88a952025a6e80.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/css/dfe188d46577aea3.css",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/pages/_app-581ead4499966a3b.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/7161-fbab5101e3c6fcd3.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/8230-deb01d3ac4ed7c96.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/9520-9723bb1a3e2cdf4a.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/2317-7d26aa15d5eb547d.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/4514-241f5f861018e722.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/1060-bc95950d8c7e80b6.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/2855-64d7b5e5d5f48103.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/314-151c92c859013d86.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/2321-4da2cda4fdfa4ff5.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/5986-4a56a3bc3c70ad00.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/css/bf787137990b711b.css",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/5375-7ea5a8c4346427cb.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/6001-cd624421ead8d87b.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/css/61047211a1a88937.css",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/pages/NewSearch/mainSearch-cf82a97caaee43f0.js",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/items/work-order-add/options",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "path": "/api/items/work-order-add/confirm",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "path": "/api/items/work-order-add/slack",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "path": "/api/items/work-order-add/slack",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "path": "/api/ops/work-orders",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "path": "/api/ops/work-order-link-alerts",
+      "method": "GET",
+      "status": 401
+    }
+  ],
+  "assets": [
+    {
+      "path": "static/chunks/webpack-0e4290ce213ed12f.js",
+      "sha256": "dbbf5fa6a006129212380e2cf8770ce0d91a952f5df448b4494033a5744f69e4"
+    },
+    {
+      "path": "static/chunks/framework-32a7466d5cae4a81.js",
+      "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+    },
+    {
+      "path": "static/chunks/main-9b88a952025a6e80.js",
+      "sha256": "9721dc88d71db395be7e0bbe6dbadcd97ef26033b8262361cea8aabfcc7d58d4"
+    },
+    {
+      "path": "static/css/dfe188d46577aea3.css",
+      "sha256": "cb0402c172b971e0d1d734976fab68f5738dfbeb5ddc897031cb2ee044e8040d"
+    },
+    {
+      "path": "static/chunks/pages/_app-581ead4499966a3b.js",
+      "sha256": "27683d3129830c55fb2628e7047c3bdb6ce383c0fd9facfc7e0a22d44bd9dbea"
+    },
+    {
+      "path": "static/chunks/7161-fbab5101e3c6fcd3.js",
+      "sha256": "99801045a87deadf45fddcfd556b2d0c06b280d2774ee2a22f9b22145e648f85"
+    },
+    {
+      "path": "static/chunks/8230-deb01d3ac4ed7c96.js",
+      "sha256": "02e75b96f86d6b6c4227cc9740400b79f4fa2c27cead486d8bd6e8b80f6c00bd"
+    },
+    {
+      "path": "static/chunks/9520-9723bb1a3e2cdf4a.js",
+      "sha256": "7f5301ced3523617465a4f38be6700cb326602210eff5b5c006613a1fa3bbde0"
+    },
+    {
+      "path": "static/chunks/2317-7d26aa15d5eb547d.js",
+      "sha256": "9d079ac9d55a315e92dd64dfb81cb587776cd2991354c9ddefef0bc43a29c471"
+    },
+    {
+      "path": "static/chunks/4514-241f5f861018e722.js",
+      "sha256": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8"
+    },
+    {
+      "path": "static/chunks/1060-bc95950d8c7e80b6.js",
+      "sha256": "584b64f367baaf60f16538edf81fe3a0a621f6568f81866c4773bb33876bd9aa"
+    },
+    {
+      "path": "static/chunks/2855-64d7b5e5d5f48103.js",
+      "sha256": "1ca31aaf30b90b4b2e4664ba4fc22622c2cc79daadc5a1ea107e14384f9e010e"
+    },
+    {
+      "path": "static/chunks/314-151c92c859013d86.js",
+      "sha256": "e28913516a58169b964783e05f86b84742a67789d14ce93063ae4e6747613dbe"
+    },
+    {
+      "path": "static/chunks/2321-4da2cda4fdfa4ff5.js",
+      "sha256": "8dd034e9c19bd7df338fb37aad0567e59f25bf028e631a24c63bd788f81efe72"
+    },
+    {
+      "path": "static/chunks/5986-4a56a3bc3c70ad00.js",
+      "sha256": "0f4e412262286e25d7a585ee7ce2b78e9ee4f218ec019a1fc0fef44787d49289"
+    },
+    {
+      "path": "static/css/bf787137990b711b.css",
+      "sha256": "bf787137990b711bb7eef439ba0ff93edf0cad331daf4d6d03c2309345b74899"
+    },
+    {
+      "path": "static/chunks/5375-7ea5a8c4346427cb.js",
+      "sha256": "506624acc50250491bc7926867e9de5fef165cdf244d2aa55334706d61424edc"
+    },
+    {
+      "path": "static/chunks/6001-cd624421ead8d87b.js",
+      "sha256": "8563d67f613caf8964276608f1b9d02f2c96221f6ccc98be8acc590cb9b4e701"
+    },
+    {
+      "path": "static/css/61047211a1a88937.css",
+      "sha256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7"
+    },
+    {
+      "path": "static/chunks/pages/NewSearch/mainSearch-cf82a97caaee43f0.js",
+      "sha256": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f"
+    }
+  ],
+  "authenticatedApplicationRequests": 0,
+  "databaseWrites": 0,
+  "liveSlackPosts": 0,
+  "configurationPreserved": true
+}

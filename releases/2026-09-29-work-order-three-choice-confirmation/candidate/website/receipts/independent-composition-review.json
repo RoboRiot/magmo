@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-09-29T23:12:01.522Z",
+  "result": "PASS",
+  "candidateDirectory": "scoped-source-v3",
+  "compositionSHA256": "4b8eaf84dec8440c507dbccb9e79ae76c29f1a8f918fd2143c452fe6ff9b6b5f",
+  "compositionReportSHA256": "4b8eaf84dec8440c507dbccb9e79ae76c29f1a8f918fd2143c452fe6ff9b6b5f",
+  "baselineRevision": "nextserverwest-00070-liw",
+  "baselineArchiveSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "pageSHA256": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f",
+  "candidatePageSHA256": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f",
+  "candidateBuildId": "wo-three-choice-cf82a97caaee43f0",
+  "baselineFiles": 537,
+  "candidateFiles": 540,
+  "unchangedFiles": 477,
+  "modifiedMetadataFiles": 60,
+  "addedFiles": [
+    ".next/static/chunks/pages/NewSearch/mainSearch-cf82a97caaee43f0.js",
+    ".next/static/wo-three-choice-cf82a97caaee43f0/_buildManifest.js",
+    ".next/static/wo-three-choice-cf82a97caaee43f0/_ssgManifest.js"
+  ],
+  "changedPageFactoryIds": [
+    21704,
+    60992
+  ],
+  "changedFactoryIds": [
+    21704,
+    60992
+  ],
+  "modalStatementIndex": 79,
+  "modalOnly60992": true,
+  "cssMappingComplete": true,
+  "cssSelectorCount": 79,
+  "itemStatusFactoriesPreserved": true,
+  "backendExecutableFilesPreserved": true,
+  "explicitSemanticMap": {
+    "tS": "t_",
+    "t_": "tS",
+    "tj": "tC",
+    "tC": "tj"
+  },
+  "semanticallyRebasedReferenceCount": 12,
+  "exactOracleModalAfterIndependentRebase": true,
+  "hostBytesOutsideModalPreserved": true,
+  "allOtherPageFactoriesPreserved": true,
+  "allExistingStaticAssetsPreserved": true,
+  "allBackendAndLinkageFilesByteIdentical": true,
+  "preservedBackendFileCount": 200,
+  "preservedBackendInventorySHA256": "775ec4e946066ab549a8dfafff2b880efaf0418607e18f43b378813ea012d5b0",
+  "newCssByteIdentical": true,
+  "sourceWrites": 0,
+  "candidateChanges": 0,
+  "productionWrites": 0
+}

@@ -1,0 +1,23 @@
+{
+  "purpose": "Replace the Work Order Add two-step save/Slack flow with one centered confirmation dialog offering Cancel, Save only, and Save and send to Slack; preserve the exact deployed calendar and work-order linkage runtime",
+  "inputs": [
+    "components/WorkOrderAddModal.js",
+    "components/WorkOrderAddModal.module.css"
+  ],
+  "unchangedControls": [
+    "lib/inventory/workOrderAddUiContract.js",
+    "lib/inventory/scanResolutionQueue.cjs",
+    "pages/NewSearch/mainSearch.js"
+  ],
+  "compilerInputs": [
+    "next.config.js",
+    "package.json",
+    "package-lock.json"
+  ],
+  "expectedHashes": {
+    "components/WorkOrderAddModal.js": "79b7beab86cead810a3f1ade5b272d24874e275ce42d618700f8a091c5514b24",
+    "components/WorkOrderAddModal.module.css": "f44f906b9fb69fa5a0ebf6d1c7eed189b0b3705ccea7abf7447454d4ba9515fb",
+    "lib/inventory/workOrderAddUiContract.js": "56ceecea94decf4eee7974f0fc484ba911b3e9512e9000ef196180c9b4c86c7b"
+  },
+  "productionMutationsAuthorized": false
+}

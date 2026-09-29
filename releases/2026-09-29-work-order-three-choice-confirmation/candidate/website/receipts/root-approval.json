@@ -1,0 +1,19 @@
+{
+  "approvedAt": "2026-09-29T23:13:30.000Z",
+  "sourceOnlyApproved": true,
+  "scope": "Work Order Add single three-choice confirmation popup and matching CSS module mapping only",
+  "artifactSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "packageGatesSHA256": "8c9cf8b832623f9487d6be564b1bc04acf348e0b26aeffa8be635c865e58dd99",
+  "compositionReportSHA256": "4b8eaf84dec8440c507dbccb9e79ae76c29f1a8f918fd2143c452fe6ff9b6b5f",
+  "baselineArchiveSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "baselineRevision": "nextserverwest-00070-liw",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "toolHashes": {
+    "deploy.cjs": "aa4545efb4131b18fb9fa000498f461097cc67c54f48eb0dc7d9c8a0e95d3f22",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "rollback.cjs": "8548febbc527099361ede8dc3a4eb2e3d2d1abcd6aa29f26cb76ee5c15f03fc4",
+    "verify-live.cjs": "1f23af8cc5712f753891947eeb0bc2a1757d1b40c8b33ab25bbafd4792ddca37"
+  }
+}

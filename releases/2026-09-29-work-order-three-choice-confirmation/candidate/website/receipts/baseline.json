@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-09-29T22:53:14.069Z",
+  "functionName": "projects/magmo-ac10c/locations/us-west2/functions/nextServerWest",
+  "revision": "nextserverwest-00070-liw",
+  "updateTime": "2026-09-29T18:55:39.909232541Z",
+  "source": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790707920911481"
+    }
+  },
+  "archiveFile": "source.zip",
+  "archiveSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "archiveBytes": 3812822,
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "runtime": "nodejs22",
+  "entryPoint": "nextServerWest",
+  "region": "us-west2",
+  "buildId": "ops-calendar-919ccc2c20100d03",
+  "files": 537,
+  "productionMutations": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

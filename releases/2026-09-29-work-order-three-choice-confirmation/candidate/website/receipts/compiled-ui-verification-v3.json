@@ -1,0 +1,491 @@
+{
+  "checkedAt": "2026-09-29T23:09:31.022Z",
+  "result": "PASS",
+  "productionRequests": 0,
+  "productionWrites": 0,
+  "pageAsset": "static/chunks/pages/NewSearch/mainSearch-cf82a97caaee43f0.js",
+  "pageSHA256": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f",
+  "componentModuleId": 60992,
+  "componentFactorySHA256": "ab0c6d69916a66e995eff955e787c3686961fcc7efc60e68bf8ed1c83d0c2247",
+  "cssModuleId": 21704,
+  "cssFactorySHA256": "a3ebabaebb291c2a85db409eb04094c1e0cfc9cfe1b250273c1a56b0840e1286",
+  "referencedCssKeys": [
+    "alert",
+    "cameraActions",
+    "cameraPanel",
+    "combobox",
+    "comboboxWrap",
+    "contentsPreview",
+    "dialog",
+    "emptyList",
+    "emptyOptions",
+    "eyebrow",
+    "footerButtons",
+    "footerSummary",
+    "modalBody",
+    "modalContent",
+    "modalFooter",
+    "modalHeader",
+    "movementChoice",
+    "movementChoiceBody",
+    "movementChoiceSelected",
+    "movementChoices",
+    "movementFieldset",
+    "movementPlaceholder",
+    "movementRequired",
+    "movementRoute",
+    "movementSelectedSummary",
+    "promptBody",
+    "promptContent",
+    "promptDialog",
+    "promptFooter",
+    "promptHeader",
+    "promptLead",
+    "promptNote",
+    "removeButton",
+    "resolving",
+    "reviewSlackButton",
+    "scanForm",
+    "scanInputRow",
+    "scannerCaptureActions",
+    "scannerCaptureActive",
+    "scannerCaptureCopy",
+    "scannerCaptureDot",
+    "scannerCaptureDotActive",
+    "scannerCapturePanel",
+    "searchGlyph",
+    "section",
+    "sectionDisabled",
+    "sectionHeading",
+    "selectedWorkOrder",
+    "slackItem",
+    "slackItemIdentity",
+    "slackItemMessage",
+    "slackItems",
+    "slackProgress",
+    "slackPromptSummary",
+    "slackResultSummary",
+    "slackWarnings",
+    "stagedHeader",
+    "stagedIdentity",
+    "stagedList",
+    "stagedMeta",
+    "stagedRow",
+    "stagedRowHeading",
+    "step",
+    "successIcon",
+    "successPanel",
+    "workOrderMenu",
+    "workOrderOption",
+    "workOrderOptionActive",
+    "workOrderOptionCustomer",
+    "workOrderOptionDisabled",
+    "workOrderOptionSubject",
+    "workOrderOptionTopline"
+  ],
+  "missingCssKeys": [],
+  "selectorsMissing": [],
+  "assetHashes": {
+    "static/chunks/webpack-0e4290ce213ed12f.js": "dbbf5fa6a006129212380e2cf8770ce0d91a952f5df448b4494033a5744f69e4",
+    "static/chunks/framework-32a7466d5cae4a81.js": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458",
+    "static/chunks/main-9b88a952025a6e80.js": "9721dc88d71db395be7e0bbe6dbadcd97ef26033b8262361cea8aabfcc7d58d4",
+    "static/css/dfe188d46577aea3.css": "cb0402c172b971e0d1d734976fab68f5738dfbeb5ddc897031cb2ee044e8040d",
+    "static/chunks/pages/_app-581ead4499966a3b.js": "27683d3129830c55fb2628e7047c3bdb6ce383c0fd9facfc7e0a22d44bd9dbea",
+    "static/chunks/7161-fbab5101e3c6fcd3.js": "99801045a87deadf45fddcfd556b2d0c06b280d2774ee2a22f9b22145e648f85",
+    "static/chunks/8230-deb01d3ac4ed7c96.js": "02e75b96f86d6b6c4227cc9740400b79f4fa2c27cead486d8bd6e8b80f6c00bd",
+    "static/chunks/9520-9723bb1a3e2cdf4a.js": "7f5301ced3523617465a4f38be6700cb326602210eff5b5c006613a1fa3bbde0",
+    "static/chunks/2317-7d26aa15d5eb547d.js": "9d079ac9d55a315e92dd64dfb81cb587776cd2991354c9ddefef0bc43a29c471",
+    "static/chunks/4514-241f5f861018e722.js": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8",
+    "static/chunks/1060-bc95950d8c7e80b6.js": "584b64f367baaf60f16538edf81fe3a0a621f6568f81866c4773bb33876bd9aa",
+    "static/chunks/2855-64d7b5e5d5f48103.js": "1ca31aaf30b90b4b2e4664ba4fc22622c2cc79daadc5a1ea107e14384f9e010e",
+    "static/chunks/314-151c92c859013d86.js": "e28913516a58169b964783e05f86b84742a67789d14ce93063ae4e6747613dbe",
+    "static/chunks/2321-4da2cda4fdfa4ff5.js": "8dd034e9c19bd7df338fb37aad0567e59f25bf028e631a24c63bd788f81efe72",
+    "static/chunks/5986-4a56a3bc3c70ad00.js": "0f4e412262286e25d7a585ee7ce2b78e9ee4f218ec019a1fc0fef44787d49289",
+    "static/css/bf787137990b711b.css": "bf787137990b711bb7eef439ba0ff93edf0cad331daf4d6d03c2309345b74899",
+    "static/chunks/5375-7ea5a8c4346427cb.js": "506624acc50250491bc7926867e9de5fef165cdf244d2aa55334706d61424edc",
+    "static/chunks/6001-cd624421ead8d87b.js": "8563d67f613caf8964276608f1b9d02f2c96221f6ccc98be8acc590cb9b4e701",
+    "static/css/61047211a1a88937.css": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7",
+    "static/chunks/pages/NewSearch/mainSearch-cf82a97caaee43f0.js": "cf82a97caaee43f075e84aff975801c1239f367571b965718ba6db8b73752a3f"
+  },
+  "results": [
+    {
+      "name": "cancel",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 0,
+      "slack": 0
+    },
+    {
+      "name": "save-only",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 0
+    },
+    {
+      "name": "save-and-send",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 5
+    },
+    {
+      "name": "failed-save",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 0
+    },
+    {
+      "name": "missing-saved-operation",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 0
+    },
+    {
+      "name": "missing-saved-items",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 0
+    },
+    {
+      "name": "late-relay-scan",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 0,
+      "slack": 0,
+      "lateScanResolvedWhileReviewOpen": true
+    },
+    {
+      "name": "desktop-dark",
+      "geometry": {
+        "x": 320,
+        "y": 239.296875,
+        "width": 640,
+        "height": 421.390625,
+        "viewportWidth": 1280,
+        "viewportHeight": 900,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 527.484375,
+            "y": 593.6875,
+            "width": 75.15625,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 619.640625,
+            "y": 593.6875,
+            "width": 97.78125,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 734.421875,
+            "y": 593.6875,
+            "width": 196.578125,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 0,
+      "slack": 0
+    },
+    {
+      "name": "mobile-reduced-motion",
+      "geometry": {
+        "x": 10,
+        "y": 107.171875,
+        "width": 370,
+        "height": 633.640625,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "centerHitInside": true,
+        "contentClass": "modal-content WorkOrderAddModal_promptContent__urDRl",
+        "dialogClass": "modal-dialog WorkOrderAddModal_promptDialog__WYfnO modal-dialog-centered modal-dialog-scrollable",
+        "buttons": [
+          {
+            "name": "Cancel",
+            "x": 31,
+            "y": 555.8125,
+            "width": 336,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save only",
+            "x": 31,
+            "y": 614.8125,
+            "width": 336,
+            "height": 42,
+            "centerHit": true
+          },
+          {
+            "name": "Save and send to Slack",
+            "x": 31,
+            "y": 673.8125,
+            "width": 336,
+            "height": 42,
+            "centerHit": true
+          }
+        ]
+      },
+      "confirm": 1,
+      "slack": 3
+    }
+  ]
+}

@@ -1,0 +1,323 @@
+{
+  "checkedAt": "2026-09-29T23:10:12.680Z",
+  "result": "PASS",
+  "activePageSHA256": "ee3b5c016831c2f781969d187a4a90339db9920a80ada27dc5e6645360e1e06e",
+  "oraclePageSHA256": "7b033d81ef4379c23662c42d57c92b5ab6e23fd57b7dcc883264b28acf5bcb33",
+  "activeFactorySHA256": "c8d9dad81d6a14a81e0a657cc1aefaf723da34d022219a01ba813fbdf7886225",
+  "oracleFactorySHA256": "c5c112b75eb241565f54596dc1c5d2cedb6597a3225f980dfe20355759ce22ce",
+  "activeModalSHA256": "3bfe3dffa2bdf7290eb2f8453e962a6813da3b038cb49291a1eedc3e12cfc686",
+  "oracleModalSHA256": "0eb8c8b92db52a06023178dae8aa033f5546e9540be6dee9781d9eb52a225d56",
+  "modalStatementIndex": 79,
+  "modalBinding": "tI",
+  "oldFreeNames": [
+    "AbortController",
+    "Array",
+    "Boolean",
+    "Date",
+    "Error",
+    "Math",
+    "Number",
+    "Set",
+    "String",
+    "URLSearchParams",
+    "a",
+    "clearTimeout",
+    "console",
+    "d",
+    "e6",
+    "encodeURIComponent",
+    "globalThis",
+    "k",
+    "n",
+    "s",
+    "setTimeout",
+    "tA",
+    "tC",
+    "tM",
+    "tN",
+    "tS",
+    "tT",
+    "t_",
+    "ta",
+    "tb",
+    "tc",
+    "td",
+    "te",
+    "tf",
+    "tg",
+    "th",
+    "ti",
+    "tj",
+    "tk",
+    "tm",
+    "tn",
+    "tp",
+    "tr",
+    "tt",
+    "tu",
+    "tv",
+    "tw",
+    "tx",
+    "ty"
+  ],
+  "newFreeNames": [
+    "AbortController",
+    "Array",
+    "Boolean",
+    "Date",
+    "Error",
+    "Math",
+    "Number",
+    "Set",
+    "String",
+    "URLSearchParams",
+    "a",
+    "clearTimeout",
+    "console",
+    "d",
+    "e6",
+    "encodeURIComponent",
+    "globalThis",
+    "k",
+    "n",
+    "s",
+    "setTimeout",
+    "tA",
+    "tC",
+    "tM",
+    "tN",
+    "tS",
+    "tT",
+    "t_",
+    "ta",
+    "tb",
+    "tc",
+    "td",
+    "te",
+    "tf",
+    "tg",
+    "th",
+    "ti",
+    "tj",
+    "tk",
+    "tm",
+    "tn",
+    "tp",
+    "tr",
+    "tt",
+    "tu",
+    "tv",
+    "tw",
+    "tx",
+    "ty"
+  ],
+  "removedFreeNames": [],
+  "addedFreeNames": [],
+  "semanticRebase": {
+    "tS": "t_",
+    "t_": "tS",
+    "tj": "tC",
+    "tC": "tj"
+  },
+  "helperStatements": [
+    {
+      "index": 60,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "d8930c6aa8a4e38c74f7f130af2b3728fcaaa5d808f1127b3fc75807cc2a352e",
+      "rebasedOracleSHA256": "d8930c6aa8a4e38c74f7f130af2b3728fcaaa5d808f1127b3fc75807cc2a352e"
+    },
+    {
+      "index": 61,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "53e1303c7ec5f5f608503f94b6bf9c0d02436f40d8580e2c1fdf2477764e4585",
+      "rebasedOracleSHA256": "53e1303c7ec5f5f608503f94b6bf9c0d02436f40d8580e2c1fdf2477764e4585"
+    },
+    {
+      "index": 62,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "1613422ed826f0a51104f6b5b45d0bfd58de928a18e8ac1dac97d0bf433eaea5",
+      "rebasedOracleSHA256": "1613422ed826f0a51104f6b5b45d0bfd58de928a18e8ac1dac97d0bf433eaea5"
+    },
+    {
+      "index": 63,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "183ebd3e3e86b967bccf515cadc976405d9a227f7e59965be7b7a0a57698c78f",
+      "rebasedOracleSHA256": "183ebd3e3e86b967bccf515cadc976405d9a227f7e59965be7b7a0a57698c78f"
+    },
+    {
+      "index": 64,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "86d3ce26ed39ce7f0e70410ce658d5773e7b93a1070c40c25b6c7ffc9a38e3e1",
+      "rebasedOracleSHA256": "86d3ce26ed39ce7f0e70410ce658d5773e7b93a1070c40c25b6c7ffc9a38e3e1"
+    },
+    {
+      "index": 65,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "abeb208ce1db88a1724e629db25b8d4483625d66b33624eb637e8af12e790796",
+      "rebasedOracleSHA256": "abeb208ce1db88a1724e629db25b8d4483625d66b33624eb637e8af12e790796"
+    },
+    {
+      "index": 66,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "ff7702bf13c8c4f449ff23f3ecf7bcbcd7ab5d2cfc4f4014c6ca53b074c54ccd",
+      "rebasedOracleSHA256": "ff7702bf13c8c4f449ff23f3ecf7bcbcd7ab5d2cfc4f4014c6ca53b074c54ccd"
+    },
+    {
+      "index": 67,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "1073ba081c6fbfead913d2279ae76ffe10d50f762a6727839fa50f090508dfc3",
+      "rebasedOracleSHA256": "1073ba081c6fbfead913d2279ae76ffe10d50f762a6727839fa50f090508dfc3"
+    },
+    {
+      "index": 68,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "7344c3f6cb9a396c389be5875cbdcc847237e923ccced298c5b21fdc5c732306",
+      "rebasedOracleSHA256": "7344c3f6cb9a396c389be5875cbdcc847237e923ccced298c5b21fdc5c732306"
+    },
+    {
+      "index": 69,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "9449d31f8c8c25c370527a5dc23f442b6ac332c16f6b5daa59477ffe35ea21c9",
+      "rebasedOracleSHA256": "9449d31f8c8c25c370527a5dc23f442b6ac332c16f6b5daa59477ffe35ea21c9"
+    },
+    {
+      "index": 70,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "5714a85fe2465a2d883a6cdd6d247044ea3d203b60ca53009ed02fd18a380703",
+      "rebasedOracleSHA256": "5714a85fe2465a2d883a6cdd6d247044ea3d203b60ca53009ed02fd18a380703"
+    },
+    {
+      "index": 71,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "46d53c60806d7efe8abbe91f4be3a897e72284094fe442803bb52aed80618ff2",
+      "rebasedOracleSHA256": "46d53c60806d7efe8abbe91f4be3a897e72284094fe442803bb52aed80618ff2"
+    },
+    {
+      "index": 72,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "1b4cea09944d7fc8ff71942603b93e56b5b4f76a69bb336a6bc369043345078f",
+      "rebasedOracleSHA256": "1b4cea09944d7fc8ff71942603b93e56b5b4f76a69bb336a6bc369043345078f"
+    },
+    {
+      "index": 73,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "d9ae8357008ea583e7ab34cc5a6407dfeef9a68d3b7b47ca67d15d08930944cf",
+      "rebasedOracleSHA256": "d9ae8357008ea583e7ab34cc5a6407dfeef9a68d3b7b47ca67d15d08930944cf"
+    },
+    {
+      "index": 74,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "5001a8920216d46515f0778ed0576653f24121283aa46a8283dd27507611debf",
+      "rebasedOracleSHA256": "5001a8920216d46515f0778ed0576653f24121283aa46a8283dd27507611debf"
+    },
+    {
+      "index": 75,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "19b8ec078299a815ff2912aba02e768d50dd2c45a72db2dadc1fe68b5bba9e73",
+      "rebasedOracleSHA256": "19b8ec078299a815ff2912aba02e768d50dd2c45a72db2dadc1fe68b5bba9e73"
+    },
+    {
+      "index": 76,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "fa0864ebd331e3e154c53fff5050530228c924fe4b6b883a699e7b2aaad37b6d",
+      "rebasedOracleSHA256": "fa0864ebd331e3e154c53fff5050530228c924fe4b6b883a699e7b2aaad37b6d"
+    },
+    {
+      "index": 77,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "c6b5dd12d8e751ea0b062420305d6bf5c684df4f59a12d1bf34de4b2006426f7",
+      "rebasedOracleSHA256": "c6b5dd12d8e751ea0b062420305d6bf5c684df4f59a12d1bf34de4b2006426f7"
+    },
+    {
+      "index": 78,
+      "sameAfterExplicitSemanticRebase": true,
+      "activeSHA256": "8a3d2b9dc72a61ca6f77053fa8a139329f68844234df9e4ca72489c3e6e7f661",
+      "rebasedOracleSHA256": "8a3d2b9dc72a61ca6f77053fa8a139329f68844234df9e4ca72489c3e6e7f661"
+    }
+  ],
+  "changedOuterDefinitions": [
+    {
+      "name": "a",
+      "active": "a=r(37876)",
+      "oracle": "a=r(83011)"
+    },
+    {
+      "name": "d",
+      "active": "d=r(39520)",
+      "oracle": "d=r(25508)"
+    },
+    {
+      "name": "e6",
+      "active": "e6=r(25856)",
+      "oracle": "e6=r(20099)"
+    },
+    {
+      "name": "k",
+      "active": "k=r(31394)",
+      "oracle": "k=r(78158)"
+    },
+    {
+      "name": "n",
+      "active": "n=r(14232)",
+      "oracle": "n=r(97323)"
+    },
+    {
+      "name": "s",
+      "active": "s=r(14873)",
+      "oracle": "s=r(44140)"
+    },
+    {
+      "name": "tC",
+      "active": "function tC(e){return e?.preview&&\"object\"==typeof e.preview?e.preview:{};}",
+      "oracle": "function tC(e,t){let r=tf(e?.canonicalId||tj(e)?.id||t).toUpperCase();return`${tN(e)}:${r}`;}"
+    },
+    {
+      "name": "tM",
+      "active": "function tM({id:e,workOrder:t,active:r,onChoose:n}){let i=tb(t),l=tS(t),o=t_(t),s=tf(t?.workflowStatus||t?.status),c=t?.destinationLinked!==!1;return(0,a.jsxs)(\"button\",{id:e,type:\"button\",role:\"option\",\"aria-selected\":r,\"aria-disabled\":!c,disabled:!c,className:`${tc().workOrderOption} ${r?tc().workOrderOptionActive:\"\"} ${!c?tc().workOrderOptionDisabled:\"\"}`,onMouseDown:e=>{e.preventDefault();},onClick:()=>n(t),children:[(0,a.jsxs)(\"span\",{className:tc().workOrderOptionTopline,children:[(0,a.jsx)(\"strong\",{children:i?`WO #${i}`:\"Work order\"}),(0,a.jsx)(\"span\",{children:c?s:tf(t?.destinationIssue)||\"Destination not linked\"})]}),(0,a.jsx)(\"span\",{className:tc().workOrderOptionSubject,children:o}),l?(0,a.jsx)(\"span\",{className:tc().workOrderOptionCustomer,children:l}):null]});}",
+      "oracle": "function tM({id:e,workOrder:t,active:r,onChoose:n}){let i=tb(t),l=t_(t),o=tS(t),s=tf(t?.workflowStatus||t?.status),c=t?.destinationLinked!==!1;return(0,a.jsxs)(\"button\",{id:e,type:\"button\",role:\"option\",\"aria-selected\":r,\"aria-disabled\":!c,disabled:!c,className:`${tc().workOrderOption} ${r?tc().workOrderOptionActive:\"\"} ${!c?tc().workOrderOptionDisabled:\"\"}`,onMouseDown:e=>{e.preventDefault();},onClick:()=>n(t),children:[(0,a.jsxs)(\"span\",{className:tc().workOrderOptionTopline,children:[(0,a.jsx)(\"strong\",{children:i?`WO #${i}`:\"Work order\"}),(0,a.jsx)(\"span\",{children:c?s:tf(t?.destinationIssue)||\"Destination not linked\"})]}),(0,a.jsx)(\"span\",{className:tc().workOrderOptionSubject,children:o}),l?(0,a.jsx)(\"span\",{className:tc().workOrderOptionCustomer,children:l}):null]});}"
+    },
+    {
+      "name": "tS",
+      "active": "function tS(e){return tf(e?.clientName||e?.customer||e?.customerName||e?.siteName);}",
+      "oracle": "function tS(e){return tf(e?.subject||e?.title||e?.name||\"Untitled work order\");}"
+    },
+    {
+      "name": "tT",
+      "active": "function tT({row:e,disabled:t,onRemove:r}){let n=tC(e.resolution),i=tN(e.resolution),l=Number(n.itemCount||0),o=Array.isArray(n.items)?n.items:[];return(0,a.jsxs)(\"li\",{className:tc().stagedRow,children:[(0,a.jsxs)(\"div\",{className:tc().stagedRowHeading,children:[(0,a.jsxs)(\"div\",{className:tc().stagedIdentity,children:[(0,a.jsx)(e6.A,{bg:\"item\"===i?\"primary\":\"bin\"===i?\"info\":\"success\",children:i}),(0,a.jsxs)(\"div\",{children:[(0,a.jsx)(\"strong\",{children:tw(e.resolution,e.code)}),(0,a.jsx)(\"span\",{children:tf(e.resolution?.canonicalId)||e.code})]})]}),(0,a.jsx)(\"button\",{type:\"button\",className:tc().removeButton,\"aria-label\":`Remove ${tw(e.resolution,e.code)}`,disabled:t,onClick:()=>r(e.rowKey),children:\"\\xd7\"})]}),(0,a.jsxs)(\"div\",{className:tc().stagedMeta,children:[n.pn?(0,a.jsxs)(\"span\",{children:[\"PN: \",n.pn]}):null,n.sn?(0,a.jsxs)(\"span\",{children:[\"SN: \",n.sn]}):null,n.currentLocation?(0,a.jsxs)(\"span\",{children:[\"Current: \",n.currentLocation]}):null,\"item\"!==i?(0,a.jsxs)(\"span\",{children:[l,\" \",1===l?\"item\":\"items\"]}):null]}),o.length?(0,a.jsxs)(\"div\",{className:tc().contentsPreview,children:[(0,a.jsx)(\"strong\",{children:\"Includes:\"}),\" \",o.slice(0,5).map(e=>tf(e?.name||e?.id||e)).filter(Boolean).join(\", \"),o.length>5?` +${o.length-5} more`:\"\"]}):null]});}",
+      "oracle": "function tT({row:e,disabled:t,onRemove:r}){let n=tj(e.resolution),i=tN(e.resolution),l=Number(n.itemCount||0),o=Array.isArray(n.items)?n.items:[];return(0,a.jsxs)(\"li\",{className:tc().stagedRow,children:[(0,a.jsxs)(\"div\",{className:tc().stagedRowHeading,children:[(0,a.jsxs)(\"div\",{className:tc().stagedIdentity,children:[(0,a.jsx)(e6.A,{bg:\"item\"===i?\"primary\":\"bin\"===i?\"info\":\"success\",children:i}),(0,a.jsxs)(\"div\",{children:[(0,a.jsx)(\"strong\",{children:tw(e.resolution,e.code)}),(0,a.jsx)(\"span\",{children:tf(e.resolution?.canonicalId)||e.code})]})]}),(0,a.jsx)(\"button\",{type:\"button\",className:tc().removeButton,\"aria-label\":`Remove ${tw(e.resolution,e.code)}`,disabled:t,onClick:()=>r(e.rowKey),children:\"\\xd7\"})]}),(0,a.jsxs)(\"div\",{className:tc().stagedMeta,children:[n.pn?(0,a.jsxs)(\"span\",{children:[\"PN: \",n.pn]}):null,n.sn?(0,a.jsxs)(\"span\",{children:[\"SN: \",n.sn]}):null,n.currentLocation?(0,a.jsxs)(\"span\",{children:[\"Current: \",n.currentLocation]}):null,\"item\"!==i?(0,a.jsxs)(\"span\",{children:[l,\" \",1===l?\"item\":\"items\"]}):null]}),o.length?(0,a.jsxs)(\"div\",{className:tc().contentsPreview,children:[(0,a.jsx)(\"strong\",{children:\"Includes:\"}),\" \",o.slice(0,5).map(e=>tf(e?.name||e?.id||e)).filter(Boolean).join(\", \"),o.length>5?` +${o.length-5} more`:\"\"]}):null]});}"
+    },
+    {
+      "name": "t_",
+      "active": "function t_(e){return tf(e?.subject||e?.title||e?.name||\"Untitled work order\");}",
+      "oracle": "function t_(e){return tf(e?.clientName||e?.customer||e?.customerName||e?.siteName);}"
+    },
+    {
+      "name": "te",
+      "active": "te=r(74742)",
+      "oracle": "te=r(51653)"
+    },
+    {
+      "name": "tj",
+      "active": "function tj(e,t){let r=tf(e?.canonicalId||tC(e)?.id||t).toUpperCase();return`${tN(e)}:${r}`;}",
+      "oracle": "function tj(e){return e?.preview&&\"object\"==typeof e.preview?e.preview:{};}"
+    },
+    {
+      "name": "tk",
+      "active": "async function tk(e,{method:t=\"GET\",body:r,signal:a,timeoutMs:n=3e4}={}){let i,l=j.A.auth().currentUser;if(!l)throw new tp(\"Your session is not ready. Sign in again and retry.\",{status:401,code:\"not_authenticated\"});let o=await l.getIdToken(),s=new AbortController(),c=()=>s.abort();a?.aborted?s.abort():a?.addEventListener?.(\"abort\",c,{once:!0});let d=Number(n),u=setTimeout(()=>s.abort(),Number.isFinite(d)?Math.max(1e3,Math.min(3e5,d)):3e4);try{i=await fetch(e,{method:t,signal:s.signal,headers:{Accept:\"application/json\",Authorization:`Bearer ${o}`,...(void 0===r?{}:{\"Content-Type\":\"application/json\"})},...(void 0===r?{}:{body:JSON.stringify(r)})});}catch(e){if(e?.name===\"AbortError\"&&!a?.aborted)throw new tp(\"Magmo took too long to confirm the result. Retry the same list safely; Magmo will not duplicate a completed movement.\",{status:408,code:\"request_timeout\"});throw e;}finally{clearTimeout(u),a?.removeEventListener?.(\"abort\",c);}let m=await i.json().catch(()=>null);if(!i.ok||m?.ok===!1)throw new tp(tf(m?.error||m?.message)||`The request failed with status ${i.status}.`,{status:i.status,code:tf(m?.code)||\"request_failed\",payload:m});return m||{ok:!0};}",
+      "oracle": "async function tk(e,{method:t=\"GET\",body:r,signal:a,timeoutMs:n=3e4}={}){let i,l=C.A.auth().currentUser;if(!l)throw new tp(\"Your session is not ready. Sign in again and retry.\",{status:401,code:\"not_authenticated\"});let o=await l.getIdToken(),s=new AbortController(),c=()=>s.abort();a?.aborted?s.abort():a?.addEventListener?.(\"abort\",c,{once:!0});let d=Number(n),u=setTimeout(()=>s.abort(),Number.isFinite(d)?Math.max(1e3,Math.min(3e5,d)):3e4);try{i=await fetch(e,{method:t,signal:s.signal,headers:{Accept:\"application/json\",Authorization:`Bearer ${o}`,...(void 0===r?{}:{\"Content-Type\":\"application/json\"})},...(void 0===r?{}:{body:JSON.stringify(r)})});}catch(e){if(e?.name===\"AbortError\"&&!a?.aborted)throw new tp(\"Magmo took too long to confirm the result. Retry the same list safely; Magmo will not duplicate a completed movement.\",{status:408,code:\"request_timeout\"});throw e;}finally{clearTimeout(u),a?.removeEventListener?.(\"abort\",c);}let m=await i.json().catch(()=>null);if(!i.ok||m?.ok===!1)throw new tp(tf(m?.error||m?.message)||`The request failed with status ${i.status}.`,{status:i.status,code:tf(m?.code)||\"request_failed\",payload:m});return m||{ok:!0};}"
+    },
+    {
+      "name": "tu",
+      "active": "tu=e9()(()=>r.e(3999).then(r.bind(r,3999)),{loadableGenerated:{webpack:()=>[3999]},ssr:!1})",
+      "oracle": "tu=e9()(()=>r.e(1154).then(r.bind(r,91154)),{loadableGenerated:{webpack:()=>[91154]},ssr:!1})"
+    },
+    {
+      "name": "tw",
+      "active": "function tw(e,t){let r=tC(e);return tf(r.name||r.id||e?.canonicalId||t);}",
+      "oracle": "function tw(e,t){let r=tj(e);return tf(r.name||r.id||e?.canonicalId||t);}"
+    }
+  ],
+  "limitation": "This proves compatible free names and helper declarations for a tI-only transplant; it does not certify a final composed artifact or all imported module semantics.",
+  "productionWrites": 0,
+  "candidateChanges": 0
+}

@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T23:18:07.022Z",
+  "ready": true,
+  "changed": false,
+  "currentRevision": "nextserverwest-00071-zot",
+  "deployedArtifactSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "sourceOnly": true,
+  "rollbackRevision": "nextserverwest-00070-liw",
+  "rollbackArchive": "source.zip",
+  "rollbackArchiveSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "rollbackToolSHA256": "8548febbc527099361ede8dc3a4eb2e3d2d1abcd6aa29f26cb76ee5c15f03fc4",
+  "dataWillBeRestored": false,
+  "rulesWillBeRestored": false,
+  "productionWrites": 0
+}

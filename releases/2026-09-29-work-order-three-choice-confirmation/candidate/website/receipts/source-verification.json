@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-29T23:14:30.574Z",
+  "result": "PASS",
+  "suites": [
+    {
+      "name": "source-browser-and-ui-contract",
+      "exitCode": 0,
+      "durationMs": 16029,
+      "args": [
+        "--test",
+        "test/work-order-add-slack-ui.browser.test.cjs",
+        "test/work-order-add-ui-contract.test.cjs"
+      ],
+      "tests": 22,
+      "pass": 22,
+      "fail": 0,
+      "skipped": 0,
+      "stdoutSHA256": "dbba15ad5795731606846b23e7a80a22e25c59caaa6b1daac54b1136e3e46d1b",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "backend-scanner-and-movement-regressions",
+      "exitCode": 0,
+      "durationMs": 1126,
+      "args": [
+        "--test",
+        "--test-reporter=dot",
+        "test/fast-scan-drain-ui.test.cjs",
+        "test/work-order-add-service.test.cjs",
+        "test/work-order-add-route.test.cjs",
+        "test/work-order-scanner-capture.test.cjs",
+        "test/work-order-scanner-routes.test.cjs",
+        "test/work-order-add-contract.test.cjs",
+        "test/work-order-add-options.test.cjs",
+        "test/work-order-add-slack.test.cjs",
+        "test/work-order-add-slack-thread.test.cjs",
+        "test/work-order-add-slack-route.test.cjs"
+      ],
+      "stdoutSHA256": "c7f3fbe1484dc81b1654aacd00eb48e70af98dc85ed594bfb309abb610807261",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "frozenProductionAndControlHashes": {
+    "components/WorkOrderAddModal.js": "79b7beab86cead810a3f1ade5b272d24874e275ce42d618700f8a091c5514b24",
+    "components/WorkOrderAddModal.module.css": "f44f906b9fb69fa5a0ebf6d1c7eed189b0b3705ccea7abf7447454d4ba9515fb",
+    "lib/inventory/workOrderAddUiContract.js": "56ceecea94decf4eee7974f0fc484ba911b3e9512e9000ef196180c9b4c86c7b",
+    "lib/inventory/scanResolutionQueue.cjs": "39d2c2cdb847cf58774206fa7089222b370598226ce432e353b27ef842d99d7a",
+    "pages/NewSearch/mainSearch.js": "8a026a252748a47422ffa742daa9705b5f7fd45cb92d2b565fd489e415f30014",
+    "next.config.js": "a89af5249daef7d6a206a7593d3754bbb9ae760e8b3cd8ac5fe16af10206a2d8",
+    "package.json": "2d11557489a1d347467117570c6b4bc4ff0257f77e6b09e7b81c6cb10d99d80b",
+    "package-lock.json": "ad7272cc995c3a741bea217493bc6c1138db863f82239106485d980dbd3e3bbe"
+  },
+  "testHashes": {
+    "test/work-order-add-slack-ui.browser.test.cjs": "7d79e06717f7ed2100a4c9f173bfe8041476dca9a52bc91b2eb11933d3e0a4fe",
+    "test/work-order-add-ui-contract.test.cjs": "060789887662e8669e456670fc296777595fea851160bf43889be548707028fc",
+    "test/fast-scan-drain-ui.test.cjs": "8e5121de290f95cab762c9fc3be3adb2dc0ee2278743f8bd542d55127b34a3b9",
+    "test/work-order-add-service.test.cjs": "6cd9ac98ae9e7bf27d3c8c54cab0107e1ee265111ad4db376206e14d7a3eb110",
+    "test/work-order-add-route.test.cjs": "ff26045ae8a5307f08f6e1e0427c47608ea015b7dd5764bab5130b08bff15b78",
+    "test/work-order-scanner-capture.test.cjs": "8924aa170dcc18f008100c48a876b008eabc537347bab43549ae809b522cf48f",
+    "test/work-order-scanner-routes.test.cjs": "e6dd555856ea1103567056ded3ee15f1a34ed2db4b25819df52f2ca87ffc39bb",
+    "test/work-order-add-contract.test.cjs": "062ad989ebe261b9dae5c62f20555e05240dd7a3c513f6337d3f4112f74e3bdb",
+    "test/work-order-add-options.test.cjs": "ea56fac1ba48f771f455d732129707b6bd70bb148348d73ea8d67c862f03e6b8",
+    "test/work-order-add-slack.test.cjs": "29b80197f7e78e7c1c9cb51ddda857401d836d7f4979da950e80ded809ec1be3",
+    "test/work-order-add-slack-thread.test.cjs": "a9f86b310d11b956e0ccca899c2a87ce21ca45f858329817e9aa5d84494c7287",
+    "test/work-order-add-slack-route.test.cjs": "d50cd1563fc8a5b18775b00b560189ece3b8a82d891f0c7121382ad3e09be037"
+  },
+  "testsUseSyntheticData": true,
+  "liveCredentialsPassedToTests": false,
+  "productionRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}
