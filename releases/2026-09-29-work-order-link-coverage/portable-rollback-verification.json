@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T18:17:30.366Z",
+  "toolSHA256": "77ab0ac25351e4f5db38535edc5aa29be46b1469644812684a167f57c2f6db37",
+  "testSHA256": "3d0884b9256716af990ac273d8672dfc4c50f57ba99360a4d4b1c6ea8b270d1d",
+  "tests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "scope": "Mocked source-only rollback, later-release/config drift guards, approval gate, duplicate journal prevention and exact source-only PATCH",
+  "liveNetworkRequests": 0,
+  "liveSourceChanges": 0,
+  "liveDataChanges": 0
+}
