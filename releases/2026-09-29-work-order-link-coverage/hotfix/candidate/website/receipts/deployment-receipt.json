@@ -1,0 +1,33 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-09-29T18:52:04.559Z",
+  "originalRevision": "nextserverwest-00069-geb",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790707157888370"
+    }
+  },
+  "originalUpdateTime": "2026-09-29T18:42:03.113850922Z",
+  "artifactSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "compositionReportSHA256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Historical link-alert reason-refinement dedupe hotfix only",
+  "sourceOnly": true,
+  "rollbackArchive": "source.zip",
+  "databaseWrites": 0,
+  "testSlackPosts": 0,
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790707920092-65ca3ad793e21-60c5fbe7-98cbe38e",
+  "completedAt": "2026-09-29T18:56:48.901Z",
+  "revision": "nextserverwest-00070-liw",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790707920911481"
+    }
+  },
+  "deployedUpdateTime": "2026-09-29T18:55:39.909232541Z",
+  "unrelatedConfigurationPreserved": true
+}

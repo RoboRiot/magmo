@@ -1,0 +1,201 @@
+{
+  "generatedAt": "2026-09-29T18:45:08.257Z",
+  "approvedForDeployment": false,
+  "sourceDirectory": "candidate",
+  "directory": "candidate",
+  "baselineRevision": "nextserverwest-00069-geb",
+  "baselineArchiveSHA256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d",
+  "baselineConfigHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "baselineFileCount": 537,
+  "candidateFileCount": 537,
+  "changed": [
+    "work-order-link/lib/ops/workOrderLinkHealth.cjs"
+  ],
+  "added": [],
+  "sourceHashes": {
+    "lib/ops/workOrderLinkHealth.cjs": "7584758c729e51b9d24b3b10d69089798d5609406e4ad60136b037dbc0c0af95"
+  },
+  "entries": [
+    {
+      "path": "work-order-link/lib/ops/workOrderLinkHealth.cjs",
+      "before": "700e40fd769ad6c257244386748859b553f39138dd6ddcdbbb6fbe4bfa86e48f",
+      "after": "7584758c729e51b9d24b3b10d69089798d5609406e4ad60136b037dbc0c0af95"
+    }
+  ],
+  "noDeletedFiles": true,
+  "unrelatedFilesPreserved": true,
+  "noStaticChanges": true,
+  "runtimeConfigChanged": false,
+  "immutableStaticAssetsPreserved": 150,
+  "unchangedBuildId": "ops-calendar-919ccc2c20100d03",
+  "compiledConsumers": [
+    "pages/api/ops/calendar.js",
+    "pages/api/ops/engineer-notifications.js",
+    "pages/api/ops/general.js",
+    "pages/api/ops/ingest.js",
+    "pages/api/ops/ot-coverage.js",
+    "pages/api/ops/ot-swaps.js",
+    "pages/api/ops/service-request-analysis.js",
+    "pages/api/ops/service-requests.js",
+    "pages/api/ops/system-notes.js",
+    "pages/api/ops/work-orders.js"
+  ],
+  "sharedFactory": {
+    "module": 78806,
+    "beforeSHA256": "51514a932646d888aafcca7ef9060ddfc0e3bdced4ff9acf1400572d864d1865",
+    "afterSHA256": "604074ed99b3c1ca57087825ced01259bf0cef2097856211f424057978745fbc",
+    "originalExportMappingsPreserved": true,
+    "reverseVerified": true,
+    "bindings": {
+      "cleanText": "C",
+      "requireDb": "B",
+      "normalizeId": "E",
+      "workOrderRef": "af",
+      "referenceId": "a0",
+      "trailerClientId": "a1",
+      "trailerMachineId": "a2",
+      "clientName": "a_",
+      "clientLocation": "a$",
+      "trailerName": "a3",
+      "FieldValue": "e.FieldValue",
+      "serializeWorkOrder": "ag",
+      "ACTIVE_STATUSES": "bp",
+      "normalizeWorkOrderSubject": "D",
+      "buildDispatchEvidenceResolutionPatch": "ba",
+      "normalizeAssignees": "M",
+      "defaultOpsOversightManagers": "N",
+      "mergeAssignees": "O",
+      "normalizePriorityTier": "Q",
+      "normalizePriorityLabel": "S",
+      "normalizePriorityOrder": "T",
+      "initialAssignmentEntry": "ae",
+      "timestampToIso": "G",
+      "PRIORITY_TIERS": "bs",
+      "GENERATED_PRIORITY_PATTERN": "bt",
+      "PRIORITY_TIER_LABELS": "bv",
+      "PRIORITY_TIER_ORDER": "bu",
+      "buildBlueFolderImportPatch": "bi",
+      "buildBlueFolderLifecycleCorrection": "bh",
+      "buildWorkflowTransitionUpdate": "L",
+      "initialBlueFolderWorkflowStage": "bj"
+    },
+    "functions": [
+      {
+        "name": "aj",
+        "beforeSHA256": "61f5920528c4d060fa37dc53c7e23abeb268ddd93ce7b5b85ea989d5d86a9da2",
+        "afterSHA256": "837d194f152b805406ea18555675ec8e840f1d4088de48afc5e88b48c90ec348"
+      },
+      {
+        "name": "an",
+        "beforeSHA256": "0158ae103bfbec40bb45f92b5c6db584f109b09d64cb7f5ff2aa39bbd57d608a",
+        "afterSHA256": "dfe7304464798354c80f0584d75b3d09f788002018f1630225d079f217b29132"
+      },
+      {
+        "name": "ao",
+        "beforeSHA256": "e3b9af7f4f4549df852d3e04f2ff84b3683fcdbc361888756278fe5716d4da38",
+        "afterSHA256": "6d49a17004f86284215069a71e2d2507b28398f8b9405d9329108f47fd725b54"
+      }
+    ],
+    "sourceFunctions": {
+      "deliverNewWorkOrderLinkAlert": "18a7f96d1855622c41b3603e90012ae882b2c32b926fdd7b82d1dbabce425978",
+      "withEquipmentLinkResolution": "f8b1bbd6e79a2f136b602c4dee791eeb6294ba958356d35cfb9a83a58bdc03f9",
+      "updateOpsConnections": "84c2536fcf63e4725954cc47613a08c65d95a9820b4f1a45a99075fe2bf0d0bc",
+      "upsertOpsWorkOrder": "15706847dfbf281d4d659159882eda36e1fe7acfc229551c0c74a2cf6eab2a9b",
+      "importOpsBlueFolderWorkOrder": "61447d26b014a8d377096a3a238638beaf71d5f134a3f582666fe46b68d9c93a"
+    },
+    "unaffectedFunctionCount": 76,
+    "serializerInsertion": "linkHealth:require(process.cwd()+\"/work-order-link/lib/ops/workOrderLinkHealth.cjs\").publicLinkHealth(e.linkHealth),",
+    "entireChunkPreserved": true
+  },
+  "routeOverlay": {
+    "cron": {
+      "path": ".next/server/pages/api/cron/magmonitor-alerts.js",
+      "factory": 29899,
+      "previousFactorySHA256": "49d8447c4e5441557d2143a6e670ece3a262216c445d74d278167bb763cec110",
+      "candidateFactorySHA256": "2bc44f19e9e82ad7258e6ba04ec0f5c2c4a8347c70cfe2d8e4bfbecc86eb7a65",
+      "chunks": [
+        5030,
+        7040,
+        6192,
+        8806
+      ],
+      "addedExactLiveFactories": []
+    },
+    "newApi": {
+      "route": "/api/ops/work-order-link-alerts",
+      "path": ".next/server/pages/api/ops/work-order-link-alerts.js",
+      "entryId": 9009291,
+      "userlandId": 9009292,
+      "chunkId": 9009293,
+      "chunks": [
+        5030
+      ],
+      "copiedFrameworkFactories": [
+        {
+          "id": 56472,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "ac829bac76566303c2b5e945cdf2c8bab73c0111de9aa8d68c08770f83d43db3"
+        },
+        {
+          "id": 75600,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "fa27e549abfc1dfe8c6b9bf1f5feee51e1da59c261c014b66804016423000451"
+        },
+        {
+          "id": 14276,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "b0abe324468b168ea71041208fc6c25074f7bc167b30055a800efdc275e6154a"
+        },
+        {
+          "id": 52771,
+          "from": ".next/server/chunks/7040.js",
+          "sha256": "08b50e395c4423b0e15abedb296ae2c3425c66488a729d6e474981cde4c5a114"
+        },
+        {
+          "id": 29021,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "ee59e384d0799c3c99736408a77981e3eb846adc56b54302dd58fd071fb956ba"
+        },
+        {
+          "id": 9801,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "0785cfab7106db11193bde70238728fdb2704af45ee1d27051559480881941d6"
+        },
+        {
+          "id": 35567,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "9459d6ba453fe9284a1c196597102bab3dfc011462cdfa9faf62aa5807ff15c1"
+        },
+        {
+          "id": 7879,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "2adea825dc4001489497b9e0111fdc1bbfd787bcc09123e3078f9413f1d1f25f"
+        },
+        {
+          "id": 24803,
+          "from": ".next/server/pages/api/cron/magmonitor-alerts.js",
+          "sha256": "6d32e65bbfba13311d3e8674694e8dd80696c6b34684926dc101283feee26b7e"
+        },
+        {
+          "id": 81067,
+          "from": ".next/server/chunks/741.js",
+          "sha256": "ab844939ba82c4df037b6a1ef2ce2bee869dc7033c327adfd1e390060965a74d"
+        }
+      ]
+    },
+    "metadata": [
+      ".next/server/pages-manifest.json",
+      ".next/routes-manifest.json"
+    ],
+    "sourceWrapperCompiler": "@babel/plugin-transform-modules-commonjs",
+    "unchangedBuildId": "item-status-52cd8da14a55bec2"
+  },
+  "liveBluefolderAdapter": {
+    "id": 96965,
+    "factorySHA256": "e7237d875c3118aa608ff79b62e339ed064a12ecd298c6be09e191e8901e5bb4",
+    "sourceCopied": false
+  },
+  "scope": "Suppress historical-incident re-alerts caused only by reason/fingerprint refinement; preserve real recovery and materially changed source alerts",
+  "productionMutations": 0,
+  "interveningCalendarRoutePreserved": true
+}

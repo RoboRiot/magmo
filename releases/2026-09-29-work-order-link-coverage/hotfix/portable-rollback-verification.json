@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T19:02:14.916Z",
+  "tests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "toolSHA256": "8d8eb028a2bc771dab3170cdd939b21b43a52b9cd679e85bfb7c8f6288128cb2",
+  "testSHA256": "4804f3964d1b5147b66131790b6ff7b902b8eaf5da13cfa9aaa202f6741b05cc",
+  "baseTestSHA256": "3d0884b9256716af990ac273d8672dfc4c50f57ba99360a4d4b1c6ea8b270d1d",
+  "scope": "Actual portable entrypoint; mocked source-only rollback, exact current revision/config guards, hash approval, duplicate journal prevention and mandatory paused owner delivery",
+  "liveRequests": 0,
+  "productionMutations": 0
+}

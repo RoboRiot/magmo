@@ -1,0 +1,104 @@
+{
+  "apply": true,
+  "checkedAt": "2026-09-29T18:24:41.753423+00:00",
+  "sourcePath": "C:\\Users\\Owner\\Desktop\\warehouse\\bluefolder_listener\\bluefolder_slack_listener_v2.py",
+  "beforeSha256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+  "candidateSha256": "7d5405af384d7d040b471a63d09091ee94410411130bf4a01054d20a45e0e0e0",
+  "managerSha256": "da41cddb8693652a369c8ea7422b5f5c61feffa914c358482e2f9e08c6d8665a",
+  "priorPid": 5752,
+  "recordCountBefore": 9636,
+  "checkpointStateReplaced": false,
+  "credentialsCopied": false,
+  "otherServicesRestarted": false,
+  "servicesBefore": [
+    {
+      "key": "bluefolder_print",
+      "pid": 7676,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "magmonitor_relay",
+      "pid": 15356,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "command_report",
+      "pid": 18088,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.21-ops-reconnect.2",
+      "latest_successful_poll": "2026-09-29T18:24:34.275271+00:00"
+    },
+    {
+      "key": "ngrok",
+      "pid": 8440,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "bluefolder_listener",
+      "pid": 5752,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.25-bluefolder-destination-retry.1",
+      "latest_successful_poll": "2026-09-29T18:23:30.919574+00:00"
+    }
+  ],
+  "backupDirectory": "C:\\Users\\Owner\\Desktop\\warehouse\\backups\\work-order-link-coverage-20260929T182441.753423Z",
+  "checkpointBackupSha256": "3ffd2486eafc7e4227ea06c60747a0a36b189b8d154af4155395444b936d96a8",
+  "newPid": 22800,
+  "startupVerified": true,
+  "servicesAfter": [
+    {
+      "key": "bluefolder_print",
+      "pid": 7676,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "magmonitor_relay",
+      "pid": 15356,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "command_report",
+      "pid": 18088,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.21-ops-reconnect.2",
+      "latest_successful_poll": "2026-09-29T18:24:34.275271+00:00"
+    },
+    {
+      "key": "ngrok",
+      "pid": 8440,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "bluefolder_listener",
+      "pid": 22800,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.25-bluefolder-destination-retry.1",
+      "latest_successful_poll": "2026-09-29T18:23:30.919574+00:00"
+    }
+  ],
+  "unrelatedServicePidsUnchanged": true,
+  "priorWorkOrderKeysPreserved": true,
+  "afterSha256": "7d5405af384d7d040b471a63d09091ee94410411130bf4a01054d20a45e0e0e0"
+}

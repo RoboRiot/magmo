@@ -1,0 +1,28 @@
+{
+  "frozenAt": "2026-09-29T18:14:29.211Z",
+  "sourceHashes": {
+    "lib/ops/workOrders.js": "5dcbf4d8c966ef9f56902d64a7544fc1016680094210e6e0f9b9102f1c9edc38",
+    "lib/ops/workOrderLinkAlertDelivery.cjs": "9e0148baafdaaf3a7f36ef6193390e9be1399fb672c8d4d88a6f96e108e8517a",
+    "lib/ops/workOrderLinkRuntime.cjs": "62154f6af07e4c1f55a5e3050b5ce9a16f18ff56e0777b60538fba97bf6e57b8",
+    "lib/ops/workOrderLinkHealth.cjs": "700e40fd769ad6c257244386748859b553f39138dd6ddcdbbb6fbe4bfa86e48f",
+    "lib/ops/workOrderClientLink.cjs": "9b2810dfca7fed5ef3ef0f101269a386484c78b245a2479d8a24eb5772091204",
+    "lib/ops/clientDirectory.cjs": "081416a8ba803a33cfa75df84857ed9328176f2a93591ad7044850c986c7f08f",
+    "lib/ops/trailerClientLinks.cjs": "42606bf5a0e760e9b2f3d95363f803e67bd5c091efdfbdf8dcd672b1e42ec3eb",
+    "lib/ops/workOrderSiteLink.cjs": "2b323a8dab0697d3d870440df5e391054577a905156c2a03013d2217bcef179f",
+    "lib/ops/blueFolderCustomerLookup.cjs": "1a7b66fa07844b0c235f377f2fe1ed5f04fad280680dc43478f47343dd5c3870",
+    "lib/inventory/workOrderAddContract.cjs": "125519c9ae4cea132107e85bebaa31f8b131fcf4660f47f41264d8026bb879d1",
+    "lib/inventory/storageUnitContract.cjs": "e0cda77e919a02d81d86c2ab41800f2aa446d3702feb106c9f9fc0615ba7da7a",
+    "lib/ops/workOrderMachineLink.cjs": "33f7ee48b103137da5c819c1ceb9892f12d80e2f3f6a81fb399ad7a2e0afa81a",
+    "lib/ops/workOrderSourceLookup.cjs": "aca10f1dd04889aff03af1e7029a7cf2d60ad49e934e6a11d3f58a51759e505d",
+    "lib/ops/workOrderSourceLinkPayload.cjs": "7fd85b1de1281df2a46f0db3d77ae6d5ab92c15725c2ab5a047a94ef02330521",
+    "lib/ops/workOrderEquipmentOnboarding.cjs": "ac70baaccbdf0c50f0c80339f0e1e5c9e8f6b5d116577cd3915973e1eedfe256",
+    "lib/ops/blueFolderEquipmentLookup.cjs": "51170197b6dc40143f0b5ba00c9e534246d5a59989efe7560c8c18caac43888e",
+    "lib/ops/workOrderLinkSweep.cjs": "c69662a9546a27fefaf679dafe939dcd386631c0d8b5c5102c33c4c37b22a24c",
+    "lib/ops/blueFolderImportContract.cjs": "afa2ca57a052f013d28d160b4437f415039c3d3c537bef9ad91b9302f570a6bc",
+    "lib/ops/workOrderLinkServer.js": "2b278a5eb233a6f3be5f2bb226d7aa4fde1b6ac40162379dbfc1a3f3802bb716",
+    "pages/api/cron/magmonitor-alerts.js": "f6d8421bf8031a8b50d4ce816721267b276cf722fc531cca3318c0ce3ff2ba85",
+    "pages/api/ops/work-order-link-alerts.js": "6bcb4f3e75a03496aec8306c21bfb043f33f02b009d04cb5bde1b92c98c83b5b"
+  },
+  "baselineArchiveSHA256": "7716c30cc40da7247478218065cc4153e94939c773100876ab1a5015cda6162a",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a"
+}

@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "packagedAt": "2026-09-29T18:50:28.253Z",
+  "artifactSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "artifactBytes": 3812822,
+  "compositionReportSHA256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f",
+  "baselineRevision": "nextserverwest-00069-geb",
+  "baselineArchiveSHA256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d",
+  "candidateBuildId": "ops-calendar-919ccc2c20100d03",
+  "noDeletedFiles": true,
+  "unchangedFilesVerified": true,
+  "compiledTestsPassed": true,
+  "compiledTestCount": 93,
+  "independentReviewPassed": true,
+  "zipEntriesVerified": 537,
+  "sourceOnly": true,
+  "runtimeConfigurationPreserved": true,
+  "staticAssetsPreserved": 150,
+  "receiptHashes": {
+    "compiled-verification.json": "30469f49ef68fdc8525885c4b84257e597d4ad7787ad7f6fdd05fcff245d9ef1",
+    "source-verification.json": "1b29942cc1994d979059db2f13951e74b6d4bb367d8de17427ecf06d46636ed9",
+    "independent-artifact-review.json": "d575c862ae346b2915dced144246ce0f3e3d0cdab5801dbf5f88efbf41a3dfcc",
+    "root-independent-verification.json": "5909d117fd18b1c0d4bd8f6d0face003e9a1e706e7372573cd70ff7be11846e5"
+  },
+  "frozenInputsSHA256": "9d843ab3a049cc44b7b112aeee00fe4adf22e0a83dbb7e822756215712a477fd",
+  "candidateInventorySHA256": "8ad0f81b8184b4629f386f0b3b0a36e09062d7e217a68ecef962fe30f67bcea5"
+}

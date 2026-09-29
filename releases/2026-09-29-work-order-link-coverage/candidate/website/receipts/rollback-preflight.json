@@ -1,0 +1,11 @@
+{
+  "ready": true,
+  "changed": false,
+  "currentRevision": "nextserverwest-00067-loh",
+  "sourceOnly": true,
+  "rollbackArchiveSHA256": "7716c30cc40da7247478218065cc4153e94939c773100876ab1a5015cda6162a",
+  "restoredFromRevision": "nextserverwest-00066-xuc",
+  "dataWillBeRestored": false,
+  "rulesWillBeRestored": false,
+  "checkedAt": "2026-09-29T18:24:29.144Z"
+}

@@ -1,0 +1,41 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-09-29T18:32:09.162631+00:00",
+  "version": "2026.09.29-bluefolder-link-coverage.1",
+  "sourceSHA256": "7d5405af384d7d040b471a63d09091ee94410411130bf4a01054d20a45e0e0e0",
+  "initialSshJobLifetimeFailure": true,
+  "narrowDurableLaunchRecovery": true,
+  "survivedSeparateSshSession": true,
+  "running": true,
+  "healthy": true,
+  "lastSuccessfulPoll": "2026-09-29T18:32:02.805524+00:00",
+  "checkpointStateReplaced": false,
+  "priorWorkOrderKeysPreserved": true,
+  "otherServicesRestarted": false,
+  "files": [
+    {
+      "path": "deploy-listener.cjs",
+      "sha256": "f2650956eb056576af01f1f5244263499b36430300b23952bf2fdeb4f084527e"
+    },
+    {
+      "path": "recover-listener-launch.cjs",
+      "sha256": "40d3a6a0354fac08027c8dc99506e1c2bf95555bf2de940b14fec7888a65e2fa"
+    },
+    {
+      "path": "verify-listener.cjs",
+      "sha256": "b8faf9e9e8b986b355c27342df346858c6a8af5cdd5088fa02221d02bcd5828d"
+    },
+    {
+      "path": "listener-publication-1790706288609.json",
+      "sha256": "3ae1d04f05e1852c10bf893a37011f52150443f118fc68ff438f20183411e6e9"
+    },
+    {
+      "path": "listener-launch-recovery-1790706637610.json",
+      "sha256": "e5354517a7b5baf924386bf63cd8d5136844506c2dc31ec7a80fc28eefef1f63"
+    },
+    {
+      "path": "listener-live-verification.json",
+      "sha256": "5f96666c3b810e42e40004375a02c09d2e362dd17e36c40fd24b6022d43f5940"
+    }
+  ]
+}

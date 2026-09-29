@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "checkedAtIso": "2026-09-29T18:55:57.368643+00:00",
+  "readOnly": true,
+  "verificationChannel": "Fresh independent SSH session; manager service_status only",
+  "status": {
+    "key": "bluefolder_listener",
+    "pid": 22344,
+    "running": true,
+    "healthy": true,
+    "deployed_version": "2026.09.29-bluefolder-link-coverage.1",
+    "latest_successful_poll": "2026-09-29T18:54:33.917032+00:00"
+  },
+  "successfulPollAgeSeconds": 83.451611,
+  "maximumPollAgeSeconds": 180,
+  "expectedPid": 22344,
+  "expectedVersion": "2026.09.29-bluefolder-link-coverage.1",
+  "serverSourceWrites": 0,
+  "serverCheckpointWrites": 0,
+  "serverRestarts": 0,
+  "credentialsPrintedOrSaved": false,
+  "previousReceiptsPreserved": true
+}

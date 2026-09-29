@@ -1,0 +1,134 @@
+{
+  "preparedAt": "2026-09-29T18:57:13.905Z",
+  "result": "PASS",
+  "baselineRevision": "nextserverwest-00069-geb",
+  "baselineArchiveSHA256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d",
+  "revision": "nextserverwest-00070-liw",
+  "artifactSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "scope": "One link-health helper only; 536 existing files and intervening calendar releases preserved",
+  "files": [
+    {
+      "path": "baseline/baseline.json",
+      "sha256": "bba069d5bec83d9cb15041266f813f62f2acc3360425404e9ec2893ba8154117"
+    },
+    {
+      "path": "baseline/baseline-files.json",
+      "sha256": "a7d8a63582d72be49cb57867a9211aa228efbfd253c8976251b15c08e1246a64"
+    },
+    {
+      "path": "baseline/source-00069.zip",
+      "sha256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d"
+    },
+    {
+      "path": "candidate/website/receipts/composition-report.json",
+      "sha256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f"
+    },
+    {
+      "path": "candidate/website/receipts/candidate-files.json",
+      "sha256": "8ad0f81b8184b4629f386f0b3b0a36e09062d7e217a68ecef962fe30f67bcea5"
+    },
+    {
+      "path": "candidate/website/receipts/frozen-inputs.json",
+      "sha256": "9d843ab3a049cc44b7b112aeee00fe4adf22e0a83dbb7e822756215712a477fd"
+    },
+    {
+      "path": "candidate/website/receipts/source-verification.json",
+      "sha256": "1b29942cc1994d979059db2f13951e74b6d4bb367d8de17427ecf06d46636ed9"
+    },
+    {
+      "path": "candidate/website/receipts/compiled-verification.json",
+      "sha256": "30469f49ef68fdc8525885c4b84257e597d4ad7787ad7f6fdd05fcff245d9ef1"
+    },
+    {
+      "path": "candidate/website/receipts/independent-artifact-review.json",
+      "sha256": "d575c862ae346b2915dced144246ce0f3e3d0cdab5801dbf5f88efbf41a3dfcc"
+    },
+    {
+      "path": "candidate/website/receipts/root-independent-verification.json",
+      "sha256": "5909d117fd18b1c0d4bd8f6d0face003e9a1e706e7372573cd70ff7be11846e5"
+    },
+    {
+      "path": "candidate/website/receipts/package-gates.json",
+      "sha256": "6d7670ca426b333f780be851574f44228e1b94b2b7fd17da7f6739f8102392ac"
+    },
+    {
+      "path": "candidate/website/receipts/root-approval.json",
+      "sha256": "945cd9cdf9267f9a664b9849f322f337cc970b800be4c8dcc3c173fd235f5dc6"
+    },
+    {
+      "path": "candidate/website/receipts/deployment-receipt.json",
+      "sha256": "2fe793afff5088d6160bc6d21f947e5a6b029a89a558fb912961721ada8eafea"
+    },
+    {
+      "path": "candidate/website/receipts/live-verification.json",
+      "sha256": "726f08b732b7b71db5649ce6d512a5bdc1244f4619918d44f4d4165dc0c961d6"
+    },
+    {
+      "path": "candidate/website/receipts/rollback-preflight.json",
+      "sha256": "a6945d4b4f14b958a95dd0db8d9e8b78554cc8ab33cb886aedf6c4f03f91f779"
+    },
+    {
+      "path": "candidate/website/tools/compose.cjs",
+      "sha256": "aff3e4b7c3527d4b2be918435ea8866c0cf1d72c5dc7867a6a363e7f094e13da"
+    },
+    {
+      "path": "candidate/website/tools/package.cjs",
+      "sha256": "b9933b3bb467d62094410b2884e71921580b30d6d657b1d2fa87e30d5f731c0b"
+    },
+    {
+      "path": "candidate/website/tools/deploy.cjs",
+      "sha256": "eabaaf6a8bae3400f2fa6becd89355fe25398e3f7e39b44c65d03fad77f3fa38"
+    },
+    {
+      "path": "candidate/website/tools/cloud-common.cjs",
+      "sha256": "6bbd38ee2c223da002be68db7815ccac610e312a669df9c9bb9d096a245740d1"
+    },
+    {
+      "path": "candidate/website/tools/rollback.cjs",
+      "sha256": "c8504fc683f50a7f5cbe207166529a37fb653333b9e144578930bd41618e30e5"
+    },
+    {
+      "path": "candidate/website/tools/verify-live.cjs",
+      "sha256": "158195358907243511c2ab1db897ed7270d7d808754331d64a563b3913e7a06c"
+    },
+    {
+      "path": "candidate/website/tools/test-service-draft.cjs",
+      "sha256": "b6d1ea022be7e87723202da806acfa427d4a38e4a154a7016f4f4ac59d58de3b"
+    },
+    {
+      "path": "candidate/website/tools/test-routes-draft.cjs",
+      "sha256": "dc5946411773706d9643163dc1fd91aae0317694c6d4df38278bab9ed638cd0d"
+    },
+    {
+      "path": "candidate/website/tools/test-live-bluefolder-adapter.cjs",
+      "sha256": "46657a5e0f56ed92cca025050505440e885fc3c52dd946ea70514b73352ce361"
+    },
+    {
+      "path": "candidate/website/tools/compiled-service-loader.cjs",
+      "sha256": "5502f8b9c982075df9816f4a4b65500aeee9307d887d2d7d6fed94e43cd6aa5c"
+    },
+    {
+      "path": "candidate/website/tools/run-source-verification.cjs",
+      "sha256": "2d9c38eb40b327a1cd3aefa3a1d45f06e685576a70c0f94f3aaeea12431463c1"
+    },
+    {
+      "path": "candidate/website/tools/run-compiled-verification.cjs",
+      "sha256": "41bab7f601e2e231cb4555c2826d2be38fefc2a73f3670aae0a21f0e5656efc5"
+    },
+    {
+      "path": "candidate/website/source/workOrderLinkHealth.cjs",
+      "sha256": "7584758c729e51b9d24b3b10d69089798d5609406e4ad60136b037dbc0c0af95"
+    },
+    {
+      "path": "candidate/website/artifact.zip",
+      "sha256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e"
+    },
+    {
+      "path": "tools/rollback-release.cjs",
+      "sha256": "8d8eb028a2bc771dab3170cdd939b21b43a52b9cd679e85bfb7c8f6288128cb2"
+    }
+  ],
+  "privateDataIncluded": false,
+  "committed": false,
+  "pushed": false
+}

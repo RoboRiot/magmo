@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T18:14:30.657Z",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "tests": {
+    "passed": 86,
+    "failed": 0
+  },
+  "testHashes": {
+    "tmp/work-order-link-coverage-20260929/deployment/test-service-draft.cjs": "8fdef0ff4de50d005f8c40c24bda397d08abc26d4e93b87755e3b849bb84c500",
+    "tmp/work-order-link-coverage-20260929/deployment/test-routes-draft.cjs": "3fe7aef9fa5818a0a0dd42515ccc4e40d4022860451a26732fdcef2ee467aac5",
+    "tmp/work-order-link-coverage-20260929/deployment/test-live-bluefolder-adapter.cjs": "ad7496459633a42552509a04a28108304c223e86d4df934fc8f51e2858251015",
+    "tmp/work-order-link-coverage-20260929/deployment/compiled-service-loader.cjs": "5502f8b9c982075df9816f4a4b65500aeee9307d887d2d7d6fed94e43cd6aa5c",
+    "test/work-order-machine-import.test.cjs": "b40223336a35cccf608d1cd2604955e67ae1fbad173e6f43b0cde2d9235446bd",
+    "test/work-order-link-health.test.cjs": "21177dfa3625c0750109f2c1742f05b4fa8bb7764c2292ca56a2a4a762c65561",
+    "test/work-order-link-independent-review.test.cjs": "a2aa6eaff9e35d4d21e972e186d444c7b51dbc5bf4739b21a3528707003c467b"
+  },
+  "actualCompiledImporter": true,
+  "actualCompiledUpsert": true,
+  "actualCompiledManualLinks": true,
+  "actualCompiledCron": true,
+  "actualCompiledOwnerInbox": true,
+  "actualLiveBlueFolderClient": true,
+  "productionNetworkRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

@@ -1,0 +1,95 @@
+{
+  "apply": true,
+  "checkedAt": "2026-09-29T18:30:31.125831+00:00",
+  "sourceChanged": false,
+  "checkpointStateReplaced": false,
+  "otherServicesRestarted": false,
+  "launchMethod": "CREATE_BREAKAWAY_FROM_JOB hidden pythonw manager start bluefolder_listener",
+  "servicesBefore": [
+    {
+      "key": "bluefolder_print",
+      "pid": 7676,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "magmonitor_relay",
+      "pid": 15356,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "command_report",
+      "pid": 18088,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.21-ops-reconnect.2",
+      "latest_successful_poll": "2026-09-29T18:30:16.405729+00:00"
+    },
+    {
+      "key": "ngrok",
+      "pid": 8440,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "bluefolder_listener",
+      "pid": null,
+      "running": false,
+      "healthy": false,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    }
+  ],
+  "managerLauncherPid": 22936,
+  "managerExitCode": 0,
+  "servicesAfter": [
+    {
+      "key": "bluefolder_print",
+      "pid": 7676,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "magmonitor_relay",
+      "pid": 15356,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "command_report",
+      "pid": 18088,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.21-ops-reconnect.2",
+      "latest_successful_poll": "2026-09-29T18:30:16.405729+00:00"
+    },
+    {
+      "key": "ngrok",
+      "pid": 8440,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "bluefolder_listener",
+      "pid": 22344,
+      "running": true,
+      "healthy": false,
+      "deployed_version": "2026.09.25-bluefolder-destination-retry.1",
+      "latest_successful_poll": "2026-09-29T18:23:30.919574+00:00"
+    }
+  ],
+  "newPid": 22344
+}

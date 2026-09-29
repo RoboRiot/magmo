@@ -1,0 +1,20 @@
+{
+  "sourceOnlyApproved": true,
+  "artifactSHA256": "af039aea79596d04fdb49ca5bbb83037822e21731befaabadd7aafd8edcdc04a",
+  "packageGatesSHA256": "bc4644a839a74707db4cd1e6df417072b28ddeb8f5198cf871856640de42267f",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "baselineArchiveSHA256": "7716c30cc40da7247478218065cc4153e94939c773100876ab1a5015cda6162a",
+  "baselineRevision": "nextserverwest-00066-xuc",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "historicalBaselineSuppressed": true,
+  "ownerConfigurationVerified": true,
+  "toolHashes": {
+    "deploy.cjs": "afcc676e213bb465fbed2c4c9c12088aeb9de9c35c1e7beb8bbc6ed89ae45da5",
+    "cloud-common.cjs": "6bbd38ee2c223da002be68db7815ccac610e312a669df9c9bb9d096a245740d1",
+    "rollback.cjs": "d9018d90fcaffbbb685fa51f0343c5b0520e06029c08d502358ae742d2329681"
+  },
+  "scope": "Reviewed linkage service, private owner alert API and bounded reconciliation cron; preserve runtime configuration, unrelated code and static assets.",
+  "verification": "Root independent byte audit and actual compiled tests; separate source and artifact reviews; historical624 suppressed and new arrivals retained for normal private alert delivery. No test messages."
+}

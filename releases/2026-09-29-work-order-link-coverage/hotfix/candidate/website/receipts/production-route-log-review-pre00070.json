@@ -1,0 +1,72 @@
+{
+  "result": "PASS",
+  "scope": "Read-only affected-route log classification and existing scheduler/runtime verification before 00070 completion; not a post-deployment smoke test",
+  "checkedAtIso": "2026-09-29T18:54:25.380Z",
+  "since": "2026-09-29T18:24:19.534Z",
+  "currentRevision": "nextserverwest-00069-geb",
+  "functionStateAtCheck": "DEPLOYING",
+  "allLogQueriesPaginatedToCompletion": true,
+  "routeSummary": {
+    "ingest200": 462,
+    "ingest404": 203,
+    "naturalCron200": 1,
+    "knownUnauthenticatedSmoke401": 4,
+    "knownWrongMethodSmoke405": 2,
+    "affectedRoute5xx": 0,
+    "relatedApplicationErrors": 0
+  },
+  "ingestDiagnosticClassification": {
+    "parsedDiagnosticCount": 205,
+    "allEventTypes": ["work_order.command_context"],
+    "allStatuses": [404],
+    "allCodes": ["work_order_not_found"],
+    "failedImportOrWriteEventDiagnostics": 0,
+    "classification": "Expected read-only Magmo receipt probes for absent work-order documents, explicitly handled by the listener as None. These are not failed BlueFolder link imports.",
+    "tombstoneDistinction": "Existing deleted work orders return lifecycle context with deleted=true; the inspected handler returns not_found only when the document does not exist.",
+    "countNote": "HTTP request and application diagnostic streams are independently timestamped/indexed; their counts are not asserted as a one-to-one join."
+  },
+  "excludedExistingOrUnrelatedErrors": {
+    "slackEvents503": 72,
+    "calendar": 8
+  },
+  "scheduler": {
+    "job": "firebase-schedule-magmonitorAlertsSchedule-us-west2",
+    "state": "ENABLED",
+    "schedule": "*/30 * * * *",
+    "timeZone": "America/Los_Angeles",
+    "lastAttemptTime": "2026-09-29T18:30:00.452792Z",
+    "lastStatusCode": 0,
+    "targetFunction": "magmonitorAlertsSchedule",
+    "functionState": "ACTIVE",
+    "revision": "magmonitoralertsschedule-00004-kez",
+    "configuredRouteOverride": false,
+    "actualNaturalResponseAt": "2026-09-29T18:30:27.027763Z",
+    "actualResponseOk": true,
+    "coveragePresent": true,
+    "coverageDisabled": false,
+    "coverageUnavailable": false,
+    "workOrdersChecked": 50,
+    "sourcesRefreshed": 4,
+    "healthFailures": 0,
+    "sourceFailures": 0
+  },
+  "runtime": {
+    "exactDatabaseProject": "magmo-ac10c",
+    "productionGuardEnabled": true,
+    "blueFolderCredentialConfigured": true,
+    "ingestWritesEnabled": true,
+    "environmentValuesPrinted": false
+  },
+  "evidenceSources": [
+    "Cloud Run request/error logs, original 00067 activation through checkedAtIso",
+    "Cloud Scheduler live job and target function metadata",
+    "Actual scheduled function response summary from its 18:30 natural run",
+    "pages/api/ops/ingest.js command_context read handler",
+    "lib/ops/workOrders.js getOpsCommandContext existence/tombstone behavior",
+    "Deployed listener source work_order_context exact 404/work_order_not_found catch"
+  ],
+  "rawMessagesPrintedOrSaved": false,
+  "requestBodiesPrintedOrSaved": false,
+  "credentialsPrintedOrSaved": false,
+  "productionMutations": 0
+}

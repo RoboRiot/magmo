@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T18:32:09.162631+00:00",
+  "sourceSha256": "7d5405af384d7d040b471a63d09091ee94410411130bf4a01054d20a45e0e0e0",
+  "version": "2026.09.29-bluefolder-link-coverage.1",
+  "recordCount": 9636,
+  "services": [
+    {
+      "key": "bluefolder_print",
+      "pid": 7676,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "magmonitor_relay",
+      "pid": 15356,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "command_report",
+      "pid": 18088,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.21-ops-reconnect.2",
+      "latest_successful_poll": "2026-09-29T18:31:54.304705+00:00"
+    },
+    {
+      "key": "ngrok",
+      "pid": 8440,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "",
+      "latest_successful_poll": ""
+    },
+    {
+      "key": "bluefolder_listener",
+      "pid": 22344,
+      "running": true,
+      "healthy": true,
+      "deployed_version": "2026.09.29-bluefolder-link-coverage.1",
+      "latest_successful_poll": "2026-09-29T18:32:02.805524+00:00"
+    }
+  ],
+  "listenerOnlyRestarted": true,
+  "checkpointStateReplaced": false,
+  "credentialsCopied": false,
+  "priorWorkOrderKeysPreserved": true,
+  "publicationReceipt": "listener-publication-1790706288609.json",
+  "durableLaunchRecoveryReceipt": "listener-launch-recovery-1790706637610.json",
+  "survivedSeparateSshSession": true
+}

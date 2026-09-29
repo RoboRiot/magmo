@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "packagedAt": "2026-09-29T18:20:52.183Z",
+  "artifactSHA256": "af039aea79596d04fdb49ca5bbb83037822e21731befaabadd7aafd8edcdc04a",
+  "artifactBytes": 3768638,
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "baselineRevision": "nextserverwest-00066-xuc",
+  "baselineArchiveSHA256": "7716c30cc40da7247478218065cc4153e94939c773100876ab1a5015cda6162a",
+  "candidateBuildId": "item-status-52cd8da14a55bec2",
+  "noDeletedFiles": true,
+  "unchangedFilesVerified": true,
+  "compiledTestsPassed": true,
+  "compiledTestCount": 86,
+  "independentReviewPassed": true,
+  "zipEntriesVerified": 533,
+  "sourceOnly": true,
+  "runtimeConfigurationPreserved": true,
+  "staticAssetsPreserved": 146,
+  "receiptHashes": {
+    "compiled-verification.json": "46a828a48d5d99e2c65878894c28ff16fa974547d8e49384bfd5e9cc2fe0e586",
+    "source-verification.json": "5db11a0f4745a727127bce72297a64ea4867e7920110d6173a55b1d6679a1f37",
+    "independent-artifact-review.json": "685ed70a251e0d2a13327b2969411aaf5aa5cd2b54f4f0dd3a5bbfe426c06407",
+    "root-independent-verification.json": "69cefacf522de466fb6b4513958fd88046ca55d20194437162c6f5957470bf09"
+  },
+  "frozenInputsSHA256": "9d88060d60514653bf2f72c1b5a6a587d74bbd73bad0e20d372dde823e62a7e2",
+  "candidateInventorySHA256": "14fbbb2a4deb543d44676f538d3a400f8614b1c425b850e0c99ca2f42b862849"
+}

@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T18:15:28.674Z",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "sourceDirectory": "draft-source-v6",
+  "baselineFiles": 511,
+  "candidateFiles": 533,
+  "changedFiles": [
+    ".next/routes-manifest.json",
+    ".next/server/chunks/8806.js",
+    ".next/server/pages-manifest.json",
+    ".next/server/pages/api/cron/magmonitor-alerts.js",
+    "machine-link/blueFolderImportContract.cjs"
+  ],
+  "unchangedFilesVerified": 506,
+  "exactSourceFunctions": 5,
+  "compiledTestsPassed": 86,
+  "compiledTestsFailed": 0,
+  "privateDataIncluded": false,
+  "productionNetworkRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

@@ -1,0 +1,21 @@
+{
+  "sourceOnlyApproved": true,
+  "artifactSHA256": "e4201b19e44328e633c7f0c11f5bba377c5488a3d4ef57f881d921bdd843329e",
+  "packageGatesSHA256": "6d7670ca426b333f780be851574f44228e1b94b2b7fd17da7f6739f8102392ac",
+  "compositionReportSHA256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f",
+  "baselineArchiveSHA256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d",
+  "baselineRevision": "nextserverwest-00069-geb",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "historicalBaselineSuppressed": true,
+  "ownerConfigurationVerified": true,
+  "ownerDeliveryPaused": true,
+  "toolHashes": {
+    "deploy.cjs": "eabaaf6a8bae3400f2fa6becd89355fe25398e3f7e39b44c65d03fad77f3fa38",
+    "cloud-common.cjs": "6bbd38ee2c223da002be68db7815ccac610e312a669df9c9bb9d096a245740d1",
+    "rollback.cjs": "c8504fc683f50a7f5cbe207166529a37fb653333b9e144578930bd41618e30e5"
+  },
+  "scope": "One stable notification-identity helper only. Preserve exact00069 calendar release and loader correction, every other source/static byte and runtime configuration. Keep owner delivery paused until guarded queue reconciliation and live verification.",
+  "verification": "Root and independent reviews:536unchangedfiles,93compiledtests;494source tests. No production test Slack posts. Historical baseline stays suppressed; true source/asset changes and resolved/reopened incidents remain deliverable."
+}

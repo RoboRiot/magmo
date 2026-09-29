@@ -1,0 +1,8 @@
+{
+  "frozenAt": "2026-09-29T18:45:08.259Z",
+  "sourceHashes": {
+    "lib/ops/workOrderLinkHealth.cjs": "7584758c729e51b9d24b3b10d69089798d5609406e4ad60136b037dbc0c0af95"
+  },
+  "baselineArchiveSHA256": "250c33036d94e3d1aa5c549cfec7b6451b0ec8dcd64782ddef1ef75e10e1b36d",
+  "compositionReportSHA256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f"
+}

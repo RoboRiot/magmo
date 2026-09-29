@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-29T18:45:09.609Z",
+  "compositionReportSHA256": "162eda92b0c816d496275363917f42ec73797529bdd53654e00151b31efab09f",
+  "tests": {
+    "passed": 93,
+    "failed": 0
+  },
+  "testHashes": {
+    "tmp/work-order-link-coverage-20260929/hotfix-deployment-v2/test-service-draft.cjs": "b6d1ea022be7e87723202da806acfa427d4a38e4a154a7016f4f4ac59d58de3b",
+    "tmp/work-order-link-coverage-20260929/hotfix-deployment-v2/test-routes-draft.cjs": "dc5946411773706d9643163dc1fd91aae0317694c6d4df38278bab9ed638cd0d",
+    "tmp/work-order-link-coverage-20260929/hotfix-deployment-v2/test-live-bluefolder-adapter.cjs": "46657a5e0f56ed92cca025050505440e885fc3c52dd946ea70514b73352ce361",
+    "tmp/work-order-link-coverage-20260929/hotfix-deployment-v2/compiled-service-loader.cjs": "5502f8b9c982075df9816f4a4b65500aeee9307d887d2d7d6fed94e43cd6aa5c",
+    "test/work-order-machine-import.test.cjs": "b40223336a35cccf608d1cd2604955e67ae1fbad173e6f43b0cde2d9235446bd",
+    "test/work-order-link-health.test.cjs": "02a49d797cd2793c3592aebb1ed459e44ecdc60f3941ae7a22f652e1a7b17e1f",
+    "test/work-order-link-independent-review.test.cjs": "a2aa6eaff9e35d4d21e972e186d444c7b51dbc5bf4739b21a3528707003c467b"
+  },
+  "actualCompiledImporter": true,
+  "actualCompiledUpsert": true,
+  "actualCompiledManualLinks": true,
+  "actualCompiledCron": true,
+  "actualCompiledOwnerInbox": true,
+  "actualLiveBlueFolderClient": true,
+  "productionNetworkRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

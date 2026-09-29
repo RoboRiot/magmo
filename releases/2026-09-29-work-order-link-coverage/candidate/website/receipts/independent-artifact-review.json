@@ -1,0 +1,38 @@
+{
+  "result": "PASS",
+  "reviewer": "link_coverage_design",
+  "reviewedAtIso": "2026-09-29T18:18:36.619Z",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "directory": "draft-source-v6",
+  "baselineRevision": "nextserverwest-00066-xuc",
+  "runtimeEditsDuringReview": 0,
+  "productionMutations": 0,
+  "tests": [
+    {
+      "command": "WO_LINK_DRAFT=draft-source-v6 node --test tmp/work-order-link-coverage-20260929/deployment/test-service-draft.cjs",
+      "passed": 65,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "command": "WO_LINK_DRAFT=draft-source-v6 node --test tmp/work-order-link-coverage-20260929/deployment/test-routes-draft.cjs",
+      "passed": 16,
+      "failed": 0,
+      "exitCode": 0
+    }
+  ],
+  "checks": {
+    "actualCompiledServiceAndRoutesExecuted": true,
+    "bothSourceAndCodeFixtureLoadersReplaced": true,
+    "sourceHashesMatchFrozenComposition": true,
+    "fiveExtractedServiceFunctionsUnchangedFromV5": true,
+    "unrelatedSharedFactoryFunctionsPreserved": 76,
+    "liveBlueFolderAdapterPreserved": true,
+    "ownerOnlyApiAuthenticationInspected": true,
+    "productionProjectRuntimeGuardInspected": true,
+    "privateNotificationNoBroadcastPathInspected": true,
+    "sourceGraphIsolationInspected": true
+  },
+  "findings": [],
+  "scopeNote": "Whole-file workOrders.js changes after the earlier freeze were outside the five extracted functions and excluded from the compiled overlay. No attribution of those unrelated edits is claimed. This review does not claim a live deployment or production smoke test."
+}

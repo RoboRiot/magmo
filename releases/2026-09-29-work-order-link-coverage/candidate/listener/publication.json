@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-09-29T18:27:28.417Z",
+  "deployedAt": "2026-09-29T18:24:41.753423+00:00",
+  "version": "2026.09.29-bluefolder-link-coverage.1",
+  "sourceSHA256": "7d5405af384d7d040b471a63d09091ee94410411130bf4a01054d20a45e0e0e0",
+  "previousSourceSHA256": "7f28a4c93327ef111b02c6d068cc86bb4ec0561b55dc06a697bcfc5fcc76c71c",
+  "managerSHA256": "da41cddb8693652a369c8ea7422b5f5c61feffa914c358482e2f9e08c6d8665a",
+  "sourceBackupCreated": true,
+  "checkpointBackupCreated": true,
+  "checkpointStateReplaced": false,
+  "priorWorkOrderKeysPreserved": true,
+  "unrelatedServicesPreserved": true,
+  "startupVerified": true,
+  "tests": {
+    "passed": 8,
+    "failed": 0,
+    "testSHA256": "7c345921c483776db2d029d6ebaee0ba87dd4e37f932c44eebcff06a94ca5a91"
+  },
+  "credentialsOrCheckpointStateIncluded": false,
+  "freshPostStartupPoll": "separate_root_verification"
+}

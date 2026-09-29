@@ -1,0 +1,267 @@
+{
+  "preparedAt": "2026-09-29T18:26:29.218Z",
+  "result": "PASS",
+  "revision": "nextserverwest-00067-loh",
+  "baselineRevision": "nextserverwest-00066-xuc",
+  "baselineArchiveSHA256": "7716c30cc40da7247478218065cc4153e94939c773100876ab1a5015cda6162a",
+  "artifactSHA256": "af039aea79596d04fdb49ca5bbb83037822e21731befaabadd7aafd8edcdc04a",
+  "configSHA256": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "compositionReportSHA256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+  "files": [
+    {
+      "path": "receipts/baseline.json",
+      "sha256": "830743dd3a8d9538b2b30c458927c41483ca080162a4456c5751b7b51713e0d6",
+      "bytes": 747
+    },
+    {
+      "path": "receipts/composition-report.json",
+      "sha256": "e22462169b514ce7fd127ed250fc0d4b68f08a5a047919454e07544c73761a8a",
+      "bytes": 16979
+    },
+    {
+      "path": "receipts/candidate-files.json",
+      "sha256": "14fbbb2a4deb543d44676f538d3a400f8614b1c425b850e0c99ca2f42b862849",
+      "bytes": 91667
+    },
+    {
+      "path": "receipts/frozen-inputs.json",
+      "sha256": "9d88060d60514653bf2f72c1b5a6a587d74bbd73bad0e20d372dde823e62a7e2",
+      "bytes": 2557
+    },
+    {
+      "path": "receipts/compiled-verification.json",
+      "sha256": "46a828a48d5d99e2c65878894c28ff16fa974547d8e49384bfd5e9cc2fe0e586",
+      "bytes": 1473
+    },
+    {
+      "path": "receipts/source-verification.json",
+      "sha256": "5db11a0f4745a727127bce72297a64ea4867e7920110d6173a55b1d6679a1f37",
+      "bytes": 4699
+    },
+    {
+      "path": "receipts/independent-artifact-review.json",
+      "sha256": "685ed70a251e0d2a13327b2969411aaf5aa5cd2b54f4f0dd3a5bbfe426c06407",
+      "bytes": 1603
+    },
+    {
+      "path": "receipts/root-independent-verification.json",
+      "sha256": "69cefacf522de466fb6b4513958fd88046ca55d20194437162c6f5957470bf09",
+      "bytes": 717
+    },
+    {
+      "path": "receipts/package-gates.json",
+      "sha256": "bc4644a839a74707db4cd1e6df417072b28ddeb8f5198cf871856640de42267f",
+      "bytes": 1391
+    },
+    {
+      "path": "receipts/root-approval.json",
+      "sha256": "c0ae82ff531c7bb2a6451d1feefd73f96e7aeab6238ce6c10ba4213d0d797453",
+      "bytes": 1354
+    },
+    {
+      "path": "receipts/deployment-receipt.json",
+      "sha256": "ffbb290143b5240ec53605f6bc4bae924b115aa7f7907cb44d1b4401c2b5e72e",
+      "bytes": 1381
+    },
+    {
+      "path": "receipts/live-verification.json",
+      "sha256": "0d8239a26f6af07d564c511c90b0dcc483cdf3fa75494953f1a6819be560e288",
+      "bytes": 7258
+    },
+    {
+      "path": "receipts/rollback-preflight.json",
+      "sha256": "591762fadcaa7c32b051fceed000189d5fed26949462c91966ab7775ecfab6b3",
+      "bytes": 366
+    },
+    {
+      "path": "receipts/runtime-readonly-verification.json",
+      "sha256": "b8385081b5f87980fec5694ed39c47eeeaaeddc6d53b69224730b24e90d0e196",
+      "bytes": 675
+    },
+    {
+      "path": "tools/compose-service-draft.cjs",
+      "sha256": "36ccdd789a264d8ad74f230daf74956a18c92fc434787fab81e8041e6be2068c",
+      "bytes": 12160
+    },
+    {
+      "path": "tools/compose-route-overlays.cjs",
+      "sha256": "4a216ba2f7c21b6efe775c7196d6d9dfa2086d413281a3360822738727c65d2d",
+      "bytes": 8272
+    },
+    {
+      "path": "tools/finalize-candidate.cjs",
+      "sha256": "2c7667fda3d6de670ab6449c966988623b857b264f19b3d8080d6a2160ef5a62",
+      "bytes": 4087
+    },
+    {
+      "path": "tools/package.cjs",
+      "sha256": "6f013bc2e6bcb6395f330eeb63f9a8d687d46fdcaeb5e2b7b34ed32e64d51650",
+      "bytes": 4643
+    },
+    {
+      "path": "tools/deploy.cjs",
+      "sha256": "afcc676e213bb465fbed2c4c9c12088aeb9de9c35c1e7beb8bbc6ed89ae45da5",
+      "bytes": 5414
+    },
+    {
+      "path": "tools/cloud-common.cjs",
+      "sha256": "6bbd38ee2c223da002be68db7815ccac610e312a669df9c9bb9d096a245740d1",
+      "bytes": 2124
+    },
+    {
+      "path": "tools/rollback.cjs",
+      "sha256": "d9018d90fcaffbbb685fa51f0343c5b0520e06029c08d502358ae742d2329681",
+      "bytes": 4314
+    },
+    {
+      "path": "tools/verify-live.cjs",
+      "sha256": "158195358907243511c2ab1db897ed7270d7d808754331d64a563b3913e7a06c",
+      "bytes": 3486
+    },
+    {
+      "path": "tools/run-compiled-verification.cjs",
+      "sha256": "41bab7f601e2e231cb4555c2826d2be38fefc2a73f3670aae0a21f0e5656efc5",
+      "bytes": 2191
+    },
+    {
+      "path": "tools/test-service-draft.cjs",
+      "sha256": "8fdef0ff4de50d005f8c40c24bda397d08abc26d4e93b87755e3b849bb84c500",
+      "bytes": 2182
+    },
+    {
+      "path": "tools/test-routes-draft.cjs",
+      "sha256": "3fe7aef9fa5818a0a0dd42515ccc4e40d4022860451a26732fdcef2ee467aac5",
+      "bytes": 4313
+    },
+    {
+      "path": "tools/test-live-bluefolder-adapter.cjs",
+      "sha256": "ad7496459633a42552509a04a28108304c223e86d4df934fc8f51e2858251015",
+      "bytes": 5378
+    },
+    {
+      "path": "tools/compiled-service-loader.cjs",
+      "sha256": "5502f8b9c982075df9816f4a4b65500aeee9307d887d2d7d6fed94e43cd6aa5c",
+      "bytes": 4068
+    },
+    {
+      "path": "tools/test-portable-rollback.cjs",
+      "sha256": "3d0884b9256716af990ac273d8672dfc4c50f57ba99360a4d4b1c6ea8b270d1d",
+      "bytes": 5544
+    },
+    {
+      "path": "artifact.zip",
+      "sha256": "af039aea79596d04fdb49ca5bbb83037822e21731befaabadd7aafd8edcdc04a",
+      "bytes": 3768638
+    },
+    {
+      "path": "source/work-order-link/lib/bluefolder/client.js",
+      "sha256": "0fb71cd1d6fa0434ef48ee46ad761b521bd76c81a7bfcdaf0c899f8911cb77b0",
+      "bytes": 24384
+    },
+    {
+      "path": "source/work-order-link/lib/inventory/storageUnitContract.cjs",
+      "sha256": "e0cda77e919a02d81d86c2ab41800f2aa446d3702feb106c9f9fc0615ba7da7a",
+      "bytes": 4061
+    },
+    {
+      "path": "source/work-order-link/lib/inventory/workOrderAddContract.cjs",
+      "sha256": "125519c9ae4cea132107e85bebaa31f8b131fcf4660f47f41264d8026bb879d1",
+      "bytes": 52206
+    },
+    {
+      "path": "source/work-order-link/lib/ops/blueFolderCustomerLookup.cjs",
+      "sha256": "1a7b66fa07844b0c235f377f2fe1ed5f04fad280680dc43478f47343dd5c3870",
+      "bytes": 15666
+    },
+    {
+      "path": "source/work-order-link/lib/ops/blueFolderEquipmentLookup.cjs",
+      "sha256": "51170197b6dc40143f0b5ba00c9e534246d5a59989efe7560c8c18caac43888e",
+      "bytes": 9886
+    },
+    {
+      "path": "source/work-order-link/lib/ops/clientDirectory.cjs",
+      "sha256": "081416a8ba803a33cfa75df84857ed9328176f2a93591ad7044850c986c7f08f",
+      "bytes": 15043
+    },
+    {
+      "path": "source/work-order-link/lib/ops/trailerClientLinks.cjs",
+      "sha256": "42606bf5a0e760e9b2f3d95363f803e67bd5c091efdfbdf8dcd672b1e42ec3eb",
+      "bytes": 13264
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderClientLink.cjs",
+      "sha256": "9b2810dfca7fed5ef3ef0f101269a386484c78b245a2479d8a24eb5772091204",
+      "bytes": 5278
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderEquipmentOnboarding.cjs",
+      "sha256": "ac70baaccbdf0c50f0c80339f0e1e5c9e8f6b5d116577cd3915973e1eedfe256",
+      "bytes": 17299
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderLinkAlertDelivery.cjs",
+      "sha256": "9e0148baafdaaf3a7f36ef6193390e9be1399fb672c8d4d88a6f96e108e8517a",
+      "bytes": 9977
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderLinkHealth.cjs",
+      "sha256": "700e40fd769ad6c257244386748859b553f39138dd6ddcdbbb6fbe4bfa86e48f",
+      "bytes": 24334
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderLinkRuntime.cjs",
+      "sha256": "62154f6af07e4c1f55a5e3050b5ce9a16f18ff56e0777b60538fba97bf6e57b8",
+      "bytes": 1029
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderLinkServer.js",
+      "sha256": "593e31001f46d87da0aedce5da1daf0d462fbc0e4e8141c98d3d95d837a9db54",
+      "bytes": 2313
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderLinkSweep.cjs",
+      "sha256": "c69662a9546a27fefaf679dafe939dcd386631c0d8b5c5102c33c4c37b22a24c",
+      "bytes": 5881
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderMachineLink.cjs",
+      "sha256": "33f7ee48b103137da5c819c1ceb9892f12d80e2f3f6a81fb399ad7a2e0afa81a",
+      "bytes": 31209
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderSiteLink.cjs",
+      "sha256": "2b323a8dab0697d3d870440df5e391054577a905156c2a03013d2217bcef179f",
+      "bytes": 15601
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderSourceLinkPayload.cjs",
+      "sha256": "7fd85b1de1281df2a46f0db3d77ae6d5ab92c15725c2ab5a047a94ef02330521",
+      "bytes": 2665
+    },
+    {
+      "path": "source/work-order-link/lib/ops/workOrderSourceLookup.cjs",
+      "sha256": "aca10f1dd04889aff03af1e7029a7cf2d60ad49e934e6a11d3f58a51759e505d",
+      "bytes": 2077
+    },
+    {
+      "path": "source/work-order-link/pages/api/cron/magmonitor-alerts.js",
+      "sha256": "3a65f7d8e1165d9059cf7ec6d1e0e2673d60f01ad444b6e34b9267904c815e94",
+      "bytes": 4055
+    },
+    {
+      "path": "source/work-order-link/pages/api/ops/work-order-link-alerts.js",
+      "sha256": "4743805fb6b6a660a7e5b813fb6fec07dac2fcd58a7a93d6c189ecc50df821e5",
+      "bytes": 3427
+    },
+    {
+      "path": "source/work-order-link/service.cjs",
+      "sha256": "6bb217c31258b7f70bac9289aacd0804da9e72cce2d88da16661e1510ec12972",
+      "bytes": 36033
+    }
+  ],
+  "actualArchivesIncluded": true,
+  "sourceTreeRebuildIsNotRollback": true,
+  "privateDataOrCredentialsIncluded": false,
+  "committed": false,
+  "pushed": false
+}
