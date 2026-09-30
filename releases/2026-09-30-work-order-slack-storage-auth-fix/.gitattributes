@@ -1,0 +1,2 @@
+# Release manifests record exact bytes; do not normalize snapshot line endings.
+* -text

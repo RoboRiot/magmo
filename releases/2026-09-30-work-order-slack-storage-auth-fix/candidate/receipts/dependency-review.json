@@ -1,0 +1,682 @@
+{
+  "checkedAt": "2026-09-30T18:29:27.682Z",
+  "productionMutations": 0,
+  "locks": {
+    "production": {
+      "packageSHA256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522",
+      "lockSHA256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41",
+      "changed": [],
+      "added": [
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/is-stream",
+          "version": "2.0.1"
+        },
+        {
+          "path": "node_modules/tr46",
+          "version": "0.0.3"
+        },
+        {
+          "path": "node_modules/uuid",
+          "version": "11.1.1"
+        },
+        {
+          "path": "node_modules/webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "path": "node_modules/whatwg-url",
+          "version": "5.0.0"
+        }
+      ],
+      "removed": []
+    },
+    "root": {
+      "packageSHA256": "e9ee974da18def85b01d9ac4413ab428da24dc7fa05c71efcdd9221a56d44b6d",
+      "lockSHA256": "187dadc6b531a47fe4d585301d8433e417b4d455761fed6263a4c4eac68b98d3",
+      "changed": [],
+      "added": [
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/is-stream",
+          "version": "2.0.1"
+        },
+        {
+          "path": "node_modules/tr46",
+          "version": "0.0.3"
+        },
+        {
+          "path": "node_modules/uuid",
+          "version": "11.1.1"
+        },
+        {
+          "path": "node_modules/webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "path": "node_modules/whatwg-url",
+          "version": "5.0.0"
+        }
+      ],
+      "removed": []
+    },
+    "functions": {
+      "packageSHA256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522",
+      "lockSHA256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41",
+      "changed": [],
+      "added": [
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/@google-cloud/storage/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/gaxios",
+          "version": "6.7.1"
+        },
+        {
+          "path": "node_modules/gtoken/node_modules/node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "path": "node_modules/is-stream",
+          "version": "2.0.1"
+        },
+        {
+          "path": "node_modules/tr46",
+          "version": "0.0.3"
+        },
+        {
+          "path": "node_modules/uuid",
+          "version": "11.1.1"
+        },
+        {
+          "path": "node_modules/webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "path": "node_modules/whatwg-url",
+          "version": "5.0.0"
+        }
+      ],
+      "removed": []
+    }
+  },
+  "audits": {
+    "baseline": {
+      "totals": {
+        "info": 0,
+        "low": 0,
+        "moderate": 3,
+        "high": 8,
+        "critical": 1,
+        "total": 12
+      },
+      "vulnerabilities": {
+        "@firebase/firestore": {
+          "severity": "high",
+          "via": [
+            "@grpc/grpc-js"
+          ],
+          "nodes": [
+            "node_modules/@firebase/firestore"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "@firebase/firestore-compat": {
+          "severity": "high",
+          "via": [
+            "@firebase/firestore"
+          ],
+          "nodes": [
+            "node_modules/@firebase/firestore-compat"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "@grpc/grpc-js": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized",
+              "url": "https://github.com/advisories/GHSA-m9gg-hp2v-232j",
+              "range": ">=1.14.0 <1.14.5",
+              "severity": "high"
+            },
+            {
+              "title": "@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized",
+              "url": "https://github.com/advisories/GHSA-m9gg-hp2v-232j",
+              "range": "<1.13.6",
+              "severity": "high"
+            },
+            {
+              "title": "@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages",
+              "url": "https://github.com/advisories/GHSA-f596-whhp-79r4",
+              "range": ">=1.14.0 <1.14.5",
+              "severity": "low"
+            },
+            {
+              "title": "@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages",
+              "url": "https://github.com/advisories/GHSA-f596-whhp-79r4",
+              "range": "<1.13.6",
+              "severity": "low"
+            }
+          ],
+          "nodes": [
+            "node_modules/@grpc/grpc-js",
+            "node_modules/google-gax/node_modules/@grpc/grpc-js"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "body-parser": {
+          "severity": "moderate",
+          "via": [
+            "qs"
+          ],
+          "nodes": [
+            "node_modules/body-parser"
+          ],
+          "fixAvailable": true
+        },
+        "brace-expansion": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+              "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+              "range": ">=2.0.0 <2.1.3",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+              "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+              "range": ">=2.0.0 <2.1.4",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+              "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+              "range": ">=2.0.0 <2.1.7",
+              "severity": "moderate"
+            },
+            {
+              "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+              "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+              "range": ">=2.0.0 <2.1.6",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+              "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+              "range": ">=2.0.0 <2.1.5",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/brace-expansion"
+          ],
+          "fixAvailable": true
+        },
+        "express": {
+          "severity": "moderate",
+          "via": [
+            "qs"
+          ],
+          "nodes": [
+            "node_modules/express"
+          ],
+          "fixAvailable": true
+        },
+        "firebase": {
+          "severity": "high",
+          "via": [
+            "@firebase/firestore",
+            "@firebase/firestore-compat"
+          ],
+          "nodes": [
+            "node_modules/firebase"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "nanoid": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "nanoid: custom generators can loop indefinitely when size is zero",
+              "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+              "range": "<3.3.18",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/nanoid"
+          ],
+          "fixAvailable": true
+        },
+        "next": {
+          "severity": "critical",
+          "via": [
+            {
+              "title": "Next.js: Unauthenticated Remote Code Execution on windows-hosted servers",
+              "url": "https://github.com/advisories/GHSA-p293-qw3h-jr36",
+              "range": ">=16.0.0 <16.3.3",
+              "severity": "critical"
+            },
+            {
+              "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used",
+              "url": "https://github.com/advisories/GHSA-2xp9-vwfh-vxw4",
+              "range": ">=16.0.0 <16.3.3",
+              "severity": "critical"
+            },
+            {
+              "title": "Next.js: Remote Code Execution in next/og ImageResponse",
+              "url": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j",
+              "range": ">=16.2.0 <16.3.6",
+              "severity": "critical"
+            },
+            "postcss",
+            "sharp"
+          ],
+          "nodes": [
+            "node_modules/next"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        },
+        "postcss": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+              "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+              "range": "<=8.5.11",
+              "severity": "high"
+            },
+            {
+              "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+              "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+              "range": "<=8.5.22",
+              "severity": "moderate"
+            },
+            {
+              "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+              "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+              "range": "<=8.5.17",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/postcss"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        },
+        "qs": {
+          "severity": "moderate",
+          "via": [
+            {
+              "title": "qs array-limit bypass via bracket-key comma parsing",
+              "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx",
+              "range": ">=6.14.2 <=6.15.3",
+              "severity": "moderate"
+            },
+            {
+              "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+              "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g",
+              "range": ">=2.2.5 <6.16.0",
+              "severity": "moderate"
+            }
+          ],
+          "nodes": [
+            "node_modules/qs"
+          ],
+          "fixAvailable": true
+        },
+        "sharp": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545",
+              "url": "https://github.com/advisories/GHSA-rgj7-g3m4-5g8c",
+              "range": "<0.35.4",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/sharp"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        }
+      }
+    },
+    "candidate": {
+      "totals": {
+        "info": 0,
+        "low": 0,
+        "moderate": 3,
+        "high": 8,
+        "critical": 1,
+        "total": 12
+      },
+      "vulnerabilities": {
+        "@firebase/firestore": {
+          "severity": "high",
+          "via": [
+            "@grpc/grpc-js"
+          ],
+          "nodes": [
+            "node_modules/@firebase/firestore"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "@firebase/firestore-compat": {
+          "severity": "high",
+          "via": [
+            "@firebase/firestore"
+          ],
+          "nodes": [
+            "node_modules/@firebase/firestore-compat"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "@grpc/grpc-js": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized",
+              "url": "https://github.com/advisories/GHSA-m9gg-hp2v-232j",
+              "range": ">=1.14.0 <1.14.5",
+              "severity": "high"
+            },
+            {
+              "title": "@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized",
+              "url": "https://github.com/advisories/GHSA-m9gg-hp2v-232j",
+              "range": "<1.13.6",
+              "severity": "high"
+            },
+            {
+              "title": "@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages",
+              "url": "https://github.com/advisories/GHSA-f596-whhp-79r4",
+              "range": ">=1.14.0 <1.14.5",
+              "severity": "low"
+            },
+            {
+              "title": "@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages",
+              "url": "https://github.com/advisories/GHSA-f596-whhp-79r4",
+              "range": "<1.13.6",
+              "severity": "low"
+            }
+          ],
+          "nodes": [
+            "node_modules/@grpc/grpc-js",
+            "node_modules/google-gax/node_modules/@grpc/grpc-js"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "body-parser": {
+          "severity": "moderate",
+          "via": [
+            "qs"
+          ],
+          "nodes": [
+            "node_modules/body-parser"
+          ],
+          "fixAvailable": true
+        },
+        "brace-expansion": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+              "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+              "range": ">=2.0.0 <2.1.3",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+              "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+              "range": ">=2.0.0 <2.1.4",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+              "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+              "range": ">=2.0.0 <2.1.7",
+              "severity": "moderate"
+            },
+            {
+              "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+              "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+              "range": ">=2.0.0 <2.1.6",
+              "severity": "high"
+            },
+            {
+              "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+              "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+              "range": ">=2.0.0 <2.1.5",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/brace-expansion"
+          ],
+          "fixAvailable": true
+        },
+        "express": {
+          "severity": "moderate",
+          "via": [
+            "qs"
+          ],
+          "nodes": [
+            "node_modules/express"
+          ],
+          "fixAvailable": true
+        },
+        "firebase": {
+          "severity": "high",
+          "via": [
+            "@firebase/firestore",
+            "@firebase/firestore-compat"
+          ],
+          "nodes": [
+            "node_modules/firebase"
+          ],
+          "fixAvailable": {
+            "name": "firebase",
+            "version": "9.14.0",
+            "isSemVerMajor": true
+          }
+        },
+        "nanoid": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "nanoid: custom generators can loop indefinitely when size is zero",
+              "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+              "range": "<3.3.18",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/nanoid"
+          ],
+          "fixAvailable": true
+        },
+        "next": {
+          "severity": "critical",
+          "via": [
+            {
+              "title": "Next.js: Unauthenticated Remote Code Execution on windows-hosted servers",
+              "url": "https://github.com/advisories/GHSA-p293-qw3h-jr36",
+              "range": ">=16.0.0 <16.3.3",
+              "severity": "critical"
+            },
+            {
+              "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used",
+              "url": "https://github.com/advisories/GHSA-2xp9-vwfh-vxw4",
+              "range": ">=16.0.0 <16.3.3",
+              "severity": "critical"
+            },
+            {
+              "title": "Next.js: Remote Code Execution in next/og ImageResponse",
+              "url": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j",
+              "range": ">=16.2.0 <16.3.6",
+              "severity": "critical"
+            },
+            "postcss",
+            "sharp"
+          ],
+          "nodes": [
+            "node_modules/next"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        },
+        "postcss": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+              "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+              "range": "<=8.5.11",
+              "severity": "high"
+            },
+            {
+              "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+              "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+              "range": "<=8.5.22",
+              "severity": "moderate"
+            },
+            {
+              "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+              "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+              "range": "<=8.5.17",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/postcss"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        },
+        "qs": {
+          "severity": "moderate",
+          "via": [
+            {
+              "title": "qs array-limit bypass via bracket-key comma parsing",
+              "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx",
+              "range": ">=6.14.2 <=6.15.3",
+              "severity": "moderate"
+            },
+            {
+              "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+              "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g",
+              "range": ">=2.2.5 <6.16.0",
+              "severity": "moderate"
+            }
+          ],
+          "nodes": [
+            "node_modules/qs"
+          ],
+          "fixAvailable": true
+        },
+        "sharp": {
+          "severity": "high",
+          "via": [
+            {
+              "title": "sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545",
+              "url": "https://github.com/advisories/GHSA-rgj7-g3m4-5g8c",
+              "range": "<0.35.4",
+              "severity": "high"
+            }
+          ],
+          "nodes": [
+            "node_modules/sharp"
+          ],
+          "fixAvailable": {
+            "name": "next",
+            "version": "16.3.8",
+            "isSemVerMajor": false
+          }
+        }
+      }
+    }
+  }
+}

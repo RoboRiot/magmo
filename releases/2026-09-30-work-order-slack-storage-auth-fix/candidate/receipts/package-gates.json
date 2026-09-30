@@ -1,0 +1,35 @@
+{
+  "result": "PASS",
+  "packagedAt": "2026-09-30T18:35:16.844Z",
+  "rootReviewed": true,
+  "artifactSHA256": "698401991766587795dc9ac668e39c39b0bab326ce653680352c479f65a54b53",
+  "artifactBytes": 3862128,
+  "compositionReportSHA256": "3b6e66bac0252298ca0404168a4548df6b8ecf82b92b3bc83a58e6ac98f4c502",
+  "baselineRevision": "nextserverwest-00071-zot",
+  "baselineArchiveSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "changedFactoryIds": [
+    99397
+  ],
+  "modified": [
+    ".next/server/pages/api/items/work-order-add/slack.js",
+    "package-lock.json",
+    "package.json"
+  ],
+  "noDeletedFiles": true,
+  "unchangedFilesVerified": true,
+  "compiledTestsPassed": true,
+  "sourceTests": 151,
+  "compiledTests": 44,
+  "adcGraphTests": 3,
+  "independentReviewPassed": true,
+  "zipEntriesVerified": 540,
+  "sourceOnly": true,
+  "runtimeConfigurationPreserved": true,
+  "receiptHashes": {
+    "compiled-verification.json": "4037c535bae268db85176f4dccd66c52156f0414c7521679d81ac64d26acf76a",
+    "independent-composition-review.json": "44db6993ab395eec56d73deb9adbaee6d2ce4b4ca6eb34ccedc045a5059d49b6",
+    "dependency-runtime-verification.json": "757d52ecd2fcb06e187818b09374cd577d07744179a2810bde3321bc7fbab047",
+    "dependency-review.json": "7c25d831f0c507aa9bcc7487c2c4fa8bb8cbd7c03b8636c550d8935e05b59e91"
+  },
+  "candidateInventorySHA256": "15f5dcc282b288515628395060a410858fd28b552d9c8d1dec6f4b8c8620e05e"
+}

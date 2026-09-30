@@ -1,0 +1,51 @@
+{
+  "composedAt": "2026-09-30T18:30:46.513Z",
+  "baselineRevision": "nextserverwest-00071-zot",
+  "baselineArchiveSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "baselineConfigHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "sourceFile": "lib/inventory/workOrderAddSlack.cjs",
+  "sourceSHA256": "d943a2fb7109ae359ae8b4a6f70ac58fd58352aef7f4d154c3d8ab015e985138",
+  "api": ".next/server/pages/api/items/work-order-add/slack.js",
+  "changedFactoryIds": [
+    99397
+  ],
+  "mappedRequires": [
+    {
+      "request": "node:crypto",
+      "id": 77598
+    },
+    {
+      "request": "./workOrderAddContract.cjs",
+      "id": 92631
+    },
+    {
+      "request": "../items/itemEditorOperations.cjs",
+      "id": 42311
+    },
+    {
+      "request": "./workOrderAddSlackThread.cjs",
+      "id": 97306
+    }
+  ],
+  "serviceFactorySHA256": "7c53764d1db76a0c9f5b64bef0201c39dd9a4e3f545054c23872f2eaebe8cb78",
+  "oldServiceFactorySHA256": "7ae27f64d6794729e409c5a15db80878f5e2d9689f2227052787f092ec21daff",
+  "apiSHA256": "b7d87f0db737a45c19b81caec7b52e52423f05a0633e13d49fa937dd99024a08",
+  "sharedChunksUnchanged": true,
+  "unrelatedFactoriesPreserved": true,
+  "frontendAssetsUnchanged": true,
+  "buildIdUnchanged": true,
+  "allLinkageAndCalendarFilesPreserved": true,
+  "modified": [
+    ".next/server/pages/api/items/work-order-add/slack.js",
+    "package-lock.json",
+    "package.json"
+  ],
+  "added": [],
+  "removed": [],
+  "noDeletedFiles": true,
+  "unrelatedFilesPreserved": true,
+  "runtimeConfigChanged": false,
+  "files": 540,
+  "databaseWrites": 0,
+  "slackPosts": 0
+}

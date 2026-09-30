@@ -1,0 +1,19 @@
+{
+  "sourceOnlyApproved": true,
+  "approvedBy": "root after independent source, dependency, artifact, test, and deployment-tool review",
+  "scope": "Compatible Cloud Storage ADC dependency graph and safe Work Order Add Slack failure diagnostics only",
+  "artifactSHA256": "698401991766587795dc9ac668e39c39b0bab326ce653680352c479f65a54b53",
+  "packageGatesSHA256": "2e541572392d82a4cdbdf7b420c9f98d209a3261f7f593931506e92d563766a2",
+  "compositionReportSHA256": "3b6e66bac0252298ca0404168a4548df6b8ecf82b92b3bc83a58e6ac98f4c502",
+  "baselineArchiveSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "baselineRevision": "nextserverwest-00071-zot",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "toolHashes": {
+    "deploy.cjs": "70db71442af79213bbda89c12861fcf8f2051e80197b085803f105689e240ab3",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "rollback.cjs": "db88b86c5678f319704a5ec1ed234235c01672a97522015bef6192ed312c096f",
+    "verify-live.cjs": "a9d9299eeb021c2ae23c37478966c9d4023f01cbd008be8cc9ae26aeb95d38d9"
+  }
+}

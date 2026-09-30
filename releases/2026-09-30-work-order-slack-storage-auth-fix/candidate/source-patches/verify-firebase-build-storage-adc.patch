@@ -1,0 +1,25 @@
+diff --git a/scripts/verify-firebase-build.js b/scripts/verify-firebase-build.js
+--- a/scripts/verify-firebase-build.js
++++ b/scripts/verify-firebase-build.js
+@@ -74,1 +74,21 @@
++// A dependency override can break Cloud Run's metadata authentication while
++// source tests and developer OAuth credentials still work. Exercise the actual
++// application and Functions Storage dependency graphs before every deployment.
++const storageVerification = spawnSync(
++  process.execPath,
++  ["--test", path.join(projectRoot, "test", "storage-adc-compatibility.test.cjs")],
++  {
++    cwd: projectRoot,
++    stdio: "inherit",
++    timeout: 45000,
++    env: { ...process.env, STORAGE_ADC_CANDIDATE_ROOT: "" },
++  },
++);
++if (storageVerification.error || storageVerification.status !== 0) {
++  fail(
++    "Cloud Storage ADC compatibility regression failed" +
++      (storageVerification.error ? `: ${storageVerification.error.message}` : "."),
++  );
++}
++
+ console.log(

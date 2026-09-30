@@ -1,0 +1,33 @@
+{
+  "reviewedAt": "2026-09-30T18:33:01.391Z",
+  "pass": true,
+  "sourceFiles": 540,
+  "changedFiles": [
+    ".next/server/pages/api/items/work-order-add/slack.js",
+    "package-lock.json",
+    "package.json"
+  ],
+  "changedFactoryIds": [
+    99397
+  ],
+  "exactBytesOutsideChangedFactoryPreserved": true,
+  "factoryReverseMappedToExactSourceAst": true,
+  "originalDependencyEntriesUnchanged": true,
+  "addedDependencyEntries": [
+    "node_modules/@google-cloud/storage/node_modules/gaxios",
+    "node_modules/@google-cloud/storage/node_modules/node-fetch",
+    "node_modules/gtoken/node_modules/gaxios",
+    "node_modules/gtoken/node_modules/node-fetch",
+    "node_modules/is-stream",
+    "node_modules/tr46",
+    "node_modules/uuid",
+    "node_modules/webidl-conversions",
+    "node_modules/whatwg-url"
+  ],
+  "sourceSHA256": "d943a2fb7109ae359ae8b4a6f70ac58fd58352aef7f4d154c3d8ab015e985138",
+  "candidateApiSHA256": "b7d87f0db737a45c19b81caec7b52e52423f05a0633e13d49fa937dd99024a08",
+  "compositionReportSHA256": "3b6e66bac0252298ca0404168a4548df6b8ecf82b92b3bc83a58e6ac98f4c502",
+  "packageSHA256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522",
+  "lockSHA256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41",
+  "productionMutations": 0
+}

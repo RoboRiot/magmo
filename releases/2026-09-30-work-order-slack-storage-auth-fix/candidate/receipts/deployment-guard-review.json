@@ -1,0 +1,24 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-30T18:42:52.229Z",
+  "sourceFile": "scripts/verify-firebase-build.js",
+  "beforeStorageGateSHA256": "da150f4ba9d9ae0ad97f615436948c1491af74f529717bf54fb7a6f15a9921a2",
+  "afterStorageGateSHA256": "02811a7eed9b94db801ed07a13ecbab4e8a6a16757343144e0f458a0154d494e",
+  "patchSHA256": "17651c69a552671c6e3511edaa886a88739f85a99532bc9a6a4afc7e04312d63",
+  "patchContainsOnlyStorageGate": true,
+  "preexistingIngestGatePreserved": true,
+  "candidateOverrideCleared": true,
+  "tests": {
+    "passed": 4,
+    "uniqueNewDeployGuardTests": 2,
+    "repeatedAdcGraphChecks": 2,
+    "failed": 0,
+    "outputSHA256": "bc1e5687a152e6767b9cd3d60765cacb7519e4bc79ca8948fea7465e41d08243",
+    "testSHA256": "afc5b77630740e9ca63145252c5b4c9d0fb445c7c79a0b9bb17a33ea96c11f70"
+  },
+  "approvedRuntimeArtifactUnchanged": true,
+  "artifactSHA256": "698401991766587795dc9ac668e39c39b0bab326ce653680352c479f65a54b53",
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "productionMutations": 0
+}

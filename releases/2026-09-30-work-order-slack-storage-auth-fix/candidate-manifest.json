@@ -1,0 +1,236 @@
+{
+  "refreshedAt": "2026-09-30T18:44:20.277Z",
+  "state": "root_authorized_scoped_publication",
+  "previousGitRecord": "f5b394d9bea71c09657087d27088c13c43cd31d7",
+  "productionDeploymentState": "ACTIVE",
+  "baselineRevision": "nextserverwest-00071-zot",
+  "baselineArchiveSHA256": "cd45fc1b6184406a6e41b9db1989c2b7a5bbbd8c70d544aef3ce05e426060017",
+  "baselineConfigSHA256": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "scope": "Scoped Slack diagnostics, storage dependency compatibility, tests, docs, and sanitized release evidence. Not a full app or rollback archive.",
+  "sourcePaths": [
+    "lib/inventory/workOrderAddSlack.cjs"
+  ],
+  "testPaths": [
+    "test/work-order-add-slack.test.cjs",
+    "test/storage-adc-compatibility.test.cjs",
+    "test/firebase-storage-deploy-guard.test.cjs"
+  ],
+  "verificationCounts": {
+    "source": 151,
+    "compiled": 44,
+    "adcGraphs": 3,
+    "predeployTotal": 198,
+    "additionalDeploymentGuard": 2,
+    "uniqueTotal": 200,
+    "focusedSlackRerunIsSubset": true,
+    "repeatedAdcChecksNotAddedAgain": true
+  },
+  "pendingReceipts": [],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 88,
+      "sha256": "99cf5968fc2ffca276c8d9f2a0163baeefa5f45093469da6e890ac545885491f"
+    },
+    {
+      "path": "candidate/dependencies/production-package-lock.json",
+      "bytes": 206879,
+      "sha256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41"
+    },
+    {
+      "path": "candidate/dependencies/production-package.json",
+      "bytes": 1128,
+      "sha256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522"
+    },
+    {
+      "path": "candidate/dependencies/repository-overrides.json",
+      "bytes": 948,
+      "sha256": "796efa1e237de179f4b806c8fbf149e9481c80992f9959f3242b15173675e9a3"
+    },
+    {
+      "path": "candidate/docs/work-order-warehouse-slack.md",
+      "bytes": 5975,
+      "sha256": "a3e34a675effea4745901326be598bd69ea7646ce0b156264367b4282c1b2428"
+    },
+    {
+      "path": "candidate/receipts/baseline-files.json",
+      "bytes": 92945,
+      "sha256": "872012d2761613473c515fbfa8a4c6a924e8ed5f5f17a406c0f4725abbb124f4"
+    },
+    {
+      "path": "candidate/receipts/baseline.json",
+      "bytes": 1099,
+      "sha256": "06ed849be60ada81f86e35a80d7bbe34c214fde47619668985724e376e456d38"
+    },
+    {
+      "path": "candidate/receipts/candidate-files.json",
+      "bytes": 92945,
+      "sha256": "15f5dcc282b288515628395060a410858fd28b552d9c8d1dec6f4b8c8620e05e"
+    },
+    {
+      "path": "candidate/receipts/compiled-verification.json",
+      "bytes": 2832,
+      "sha256": "4037c535bae268db85176f4dccd66c52156f0414c7521679d81ac64d26acf76a"
+    },
+    {
+      "path": "candidate/receipts/composition-report.json",
+      "bytes": 1628,
+      "sha256": "3b6e66bac0252298ca0404168a4548df6b8ecf82b92b3bc83a58e6ac98f4c502"
+    },
+    {
+      "path": "candidate/receipts/dependency-review.json",
+      "bytes": 22378,
+      "sha256": "7c25d831f0c507aa9bcc7487c2c4fa8bb8cbd7c03b8636c550d8935e05b59e91"
+    },
+    {
+      "path": "candidate/receipts/dependency-runtime-verification.json",
+      "bytes": 796,
+      "sha256": "757d52ecd2fcb06e187818b09374cd577d07744179a2810bde3321bc7fbab047"
+    },
+    {
+      "path": "candidate/receipts/deployment-guard-review.json",
+      "bytes": 1010,
+      "sha256": "0a598fa05acd90543b0f9cee0e9b2c0d98a07c82a90918778eeb8cab60b0d683"
+    },
+    {
+      "path": "candidate/receipts/deployment-receipt.json",
+      "bytes": 1387,
+      "sha256": "6947b1798e8f60f42155b69ac5185e5614c9a5978a5f1f7c229052a150efa336"
+    },
+    {
+      "path": "candidate/receipts/guardrails-scope-review.json",
+      "bytes": 1735,
+      "sha256": "f85be7d912c046cb04c506dbd9864645dea42c24c01b09b1a5222e40d0683ceb"
+    },
+    {
+      "path": "candidate/receipts/independent-composition-review.json",
+      "bytes": 1284,
+      "sha256": "44db6993ab395eec56d73deb9adbaee6d2ce4b4ca6eb34ccedc045a5059d49b6"
+    },
+    {
+      "path": "candidate/receipts/live-verification.json",
+      "bytes": 7036,
+      "sha256": "bc6d0204eef5e56202d5cea33024cf86d79b8f5b26dd48e4f0d6d2cb4969005c"
+    },
+    {
+      "path": "candidate/receipts/package-gates.json",
+      "bytes": 1445,
+      "sha256": "2e541572392d82a4cdbdf7b420c9f98d209a3261f7f593931506e92d563766a2"
+    },
+    {
+      "path": "candidate/receipts/rollback-preflight.json",
+      "bytes": 714,
+      "sha256": "f6d3c6cfa78fd8a99967922e933a755734c11c9b203c001e4fbff624cd2c79a0"
+    },
+    {
+      "path": "candidate/receipts/root-approval.json",
+      "bytes": 1206,
+      "sha256": "036788e66f03acfb7953b88421c49777850f61b33f39b9cb03cfebfea9c41bbe"
+    },
+    {
+      "path": "candidate/source-patches/verify-firebase-build-storage-adc.patch",
+      "bytes": 956,
+      "sha256": "17651c69a552671c6e3511edaa886a88739f85a99532bc9a6a4afc7e04312d63"
+    },
+    {
+      "path": "candidate/source/lib/inventory/workOrderAddSlack.cjs",
+      "bytes": 20793,
+      "sha256": "d943a2fb7109ae359ae8b4a6f70ac58fd58352aef7f4d154c3d8ab015e985138"
+    },
+    {
+      "path": "candidate/test/firebase-storage-deploy-guard.test.cjs",
+      "bytes": 2373,
+      "sha256": "afc5b77630740e9ca63145252c5b4c9d0fb445c7c79a0b9bb17a33ea96c11f70"
+    },
+    {
+      "path": "candidate/test/storage-adc-compatibility.test.cjs",
+      "bytes": 8141,
+      "sha256": "f4b503f552e8bd744d7744905afc41373bb401b29629aa1849e525e7bdd97dfd"
+    },
+    {
+      "path": "candidate/test/work-order-add-slack.test.cjs",
+      "bytes": 27618,
+      "sha256": "4802988aa7d56b2c2a8cbd1142e24e8b163ee626a760f656d311bbc758d8d6a9"
+    },
+    {
+      "path": "candidate/tools/audit-dependencies.cjs",
+      "bytes": 3547,
+      "sha256": "8bcbd9cd1b18acebdb18b2f80952d5c6ee3dde8208a94f34eb2ec94fb877ee44"
+    },
+    {
+      "path": "candidate/tools/cloud-common.cjs",
+      "bytes": 2422,
+      "sha256": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f"
+    },
+    {
+      "path": "candidate/tools/compose.cjs",
+      "bytes": 4652,
+      "sha256": "6252f36db319b3227cd8bebf0c632ba3716159973c7bc000cd84ef5182ef3653"
+    },
+    {
+      "path": "candidate/tools/deploy.cjs",
+      "bytes": 6098,
+      "sha256": "70db71442af79213bbda89c12861fcf8f2051e80197b085803f105689e240ab3"
+    },
+    {
+      "path": "candidate/tools/package.cjs",
+      "bytes": 4905,
+      "sha256": "7109be240c52fa93c5dc7966463548276caa7753269d169edcbf9c7a9c583171"
+    },
+    {
+      "path": "candidate/tools/record-rollback-preflight.cjs",
+      "bytes": 1813,
+      "sha256": "e04e31995e4492797608bc546cc1313b5d67c103d55007114f7e42c1cee3849e"
+    },
+    {
+      "path": "candidate/tools/rollback.cjs",
+      "bytes": 4651,
+      "sha256": "db88b86c5678f319704a5ec1ed234235c01672a97522015bef6192ed312c096f"
+    },
+    {
+      "path": "candidate/tools/run-verification.cjs",
+      "bytes": 2573,
+      "sha256": "3f67cc5c0b4adb386cd3530953576ab81bb80691941a10144d70d02b2a3cfcb6"
+    },
+    {
+      "path": "candidate/tools/snapshot.cjs",
+      "bytes": 4399,
+      "sha256": "52133d21d4a0b859c8053424d58b11d50af9fe95bc46ed764a943753bf3a76b8"
+    },
+    {
+      "path": "candidate/tools/test-compiled-service.test.cjs",
+      "bytes": 4176,
+      "sha256": "d6cfe19ed1c1cfbaeaf1463450de640f962d69afa94d160fe2f8d1ce60fd2e69"
+    },
+    {
+      "path": "candidate/tools/verify-live.cjs",
+      "bytes": 3506,
+      "sha256": "a9d9299eeb021c2ae23c37478966c9d4023f01cbd008be8cc9ae26aeb95d38d9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6259,
+      "sha256": "6bf8421b48cd3c8fd2555a219669485d6793c0c06f8b276b217760b8d40fc7d7"
+    },
+    {
+      "path": "tools/audit-candidate-scope.cjs",
+      "bytes": 6855,
+      "sha256": "cdc08d18b48f2339c22a5b3b58229f58a68e99b46bba01d527b4754164678a1a"
+    },
+    {
+      "path": "tools/refresh-record.cjs",
+      "bytes": 6255,
+      "sha256": "13632fc786b4c204c85d5006a12dfa4daf121ce1ede282b4cd167955f641ca0e"
+    },
+    {
+      "path": "tools/review-deployment-guard.cjs",
+      "bytes": 3414,
+      "sha256": "917148dcb6cdd2418fc372c8de9e8e8137d50c3e1f0adbdeb3231c637bbfab92"
+    },
+    {
+      "path": "tools/verify-record.cjs",
+      "bytes": 4989,
+      "sha256": "22c7d8ce0137ba4caafbc8fd9516f76b59e7196b51a0c9d3d764285527e52d19"
+    }
+  ]
+}

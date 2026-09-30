@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-30T18:33:56.400Z",
+  "compositionReportSHA256": "3b6e66bac0252298ca0404168a4548df6b8ecf82b92b3bc83a58e6ac98f4c502",
+  "sourceSHA256": "d943a2fb7109ae359ae8b4a6f70ac58fd58352aef7f4d154c3d8ab015e985138",
+  "packageSHA256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522",
+  "lockSHA256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41",
+  "source": {
+    "result": "PASS",
+    "passed": 151,
+    "failed": 0,
+    "outputSHA256": "f8be602fe57c4415aa264d4ffdde459dfa4550ce386a698b3aca2ba00b4a061b",
+    "testHashes": {
+      "test/fast-scan-drain-ui.test.cjs": "8e5121de290f95cab762c9fc3be3adb2dc0ee2278743f8bd542d55127b34a3b9",
+      "test/work-order-add-service.test.cjs": "6cd9ac98ae9e7bf27d3c8c54cab0107e1ee265111ad4db376206e14d7a3eb110",
+      "test/work-order-add-route.test.cjs": "ff26045ae8a5307f08f6e1e0427c47608ea015b7dd5764bab5130b08bff15b78",
+      "test/work-order-scanner-capture.test.cjs": "8924aa170dcc18f008100c48a876b008eabc537347bab43549ae809b522cf48f",
+      "test/work-order-scanner-routes.test.cjs": "e6dd555856ea1103567056ded3ee15f1a34ed2db4b25819df52f2ca87ffc39bb",
+      "test/work-order-add-contract.test.cjs": "062ad989ebe261b9dae5c62f20555e05240dd7a3c513f6337d3f4112f74e3bdb",
+      "test/work-order-add-options.test.cjs": "ea56fac1ba48f771f455d732129707b6bd70bb148348d73ea8d67c862f03e6b8",
+      "test/work-order-add-slack.test.cjs": "4802988aa7d56b2c2a8cbd1142e24e8b163ee626a760f656d311bbc758d8d6a9",
+      "test/work-order-add-slack-thread.test.cjs": "a9f86b310d11b956e0ccca899c2a87ce21ca45f858329817e9aa5d84494c7287",
+      "test/work-order-add-slack-route.test.cjs": "d50cd1563fc8a5b18775b00b560189ece3b8a82d891f0c7121382ad3e09be037"
+    }
+  },
+  "adcInstalledGraphs": {
+    "result": "PASS",
+    "passed": 2,
+    "failed": 0,
+    "outputSHA256": "f189cb091be103c4e8eff802ee2d8d8e6a1ba9705c3ff88087b0b7f8be8edadd",
+    "testHashes": {
+      "test/storage-adc-compatibility.test.cjs": "f4b503f552e8bd744d7744905afc41373bb401b29629aa1849e525e7bdd97dfd"
+    }
+  },
+  "adcCandidate": {
+    "result": "PASS",
+    "passed": 1,
+    "failed": 0,
+    "outputSHA256": "ead099dc7c335a287af2b90685a2540a8b24c125fb7b0312e292a93971b03d83",
+    "testHashes": {
+      "test/storage-adc-compatibility.test.cjs": "f4b503f552e8bd744d7744905afc41373bb401b29629aa1849e525e7bdd97dfd"
+    }
+  },
+  "compiled": {
+    "result": "PASS",
+    "passed": 44,
+    "failed": 0,
+    "outputSHA256": "5d4e01e14b23e38319d639bb68ed4db63acbd5c751f135130241c1784c71d2a8",
+    "testHashes": {
+      "tmp\\work-order-slack-preparation-fix-20260930\\deployment\\test-compiled-service.test.cjs": "d6cfe19ed1c1cfbaeaf1463450de640f962d69afa94d160fe2f8d1ce60fd2e69"
+    }
+  },
+  "externalSlackRequests": 0,
+  "productionDatabaseWrites": 0,
+  "liveSlackPosts": 0
+}

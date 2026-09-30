@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-09-30T18:33:01.711Z",
+  "pass": true,
+  "testSHA256": "f4b503f552e8bd744d7744905afc41373bb401b29629aa1849e525e7bdd97dfd",
+  "packageSHA256": "7e812114b6fb4d6e0a7a3e92d07c0e393f48b6e1d0850de381aa7e1f39466522",
+  "lockSHA256": "aec23b1c9cd3ec482620c82b1fc494483e8f5c253c07a77122247f53e2c4ff41",
+  "candidateRoot": "tmp/work-order-slack-preparation-fix-20260930/deployment/scoped-source",
+  "actualSdkVerification": {
+    "ok": true,
+    "versions": {
+      "storage": "7.21.0",
+      "auth": "9.15.1",
+      "metadata": "6.1.1",
+      "metadataTransport": "6.7.1"
+    },
+    "photoCount": 2,
+    "metadataRequests": 1,
+    "storageRequests": 3,
+    "forbiddenNetworkAttempts": 0,
+    "realCredentialsUsed": false,
+    "productionWrites": 0
+  },
+  "productionMutations": 0
+}
