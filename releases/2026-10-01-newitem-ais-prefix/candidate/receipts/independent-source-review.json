@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "sourceFile": "pages/NewSearch/AddItem/NewItem.js",
+  "sourceSHA256": "c55ae61ffa570b89c39b901108a653bf90f973b0404c4b7e058d018fe517f614",
+  "priorSourceSHA256": "6e3886d1ad33d11679fa56659193d2caed459eae95000753d07eec5974b246c6",
+  "sourceScope": "Only localSN Form.Group JSX; outside block unchanged except line-ending comparison normalization",
+  "normalizedInputCases": 8,
+  "invalidInputCases": 6,
+  "leadingZerosPreserved": true,
+  "blankStillUsesExistingUniqueIdGenerator": true,
+  "duplicateAndTransactionLogicUnchanged": true,
+  "noSourceEdits": true,
+  "productionActions": 0
+}

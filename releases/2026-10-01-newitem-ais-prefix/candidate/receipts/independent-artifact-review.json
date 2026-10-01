@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "reviewedAt": "2026-10-01T15:42:42.939Z",
+  "buildId": "newitem-ais-prefix-2d70e4e4fd80c199",
+  "baselineRevision": "nextserverwest-00074-gax",
+  "baselineArchiveSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "compositionReportSHA256": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+  "candidateManifestSHA256": "11c84948b5d33c0c5db4d615c2c8016e9e417c05341db024590a4a483144efdc",
+  "sourceSHA256": "c55ae61ffa570b89c39b901108a653bf90f973b0404c4b7e058d018fe517f614",
+  "candidateFiles": 558,
+  "addedFiles": [
+    ".next/static/chunks/pages/NewSearch/AddItem/NewItem-2d70e4e4fd80c199.js",
+    ".next/static/newitem-ais-prefix-2d70e4e4fd80c199/_buildManifest.js",
+    ".next/static/newitem-ais-prefix-2d70e4e4fd80c199/_ssgManifest.js"
+  ],
+  "changedFactoryIds": [
+    19967
+  ],
+  "oldAssetsPreserved": true,
+  "entirePageByteExactInverse": true,
+  "metadataByteExactInverse": true,
+  "allDependenciesUnchanged": true,
+  "compiledInputChecks": 14,
+  "saveAndDuplicateHelpersUnchanged": true,
+  "serverLogicChanged": false,
+  "cssChanged": false,
+  "rulesChanged": false,
+  "packagesChanged": false,
+  "productionActions": 0
+}

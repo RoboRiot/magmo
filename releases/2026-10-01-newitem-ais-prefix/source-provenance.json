@@ -1,0 +1,184 @@
+{
+  "purpose": "Exact reviewed UI source/evidence snapshots; actual deployed scope is the single-expression composition proof.",
+  "priorReleaseCommit": "b39e3b57f92ffe0b71f7fb1ce9145baef9abc238",
+  "files": [
+    {
+      "relative": "candidate/source/pages/NewSearch/AddItem/NewItem.js",
+      "source": "pages/NewSearch/AddItem/NewItem.js",
+      "sha256": "c55ae61ffa570b89c39b901108a653bf90f973b0404c4b7e058d018fe517f614",
+      "bytes": 188549
+    },
+    {
+      "relative": "candidate/test/newitem-ais-prefix.test.cjs",
+      "source": "test/newitem-ais-prefix.test.cjs",
+      "sha256": "4c532bf986b9dafb7ffe8c35e4e1ec4e5ac6d2ab31bf5dfe95cae314f4cee653",
+      "bytes": 4077
+    },
+    {
+      "relative": "candidate/browser/verify.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/browser/verify.cjs",
+      "sha256": "b6c60e1cfaca18f854917189713666be0d6a9404e451241e9b37b5e3308249ee",
+      "bytes": 6736
+    },
+    {
+      "relative": "candidate/tools/independent-source-review.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/independent-source-review.cjs",
+      "sha256": "a6785a4e6a21684cdf272851dc03a0132597706cf3bcdb56dc32474d46721eb5",
+      "bytes": 3681
+    },
+    {
+      "relative": "candidate/receipts/independent-source-review.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/independent-source-review.json",
+      "sha256": "586da8ef453b31e7d62b2f2f103e1bd7f458eb7c8f55ee5b340ec386a98e8841",
+      "bytes": 610
+    },
+    {
+      "relative": "candidate/receipts/baseline.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/baseline.json",
+      "sha256": "aaedae3e31614ef160dd5fa07ae354671f890545e7a085b98668195396ecf5da",
+      "bytes": 1096
+    },
+    {
+      "relative": "candidate/receipts/composition-report.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/composition-report.json",
+      "sha256": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+      "bytes": 10810
+    },
+    {
+      "relative": "candidate/receipts/candidate-files.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/candidate-files.json",
+      "sha256": "11c84948b5d33c0c5db4d615c2c8016e9e417c05341db024590a4a483144efdc",
+      "bytes": 96284
+    },
+    {
+      "relative": "candidate/receipts/package-verification.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/package-verification.json",
+      "sha256": "a31aa8110d3754891d8b2e8b76a16b44890f5309264ecd5f0e93e72cc1250b92",
+      "bytes": 488
+    },
+    {
+      "relative": "candidate/receipts/package-gates.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/package-gates.json",
+      "sha256": "7d7db700b73bc1f43abb6c707606a54e311a7a75f795bfa291d54c27c4955df5",
+      "bytes": 1924
+    },
+    {
+      "relative": "candidate/receipts/independent-artifact-review.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/independent-artifact-review.json",
+      "sha256": "84309e50ca09936645743f1bc73340fd996109b1bf27f7df9449c48b786db955",
+      "bytes": 1202
+    },
+    {
+      "relative": "candidate/receipts/independent-package-review.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/independent-package-review.json",
+      "sha256": "fb8fdfbe3281a894b0f82544cba25e1e0e82ccb508c6878d1be41c4fd0118147",
+      "bytes": 425
+    },
+    {
+      "relative": "candidate/receipts/rules-baseline.json",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/rules-baseline.json",
+      "sha256": "bcdcf810d0302f28a894071cbbcd5c77eacebf9f9485b77f0e31b6f17ab0dc5e",
+      "bytes": 498
+    },
+    {
+      "relative": "candidate/tools/snapshot.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/snapshot.cjs",
+      "sha256": "aaabc387d00c7f54f45d6d88680b7b322842e9956757bac57b0a7eaad80a6630",
+      "bytes": 5850
+    },
+    {
+      "relative": "candidate/tools/compose.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/compose.cjs",
+      "sha256": "4e72e3bbdcdc51f726396862d0f20b1b6e1f1c974f6f47004f9168e34773cc19",
+      "bytes": 7789
+    },
+    {
+      "relative": "candidate/tools/package.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/package.cjs",
+      "sha256": "67e0c9c12d7a273032536a3dffc2e764b0e8e9ef4cb7d115c70caff4e6113f94",
+      "bytes": 3860
+    },
+    {
+      "relative": "candidate/tools/cloud-common.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/cloud-common.cjs",
+      "sha256": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+      "bytes": 2422
+    },
+    {
+      "relative": "candidate/tools/deploy.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/deploy.cjs",
+      "sha256": "8f8b846a6e437649b74c24d5448e1fc93bcecbd717e664aa9122c00f00b907ab",
+      "bytes": 5176
+    },
+    {
+      "relative": "candidate/tools/rollback.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/rollback.cjs",
+      "sha256": "2cd8b4be8f12119bdb6fe85496ba2cef4cc0adddfd403f9ae1683f58c3052c3b",
+      "bytes": 4651
+    },
+    {
+      "relative": "candidate/tools/verify-live.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/verify-live.cjs",
+      "sha256": "d2947ab49c931bba81ad97d9206502005ac3917830bcbbf680f66d2ec0d35639",
+      "bytes": 3988
+    },
+    {
+      "relative": "candidate/tools/finalize-gates.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/finalize-gates.cjs",
+      "sha256": "bfa34ce1ee865b617f8479f62b17fcad77bb6df2927ab74f1fe395ae41b288a9",
+      "bytes": 3512
+    },
+    {
+      "relative": "candidate/tools/independent-artifact-review.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/deployment/independent-artifact-review.cjs",
+      "sha256": "4b0db981649e59d920966158ab3b327d4fc1f45c807baaf8175f854e2f36baae",
+      "bytes": 7387
+    },
+    {
+      "relative": "candidate/receipts/browser-verification.json",
+      "source": "tmp/newitem-ais-prefix-20261001/browser/artifact/verification.json",
+      "sha256": "1fbaec85492c09ad5501a54b6fd20645aaab0a2d4adba1c167bd717000a49d07",
+      "bytes": 5439
+    },
+    {
+      "relative": "candidate/receipts/browser-binding-verification.json",
+      "source": "tmp/newitem-ais-prefix-20261001/browser/artifact/binding-verification.json",
+      "sha256": "912ebdf55c89fb3148abc01261f670d0367ae90a4123fabee267109099bc35da",
+      "bytes": 6024
+    },
+    {
+      "relative": "candidate/browser/verify-visual.cjs",
+      "source": "tmp/newitem-ais-prefix-20261001/browser/verify-visual.cjs",
+      "sha256": "98c23cc3b435a37f21cedec8812fcd06d09224b193ff315f40a870d66f75f1aa",
+      "bytes": 5323
+    },
+    {
+      "relative": "candidate/receipts/browser-visual-verification.json",
+      "source": "tmp/newitem-ais-prefix-20261001/browser/visual/verification.json",
+      "sha256": "0f88b2e799940005fb2dc7a26edce4261b13282d6ef69238fca95ada0f2182ce",
+      "bytes": 5894
+    }
+  ],
+  "sharedDependenciesAlreadyInPriorRelease": [
+    {
+      "originalWorkspacePath": "tmp/ais-duplicate-newitem-browser-20260930.cjs",
+      "gitRecordPath": "releases/2026-09-30-ais-identity-duplicate-fix/candidate/browser-harnesses/tmp/ais-duplicate-newitem-browser-20260930.cjs",
+      "sha256": "87b423a139cd71e3084fc87bcfb73e4cfc88ebb41e5c8315e79665398d996f91"
+    },
+    {
+      "originalWorkspacePath": "tmp/ot-collapse-20260928/factory-tools.cjs",
+      "gitRecordPath": "releases/2026-09-30-ais-identity-duplicate-fix/candidate/tool-dependencies/factory-tools.cjs",
+      "sha256": "55fc2b2fd389ac6db786cdf1c1cff749075b4f8558ec18d7597a4f0cd6ae80d6"
+    },
+    {
+      "originalWorkspacePath": "tmp/ais-duplicate-fix-20260930/deployment/factory-utils.cjs",
+      "gitRecordPath": "releases/2026-09-30-ais-identity-duplicate-fix/candidate/tools/factory-utils.cjs",
+      "sha256": "f7f5cb405fd2d54a85bbf43141922aa38f78a39875fefb6db858431834fbc4e5"
+    },
+    {
+      "originalWorkspacePath": "tmp/ops-reliability-20260922/cloud.cjs",
+      "gitRecordPath": "releases/2026-09-30-ais-identity-duplicate-fix/candidate/tool-dependencies/cloud.cjs",
+      "sha256": "baed3c6c1f0eeeb57bc5b543e2d5214dc109091e91554b96196fbf033c7d0c13"
+    }
+  ]
+}

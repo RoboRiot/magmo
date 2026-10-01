@@ -1,0 +1,9 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-10-01T15:43:41.5608154Z",
+  "artifactSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "entriesIndependentlyDecompressedAndHashed": 558,
+  "candidateManifestSHA256": "11c84948b5d33c0c5db4d615c2c8016e9e417c05341db024590a4a483144efdc",
+  "scopeReviewSHA256": "84309e50ca09936645743f1bc73340fd996109b1bf27f7df9449c48b786db955",
+  "productionActions": 0
+}

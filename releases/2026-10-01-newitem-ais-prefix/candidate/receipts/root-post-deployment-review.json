@@ -1,0 +1,21 @@
+{
+  "reviewedBy": "root",
+  "result": "PASS",
+  "verifiedAt": "2026-10-01T15:49:39.665Z",
+  "revision": "nextserverwest-00075-rod",
+  "buildId": "newitem-ais-prefix-2d70e4e4fd80c199",
+  "artifactSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "uiOnly": true,
+  "productionDatabaseWrites": 0,
+  "productionSlackPosts": 0,
+  "rulesUnchanged": true,
+  "hostingUnchanged": true,
+  "configurationPreserved": true,
+  "rollbackDryRunPassed": true,
+  "rollbackExecuted": false,
+  "sourceTestsRerunByRoot": {
+    "prefix": 6,
+    "identityAndTransactions": 34
+  },
+  "preflightNote": "One initial attempt stopped before upload/mutation because the function briefly returned UNKNOWN. A fresh read and full dry run verified the exact ACTIVE baseline; exactly one deployment PATCH was then submitted successfully."
+}

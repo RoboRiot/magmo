@@ -1,0 +1,34 @@
+{
+  "result": "PASS",
+  "createdAt": "2026-10-01T15:43:51.001Z",
+  "artifactSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "compositionReportSHA256": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+  "buildId": "newitem-ais-prefix-2d70e4e4fd80c199",
+  "compiledTestsPassed": true,
+  "independentReviewPassed": true,
+  "sourceOnly": true,
+  "uiOnly": true,
+  "changedFactoryIds": [
+    19967
+  ],
+  "artifactBrowserChecks": 17,
+  "independentCompiledInputChecks": 14,
+  "sourceSHA256": "c55ae61ffa570b89c39b901108a653bf90f973b0404c4b7e058d018fe517f614",
+  "receiptHashes": {
+    "baseline.json": "aaedae3e31614ef160dd5fa07ae354671f890545e7a085b98668195396ecf5da",
+    "baseline-files.json": "eb0e6a529cc5c5c0ebe8fbadb55e1c2c95feffc2103aa5d633c0d553055d9162",
+    "rules-baseline.json": "bcdcf810d0302f28a894071cbbcd5c77eacebf9f9485b77f0e31b6f17ab0dc5e",
+    "firestore-before.rules": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+    "hosting-baseline.json": "0b7d22a49efe366add11d49726a03e933c48feab17ec2baa14b74449bd3e22b5",
+    "composition-report.json": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+    "candidate-files.json": "11c84948b5d33c0c5db4d615c2c8016e9e417c05341db024590a4a483144efdc",
+    "package-verification.json": "a31aa8110d3754891d8b2e8b76a16b44890f5309264ecd5f0e93e72cc1250b92",
+    "independent-artifact-review.json": "84309e50ca09936645743f1bc73340fd996109b1bf27f7df9449c48b786db955",
+    "../browser/artifact/binding-verification.json": "912ebdf55c89fb3148abc01261f670d0367ae90a4123fabee267109099bc35da",
+    "../browser/artifact/verification.json": "1fbaec85492c09ad5501a54b6fd20645aaab0a2d4adba1c167bd717000a49d07",
+    "../browser/source/binding-verification.json": "e7d93023ce98b4b52668cf72072e3382d0264d35af9678dc298623823f7c3406"
+  },
+  "databaseWrites": 0,
+  "rulesWrites": 0,
+  "slackPosts": 0
+}

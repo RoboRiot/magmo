@@ -1,0 +1,38 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-10-01T15:45:38.980Z",
+  "originalRevision": "nextserverwest-00074-gax",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790813711063943"
+    }
+  },
+  "originalUpdateTime": "2026-10-01T00:17:47.744162057Z",
+  "uploadedSource": {
+    "bucket": "gcf-v2-uploads-177857525147.us-west2.cloudfunctions.appspot.com",
+    "object": "18545752-cf4b-40f2-b213-ac069a8cf687.zip"
+  },
+  "artifactSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "compositionReportSHA256": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "buildId": "newitem-ais-prefix-2d70e4e4fd80c199",
+  "sourceOnly": true,
+  "rollbackArchive": "source.zip",
+  "databaseWrites": 0,
+  "testSlackPosts": 0,
+  "scope": "NewItem fixed AIS prefix and numeric Local SN entry UI only",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1790869539722-65cc94ec114e6-60046f77-b8f47077",
+  "completedAt": "2026-10-01T15:49:28.091Z",
+  "revision": "nextserverwest-00075-rod",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790869540632509"
+    }
+  },
+  "deployedUpdateTime": "2026-10-01T15:48:45.807350374Z",
+  "unrelatedConfigurationPreserved": true
+}

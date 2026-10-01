@@ -1,0 +1,19 @@
+{
+  "sourceOnlyApproved": true,
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "artifactSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "compositionReportSHA256": "f83146d12c5c55a844ab1fd182d35c5b26fd0031e998afd5911cae7097d629ba",
+  "packageGatesSHA256": "7d7db700b73bc1f43abb6c707606a54e311a7a75f795bfa291d54c27c4955df5",
+  "baselineArchiveSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "toolHashes": {
+    "deploy.cjs": "8f8b846a6e437649b74c24d5448e1fc93bcecbd717e664aa9122c00f00b907ab",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "rollback.cjs": "2cd8b4be8f12119bdb6fe85496ba2cef4cc0adddfd403f9ae1683f58c3052c3b",
+    "verify-live.cjs": "d2947ab49c931bba81ad97d9206502005ac3917830bcbbf680f66d2ec0d35639"
+  },
+  "approvedBy": "root",
+  "approvalScope": "One guarded UI-only application deployment of the fixed AIS prefix on NewItem. No database writes, data cleanup, rules changes, hosting changes, server-logic changes, or Slack posts.",
+  "evidenceReviewed": "Root reviewed source JSX, both source and artifact screenshots, focused 6 tests and 34 existing identity/transaction tests, 17-case artifact browser receipt, independent 558-file/ZIP scope proof, and exact deployment/rollback/live verification tools."
+}

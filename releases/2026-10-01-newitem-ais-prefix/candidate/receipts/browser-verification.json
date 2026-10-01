@@ -1,0 +1,121 @@
+{
+  "ok": true,
+  "createdAt": "2026-10-01T15:40:53.820Z",
+  "mode": "artifact",
+  "candidate": "C:\\Users\\mack2\\Desktop\\code\\tmp\\newitem-ais-prefix-20261001\\deployment\\scoped-source\\.next",
+  "artifactInputs": {
+    "buildId": "newitem-ais-prefix-2d70e4e4fd80c199",
+    "manifestSHA256": "6426067b6464451b77d200629c63f520810d5c7609ecb3329589a8dc0b358863",
+    "assets": [
+      {
+        "path": "static/chunks/webpack-0e4290ce213ed12f.js",
+        "sha256": "dbbf5fa6a006129212380e2cf8770ce0d91a952f5df448b4494033a5744f69e4"
+      },
+      {
+        "path": "static/chunks/framework-32a7466d5cae4a81.js",
+        "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+      },
+      {
+        "path": "static/chunks/main-9b88a952025a6e80.js",
+        "sha256": "9721dc88d71db395be7e0bbe6dbadcd97ef26033b8262361cea8aabfcc7d58d4"
+      },
+      {
+        "path": "static/css/dfe188d46577aea3.css",
+        "sha256": "cb0402c172b971e0d1d734976fab68f5738dfbeb5ddc897031cb2ee044e8040d"
+      },
+      {
+        "path": "static/chunks/pages/_app-581ead4499966a3b.js",
+        "sha256": "27683d3129830c55fb2628e7047c3bdb6ce383c0fd9facfc7e0a22d44bd9dbea"
+      },
+      {
+        "path": "static/chunks/7161-fbab5101e3c6fcd3.js",
+        "sha256": "99801045a87deadf45fddcfd556b2d0c06b280d2774ee2a22f9b22145e648f85"
+      },
+      {
+        "path": "static/chunks/8230-deb01d3ac4ed7c96.js",
+        "sha256": "02e75b96f86d6b6c4227cc9740400b79f4fa2c27cead486d8bd6e8b80f6c00bd"
+      },
+      {
+        "path": "static/chunks/9520-9723bb1a3e2cdf4a.js",
+        "sha256": "7f5301ced3523617465a4f38be6700cb326602210eff5b5c006613a1fa3bbde0"
+      },
+      {
+        "path": "static/chunks/2317-7d26aa15d5eb547d.js",
+        "sha256": "9d079ac9d55a315e92dd64dfb81cb587776cd2991354c9ddefef0bc43a29c471"
+      },
+      {
+        "path": "static/chunks/4514-241f5f861018e722.js",
+        "sha256": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8"
+      },
+      {
+        "path": "static/chunks/1060-bc95950d8c7e80b6.js",
+        "sha256": "584b64f367baaf60f16538edf81fe3a0a621f6568f81866c4773bb33876bd9aa"
+      },
+      {
+        "path": "static/chunks/2855-64d7b5e5d5f48103.js",
+        "sha256": "1ca31aaf30b90b4b2e4664ba4fc22622c2cc79daadc5a1ea107e14384f9e010e"
+      },
+      {
+        "path": "static/chunks/2321-4da2cda4fdfa4ff5.js",
+        "sha256": "8dd034e9c19bd7df338fb37aad0567e59f25bf028e631a24c63bd788f81efe72"
+      },
+      {
+        "path": "static/chunks/5986-4a56a3bc3c70ad00.js",
+        "sha256": "0f4e412262286e25d7a585ee7ce2b78e9ee4f218ec019a1fc0fef44787d49289"
+      },
+      {
+        "path": "static/chunks/4595-4aa58e033edbb512.js",
+        "sha256": "3f2519c98339a3b0c872ec94eaed5e31fab32b241b239896a4fc6ffcfd99ae7c"
+      },
+      {
+        "path": "static/chunks/6183-298ab97d5d22f836.js",
+        "sha256": "d5fb3f5182a903756e4b7f1ed7d755d951ee84f906681fdced0ce9accd591bbe"
+      },
+      {
+        "path": "static/chunks/8137-9b4fb93862431982.js",
+        "sha256": "39cb43d74122e64d2f8729e0b00578e343909e75f917a7acac221fb981096cb4"
+      },
+      {
+        "path": "static/chunks/1531-16a8eae2bb1e5e20.js",
+        "sha256": "b719e896da6dddf548d5640261376463dc8dfb8fb77b69c1d06146b0aea57aa0"
+      },
+      {
+        "path": "static/chunks/6001-cd624421ead8d87b.js",
+        "sha256": "8563d67f613caf8964276608f1b9d02f2c96221f6ccc98be8acc590cb9b4e701"
+      },
+      {
+        "path": "static/css/7f291752931ceafe.css",
+        "sha256": "7f291752931ceafea54ad485355ab3916c58160ac2660b15110526772ba23434"
+      },
+      {
+        "path": "static/chunks/4783-1d40485a2cfc14e4.js",
+        "sha256": "4123ec8e31fa6ad89065419c5af48c00e01c565511117c91e7e7cdf9d889ed0e"
+      },
+      {
+        "path": "static/chunks/pages/NewSearch/AddItem/NewItem-2d70e4e4fd80c199.js",
+        "sha256": "2d70e4e4fd80c1990cf5f9987797e599b15cf54da1553e6d20e30393b91cc060"
+      }
+    ]
+  },
+  "checks": [
+    "fixed AIS prefix remains outside editable digits input; bare typing works",
+    "pasted uppercase/lowercase/separated AIS forms display only number without doubled prefix",
+    "leading zeros preserved; invalid unrelated/storage-unit IDs rejected without alternate conversion",
+    "clear or prefix-only input stays blank rather than AIS-only state",
+    "canonical route prefill displays digits once and preserves leading zeros",
+    "duplicate 33551 Save: blocked, no writes/side effects/false success",
+    "duplicate ais-33551 Save: blocked, no writes/side effects/false success",
+    "duplicate 33551 Clone: blocked, no writes/side effects/false success",
+    "query-id 33551 Save: blocked, no writes/side effects/false success",
+    "legacy AIS33551 Save: blocked, no writes/side effects/false success",
+    "archive 33551 Save: blocked, no writes/side effects/false success",
+    "offline 33551 Save: blocked, no writes/side effects/false success",
+    "unique numeric ID: exactly one canonical save, canonical aliases/index/navigation, original intact",
+    "AIS33553: one canonical item, matching aliases/index/navigation, original intact",
+    "AIS33554: one canonical item, matching aliases/index/navigation, original intact",
+    "AIS0033552: one canonical item, matching aliases/index/navigation, original intact",
+    "clear then auto-generate: one canonical item, matching aliases/index/navigation, original intact"
+  ],
+  "errors": [],
+  "noProductionWrites": true
+}
