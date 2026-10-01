@@ -1,0 +1,26 @@
+{
+  "composedAt": "2026-09-30T23:54:22.540Z",
+  "baselineRelease": {
+    "name": "projects/magmo-ac10c/releases/cloud.firestore",
+    "rulesetName": "projects/magmo-ac10c/rulesets/39fd0c80-5269-49f3-b90d-1af5de77f3b8",
+    "createTime": "2022-03-31T03:05:50.558621Z",
+    "updateTime": "2026-09-30T20:03:33.058969Z"
+  },
+  "fileName": "firestore.rules",
+  "beforeSHA256": "44c113e893551ae7da25eb6845b74573821afd29a4c4fc6d391b9009c32e1203",
+  "afterSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "sourceRulesSHA256": "7a5eb2a6da09725ca928fa09795185d46bbd12dd8bb1d94793b4e48d9d7c34d1",
+  "addedFunctions": [
+    "canonicalNewItemIdentity",
+    "matchingNewItemAlias",
+    "newItemIdentityAllowed",
+    "updatedItemIdentityAllowed"
+  ],
+  "changedMatches": [
+    "Test create",
+    "Test update"
+  ],
+  "reversibleToExactProduction": true,
+  "archiveRenameAndPhotoHistoryRulesPreserved": true,
+  "productionMutations": 0
+}

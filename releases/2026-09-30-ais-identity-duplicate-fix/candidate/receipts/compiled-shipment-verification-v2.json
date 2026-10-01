@@ -1,0 +1,13 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-10-01T00:08:50.248Z",
+  "candidate": "scoped-source-v2",
+  "serviceFactoryId": 51585,
+  "testsPassed": 12,
+  "testsFailed": 0,
+  "actualDeployedServiceAndContractFactories": true,
+  "sourceTestSHA256": "5891545b245eff4bcdc2d91ee7eb12335fc68ef3dec2db4103c80025e4615071",
+  "compiledChunkSHA256": "ad04f0539e0dd0bb4b8210e18b43391b44a14589053576a13c80b363d3f65c5d",
+  "logSHA256": "136f263c1494c6bad3ae977d13e07f3b154587cf799edf4006f23814d413ee78",
+  "productionMutations": 0
+}

@@ -1,0 +1,13 @@
+{
+  "result": "PASS",
+  "createdAt": "2026-10-01T00:06:33.692Z",
+  "files": 555,
+  "modified": 61,
+  "added": 6,
+  "archiveBytes": 4315626,
+  "artifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "compositionReportSHA256": "0f2dc1bdc50db9799b248a852a14acdd75d4c42133c9d5d7a54053c38c0559f4",
+  "candidateFilesSHA256": "ab9fb176744a71f1a5c63bc56e066fc89de792c58787c0b72091d76eec012724",
+  "extractedBytesMatch": true,
+  "liveRuntimeFilesPreserved": true
+}

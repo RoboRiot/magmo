@@ -1,0 +1,34 @@
+{
+  "status": "PLAN_ONLY_NO_COMMIT_OR_PUSH",
+  "isolatedCheckout": "tmp/work-order-site-only-recovery-release",
+  "checkedCleanHead": "bdc164e0d7ffcb9d0979dfcb0a6bc73c9aafca3f",
+  "proposedBranch": "codex/ais-identity-duplicate-fix-20260930",
+  "proposedReleaseDirectory": "releases/2026-09-30-ais-identity-duplicate-fix",
+  "sourceScope": [
+    "lib/items/itemIdentity.cjs",
+    "lib/items/itemIdentitySearch.cjs",
+    "lib/items/itemEditorOperations.cjs",
+    "lib/inventory/shipmentSystemService.cjs",
+    "utils/itemFormShared.js",
+    "utils/warehouseAssociations.js",
+    "utils/fetchAssociations.js",
+    "pages/NewSearch/AddItem/NewItem.js",
+    "pages/NewSearch/item/[id]/index.js",
+    "pages/NewSearch/mainSearch.js",
+    "pages/NewSearch/inventory/inventoryManage.js"
+  ],
+  "testsAndEvidence": "Include exact hash-frozen source tests, guarded composition/deploy/rollback tools, final v2 manifests, scoped rules before/after, sanitized verified receipts and deployment/live/rollback receipts after completion. Record rejected v1 hash and failure cause without presenting it as releasable.",
+  "backupMetadataOnly": {
+    "path": "outputs/firestore-backups/2026-09-30-ais-duplicate-prechange/manifest.json",
+    "manifestSHA256": "b930b2708c5e3362f36271dc01c5143a5f645a618994389e21e7b644b4cb24cb",
+    "dataSHA256": "1fe112d9e4ab4b80261fbdd72aafb69e9df894c56c6aa4afe014a249c586eac0",
+    "documents": 195267,
+    "collections": 1101,
+    "bytes": 1807061121,
+    "databaseItems": 3581,
+    "limitation": "Logical collection backup ran during an external rename; targeted preimages and immutable rename receipt supplement timing. Backup is Firestore only, not Storage/Auth."
+  },
+  "excluded": ["private service configuration", "database records and backup contents", "credentials and environment files", "source.zip", "artifact.zip rejected v1", "compiler workspaces", "node_modules", "screenshots containing production records"],
+  "tagPolicy": "After approved deployment and live verification, create a dated release tag on the final scoped release commit. Do not move prior tags. The previous Git checkpoint is not claimed to reconstruct ACTIVE revision73; exact rollback is pinned to the saved original source generation/archive hash and ruleset.",
+  "publicationAuthorityRequired": true
+}

@@ -1,0 +1,103 @@
+{
+  "createdAt": "2026-10-01T00:05:00.124Z",
+  "baselineRevision": "nextserverwest-00073-vim",
+  "sourceDirectory": "editor-overlay-v2",
+  "compilerVersion": "v5",
+  "pages": [
+    {
+      "route": "/NewSearch/AddItem/NewItem",
+      "oldPage": "static/chunks/pages/NewSearch/AddItem/NewItem-3e032c92f8925a5d.js",
+      "newPage": "static/chunks/pages/NewSearch/AddItem/NewItem-878901bb35267d35.js",
+      "changedFactoryId": 19967,
+      "originalFactorySHA256": "e959d7055f521d8557a8e21c250e0f057d79548101a528ee09ea1169e79f2386",
+      "afterFactorySHA256": "fa16772bc0d06c02273efbfbbc411209521b64c1cfc6a59c025f4f87ca043192",
+      "oldPageSHA256": "3e032c92f8925a5d573b7d10ead869febb792dbbc7501ad9005b425d8d149f57",
+      "newPageSHA256": "878901bb35267d35ceb8163a8252d01824ea5234b2624943ad1095bb21be5b65",
+      "reversiblePageBodyEdits": true,
+      "editPairs": [
+        [
+          "y.localSN&&\"\"!==y.localSN.trim()?y.localSN.trim():Y",
+          "__resolveAis(y.localSN,Y)"
+        ],
+        [
+          "y.localSN&&\"\"!==y.localSN.trim()?y.localSN.trim():\"\"",
+          "__resolveAis(y.localSN)"
+        ],
+        [
+          "Y&&await ec(c,Y)",
+          "Y&&await ec(c,Y,{exactOnly:!0})"
+        ],
+        [
+          "let{id:o}=e.query,c=A.A.firestore()",
+          "let c=A.A.firestore()"
+        ],
+        [
+          "t9||t7.current||o||null",
+          "t9||t7.current||null"
+        ]
+      ],
+      "imports": {
+        "32087": 93900002,
+        "52321": 93900005,
+        "93200000": 93900003,
+        "93200001": 93900004
+      },
+      "newHelperIds": [
+        93900000,
+        93900001,
+        93900002,
+        93900003,
+        93900004,
+        93900005,
+        93900006
+      ],
+      "unrelatedFactoriesPreserved": true
+    },
+    {
+      "route": "/NewSearch/item/[id]",
+      "oldPage": "static/chunks/pages/NewSearch/item/[id]-e621de93c98b4802.js",
+      "newPage": "static/chunks/pages/NewSearch/item/[id]-a3e25a66399ac781.js",
+      "changedFactoryId": 40705,
+      "originalFactorySHA256": "446ed94f641b27d62ff348bc61c149c5b0f6a0ca706c244009c541a2dba14eab",
+      "afterFactorySHA256": "34e2a36119e68bc7cd801667024f5f8f082969f28e3543ea632feee2e7eb31a8",
+      "oldPageSHA256": "e621de93c98b4802d8a7df81807aafe955c2de95f30c6e841e9ad71717904493",
+      "newPageSHA256": "a3e25a66399ac781d20b8c98929b4fd708aede9f4869bfddd80c6361e92ab6cd",
+      "reversiblePageBodyEdits": true,
+      "editPairs": [
+        [
+          "eB.localSN&&\"\"!==eB.localSN.trim()?eB.localSN.trim():er",
+          "__resolveAis(eB.localSN,er)"
+        ],
+        [
+          "eB.localSN&&\"\"!==eB.localSN.trim()?eB.localSN.trim():\"\"",
+          "__resolveAis(eB.localSN)"
+        ],
+        [
+          "er&&await ef(g,er)",
+          "er&&await ef(g,er,{exactOnly:!0})"
+        ]
+      ],
+      "imports": {
+        "32087": 93900002,
+        "52321": 93900005,
+        "93200000": 93900003,
+        "93200001": 93900004
+      },
+      "newHelperIds": [
+        93900000,
+        93900001,
+        93900002,
+        93900003,
+        93900004,
+        93900005,
+        93900006
+      ],
+      "unrelatedFactoriesPreserved": true
+    }
+  ],
+  "helpersReceiptSHA256": "afd0d804bf71ebe0cae68a87d3a47cc6f0f6a221c19f0cebe60bf83d22bf9a83",
+  "cssUnchanged": true,
+  "serverRenderUnchanged": true,
+  "rejectedPredecessor": "editor-overlay-report.json",
+  "productionMutations": 0
+}

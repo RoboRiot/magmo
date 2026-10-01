@@ -1,0 +1,12 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-10-01T00:14:59.129Z",
+  "originalRuleset": "projects/magmo-ac10c/rulesets/39fd0c80-5269-49f3-b90d-1af5de77f3b8",
+  "originalReleaseUpdateTime": "2026-09-30T20:03:33.058969Z",
+  "beforeSHA256": "44c113e893551ae7da25eb6845b74573821afd29a4c4fc6d391b9009c32e1203",
+  "afterSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "databaseWrites": 0,
+  "createdRuleset": "projects/magmo-ac10c/rulesets/9fbba28a-e360-401c-8d83-aa7948cc08c0",
+  "completedAt": "2026-10-01T00:15:00.842Z",
+  "releaseUpdateTime": "2026-10-01T00:15:00.435312Z"
+}

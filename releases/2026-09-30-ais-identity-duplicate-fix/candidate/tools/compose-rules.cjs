@@ -1,0 +1,16 @@
+"use strict";
+const fs=require("node:fs"),path=require("node:path"),assert=require("node:assert/strict");
+const T=require("./factory-utils.cjs"),here=__dirname,root=path.resolve(here,"../../..");
+const baseline=JSON.parse(T.read(path.join(here,"rules-baseline.json"))),before=T.read(path.join(here,"firestore-before.rules")),rootRules=T.read(path.join(root,"firestore.rules"));
+assert.equal(T.sha(before),baseline.beforeSHA256);
+assert.equal(T.sha(rootRules),"7a5eb2a6da09725ca928fa09795185d46bbd12dd8bb1d94793b4e48d9d7c34d1","Rules source changed after freeze");
+const normalized=rootRules.replaceAll("\r\n","\n"),start=normalized.indexOf("    // Creation identity is stricter"),end=normalized.indexOf("    function renameAlias",start);
+assert(start>0&&end>start);const block=normalized.slice(start,end);assert.equal((block.match(/    function /g)||[]).length,4);
+let after=T.replaceOnce(before,"    function renameAlias",block+"    function renameAlias");
+const oldClause="    match /Test/{itemId} {\n      allow read: if approvedUser();\n      allow create, update: if itemWriteAllowed(itemId);";
+const newClause="    match /Test/{itemId} {\n      allow read: if approvedUser();\n      allow create: if itemWriteAllowed(itemId) && newItemIdentityAllowed(itemId);\n      allow update: if itemWriteAllowed(itemId) && updatedItemIdentityAllowed(itemId);";
+after=T.replaceOnce(after,oldClause,newClause);
+assert.equal(after.replace(block,"").replace(newClause,oldClause),before,"Rules change must reverse byte-for-byte");
+fs.writeFileSync(path.join(here,"firestore-scoped-v2.rules"),after,{flag:"wx"});
+const report={composedAt:new Date().toISOString(),baselineRelease:baseline.release,fileName:baseline.fileName,beforeSHA256:T.sha(before),afterSHA256:T.sha(after),sourceRulesSHA256:T.sha(rootRules),addedFunctions:["canonicalNewItemIdentity","matchingNewItemAlias","newItemIdentityAllowed","updatedItemIdentityAllowed"],changedMatches:["Test create","Test update"],reversibleToExactProduction:true,archiveRenameAndPhotoHistoryRulesPreserved:true,productionMutations:0};
+fs.writeFileSync(path.join(here,"rules-plan-v2.json"),JSON.stringify(report,null,2)+"\n",{flag:"wx"});console.log(JSON.stringify(report,null,2));

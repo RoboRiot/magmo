@@ -1,0 +1,91 @@
+{
+  "createdAt": "2026-09-30T23:56:58.794Z",
+  "baselineRevision": "nextserverwest-00073-vim",
+  "frozenSources": {
+    "lib/items/itemIdentitySearch.cjs": "968bcb4d310a4ff6348694809cc2ab1cb25dbb94ec4059c9b332cf53434a66be",
+    "utils/fetchAssociations.js": "a6760906bb2c88f23a92934de54dd95759df2dbdbfed2ead8749c39348974cdc",
+    "pages/NewSearch/mainSearch.js": "df0a221ef8be52eb2a0570dfe2f2ed4249d77abadbf3292f3632219f042fb992",
+    "pages/NewSearch/inventory/inventoryManage.js": "a6f996263bc38d7ec2f9c6badd919e2cd143d040bae55db3f2de09d27509fa51"
+  },
+  "sourceDirectory": "search-overlay",
+  "files": [
+    {
+      "route": "/NewSearch/mainSearch",
+      "moduleId": 60992,
+      "beforeAsset": ".next/static/chunks/pages/NewSearch/mainSearch-020f8f350d9bc2ab.js",
+      "afterAsset": ".next/static/chunks/pages/NewSearch/mainSearch-ais-identity-03d3b35a51e491fc.js",
+      "beforeSHA256": "020f8f350d9bc2ab7dd65019301bd66363022a269c8152a44bcae29eedcb4599",
+      "afterSHA256": "03d3b35a51e491fcd65fc831606bce19382a6053f2deacc11195b4aa979e3a70",
+      "beforeFactorySHA256": "0b2f0e019dbd0429a4a830330c19aee60eeee5e5cb20d50d3d28248a5e58a9d9",
+      "afterFactorySHA256": "8e7e4cfe09bfbd289bba05e44f2cd7f8c14d0dc45521c05d272b9a35466f8aaf",
+      "requiredHelperIds": [
+        93900001
+      ],
+      "existingFetchAssociationsId": 52321,
+      "pendingReleaseComposition": "Inject frozen helper closure including 93900001, remap 52321 to private fetch clone 93900005, rehash final asset.",
+      "byteExactInversePassed": true,
+      "outsideFactoryBytesUnchanged": true,
+      "unrelatedFactoriesUnchanged": true,
+      "unchangedLoaderChunks": true,
+      "edits": [
+        {
+          "label": "main-search helper import",
+          "before": "\"use strict\";",
+          "after": "\"use strict\";const __aisSearch=r(93900001);"
+        },
+        {
+          "label": "main-search SKU identity predicate",
+          "before": "if(\"SKU\"===a){let t=String(r).replace(/\\D/g,\"\");if(!t)return!0;let a=`ais${t}`;return[e?.id,e?.localSN,e?.local_sn].some(e=>String(e||\"\").toLowerCase().startsWith(a))}",
+          "after": "if(\"SKU\"===a)return __aisSearch.itemMatchesAisSearch(e,r);"
+        }
+      ]
+    },
+    {
+      "route": "/NewSearch/inventory/inventoryManage",
+      "moduleId": 83757,
+      "beforeAsset": ".next/static/chunks/pages/NewSearch/inventory/inventoryManage-8ac6aeccbb98c7ab.js",
+      "afterAsset": ".next/static/chunks/pages/NewSearch/inventory/inventoryManage-ais-identity-adf1545c00ae6fd0.js",
+      "beforeSHA256": "cfb22bb520896fc1ab64f366a26b3e1597b57dd17bab4b54adf4581351880ce6",
+      "afterSHA256": "adf1545c00ae6fd0c1429ef83bdddccf34fb1df27f10804ad54a543ea7baed23",
+      "beforeFactorySHA256": "85d47e11555238e1096bd52c59cc4c65047bd91ad4e1928afd5b9b4c40390d6d",
+      "afterFactorySHA256": "a764f90258ff7c42ac6450fe854a92594213b14236e24e5da3567042ffb583fd",
+      "requiredHelperIds": [
+        93900001
+      ],
+      "existingFetchAssociationsId": 52321,
+      "pendingReleaseComposition": "Inject frozen helper closure including 93900001, remap 52321 to private fetch clone 93900005, rehash final asset.",
+      "byteExactInversePassed": true,
+      "outsideFactoryBytesUnchanged": true,
+      "unrelatedFactoriesUnchanged": true,
+      "unchangedLoaderChunks": true,
+      "edits": [
+        {
+          "label": "inventory helper import",
+          "before": "\"use strict\";",
+          "after": "\"use strict\";const __aisSearch=t(93900001);"
+        },
+        {
+          "label": "inventory canonical/legacy filter",
+          "before": "return!r||!!String(e.localSN||\"\").toLowerCase().includes(r)",
+          "after": "return!r||(__aisSearch.aisSearchPrefix(r)?__aisSearch.itemMatchesAisSearch(e,r):!!String(e.localSN||\"\").toLowerCase().includes(r))"
+        },
+        {
+          "label": "inventory identity query plan",
+          "before": "let e=l.replace(/\\s+/g,\"\");if(/^(?:ais)?\\d+$/i.test(e)){let n=e.replace(/^ais/i,\"\"),i=`AIS${n}`;return{query:t.orderBy(r).startAt(i).endAt(`${i}\\uf8ff`),label:\"local-sn-document-prefix\"}}",
+          "after": "if(__aisSearch.aisSearchPrefix(l))return{query:null,queries:__aisSearch.buildItemAisSearchQueries({collection:t,documentId:r,value:l}),label:\"local-sn-canonical-and-legacy\"};"
+        },
+        {
+          "label": "inventory secondary alias filter",
+          "before": "if(!1===(e.data()||{}).visible||a.has(e.id))return;let t=q(e);Z(t,n)&&a.set(e.id,t)",
+          "after": "let __aisData=e.data()||{};if(!1===__aisData.visible||a.has(e.id))return;let t=q(e);Z({...t,local_sn:__aisData.local_sn,aisNumber:__aisData.aisNumber},n)&&a.set(e.id,t)"
+        }
+      ]
+    }
+  ],
+  "productionMutations": 0,
+  "tests": {
+    "sourceSearchChecks": 19,
+    "compiledInventoryPredicateAssertions": 9,
+    "inverseFactoryProofs": 2
+  }
+}

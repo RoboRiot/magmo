@@ -1,0 +1,23 @@
+{
+  "sourceOnlyApproved": true,
+  "rulesApproved": true,
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "artifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "compositionReportSHA256": "0f2dc1bdc50db9799b248a852a14acdd75d4c42133c9d5d7a54053c38c0559f4",
+  "packageGatesSHA256": "4986e621354c84b9e7cf68845548114c01a010be5dfa2e2d518d99e06c1a1afd",
+  "baselineArchiveSHA256": "aa11589ca9646673033a0bb6431e03d14197da605860f405365830a42c4acc14",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "rulesSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "toolHashes": {
+    "deploy.cjs": "8ee4da1a834196f7c2106001a032b4ca745e9cc9335f8cfb346ea6ba6c0d329c",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "rollback.cjs": "00cc93fc89337f913ba72c1b7157467ed2ba8b30e7014cc1f98125b5a7d2dada",
+    "rollback-rules.cjs": "940f5222ec5ad30eb469e4b8fcdc37780e60a2e5ca3e75402dfaf2d715ec8f5a",
+    "verify-live.cjs": "9cffb6e05d7a93783294850479afc2eae303d1351a1c221acb77e7c5c6606712",
+    "deploy-rules.cjs": "c7376e2b666292a5c3ccdf8cb88682df3ab4313796781499fa07143e54719821"
+  },
+  "approvedBy": "root",
+  "approvalScope": "One guarded v2 code deployment and exact scoped Firestore rules publication only. No item changes, cleanup, Slack posts, or test production writes.",
+  "reviewedEvidence": "Root reviewed exact factory mappings, independent 555-file ZIP review, actual compiled NewItem and editor/history/browser receipts, source/compiled shipment tests, exact 17-test rules emulator receipt, dated backup verification, and guarded deploy/rollback tools."
+}

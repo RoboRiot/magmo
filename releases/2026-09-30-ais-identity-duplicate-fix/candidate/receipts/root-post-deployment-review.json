@@ -1,0 +1,24 @@
+{
+  "reviewedBy": "root",
+  "verifiedAt": "2026-10-01T00:18:24.822Z",
+  "result": "PASS",
+  "revision": "nextserverwest-00074-gax",
+  "buildId": "ais-identity-fbe50eab4b16a8e4",
+  "artifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "rulesSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "liveVerification": { "assets": 34, "pages": 3, "apiProbes": 7, "configurationPreserved": true },
+  "rollbackDryRuns": { "applicationPassed": true, "rulesPassed": true, "rollbackExecuted": false },
+  "recordPreservation": {
+    "targetedPostDeploymentReadPassed": true,
+    "testRecordUnchanged": true,
+    "externallyRenamedOriginalUnchanged": true,
+    "externalRenamePreimageMatchesInitialBackup": true,
+    "cleanupAwaitingUserDirection": true
+  },
+  "productionDatabaseWrites": 0,
+  "productionStorageWrites": 0,
+  "productionSlackPosts": 0,
+  "sourceFocusedTestsRerunByRoot": { "passed": 51, "failed": 0 },
+  "compiledShipmentTestsRerunByRoot": { "passed": 12, "failed": 0 },
+  "notes": "Production rollout changed the scoped application package and Firestore rules only. It did not change inventory records. Actual create/edit behavior was tested with loopback-only browser mocks and exact scoped rules in the emulator; no test items were created in production."
+}

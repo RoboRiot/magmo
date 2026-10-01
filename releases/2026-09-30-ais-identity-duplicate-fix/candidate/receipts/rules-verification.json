@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-09-30T23:59:04.111Z",
+  "status": "passed",
+  "rulesFile": "firestore-scoped-v2.rules",
+  "rulesSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "testFile": "test/firestore-item-archive.emulator.test.cjs",
+  "testSHA256": "a21ae0b2636802c56ecb55b60e020197c2251aec0a6ba8c7c2a16e709f9b2b89",
+  "transactionalHelperSHA256": "d3d94aa3b4b12eb16ac445876810c481664af3c680d351f776269f0917122667",
+  "passed": 17,
+  "failed": 0,
+  "skipped": 0,
+  "logFile": "firestore-scoped-emulator.log",
+  "logSHA256": "89f3dc5db92efbad28639f5ce425102c5c19b0caccc69263a10a3eafcd9f80fd",
+  "project": "demo-magmo-archive",
+  "firestoreHost": "127.0.0.1:8189",
+  "config": "emulator-scoped.json",
+  "configSHA256": "ed7442eae3dd45c280c1f53c5b800f185d6e2bcf15f0c0961691789e297d2098",
+  "portableJdk": {
+    "version": "21.0.12.1+1",
+    "distribution": "Eclipse Temurin",
+    "zipSHA256": "f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e",
+    "source": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip",
+    "officialChecksum": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip.sha256.txt",
+    "systemInstalled": false
+  },
+  "coverage": [
+    "numeric/case/separator/tab/outer-space stale-client denial",
+    "new aliases must match document identity",
+    "existing numeric and lowercase owners block canonical creation",
+    "retired numeric identities cannot be reused",
+    "legacy ordinary updates preserve data",
+    "both numeric/canonical batch orders fail atomically",
+    "actual concurrent creation has exactly one canonical winner",
+    "existing target cannot be overwritten",
+    "historical numeric rename retirement preserved",
+    "archive/rename authorization and eight-alias access-budget regressions"
+  ],
+  "productionDatabaseWrites": 0,
+  "productionStorageWrites": 0,
+  "productionSlackPosts": 0
+}

@@ -1,0 +1,51 @@
+{
+  "result": "PASS",
+  "createdAt": "2026-10-01T00:13:57.678Z",
+  "candidate": "scoped-source-v2",
+  "buildId": "ais-identity-fbe50eab4b16a8e4",
+  "artifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "compositionReportSHA256": "0f2dc1bdc50db9799b248a852a14acdd75d4c42133c9d5d7a54053c38c0559f4",
+  "compiledTestsPassed": true,
+  "independentReviewPassed": true,
+  "sourceOnly": true,
+  "databaseWritesAllowed": false,
+  "testSlackPostsAllowed": false,
+  "receiptHashes": {
+    "package-verification-v2.json": "05ec20ebfc8b1ad50158ae5b8d0ec437eaff9730c40105cc482eb1c0a36fafc2",
+    "independent-final-review.json": "f17d16bc4d63553065ba87f4a6fa160e93af245873688cc6b0a1511631ac24eb",
+    "independent-package-review.json": "e522abe1eb5da0a85dba9458b6725d6600fea3f65f1b1c6d7db958f6ecd8eb90",
+    "finalsearch-candidate-verification.json": "874e1061c5754c13a9b2ef8873da2e585106feb4805b86bd65252584049f3dcf",
+    "rules-verification.json": "8d0f08b1e44d89d87f3e9fbd96a21f103667ddbf494461178bd762af9d9356db",
+    "rules-plan-v2.json": "d2383c7843292226c1778a1271dc29252ac7a929b3fe556e1eb8c1e19518f713",
+    "editor-overlay-report-v2.json": "2096beeab249649005846ff4f531a993dfd1901f73ef74694839cc3a57218bac",
+    "search-overlay-report.json": "08e5eb4b764881a58750582cbd1b8d132dfba4631deb6a17f5cf8cfe305f507d",
+    "shipment-overlay-report.json": "1d122832bb45889a2c997230f3b7a9ad087f211d646bb9dcd5295340fc99c247",
+    "compiled-shipment-verification-v2.json": "53d5a39945d23292dc6ebc0c78451bf958630eb0e39dc1944df6c80dd9c24c1b",
+    "browser-newitem-v2.json": "a8f05865b4c80b976524caff40e094c9a9d17b027750f4363f97a5d61d272a5b",
+    "browser-editor-history-v2.json": "fdb7c3ef61792d525417ff4aea39c9385b9a4c020ba06144f6f47b8948867031",
+    "global-module-id-check.json": "91fe3d266f990aba5150bf61823ebf08e65bceccb508986df5fec746bdd9d7f0",
+    "compiler-inputs-v5.json": "a4056cc614eb2b79de3867f2f546be1c5a4bb894e2eb5c79df373c33dbfc3620",
+    "compiler-success-v5.json": "c6addb6343611084240603e640d82a6b49014e33abee2fa0ed7e47735a631b4c",
+    "candidate-files-v2.json": "ab9fb176744a71f1a5c63bc56e066fc89de792c58787c0b72091d76eec012724"
+  },
+  "checks": {
+    "newItemBrowser": 8,
+    "existingEditorPhotoHistoryBrowser": 12,
+    "compiledShipment": 12,
+    "compiledSearch": 24,
+    "actualFirestoreEmulator": 17
+  },
+  "backup": {
+    "manifestPath": "outputs/firestore-backups/2026-09-30-ais-duplicate-prechange/manifest.json",
+    "manifestSHA256": "b930b2708c5e3362f36271dc01c5143a5f645a618994389e21e7b644b4cb24cb",
+    "dataSHA256": "1fe112d9e4ab4b80261fbdd72aafb69e9df894c56c6aa4afe014a249c586eac0",
+    "includesTargetedPreimages": true
+  },
+  "rejectedCandidate": {
+    "file": "artifact.zip",
+    "reason": "Wrong pre-existing private helper IDs; render failures caught before deployment",
+    "sha256": "6b5639dc5acab7e64db1e548722c4461a5b1cc19d47baae7c689713607cd7a0d",
+    "deployed": false
+  },
+  "approvalRequired": true
+}

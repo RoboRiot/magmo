@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-01T00:11:33.4370075Z",
+  "status": "passed",
+  "buildId": "ais-identity-fbe50eab4b16a8e4",
+  "artifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "artifactBytes": 4315626,
+  "independentlyDecompressedAndSHA256VerifiedEntries": 555,
+  "compositionReportSHA256": "0f2dc1bdc50db9799b248a852a14acdd75d4c42133c9d5d7a54053c38c0559f4",
+  "candidateFileManifestSHA256": "ab9fb176744a71f1a5c63bc56e066fc89de792c58787c0b72091d76eec012724",
+  "independentScopeReviewSHA256": "f17d16bc4d63553065ba87f4a6fa160e93af245873688cc6b0a1511631ac24eb",
+  "compiledSearchReviewSHA256": "874e1061c5754c13a9b2ef8873da2e585106feb4805b86bd65252584049f3dcf",
+  "baselineSourceArchiveSHA256": "aa11589ca9646673033a0bb6431e03d14197da605860f405365830a42c4acc14",
+  "rulesSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "productionWrites": 0
+}

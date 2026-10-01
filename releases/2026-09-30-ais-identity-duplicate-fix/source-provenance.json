@@ -1,0 +1,458 @@
+{
+  "recordedAt": "2026-10-01T00:21:27.573Z",
+  "purpose": "Exact-byte provenance snapshots; deployed scope is the composition report, not a wholesale source build.",
+  "sourceCompiler": "compiler-inputs-v5.json",
+  "exactByteSnapshots": 75,
+  "files": [
+    {
+      "relative": "candidate/source/lib/items/itemIdentity.cjs",
+      "kind": "frozen-compiler-source",
+      "sha256": "1f02f42887b4aeef5c8e413500f56e37951fbd58d3625862aa24e38d87705099",
+      "bytes": 1432
+    },
+    {
+      "relative": "candidate/source/lib/items/itemIdentitySearch.cjs",
+      "kind": "frozen-compiler-source",
+      "sha256": "968bcb4d310a4ff6348694809cc2ab1cb25dbb94ec4059c9b332cf53434a66be",
+      "bytes": 2317
+    },
+    {
+      "relative": "candidate/source/lib/items/itemEditorOperations.cjs",
+      "kind": "frozen-compiler-source",
+      "sha256": "d5611c2671141821ac3e985f05702677a470fa097d8c7e2c01f6049ce473847a",
+      "bytes": 2509
+    },
+    {
+      "relative": "candidate/source/lib/inventory/shipmentSystemService.cjs",
+      "kind": "frozen-compiler-source",
+      "sha256": "be840f6b48d629825708caa3a1ddecd96f689f73d0e4c4ae1bb94d5912b708fc",
+      "bytes": 23900
+    },
+    {
+      "relative": "candidate/source/utils/itemFormShared.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "f5928e0a012f7b024773965fdec54ee11fe47bbdbd3c508dd7ce2c6a5efd82fa",
+      "bytes": 12750
+    },
+    {
+      "relative": "candidate/source/utils/warehouseAssociations.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "d3d94aa3b4b12eb16ac445876810c481664af3c680d351f776269f0917122667",
+      "bytes": 28448
+    },
+    {
+      "relative": "candidate/source/utils/fetchAssociations.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "a6760906bb2c88f23a92934de54dd95759df2dbdbfed2ead8749c39348974cdc",
+      "bytes": 46877
+    },
+    {
+      "relative": "candidate/source/pages/NewSearch/AddItem/NewItem.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "6e3886d1ad33d11679fa56659193d2caed459eae95000753d07eec5974b246c6",
+      "bytes": 187541
+    },
+    {
+      "relative": "candidate/source/pages/NewSearch/item/[id]/index.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "7bdb21f0bcb8ff1a60bc4a05cc504a04036088e06c0a5d6a0d3fa6b24890edba",
+      "bytes": 231269
+    },
+    {
+      "relative": "candidate/source/pages/NewSearch/mainSearch.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "df0a221ef8be52eb2a0570dfe2f2ed4249d77abadbf3292f3632219f042fb992",
+      "bytes": 88290
+    },
+    {
+      "relative": "candidate/source/pages/NewSearch/inventory/inventoryManage.js",
+      "kind": "frozen-compiler-source",
+      "sha256": "a6f996263bc38d7ec2f9c6badd919e2cd143d040bae55db3f2de09d27509fa51",
+      "bytes": 121095
+    },
+    {
+      "relative": "candidate/test/item-ais-identity.test.cjs",
+      "kind": "regression-test",
+      "sha256": "8ccef6390beb94e258da778d52d77faa2953b054f371b8200595460c361e4371",
+      "bytes": 4758
+    },
+    {
+      "relative": "candidate/test/item-identity-search.test.cjs",
+      "kind": "regression-test",
+      "sha256": "2680eb5415204d48167c7f8723c20ed558a464c70bce094ec45a1bcbc97e7644",
+      "bytes": 5828
+    },
+    {
+      "relative": "candidate/test/part-search-pagination.test.cjs",
+      "kind": "regression-test",
+      "sha256": "9453bf4c778dc2b213d40324a0e894405a02e67e37f28cb5f716b1edefc1ade5",
+      "bytes": 12604
+    },
+    {
+      "relative": "candidate/test/warehouse-associations-transaction.test.cjs",
+      "kind": "regression-test",
+      "sha256": "b4d5eb6942ba8e831c49fdebaae15b41f63af40f3004391c1b1e0f86cadc7a6d",
+      "bytes": 27856
+    },
+    {
+      "relative": "candidate/test/item-editor-operations.test.cjs",
+      "kind": "regression-test",
+      "sha256": "ef3779b6a61095491efb3a27458454889560adb200234e28e3a0849b184d4013",
+      "bytes": 4708
+    },
+    {
+      "relative": "candidate/test/firestore-item-archive.emulator.test.cjs",
+      "kind": "regression-test",
+      "sha256": "a21ae0b2636802c56ecb55b60e020197c2251aec0a6ba8c7c2a16e709f9b2b89",
+      "bytes": 33084
+    },
+    {
+      "relative": "candidate/test/shipment-system-service.test.cjs",
+      "kind": "regression-test",
+      "sha256": "5891545b245eff4bcdc2d91ee7eb12335fc68ef3dec2db4103c80025e4615071",
+      "bytes": 18849
+    },
+    {
+      "relative": "candidate/test/item-history-ui.browser.test.cjs",
+      "kind": "regression-test",
+      "sha256": "c70619b476c5af8c8cd4d2c461fe36cb7e6c16287df44bedcab91d9bc3cf1782",
+      "bytes": 8565
+    },
+    {
+      "relative": "candidate/receipts/baseline.json",
+      "kind": "sanitized-receipt",
+      "sha256": "4de1b9ca87863885a5b24f496739ee07070c4cdb055d20ea09d307e62e34c386",
+      "bytes": 1096
+    },
+    {
+      "relative": "candidate/receipts/baseline-files.json",
+      "kind": "sanitized-receipt",
+      "sha256": "b8c23323b58ff56cb8811560de049c921b01a0699fe426a73f3d87b3b2587935",
+      "bytes": 94551
+    },
+    {
+      "relative": "candidate/receipts/candidate-files-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "ab9fb176744a71f1a5c63bc56e066fc89de792c58787c0b72091d76eec012724",
+      "bytes": 95708
+    },
+    {
+      "relative": "candidate/receipts/composition-report-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "0f2dc1bdc50db9799b248a852a14acdd75d4c42133c9d5d7a54053c38c0559f4",
+      "bytes": 21310
+    },
+    {
+      "relative": "candidate/receipts/client-helper-factories-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "afd0d804bf71ebe0cae68a87d3a47cc6f0f6a221c19f0cebe60bf83d22bf9a83",
+      "bytes": 46385
+    },
+    {
+      "relative": "candidate/receipts/compiler-inputs-v5.json",
+      "kind": "sanitized-receipt",
+      "sha256": "a4056cc614eb2b79de3867f2f546be1c5a4bb894e2eb5c79df373c33dbfc3620",
+      "bytes": 59174
+    },
+    {
+      "relative": "candidate/receipts/compiler-success-v5.json",
+      "kind": "sanitized-receipt",
+      "sha256": "c6addb6343611084240603e640d82a6b49014e33abee2fa0ed7e47735a631b4c",
+      "bytes": 321
+    },
+    {
+      "relative": "candidate/receipts/editor-overlay-report-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "2096beeab249649005846ff4f531a993dfd1901f73ef74694839cc3a57218bac",
+      "bytes": 3401
+    },
+    {
+      "relative": "candidate/receipts/search-overlay-report.json",
+      "kind": "sanitized-receipt",
+      "sha256": "08e5eb4b764881a58750582cbd1b8d132dfba4631deb6a17f5cf8cfe305f507d",
+      "bytes": 4858
+    },
+    {
+      "relative": "candidate/receipts/shipment-overlay-report.json",
+      "kind": "sanitized-receipt",
+      "sha256": "1d122832bb45889a2c997230f3b7a9ad087f211d646bb9dcd5295340fc99c247",
+      "bytes": 940
+    },
+    {
+      "relative": "candidate/receipts/package-verification-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "05ec20ebfc8b1ad50158ae5b8d0ec437eaff9730c40105cc482eb1c0a36fafc2",
+      "bytes": 488
+    },
+    {
+      "relative": "candidate/receipts/rules-baseline.json",
+      "kind": "sanitized-receipt",
+      "sha256": "d4511b31db2e936d272be26d86b7c19f3223052f107e7e0ab3e8700d12267d77",
+      "bytes": 498
+    },
+    {
+      "relative": "candidate/receipts/rules-plan-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "d2383c7843292226c1778a1271dc29252ac7a929b3fe556e1eb8c1e19518f713",
+      "bytes": 952
+    },
+    {
+      "relative": "candidate/receipts/rules-verification.json",
+      "kind": "sanitized-receipt",
+      "sha256": "8d0f08b1e44d89d87f3e9fbd96a21f103667ddbf494461178bd762af9d9356db",
+      "bytes": 2041
+    },
+    {
+      "relative": "candidate/receipts/browser-newitem-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "a8f05865b4c80b976524caff40e094c9a9d17b027750f4363f97a5d61d272a5b",
+      "bytes": 4629
+    },
+    {
+      "relative": "candidate/receipts/browser-editor-history-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "fdb7c3ef61792d525417ff4aea39c9385b9a4c020ba06144f6f47b8948867031",
+      "bytes": 5245
+    },
+    {
+      "relative": "candidate/receipts/compiled-shipment-verification-v2.json",
+      "kind": "sanitized-receipt",
+      "sha256": "53d5a39945d23292dc6ebc0c78451bf958630eb0e39dc1944df6c80dd9c24c1b",
+      "bytes": 519
+    },
+    {
+      "relative": "candidate/receipts/global-module-id-check.json",
+      "kind": "sanitized-receipt",
+      "sha256": "91fe3d266f990aba5150bf61823ebf08e65bceccb508986df5fec746bdd9d7f0",
+      "bytes": 257
+    },
+    {
+      "relative": "candidate/receipts/independent-final-review.json",
+      "kind": "sanitized-receipt",
+      "sha256": "f17d16bc4d63553065ba87f4a6fa160e93af245873688cc6b0a1511631ac24eb",
+      "bytes": 6360
+    },
+    {
+      "relative": "candidate/receipts/independent-package-review.json",
+      "kind": "sanitized-receipt",
+      "sha256": "e522abe1eb5da0a85dba9458b6725d6600fea3f65f1b1c6d7db958f6ecd8eb90",
+      "bytes": 919
+    },
+    {
+      "relative": "candidate/receipts/finalsearch-candidate-verification.json",
+      "kind": "sanitized-receipt",
+      "sha256": "874e1061c5754c13a9b2ef8873da2e585106feb4805b86bd65252584049f3dcf",
+      "bytes": 6431
+    },
+    {
+      "relative": "candidate/receipts/package-gates.json",
+      "kind": "sanitized-receipt",
+      "sha256": "4986e621354c84b9e7cf68845548114c01a010be5dfa2e2d518d99e06c1a1afd",
+      "bytes": 2963
+    },
+    {
+      "relative": "candidate/receipts/git-release-plan.json",
+      "kind": "sanitized-receipt",
+      "sha256": "a8005575c123446cf221d78917b347296c0d4e43fbe81c04c80605a143429def",
+      "bytes": 2305
+    },
+    {
+      "relative": "candidate/rules/firestore-before.rules",
+      "kind": "exact-production-rule-snapshot",
+      "sha256": "44c113e893551ae7da25eb6845b74573821afd29a4c4fc6d391b9009c32e1203",
+      "bytes": 15766
+    },
+    {
+      "relative": "candidate/rules/firestore-scoped-v2.rules",
+      "kind": "exact-production-rule-snapshot",
+      "sha256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+      "bytes": 17948
+    },
+    {
+      "relative": "candidate/tools/snapshot.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "86216a8d0269fc7645c0adf8196869d4d046d7cd63bfb5550b3c9fd70713deed",
+      "bytes": 5850
+    },
+    {
+      "relative": "candidate/tools/run-compiler.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "244a8cec0ad4def193094657f36b505b2a34420cac58312f3eb3e1d8938354a0",
+      "bytes": 4829
+    },
+    {
+      "relative": "candidate/tools/factory-utils.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "f7f5cb405fd2d54a85bbf43141922aa38f78a39875fefb6db858431834fbc4e5",
+      "bytes": 1984
+    },
+    {
+      "relative": "candidate/tools/compose-editors.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "cb513f9f58ba8b75978dfca1228047024e579c64009945a52947a8f20d5e68fd",
+      "bytes": 5870
+    },
+    {
+      "relative": "candidate/tools/compose-search-pages.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "591e734f7988c88e6d5e67c6e5efcb79e1d2324fe50dbdbc8a343e690a3f8786",
+      "bytes": 6900
+    },
+    {
+      "relative": "candidate/tools/compose-shipment.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "1535806c73b8e1ff14b03937435e2b26af48ca1a39f1e24d9f1e8b080d927744",
+      "bytes": 3537
+    },
+    {
+      "relative": "candidate/tools/compose-rules.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "4ffd1d8c76bd1a17f915e6f4a29cc8af5047c4febf45117920d03c1907236904",
+      "bytes": 2216
+    },
+    {
+      "relative": "candidate/tools/compose.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "f5a2e8bb18637407d072e9e76c2eb856e52ba11a343783211ab4093dc86361c8",
+      "bytes": 7343
+    },
+    {
+      "relative": "candidate/tools/package-v2.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "44a77074c714025b457a13150a78cc23405b4392502eff48aefa4a4e9d396371",
+      "bytes": 3905
+    },
+    {
+      "relative": "candidate/tools/finalize-gates.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "ca8b8344f6837efd94ddf69bae642f90f07b09090132e6ce3ba39c6ee26e1c5d",
+      "bytes": 5614
+    },
+    {
+      "relative": "candidate/tools/deploy.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "8ee4da1a834196f7c2106001a032b4ca745e9cc9335f8cfb346ea6ba6c0d329c",
+      "bytes": 5189
+    },
+    {
+      "relative": "candidate/tools/deploy-rules.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "c7376e2b666292a5c3ccdf8cb88682df3ab4313796781499fa07143e54719821",
+      "bytes": 4013
+    },
+    {
+      "relative": "candidate/tools/verify-live.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "9cffb6e05d7a93783294850479afc2eae303d1351a1c221acb77e7c5c6606712",
+      "bytes": 4077
+    },
+    {
+      "relative": "candidate/tools/rollback.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "00cc93fc89337f913ba72c1b7157467ed2ba8b30e7014cc1f98125b5a7d2dada",
+      "bytes": 4651
+    },
+    {
+      "relative": "candidate/tools/rollback-rules.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "940f5222ec5ad30eb469e4b8fcdc37780e60a2e5ca3e75402dfaf2d715ec8f5a",
+      "bytes": 3174
+    },
+    {
+      "relative": "candidate/tools/cloud-common.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+      "bytes": 2422
+    },
+    {
+      "relative": "candidate/tools/independent-review.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "9e475f2438f2427d0095e5a3833be20d24dc67cb0d2fe933144c3645c395f73c",
+      "bytes": 18655
+    },
+    {
+      "relative": "candidate/tools/independent-package-review.ps1",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "61238743415292cc1489c7a836ca2380a55a8535130f6edab05fb41e5c54497e",
+      "bytes": 3644
+    },
+    {
+      "relative": "candidate/tools/test-compiled-shipment.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "0ffe50d2de05d7f34ed06d781c047f9bb31b2595a0763c98fb2d1c6c3de2fc8f",
+      "bytes": 1508
+    },
+    {
+      "relative": "candidate/tools/verify-compiled-shipment.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "bb57a7fcf5154e712ebfe83a97a341295653177093134e2db30867b7f3cf034e",
+      "bytes": 1170
+    },
+    {
+      "relative": "candidate/tools/record-rules-verification.cjs",
+      "kind": "exact-reviewed-release-tool",
+      "sha256": "06bad6b64bbc9e889066aac1999bbb50712f910884d69a35d5190c4bd0871c91",
+      "bytes": 3203
+    },
+    {
+      "relative": "candidate/tool-dependencies/factory-tools.cjs",
+      "kind": "read-only-factory-tool-dependency",
+      "sha256": "55fc2b2fd389ac6db786cdf1c1cff749075b4f8558ec18d7597a4f0cd6ae80d6",
+      "bytes": 2840
+    },
+    {
+      "relative": "candidate/tool-dependencies/cloud.cjs",
+      "kind": "authenticated-client-loader-no-credentials",
+      "sha256": "baed3c6c1f0eeeb57bc5b543e2d5214dc109091e91554b96196fbf033c7d0c13",
+      "bytes": 597
+    },
+    {
+      "relative": "candidate/browser-harnesses/tmp/ais-duplicate-newitem-browser-20260930.cjs",
+      "kind": "credential-free-loopback-browser-test",
+      "sha256": "87b423a139cd71e3084fc87bcfb73e4cfc88ebb41e5c8315e79665398d996f91",
+      "bytes": 14746
+    },
+    {
+      "relative": "candidate/browser-harnesses/tmp/ais-duplicate-editor-history-browser-20260930.cjs",
+      "kind": "credential-free-loopback-browser-test",
+      "sha256": "11517ecd94e547d3733ac3db4c41907389aee74f749c4868c5daf269f22d8827",
+      "bytes": 3870
+    },
+    {
+      "relative": "candidate/browser-harnesses/tmp/item-history-20260930/verify-editor.cjs",
+      "kind": "credential-free-loopback-browser-test",
+      "sha256": "60e4c9d1297663ee6bc2797f789005c30d4d130ce3a28c97635bba441c8e1ee1",
+      "bytes": 17149
+    },
+    {
+      "relative": "candidate/receipts/root-approval.json",
+      "kind": "final-live-release-receipt",
+      "sha256": "83f2aac549faa7a74b23f7034794b4dc3fa161f62f0bcfd3a925ce066d558098",
+      "bytes": 1715
+    },
+    {
+      "relative": "candidate/receipts/deployment-receipt.json",
+      "kind": "final-live-release-receipt",
+      "sha256": "d79bb9bcebb7f2c1b64e33f85114cfd20c1cfafdfebe754da018e74c02deecda",
+      "bytes": 1585
+    },
+    {
+      "relative": "candidate/receipts/rules-deployment-receipt.json",
+      "kind": "final-live-release-receipt",
+      "sha256": "7ed4d430736f57508013f5b44820e2bf0106b00183caf5affeac94c9ca2dcb77",
+      "bytes": 603
+    },
+    {
+      "relative": "candidate/receipts/live-verification.json",
+      "kind": "final-live-release-receipt",
+      "sha256": "8841a6ab1083d587165517a5fd060f1cf1c3cf313c66ad8e8392513870c14a9a",
+      "bytes": 7686
+    },
+    {
+      "relative": "candidate/receipts/root-post-deployment-review.json",
+      "kind": "final-live-release-receipt",
+      "sha256": "ce8e208297a88cfb5d460efe225afe7a603b1ffc9ba7302a462f7da8855f86b4",
+      "bytes": 1325
+    }
+  ]
+}

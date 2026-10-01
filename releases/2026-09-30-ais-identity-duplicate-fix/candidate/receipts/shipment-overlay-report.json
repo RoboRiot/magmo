@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-09-30T23:57:09.703Z",
+  "baselineRevision": "nextserverwest-00073-vim",
+  "sourceDirectory": "shipment-overlay",
+  "file": ".next/server/chunks/4895.js",
+  "changedFactoryId": 51585,
+  "addedFactoryIds": [
+    93900000
+  ],
+  "beforeSHA256": "ca0825194391fe1df9ca4a390f6a8c0d09c4e3124359a9fc5e36d934f666582b",
+  "afterSHA256": "ad04f0539e0dd0bb4b8210e18b43391b44a14589053576a13c80b363d3f65c5d",
+  "moduleSHA256": "e7cbb851d95aff68ad41992829fb17eeaa8c0d82de772677c9704840a5611874",
+  "identityModuleSHA256": "6d69b24bac5a9e8955c5ba1aa695c1e6c3f402a415598f3856fcba556ef164f7",
+  "sourceHashes": {
+    "lib/inventory/shipmentSystemService.cjs": "be840f6b48d629825708caa3a1ddecd96f689f73d0e4c4ae1bb94d5912b708fc",
+    "lib/items/itemIdentity.cjs": "1f02f42887b4aeef5c8e413500f56e37951fbd58d3625862aa24e38d87705099"
+  },
+  "unrelatedFactoriesPreserved": true,
+  "unchangedLoaderChunks": true,
+  "productionMutations": 0
+}

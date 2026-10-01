@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-09-30T23:39:47.424Z",
+  "release": {
+    "name": "projects/magmo-ac10c/releases/cloud.firestore",
+    "rulesetName": "projects/magmo-ac10c/rulesets/39fd0c80-5269-49f3-b90d-1af5de77f3b8",
+    "createTime": "2022-03-31T03:05:50.558621Z",
+    "updateTime": "2026-09-30T20:03:33.058969Z"
+  },
+  "fileName": "firestore.rules",
+  "beforeSHA256": "44c113e893551ae7da25eb6845b74573821afd29a4c4fc6d391b9009c32e1203",
+  "sourceStableDuringCapture": true,
+  "productionMutations": 0
+}

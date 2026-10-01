@@ -1,0 +1,231 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-10-01T00:18:09.817Z",
+  "revision": "nextserverwest-00074-gax",
+  "buildId": "ais-identity-fbe50eab4b16a8e4",
+  "exactArtifactSHA256": "4163f16a210b8221dd371e7ccf120a4b5063e54adac7d4d83cc08edde447aff1",
+  "configurationPreserved": true,
+  "assets": [
+    {
+      "asset": "static/ais-identity-fbe50eab4b16a8e4/_buildManifest.js",
+      "status": 200,
+      "sha256": "0dc2c97525e288bcf9fb2b13fe6160a462200c68519b71a279ab3b0ca83b6aeb"
+    },
+    {
+      "asset": "static/item-history-43e001b820057804/_buildManifest.js",
+      "status": 200,
+      "sha256": "6e2a33a7fdee90711702544f2f2a390741dfb43298f097a5fb96ffec12687aca"
+    },
+    {
+      "asset": "static/chunks/webpack-0e4290ce213ed12f.js",
+      "status": 200,
+      "sha256": "dbbf5fa6a006129212380e2cf8770ce0d91a952f5df448b4494033a5744f69e4"
+    },
+    {
+      "asset": "static/chunks/framework-32a7466d5cae4a81.js",
+      "status": 200,
+      "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+    },
+    {
+      "asset": "static/chunks/main-9b88a952025a6e80.js",
+      "status": 200,
+      "sha256": "9721dc88d71db395be7e0bbe6dbadcd97ef26033b8262361cea8aabfcc7d58d4"
+    },
+    {
+      "asset": "static/chunks/7161-fbab5101e3c6fcd3.js",
+      "status": 200,
+      "sha256": "99801045a87deadf45fddcfd556b2d0c06b280d2774ee2a22f9b22145e648f85"
+    },
+    {
+      "asset": "static/chunks/8230-deb01d3ac4ed7c96.js",
+      "status": 200,
+      "sha256": "02e75b96f86d6b6c4227cc9740400b79f4fa2c27cead486d8bd6e8b80f6c00bd"
+    },
+    {
+      "asset": "static/chunks/9520-9723bb1a3e2cdf4a.js",
+      "status": 200,
+      "sha256": "7f5301ced3523617465a4f38be6700cb326602210eff5b5c006613a1fa3bbde0"
+    },
+    {
+      "asset": "static/chunks/2317-7d26aa15d5eb547d.js",
+      "status": 200,
+      "sha256": "9d079ac9d55a315e92dd64dfb81cb587776cd2991354c9ddefef0bc43a29c471"
+    },
+    {
+      "asset": "static/chunks/4514-241f5f861018e722.js",
+      "status": 200,
+      "sha256": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8"
+    },
+    {
+      "asset": "static/chunks/1060-bc95950d8c7e80b6.js",
+      "status": 200,
+      "sha256": "584b64f367baaf60f16538edf81fe3a0a621f6568f81866c4773bb33876bd9aa"
+    },
+    {
+      "asset": "static/chunks/2855-64d7b5e5d5f48103.js",
+      "status": 200,
+      "sha256": "1ca31aaf30b90b4b2e4664ba4fc22622c2cc79daadc5a1ea107e14384f9e010e"
+    },
+    {
+      "asset": "static/chunks/2321-4da2cda4fdfa4ff5.js",
+      "status": 200,
+      "sha256": "8dd034e9c19bd7df338fb37aad0567e59f25bf028e631a24c63bd788f81efe72"
+    },
+    {
+      "asset": "static/chunks/5986-4a56a3bc3c70ad00.js",
+      "status": 200,
+      "sha256": "0f4e412262286e25d7a585ee7ce2b78e9ee4f218ec019a1fc0fef44787d49289"
+    },
+    {
+      "asset": "static/chunks/4595-4aa58e033edbb512.js",
+      "status": 200,
+      "sha256": "3f2519c98339a3b0c872ec94eaed5e31fab32b241b239896a4fc6ffcfd99ae7c"
+    },
+    {
+      "asset": "static/chunks/6183-298ab97d5d22f836.js",
+      "status": 200,
+      "sha256": "d5fb3f5182a903756e4b7f1ed7d755d951ee84f906681fdced0ce9accd591bbe"
+    },
+    {
+      "asset": "static/chunks/8137-9b4fb93862431982.js",
+      "status": 200,
+      "sha256": "39cb43d74122e64d2f8729e0b00578e343909e75f917a7acac221fb981096cb4"
+    },
+    {
+      "asset": "static/chunks/1531-16a8eae2bb1e5e20.js",
+      "status": 200,
+      "sha256": "b719e896da6dddf548d5640261376463dc8dfb8fb77b69c1d06146b0aea57aa0"
+    },
+    {
+      "asset": "static/chunks/6001-cd624421ead8d87b.js",
+      "status": 200,
+      "sha256": "8563d67f613caf8964276608f1b9d02f2c96221f6ccc98be8acc590cb9b4e701"
+    },
+    {
+      "asset": "static/css/7f291752931ceafe.css",
+      "status": 200,
+      "sha256": "7f291752931ceafea54ad485355ab3916c58160ac2660b15110526772ba23434"
+    },
+    {
+      "asset": "static/chunks/4783-1d40485a2cfc14e4.js",
+      "status": 200,
+      "sha256": "4123ec8e31fa6ad89065419c5af48c00e01c565511117c91e7e7cdf9d889ed0e"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/AddItem/NewItem-878901bb35267d35.js",
+      "status": 200,
+      "sha256": "878901bb35267d35ceb8163a8252d01824ea5234b2624943ad1095bb21be5b65"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/AddItem/NewItem-3e032c92f8925a5d.js",
+      "status": 200,
+      "sha256": "3e032c92f8925a5d573b7d10ead869febb792dbbc7501ad9005b425d8d149f57"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/item/[id]-a3e25a66399ac781.js",
+      "status": 200,
+      "sha256": "a3e25a66399ac781d20b8c98929b4fd708aede9f4869bfddd80c6361e92ab6cd"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/item/[id]-e621de93c98b4802.js",
+      "status": 200,
+      "sha256": "e621de93c98b4802d8a7df81807aafe955c2de95f30c6e841e9ad71717904493"
+    },
+    {
+      "asset": "static/chunks/314-151c92c859013d86.js",
+      "status": 200,
+      "sha256": "e28913516a58169b964783e05f86b84742a67789d14ce93063ae4e6747613dbe"
+    },
+    {
+      "asset": "static/css/bf787137990b711b.css",
+      "status": 200,
+      "sha256": "bf787137990b711bb7eef439ba0ff93edf0cad331daf4d6d03c2309345b74899"
+    },
+    {
+      "asset": "static/chunks/5375-7ea5a8c4346427cb.js",
+      "status": 200,
+      "sha256": "506624acc50250491bc7926867e9de5fef165cdf244d2aa55334706d61424edc"
+    },
+    {
+      "asset": "static/css/61047211a1a88937.css",
+      "status": 200,
+      "sha256": "61047211a1a88937219c7d4c54e73edb78b5b63840ae6103b5f09ee89c9c09b7"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/mainSearch-18cae33ec9221d31.js",
+      "status": 200,
+      "sha256": "18cae33ec9221d31a07dc36f5c882078e894f94c5be3c05dbc9c7d7433dc02af"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/mainSearch-020f8f350d9bc2ab.js",
+      "status": 200,
+      "sha256": "020f8f350d9bc2ab7dd65019301bd66363022a269c8152a44bcae29eedcb4599"
+    },
+    {
+      "asset": "static/css/c13a64270b0ce022.css",
+      "status": 200,
+      "sha256": "3e3169f6c9f165aa48eaed566c78db47672d481aa8bd9ce6856b0dfb63ea166f"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/inventory/inventoryManage-67981680c75d54dc.js",
+      "status": 200,
+      "sha256": "67981680c75d54dc83474a394963604a2d4f75ed574adc6bb2a8dbdea62474e0"
+    },
+    {
+      "asset": "static/chunks/pages/NewSearch/inventory/inventoryManage-8ac6aeccbb98c7ab.js",
+      "status": 200,
+      "sha256": "cfb22bb520896fc1ab64f366a26b3e1597b57dd17bab4b54adf4581351880ce6"
+    }
+  ],
+  "pages": [
+    {
+      "route": "/NewSearch/AddItem/NewItem",
+      "status": 200,
+      "buildId": "ais-identity-fbe50eab4b16a8e4"
+    },
+    {
+      "route": "/NewSearch/mainSearch",
+      "status": 200,
+      "buildId": "ais-identity-fbe50eab4b16a8e4"
+    },
+    {
+      "route": "/NewSearch/inventory/inventoryManage",
+      "status": 200,
+      "buildId": "ais-identity-fbe50eab4b16a8e4"
+    }
+  ],
+  "probes": [
+    {
+      "route": "/api/ops/health",
+      "status": 200
+    },
+    {
+      "route": "/api/items/work-order-add/options",
+      "status": 401
+    },
+    {
+      "route": "/api/items/work-order-add/confirm",
+      "status": 405
+    },
+    {
+      "route": "/api/items/work-order-add/slack",
+      "status": 405
+    },
+    {
+      "route": "/api/shipments/systems",
+      "status": 405
+    },
+    {
+      "route": "/api/shipments/systems/MagmoReadOnlyProbe20260930/items",
+      "status": 405
+    },
+    {
+      "route": "/api/items/photo-history?itemId=MagmoReadOnlyProbe20260930",
+      "status": 401
+    }
+  ],
+  "ruleset": "projects/magmo-ac10c/rulesets/9fbba28a-e360-401c-8d83-aa7948cc08c0",
+  "rulesSHA256": "ea0411223d929c3e2147ff156a67b90ef79e4764e6a8615954cec84e6a055337",
+  "databaseWrites": 0,
+  "slackPosts": 0
+}
