@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-10-05T16:13:44.451Z",
+  "status": "passed",
+  "passed": 23,
+  "failed": 0,
+  "skipped": 0,
+  "rulesSHA256": "510b7a647365051680dfdb5f87307a2300c5495596cf6eb525cd60425746eff7",
+  "configSHA256": "eee6cc33b458c5a359c73352b525462f73d5760d1bd3a565225ac4bc7070130f",
+  "logSHA256": "817d4bd5021fbae14b0ca36ed3e697ae9c12dac122c919f04f4b42ab3435f3aa",
+  "project": "demo-magmo-archive",
+  "firestoreHost": "127.0.0.1:8189",
+  "productionDatabaseWrites": 0,
+  "tests": [
+    {
+      "path": "test/firestore-item-archive.emulator.test.cjs",
+      "sha256": "a21ae0b2636802c56ecb55b60e020197c2251aec0a6ba8c7c2a16e709f9b2b89"
+    },
+    {
+      "path": "test/tool-slack-rules.emulator.test.cjs",
+      "sha256": "ca20a27d4368214cecbce7139e07a9ad42e9d67d45dd0f60b107a772a441d5eb"
+    }
+  ]
+}

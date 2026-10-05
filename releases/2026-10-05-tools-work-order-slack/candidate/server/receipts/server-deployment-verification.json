@@ -1,0 +1,58 @@
+{
+  "ok": true,
+  "verifiedAt": "2026-10-05T16:31:10Z",
+  "deployedAt": "2026-10-05T16:30:28.1817418Z",
+  "serverAlias": "magmo-server",
+  "candidateManifestSha256": "b49799efa1394f626b2bd0e6eefd94ff0cd4a45fcf95c13d2860b4f460b56703",
+  "maintenanceScriptSha256": "2328a56c30f1a8e86511a0cb385a3ce03b00e2eb6995b5b893a30cfcac8bb18e",
+  "backupRoot": "C:\\Users\\Owner\\Desktop\\warehouse\\maintenance_backups\\20261005T160908-pre-tool-label",
+  "backupCreatedAt": "2026-10-05T16:16:19.2124409Z",
+  "backupBeforeSha256": {
+    "label_server/print_bluefolder_combo.py": "5f6b00d5297a729eaea3cf31f479cefffca72ace38cbfc4a6a5a158015200941",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py": "75533f280bb38e35399a0659d5da5669312f93a281f39a6c1f5f51cbd48d4ee1"
+  },
+  "runtimeSha256": {
+    "label_server/print_bluefolder_combo.py": "9fd92b70b4dd60e1cf7cb112aaf6d75e7efdf8867d85a467d8e9a7ba4008226d",
+    "scanner-server/warehouse_scanner/tool_label_print.py": "7e549e7d4393e729d1ea6b81e4ade8c8affdbf058293d60c113f4e1bbb91a061",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py": "f7847c8afa3b244e1dd4d2652f60d315db3623d430647a3e4740ee3c57211d52"
+  },
+  "preservedSha256": {
+    "scanner-server/warehouse_scanner/storage_label_print.py": "6f69d064c187e2d5932666985c69cade9809d6d6bd2e3cd59e99bdc5b12328f2",
+    "warehouse_service_manager.py": "da41cddb8693652a369c8ea7422b5f5c61feffa914c358482e2f9e08c6d8665a"
+  },
+  "privateConfigurationUnchanged": true,
+  "environmentUnchanged": true,
+  "scannerIdleGuardsPassed": true,
+  "inflightRequestsBeforeCutover": 0,
+  "printerQueueBeforeAndAfter": 0,
+  "isolatedCombinedServerTestsPassed": 41,
+  "isolatedScannerTestsPassed": 92,
+  "localHealthStatus": 200,
+  "localAuthenticatedInvalidToolPrintStatus": 400,
+  "localProtectedRouteAuthStatuses": {
+    "/storage-scan/start": 401,
+    "/storage-scan/drain": 401,
+    "/storage-scan/stop": 401,
+    "/work-order-scan/start": 401,
+    "/work-order-scan/drain": 401,
+    "/work-order-scan/stop": 401,
+    "/print-storage-label": 401,
+    "/print-tool-label": 401
+  },
+  "localLegacyInvalidPayloadStatuses": {
+    "/print-label": 400,
+    "/print_multi": 400,
+    "/bluefolder": 400
+  },
+  "publicHealthStatus": 200,
+  "publicToolAuthStatus": 401,
+  "scannerPrintProcessId": 11852,
+  "tunnelProcessId": 11840,
+  "interactiveSessionVerified": true,
+  "allOtherWarehouseServicesRunning": true,
+  "realPrintJobs": 0,
+  "slackWrites": 0,
+  "databaseWrites": 0,
+  "physicalLabelScanAcceptance": "Not performed; no physical print was requested during verification.",
+  "evidence": "Guarded Apply exit 0, deployment journal active, subsequent Verify exit 0, manager status running; exact runtime and protected hashes checked in Verify."
+}

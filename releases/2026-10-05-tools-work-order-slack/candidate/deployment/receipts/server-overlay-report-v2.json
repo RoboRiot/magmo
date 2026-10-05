@@ -1,0 +1,173 @@
+{
+  "createdAt": "2026-10-05T16:17:08.066Z",
+  "baselineRevision": "nextserverwest-00075-rod",
+  "baselineArchiveSHA256": "8f7046a9121d8076cf4be67701cd2612ff5084c7bbd25a776c8ac09606ee63fb",
+  "compilerVersion": "v2",
+  "compilerInputSHA256": "442cbfdfb65038906c412d75aaa09c5665075a61866119e61c50853786e8b64b",
+  "overlayDirectory": "server-overlay-v2",
+  "files": [
+    {
+      "path": ".next/server/chunks/93100.js",
+      "beforeSHA256": "e5c03512d05ea8c22974429b70db4ce1db793b8a95e7e28c0ecedec2a72bee80",
+      "afterSHA256": "eac4ed0d0754a9711c546d9f06c1d1825fdca98fb69aac50d340ae69ab229009",
+      "changedFactoryIds": [
+        93100000,
+        93100031,
+        93100057,
+        93100061,
+        93100062
+      ],
+      "addedFactoryIds": [
+        94500000,
+        94500002,
+        94500010,
+        94500011,
+        94500001
+      ]
+    },
+    {
+      "path": ".next/server/chunks/1572.js",
+      "beforeSHA256": "21eaa59c091bf2c4a332be3098e6bba8b36492df978213704eb14c73c43615c5",
+      "afterSHA256": "5ce5050de322ad11894406a0f2fffd193896493266555e99fcf26c39d99081a4",
+      "changedFactoryIds": [
+        1572
+      ],
+      "addedFactoryIds": [
+        94500000,
+        94500002,
+        94500010,
+        94500011
+      ]
+    },
+    {
+      "path": ".next/server/pages/api/print/tool-label.js",
+      "beforeSHA256": null,
+      "afterSHA256": "3edecef6eef6087336621fb4603ffac41f80886f81dc2ed305be6ba8da4ca736",
+      "changedFactoryIds": [],
+      "addedFactoryIds": [
+        94500020,
+        94500021,
+        94500000,
+        94500003
+      ]
+    },
+    {
+      "path": ".next/server/pages-manifest.json",
+      "beforeSHA256": "b8deea0b2c1071a332b545bbfb9bf659b4846bd084cb3bab1659f1735cf34469",
+      "afterSHA256": "82a943ec3c0e9652027630f22bd31ccc0714571ed3d03da0508d887f7f6749ae",
+      "changedFactoryIds": [],
+      "addedFactoryIds": []
+    }
+  ],
+  "sourceHashes": {
+    "lib/inventory/toolIdentity.cjs": "4380df972fcd72f74f182d6e8ba630b85272a4a6a5fa197ac6a706c567a9c2b6",
+    "lib/slack/toolListIdentity.cjs": "fae0ecc2c699f90d0002655561b261e78bd1c9b343b3273e50dabef0ccd33ced",
+    "lib/inventory/workOrderAddSlackTargets.cjs": "5adeb2ed8446ca8a194f08b4a4d8af3cae50756ab62727b3eed177db79d96cd6",
+    "lib/inventory/toolLabelData.cjs": "698f259cbf3cd524b49d4545e1429b181af0e69b14d376bd110a2b7e6d30bacd",
+    "lib/inventory/workOrderAddService.cjs": "a3b9e5f95de5a052e7a6198c9b49c4885a36c4d0d204ffe2b0182e5e0081b771",
+    "lib/inventory/workOrderAddContract.cjs": "31f594861223c3dc9bfc3adf3c1725e6f578868340702990e1c3db3b57ae3c2c",
+    "lib/inventory/workOrderAddSlack.cjs": "8a5b01c2775b269be69789d065000eadf132f66aba76be0f64c933e2c280ac25",
+    "lib/inventory/workOrderAddSlackThread.cjs": "851ac88b639fbc083fccfad79e83a354267cdd794e7f31f76dfeab4dde8f02c5",
+    "pages/api/slack/add-to-list.js": "93af9b91690782a36c96f5caa785c005785558ec9b25c72e4ee654def803295d",
+    "pages/api/print/tool-label.js": "11571203b762f5a813f454cbaa15f45feca14ff0e34527b0a466bea2a62bbc1e"
+  },
+  "modules": [
+    {
+      "source": "lib/inventory/toolIdentity.cjs",
+      "sha256": "31a93f9812b2f29701822dbf70c2b3c06af07e2c1991b44124173e9674bebfcd",
+      "importMap": {}
+    },
+    {
+      "source": "lib/slack/toolListIdentity.cjs",
+      "sha256": "338bef35b8b02819ba822abae0c09738571cd98c3eb2adad99046240cebfe33c",
+      "importMap": {
+        "node:crypto": 94500011,
+        "../inventory/toolIdentity.cjs": 94500000,
+        "../items/itemHistory.cjs": 94500010
+      }
+    },
+    {
+      "source": "lib/inventory/workOrderAddSlackTargets.cjs",
+      "sha256": "23ceac61a35e471fc43e8c098472a5f63dfc4f3a355144f03d84e1978bd792c7",
+      "importMap": {}
+    },
+    {
+      "source": "lib/inventory/toolLabelData.cjs",
+      "sha256": "eaa7b7faabed02e0f5f231206b49322c2ef470a9786e989920e960ec7d8a6924",
+      "importMap": {
+        "./toolIdentity.cjs": 94500000
+      }
+    },
+    {
+      "source": "lib/inventory/workOrderAddService.cjs",
+      "sha256": "0dc415b5b33d81f6beec484da549c913647d49c8c684fccef78d3033d3738d91",
+      "importMap": {
+        "node:crypto": 93100051,
+        "./itemLocationContract.cjs": 93100026,
+        "./storageUnitPlacement.cjs": 93100045,
+        "./storageUnitContract.cjs": 93100060,
+        "./toolIdentity.cjs": 94500000,
+        "./workOrderAddContract.cjs": 93100057,
+        "../ops/trailerClientLinks.cjs": 93100039,
+        "../ops/workOrderMachineLink.cjs": "require(process.cwd()+\"/machine-link/workOrderMachineLink.cjs\")"
+      }
+    },
+    {
+      "source": "lib/inventory/workOrderAddContract.cjs",
+      "sha256": "d5e92f994f14090844dbf2fd4b60a2f1fa0fec896db0e9d9881840754d10526f",
+      "importMap": {
+        "./storageUnitContract.cjs": 93100060,
+        "./toolIdentity.cjs": 94500000,
+        "../items/itemHistory.cjs": 93100050
+      }
+    },
+    {
+      "source": "lib/inventory/workOrderAddSlack.cjs",
+      "sha256": "86ba788e9daa1253922840140bc1168259883cba0e62b346bbdf98f9fce6973d",
+      "importMap": {
+        "node:crypto": 93100051,
+        "./workOrderAddContract.cjs": 93100057,
+        "../items/itemEditorOperations.cjs": 93100025,
+        "../items/itemHistory.cjs": 93100050,
+        "./workOrderAddSlackThread.cjs": 93100061,
+        "./workOrderAddSlackTargets.cjs": 94500001
+      }
+    },
+    {
+      "source": "lib/inventory/workOrderAddSlackThread.cjs",
+      "sha256": "487abe2efe335d84243b73b302983bcad55c104abc02ac64c1aa1e2c3fc8a46e",
+      "importMap": {
+        "node:crypto": 93100051,
+        "./workOrderAddContract.cjs": 93100057,
+        "./workOrderAddSlackTargets.cjs": 94500001,
+        "../ops/dispatchReceipt.cjs": 93100058
+      }
+    },
+    {
+      "source": "pages/api/slack/add-to-list.js",
+      "sha256": "b3361c5c84d3e9b64d5b3d43a35ee1404826d40422099d86db1a69fe49b37648",
+      "importMap": {
+        "../../../utils/apiAuth": "__webpack_require__.e(1067).then(__webpack_require__.bind(__webpack_require__,81067))",
+        "../../../context/FirebaseAdmin": "__webpack_require__.e(2771).then(__webpack_require__.bind(__webpack_require__,52771))",
+        "../../../lib/slack/toolListIdentity.cjs": "Promise.resolve(__webpack_require__(94500002))",
+        "../../../lib/ops/workOrders": "__webpack_require__.e(8806).then(__webpack_require__.bind(__webpack_require__,78806))"
+      }
+    }
+  ],
+  "privateModuleIds": {
+    "toolIdentity": 94500000,
+    "slackTargets": 94500001,
+    "toolSlack": 94500002,
+    "toolLabelData": 94500003,
+    "itemHistoryCopy": 94500010,
+    "cryptoCopy": 94500011,
+    "toolLabelHandler": 94500020,
+    "toolLabelEntry": 94500021
+  },
+  "existingUnrelatedFactoriesBytePreserved": true,
+  "newRouteBaselineDependenciesBytePreserved": true,
+  "machineLinkDynamicPathPreserved": true,
+  "firebaseConfigurationUnchanged": true,
+  "deletedFiles": [],
+  "productionMutations": 0
+}

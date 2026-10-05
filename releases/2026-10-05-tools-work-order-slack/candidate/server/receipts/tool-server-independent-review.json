@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "reviewDateLosAngeles": "2026-10-05",
+  "reviewer": "scan_tools_audit",
+  "manifestSHA256": "b49799efa1394f626b2bd0e6eefd94ff0cd4a45fcf95c13d2860b4f460b56703",
+  "maintenanceScriptSHA256": "2328a56c30f1a8e86511a0cb385a3ce03b00e2eb6995b5b893a30cfcac8bb18e",
+  "candidateFileHashesVerified": true,
+  "runtimeFilesExactly": [
+    "label_server/print_bluefolder_combo.py",
+    "scanner-server/warehouse_scanner/tool_label_print.py",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py"
+  ],
+  "regularLabelComboOnlyAddsToolImportAndRouteRegistration": true,
+  "existingStorageLabelFormatterAndServiceManagerHashGuarded": true,
+  "privateConfigurationAndEnvironmentHashGuarded": true,
+  "activeScannerSessionProbeRejectsWithoutStoppingOtherSession": true,
+  "printerQueueAndInflightRequestGuards": true,
+  "sourceWritesRequireConfirmedPrinterStop": true,
+  "datedBackupAndExactCandidateManifestRequired": true,
+  "startupUsesWindowlessPythonInInteractiveSession": true,
+  "applyStopAttemptFailureRecoveryReviewed": true,
+  "rollbackPartialFailureKeepsTunnelStoppedForInspection": true,
+  "resolvedFindings": [
+    "Stop-attempt flags are now set before service-manager calls.",
+    "Rollback failure after printer stop now fails closed instead of reopening the tunnel over a stopped or mixed runtime."
+  ],
+  "reviewOnly": true,
+  "remoteExecutionByReviewer": false,
+  "productionMutationsByReviewer": 0,
+  "realPrintJobsByReviewer": 0
+}

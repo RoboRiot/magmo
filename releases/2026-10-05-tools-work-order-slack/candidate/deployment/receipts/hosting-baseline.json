@@ -1,0 +1,45 @@
+{
+  "capturedAt": "2026-10-05T16:01:33.109Z",
+  "release": {
+    "name": "sites/magmo-ac10c/releases/1790619614828000",
+    "version": {
+      "name": "sites/magmo-ac10c/versions/da3662758ac081f1",
+      "status": "FINALIZED",
+      "config": {
+        "rewrites": [
+          {
+            "glob": "**",
+            "run": {
+              "serviceId": "nextserverwest",
+              "region": "us-west2"
+            }
+          }
+        ],
+        "cleanUrls": true
+      },
+      "labels": {
+        "deployment-tool": "cli-firebase"
+      },
+      "createTime": "2026-09-28T18:18:42.184744Z",
+      "createUser": {
+        "email": "mack2356@gmail.com",
+        "imageUrl": "https://lh3.googleusercontent.com/a/ACg8ocLuEVs9M1DQDpm4BOyDkw8kRDddlh69yQgqZRYWwaC-amDBMMYB"
+      },
+      "finalizeTime": "2026-09-28T18:20:14.893025Z",
+      "finalizeUser": {
+        "email": "mack2356@gmail.com",
+        "imageUrl": "https://lh3.googleusercontent.com/a/ACg8ocLuEVs9M1DQDpm4BOyDkw8kRDddlh69yQgqZRYWwaC-amDBMMYB"
+      },
+      "fileCount": "11",
+      "versionBytes": "592562"
+    },
+    "type": "DEPLOY",
+    "releaseTime": "2026-09-28T18:20:14.828Z",
+    "message": "Scoped Ops-General OT notification service worker only",
+    "releaseUser": {
+      "email": "mack2356@gmail.com",
+      "imageUrl": "https://lh3.googleusercontent.com/a/ACg8ocLuEVs9M1DQDpm4BOyDkw8kRDddlh69yQgqZRYWwaC-amDBMMYB"
+    }
+  },
+  "productionMutations": 0
+}

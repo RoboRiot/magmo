@@ -1,0 +1,141 @@
+(node:45436) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-magmo-archive", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
++  firestore: Firestore Emulator was started in standard edition.
++  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node --test test/firestore-item-archive.emulator.test.cjs test/tool-slack-rules.emulator.test.cjs
+TAP version 13
+# Subtest: item archive and rename security against the isolated Firestore emulator
+    # Subtest: internal item read/create/update work while direct deletion stays denied
+    ok 1 - internal item read/create/update work while direct deletion stays denied
+      ---
+      duration_ms: 1405.9338
+      ...
+    # Subtest: stale clients cannot create numeric or noncanonical AIS document paths
+    ok 2 - stale clients cannot create numeric or noncanonical AIS document paths
+      ---
+      duration_ms: 274.0229
+      ...
+    # Subtest: new aliases cannot borrow another AIS and legacy ordinary updates remain valid
+    ok 3 - new aliases cannot borrow another AIS and legacy ordinary updates remain valid
+      ---
+      duration_ms: 171.8485
+      ...
+    # Subtest: canonical creation fails for an existing numeric legacy owner or retired numeric identity
+    ok 4 - canonical creation fails for an existing numeric legacy owner or retired numeric identity
+      ---
+      duration_ms: 107.4677
+      ...
+    # Subtest: one atomic batch cannot create numeric and canonical duplicates in either write order
+    ok 5 - one atomic batch cannot create numeric and canonical duplicates in either write order
+      ---
+      duration_ms: 107.9466
+      ...
+    # Subtest: actual concurrent numeric and prefixed creation has exactly one canonical winner
+    ok 6 - actual concurrent numeric and prefixed creation has exactly one canonical winner
+      ---
+      duration_ms: 907.3344
+      ...
+    # Subtest: a legacy numeric item can rename without changing historical retirement semantics
+    ok 7 - a legacy numeric item can rename without changing historical retirement semantics
+      ---
+      duration_ms: 129.3193
+      ...
+    # Subtest: archives and rename receipts are private and immutable even under the catch-all
+    ok 8 - archives and rename receipts are private and immutable even under the catch-all
+      ---
+      duration_ms: 300.3776
+      ...
+    # Subtest: archived document IDs and all supported serial aliases cannot be recreated
+    ok 9 - archived document IDs and all supported serial aliases cannot be recreated
+      ---
+      duration_ms: 345.426
+      ...
+    # Subtest: actual rename transaction preserves the full preimage and moves machine backlinks
+    ok 10 - actual rename transaction preserves the full preimage and moves machine backlinks
+      ---
+      duration_ms: 164.7281
+      ...
+    # Subtest: forged rename receipts fail atomically rather than deleting the source
+    ok 11 - forged rename receipts fail atomically rather than deleting the source
+      ---
+      duration_ms: 774.6183
+      ...
+    # Subtest: rename retires all eight literal/canonical legacy aliases without retaining them on the target
+    ok 12 - rename retires all eight literal/canonical legacy aliases without retaining them on the target
+      ---
+      duration_ms: 219.6292
+      ...
+    # Subtest: rename refuses to retire an alias owned by another active item
+    ok 13 - rename refuses to retire an alias owned by another active item
+      ---
+      duration_ms: 72.7986
+      ...
+    # Subtest: target collisions and receipt reuse cannot overwrite earlier records
+    ok 14 - target collisions and receipt reuse cannot overwrite earlier records
+      ---
+      duration_ms: 106.8665
+      ...
+    # Subtest: the admin archive API preserves recovery records and removes active inventory atomically
+    ok 15 - the admin archive API preserves recovery records and removes active inventory atomically
+      ---
+      duration_ms: 691.1561
+      ...
+    # Subtest: archiving a renamed item cleans its receipt chain and exact legacy memberships
+    ok 16 - archiving a renamed item cleans its receipt chain and exact legacy memberships
+      ---
+      duration_ms: 931.3154
+      ...
+    1..16
+ok 1 - item archive and rename security against the isolated Firestore emulator
+  ---
+  duration_ms: 7497.7169
+  ...
+# Subtest: tool Slack delivery receipts are server-only against exact scoped rules
+    # Subtest: employee cannot read, create, update or delete global Slack dedupe receipts
+    ok 1 - employee cannot read, create, update or delete global Slack dedupe receipts
+      ---
+      duration_ms: 349.511
+      ...
+    # Subtest: admin browser cannot read, create, update or delete global Slack dedupe receipts
+    ok 2 - admin browser cannot read, create, update or delete global Slack dedupe receipts
+      ---
+      duration_ms: 80.2198
+      ...
+    # Subtest: viewer cannot read, create, update or delete global Slack dedupe receipts
+    ok 3 - viewer cannot read, create, update or delete global Slack dedupe receipts
+      ---
+      duration_ms: 102.687
+      ...
+    # Subtest: ordinary internal tool access remains allowed
+    ok 4 - ordinary internal tool access remains allowed
+      ---
+      duration_ms: 68.274
+      ...
+    # Subtest: Admin SDK can maintain protected receipt checkpoints
+    ok 5 - Admin SDK can maintain protected receipt checkpoints
+      ---
+      duration_ms: 19.2151
+      ...
+    1..5
+ok 2 - tool Slack delivery receipts are server-only against exact scoped rules
+  ---
+  duration_ms: 2193.4231
+  ...
+1..2
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7574.3629
++  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+!  Firestore Emulator has exited upon receiving signal: SIGKILL
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

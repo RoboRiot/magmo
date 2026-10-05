@@ -1,0 +1,158 @@
+{
+  "createdAt": "2026-10-05T16:20:34.764Z",
+  "baselineRevision": "nextserverwest-00075-rod",
+  "sourceDirectory": "tool-page-overlay",
+  "overlayDirectory": "tool-page-overlay",
+  "sourceHashes": {
+    "pages/NewSearch/Tools/[id]/index.js": "b1b2a5380820fee210951d330b7c800243a540ab6626a940f44899e666277cfa",
+    "lib/inventory/toolWorkOrderSelection.cjs": "0736aabb725d62ab2b1161f71fe426cefa2063ed408dff6e88ef180273cb83e4"
+  },
+  "route": "/NewSearch/Tools/[id]",
+  "oldPage": "static/chunks/pages/NewSearch/Tools/[id]-a6548fb02b36b5cb.js",
+  "newPage": "static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js",
+  "changedFactoryId": 53915,
+  "oracleFactoryId": 16589,
+  "newHelperId": 98100520,
+  "newHelperIds": [
+    98100520
+  ],
+  "imports": {
+    "2996": 89099,
+    "5832": 39982,
+    "10374": 9306,
+    "12475": 52321,
+    "15061": 44595,
+    "22190": 50072,
+    "25508": 39520,
+    "32918": 81224,
+    "38784": 97923,
+    "43991": 59601,
+    "44140": 14873,
+    "48922": 98100520,
+    "51653": 74742,
+    "60427": 88504,
+    "61014": 23316,
+    "61772": 44837,
+    "66048": 99431,
+    "78158": 31394,
+    "80290": 94513,
+    "83011": 37876,
+    "92957": 18447,
+    "97323": 14232,
+    "99553": 26617
+  },
+  "dependencyProof": [
+    {
+      "fresh": 83011,
+      "active": 37876,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 97323,
+      "active": 14232,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 22190,
+      "active": 50072,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 44140,
+      "active": 14873,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 51653,
+      "active": 74742,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 78158,
+      "active": 31394,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 61772,
+      "active": 44837,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 66048,
+      "active": 99431,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 80290,
+      "active": 94513,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 38784,
+      "active": 97923,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 25508,
+      "active": 39520,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 60427,
+      "active": 88504,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 2996,
+      "active": 89099,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 10374,
+      "active": 9306,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 43991,
+      "active": 59601,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 61014,
+      "active": 23316,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 32918,
+      "active": 81224,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 5832,
+      "active": 39982,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 15061,
+      "active": 44595,
+      "unchangedSemanticSignature": true
+    },
+    {
+      "fresh": 99553,
+      "active": 26617,
+      "unchangedSemanticSignature": true
+    }
+  ],
+  "preservedHelperExportRegressionCases": 7,
+  "oldPageSHA256": "dab095df1fefe94004c6477c7e44bca110f2d213c314d7b9ebd19f8a85ce129b",
+  "newPageSHA256": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90",
+  "oldFactorySHA256": "e4e73cf212af6fcdc3deedd97b092aacf8890c75d42bc545da85e70199c9589e",
+  "newFactorySHA256": "5d6461c1fdd15c59a913ae2b4f4182139b40d96aea878e6ef7146e779e62569a",
+  "helperSHA256": "4de96f4117e637f8cafe86aa38e9fc3c14a2583ddd777d414ca890b17236f4dc",
+  "cssUnchanged": true,
+  "unrelatedFactoriesPreserved": true,
+  "dependencyClosure": true,
+  "globalHelperIdUnique": true,
+  "compilerInputReceiptSHA256": "9cb316bf5e2ac555b3efb417e763c93f983349f629cf53b49bbf4766710e0f75",
+  "productionMutations": 0
+}

@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-05T16:10:59.108Z",
+  "readOnly": true,
+  "methods": [
+    "Firestore documents.list",
+    "slackLists.items.list"
+  ],
+  "selectedToolId": "AIS_T00001",
+  "existingToolFound": true,
+  "existingToolArchived": false,
+  "syntheticProbeMatched": false,
+  "archivedReadVerified": true,
+  "pages": [
+    {
+      "archived": false,
+      "httpStatus": 200,
+      "ok": true,
+      "error": null,
+      "rowCount": 10,
+      "allRowsHaveIdAndFields": true,
+      "hasNextCursor": false,
+      "schemaReturned": true,
+      "primaryColumnPresent": true,
+      "configuredTitleIsPrimary": true
+    },
+    {
+      "archived": false,
+      "httpStatus": 200,
+      "ok": true,
+      "error": null,
+      "rowCount": 10,
+      "allRowsHaveIdAndFields": true,
+      "hasNextCursor": false,
+      "schemaReturned": true,
+      "primaryColumnPresent": true,
+      "configuredTitleIsPrimary": true
+    },
+    {
+      "archived": true,
+      "httpStatus": 200,
+      "ok": true,
+      "error": null,
+      "rowCount": 0,
+      "allRowsHaveIdAndFields": true,
+      "hasNextCursor": false,
+      "schemaReturned": true,
+      "primaryColumnPresent": true,
+      "configuredTitleIsPrimary": true
+    }
+  ],
+  "slackWrites": 0,
+  "databaseWrites": 0,
+  "status": "passed"
+}

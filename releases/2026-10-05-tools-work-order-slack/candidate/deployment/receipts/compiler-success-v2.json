@@ -1,0 +1,9 @@
+{
+  "completedAt": "2026-10-05T16:14:24.486Z",
+  "baselineRevision": "nextserverwest-00075-rod",
+  "workspace": "compiler-workspace-v2",
+  "output": "compiler-output",
+  "inputReceiptSHA256": "442cbfdfb65038906c412d75aaa09c5665075a61866119e61c50853786e8b64b",
+  "sourceSnapshotStable": true,
+  "productionMutations": 0
+}

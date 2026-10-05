@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-10-05T16:34:42.849Z",
+  "artifactSHA256": "92cb67224b83e0cc1838bd67d3db6f98932649877967c5198493f35dae450e04",
+  "compositionReportSHA256": "f7f0e1cd2b4820ec8d19797653113cb35b6a93b23cc829be85a58594185736cc",
+  "compiledTestsPassed": true,
+  "independentReviewPassed": true,
+  "backupVerified": true,
+  "scopedSourceOnly": true,
+  "receiptHashes": {
+    "package-verification.json": "34e8230bb3482c5765142f620063217f37e19c7738820d542a274b30345284c8",
+    "candidate-files.json": "a02a2a0f515164e9c9874b6f06970a2beef2b31b7e3742426cba8cdb92b6b749",
+    "compiler-success-v2.json": "e3acda76a790993e7cb5e1bddf4ba69f6298f3f334c5043d7ce6aa12338897fd",
+    "compiler-inputs-v2.json": "442cbfdfb65038906c412d75aaa09c5665075a61866119e61c50853786e8b64b",
+    "composition-report.json": "f7f0e1cd2b4820ec8d19797653113cb35b6a93b23cc829be85a58594185736cc",
+    "server-overlay-report-v2.json": "11b972f9bae612b55b74470473b47997aeeaf1db04d27068a53189dcae914433",
+    "modal-overlay-report.json": "775a9d0053e66a52d5a31e3d0826b5af70dc5ec107dc75d4792433e7a400e85e",
+    "tool-page-overlay-report.json": "22d59354629e440ce7cb1d9dc2677c8800a69037c1836ff368d3b8dd48c96e55",
+    "compiled-services-verification.json": "681dae5f621c51a61caa53ee0a707969e52c08725d405a5ddf26871380290ecf",
+    "compiled-modal-verification.json": "e402da03392334dbcdb59f8ee0923e206a1936479e6f9fc899fa2bdebf584532",
+    "compiled-tool-page-verification.json": "cd1c0f32bcf50c6608a6be4a5bc096c020d0a39b52b7c76d41f24a4a5b10b437",
+    "compiled-tool-label-api-verification.json": "3417f040dc462e8fdc2565d942c4ca429d94003ac2bf1ac81bbd0100841a5911",
+    "independent-review.json": "9edd157e250cdb9440674567be60110f1e1822ca43edbd1f9d79dfa74d672b5d",
+    "deployment-tools-review.json": "5d29f6100c98fe302710045da268bebf7c84bbe784ba51e46e3eb0e1f1e06bde",
+    "rules-verification.json": "60ca4ac088008c9207eca906e623cdf8b651acf2e962158dffbfc0e7a353274e",
+    "rules-deployment-receipt.json": "511a8a9bfdede61225945c22ee7e03d70b22b59c46f9d08c3d34c85f9a7dcf16",
+    "server-deployment-verification.json": "3ff29f70c8833b27f81118c39ab589767715d4fc423a6c66c3da008bb5f51a18",
+    "backup-verification.json": "8e1f79b1dfd78bd9ef25b183b4d4c5afe2891a631dd5da74fc296b256bfa3ecf",
+    "artifact-secret-scan.json": "3584624f0f55fbc9c61447cc8afe5bbcd14330745cd54d655111e9293037b88e"
+  }
+}

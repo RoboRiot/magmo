@@ -1,0 +1,54 @@
+[
+  {
+    "case": "normal",
+    "size": [
+      820,
+      1179
+    ],
+    "qrBlackBounds": [
+      565,
+      942,
+      710,
+      1087
+    ]
+  },
+  {
+    "case": "minimal",
+    "size": [
+      820,
+      1179
+    ],
+    "qrBlackBounds": [
+      565,
+      942,
+      710,
+      1087
+    ]
+  },
+  {
+    "case": "long",
+    "size": [
+      820,
+      1179
+    ],
+    "qrBlackBounds": [
+      565,
+      942,
+      710,
+      1087
+    ]
+  },
+  {
+    "case": "unbroken",
+    "size": [
+      820,
+      1179
+    ],
+    "qrBlackBounds": [
+      565,
+      942,
+      710,
+      1087
+    ]
+  }
+]

@@ -1,0 +1,117 @@
+{
+  "result": "PASS",
+  "createdAt": "2026-10-05T16:55:51.484Z",
+  "candidateDir": "candidate",
+  "baselineRevision": "nextserverwest-00077-puh",
+  "baselineUpdateTime": "2026-10-05T16:49:04.797390409Z",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1791218790974241"
+    }
+  },
+  "rollbackArchive": "source.zip",
+  "originalArtifactSHA256": "6c8768b805303aab52528f3cf4279626deca2f4223b027c0aeaffb0a025f83c0",
+  "artifactSHA256": "52f027af37b5fee19035ff4e387e5a4eb19e22f5a668d8e2df366b0ddfb5303e",
+  "archiveBytes": 4601221,
+  "files": 575,
+  "changed": 1,
+  "changedFiles": [
+    ".next/server/pages/NewSearch/Tools/[id].html"
+  ],
+  "html": {
+    "path": ".next/server/pages/NewSearch/Tools/[id].html",
+    "beforeSHA256": "25c6b08e5711d125d294380e56c2bcd4166eccf58ba055cbad4aad56ca920e40",
+    "afterSHA256": "1f1c34acd7f24bc95637799abc3291bee7aff4b8a2fcd761eee74a3c7383e3c3",
+    "oldSrc": "/_next/static/chunks/pages/NewSearch/Tools/%5Bid%5D-a6548fb02b36b5cb.js",
+    "newSrc": "/_next/static/chunks/pages/NewSearch/Tools/%5Bid%5D-8337b6b88e2472d0.js",
+    "occurrencesChanged": 1,
+    "exactInverseProven": true,
+    "sameByteCount": true
+  },
+  "buildId": "ops-daily-1be8985f18eaa93d",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "toolAssetSHA256": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90",
+  "allJavaScriptPreserved": true,
+  "allStaticAssetsPreserved": true,
+  "allOtherFilesPreserved": true,
+  "allOps77ContentPreserved": true,
+  "compiledToolLogicUnchanged": true,
+  "runtimeConfigurationPreserved": true,
+  "rawAndEncodedReferencesVerified": true,
+  "toolHtmlScripts": [
+    {
+      "encoded": "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "decoded": "/_next/static/chunks/polyfills-42372ed130431b0a.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/webpack-0e4290ce213ed12f.js",
+      "decoded": "/_next/static/chunks/webpack-0e4290ce213ed12f.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/framework-32a7466d5cae4a81.js",
+      "decoded": "/_next/static/chunks/framework-32a7466d5cae4a81.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/main-9b88a952025a6e80.js",
+      "decoded": "/_next/static/chunks/main-9b88a952025a6e80.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/pages/_app-581ead4499966a3b.js",
+      "decoded": "/_next/static/chunks/pages/_app-581ead4499966a3b.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/7161-fbab5101e3c6fcd3.js",
+      "decoded": "/_next/static/chunks/7161-fbab5101e3c6fcd3.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/9520-9723bb1a3e2cdf4a.js",
+      "decoded": "/_next/static/chunks/9520-9723bb1a3e2cdf4a.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/2317-7d26aa15d5eb547d.js",
+      "decoded": "/_next/static/chunks/2317-7d26aa15d5eb547d.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/4514-241f5f861018e722.js",
+      "decoded": "/_next/static/chunks/4514-241f5f861018e722.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/1060-bc95950d8c7e80b6.js",
+      "decoded": "/_next/static/chunks/1060-bc95950d8c7e80b6.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/2321-4da2cda4fdfa4ff5.js",
+      "decoded": "/_next/static/chunks/2321-4da2cda4fdfa4ff5.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/4595-4aa58e033edbb512.js",
+      "decoded": "/_next/static/chunks/4595-4aa58e033edbb512.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/8137-9b4fb93862431982.js",
+      "decoded": "/_next/static/chunks/8137-9b4fb93862431982.js"
+    },
+    {
+      "encoded": "/_next/static/chunks/pages/NewSearch/Tools/%5Bid%5D-8337b6b88e2472d0.js",
+      "decoded": "/_next/static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js"
+    },
+    {
+      "encoded": "/_next/static/ops-daily-1be8985f18eaa93d/_buildManifest.js",
+      "decoded": "/_next/static/ops-daily-1be8985f18eaa93d/_buildManifest.js"
+    },
+    {
+      "encoded": "/_next/static/ops-daily-1be8985f18eaa93d/_ssgManifest.js",
+      "decoded": "/_next/static/ops-daily-1be8985f18eaa93d/_ssgManifest.js"
+    }
+  ],
+  "noDeletedFiles": true,
+  "noAddedFiles": true,
+  "extractedBytesMatch": true,
+  "liveStableThroughPackaging": true,
+  "productionMutations": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "printJobs": 0
+}

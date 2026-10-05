@@ -1,0 +1,50 @@
+{
+  "result": "PASS",
+  "reviewer": "/root/scan_tools_audit",
+  "reviewedDate": "2026-10-05",
+  "artifactSHA256": "18c703d6e4703016d5177cb9d788c49702970fc5141361f5e38be29e904c05b5",
+  "reportSHA256": "188ebe7c77335ff68609979f7d3e81830c31e6dce75dc744395cfff1f499f4e2",
+  "toolHashes": {
+    "deploy-bootstrap-fix.cjs": "a485c9fe24e6fb4e327cbdfc71f9ebbeae615ed979560c52e80ee29b39410eef",
+    "verify-live-final.cjs": "b15b1d0f609b346d2884639c8bb9b059bc9bd9ea56b147a31651059a9cc09bbe",
+    "rollback-final.cjs": "53505770a486e6ccbc97143690e6c0b82cf1026b16a8e759616a6b8593309285",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "../../ops-reliability-20260922/cloud.cjs": "baed3c6c1f0eeeb57bc5b543e2d5214dc109091e91554b96196fbf033c7d0c13"
+  },
+  "scope": "One URL-encoded Tool-page HTML script reference changed; source-only followup from revision nextserverwest-00076-duk. Independent local review only; no production calls or writes.",
+  "packageChecks": {
+    "filesComparedAgainstRevision76Candidate": 563,
+    "zipMembersReadAndHashVerified": 563,
+    "changedFiles": [".next/server/pages/NewSearch/Tools/[id].html"],
+    "htmlBeforeSHA256": "2cc8827353ad2ea7f2d9b1baa6b0fc70e228cfd81d853ac72e2e11cffda5f11a",
+    "htmlAfterSHA256": "ccb4b42b493087924a28c30e40391207a51ba3b4569aaec1516e7d3b154f3251",
+    "oneReplacementExactInverseAndSameByteCount": true,
+    "allExecutableJavaScriptUnchanged": true,
+    "allOtherFilesAndStaticAssetsUnchanged": true,
+    "noAddedOrDeletedFiles": true,
+    "decodedToolHtmlReferencesNewAssetAndNotOldAsset": true,
+    "decodedBothAffectedPagesMatchManifest": true
+  },
+  "toolChecks": {
+    "syntaxChecksPassed": 3,
+    "revision76SourceGenerationUpdateTimeConfigAndArchiveGuarded": true,
+    "artifactReportReviewAndToolHashesBoundToSeparateApproval": true,
+    "guardRepeatedAfterUploadBeforeSourceOnlyPatch": true,
+    "exclusiveJournalBeforePatchAndNoResubmitOnUncertainty": true,
+    "mutatingCloudRequestsHaveRetryFalse": true,
+    "liveVerificationChecksDecodedPageReferencesAndAssetBytes": true,
+    "publicVerificationRequestsUnauthenticatedAndNonMutating": true,
+    "rollbackFinalRefusesLaterRevisionAndNeedsSeparateApproval": true,
+    "originalRevision75RollbackArchiveStillPinnedAndPreserved": true,
+    "rollbackDoesNotRestoreOrDeleteDatabaseOrRules": true
+  },
+  "blockingFindings": [],
+  "limitations": [
+    "This review does not assert that the followup is deployed. Successful cloud operation completion and live-verification-final.json remain required.",
+    "Unknown cloud PATCH outcomes require manual reconciliation and must not be resubmitted."
+  ],
+  "productionCalls": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "printJobs": 0
+}

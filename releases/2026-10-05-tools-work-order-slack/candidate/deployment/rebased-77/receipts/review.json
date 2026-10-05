@@ -1,0 +1,69 @@
+{
+  "result": "PASS",
+  "reviewer": "/root/scan_tools_audit",
+  "reviewedDate": "2026-10-05",
+  "baselineRevision": "nextserverwest-00077-puh",
+  "baselineArchiveSHA256": "6c8768b805303aab52528f3cf4279626deca2f4223b027c0aeaffb0a025f83c0",
+  "artifactSHA256": "52f027af37b5fee19035ff4e387e5a4eb19e22f5a668d8e2df366b0ddfb5303e",
+  "reportSHA256": "0b36aafe4ba2e42b4ab69da206af571e211edba5e2ba55a2e6bf9327591da706",
+  "toolHashes": {
+    "deploy.cjs": "f29d2f4217309fff0126945cf32ecbee93b9d4eb1fb73c4769a6914a792baa50",
+    "verify-live.cjs": "5c52b4b1cbcc5fea962aa01ca63940029dc9f8b3a361b62c300f7d6499b8a53a",
+    "rollback.cjs": "cf2261b1ce6b9be0cdcd805ac35047b83279be8f902d29acdc93b0cf69981750",
+    "cloud.cjs": "716e9582d3a70c182fd0b94f78f683e5b2e0f9b404d5c7ae1c2506f35b9a67e8",
+    "../cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "../../../ops-reliability-20260922/cloud.cjs": "baed3c6c1f0eeeb57bc5b543e2d5214dc109091e91554b96196fbf033c7d0c13",
+    "../snapshot-package-rebased77.cjs": "aa9e26bed692e87e8fd0af0788372b23765847036691be5f754dade675d992cb"
+  },
+  "independentCandidateReviewSHA256": "2e257629e5de5ff3db95d1d7c9def1c07b8d18e858b66ec9497bf5ad3f36bb5a",
+  "scope": "One URL-encoded Tool HTML script reference on the ACTIVE revision77 source baseline; all external Ops77 content and prior tool/scan76 executable code preserved. No production calls or writes by this reviewer.",
+  "packageChecks": {
+    "baselineFilesCompared": 575,
+    "candidateFilesCompared": 575,
+    "baselineZipMembersStreamedAndHashVerified": 575,
+    "candidateZipMembersStreamedAndHashVerified": 575,
+    "changedFiles": [".next/server/pages/NewSearch/Tools/[id].html"],
+    "htmlBeforeSHA256": "25c6b08e5711d125d294380e56c2bcd4166eccf58ba055cbad4aad56ca920e40",
+    "htmlAfterSHA256": "1f1c34acd7f24bc95637799abc3291bee7aff4b8a2fcd761eee74a3c7383e3c3",
+    "oneReplacementExactInverseAndSameByteCount": true,
+    "allOtherFilesByteIdentical": true,
+    "allJavaScriptAndStaticAssetsByteIdentical": true,
+    "noAddedOrDeletedFiles": true,
+    "rawAndDecodedToolBootstrapSelectNewPageAsset": true,
+    "oldToolBootstrapReferenceAbsent": true,
+    "opsBuildIdPreserved": "ops-daily-1be8985f18eaa93d"
+  },
+  "previouslyTestedFeatureFilesByteIdentical": {
+    ".next/server/chunks/93100.js": "eac4ed0d0754a9711c546d9f06c1d1825fdca98fb69aac50d340ae69ab229009",
+    ".next/server/chunks/1572.js": "5ce5050de322ad11894406a0f2fffd193896493266555e99fcf26c39d99081a4",
+    ".next/server/pages/api/print/tool-label.js": "3edecef6eef6087336621fb4603ffac41f80886f81dc2ed305be6ba8da4ca736",
+    ".next/static/chunks/pages/NewSearch/mainSearch-4c5267b535a13af7.js": "4c5267b535a13af7c5ccf439041ad0be4a06add301535142efb1f735adbddefc",
+    ".next/static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90"
+  },
+  "toolChecks": {
+    "syntaxChecksPassed": 5,
+    "baseline77RevisionSourceGenerationUpdateTimeConfigAndArchiveGuarded": true,
+    "artifactReportReviewAndAllImportedToolHashesBound": true,
+    "guardRepeatedAfterUploadBeforeSourceOnlyPatch": true,
+    "exclusiveJournalBeforePatchAndNoResubmitOnUncertainty": true,
+    "mutatingCloudRequestRetryDisabled": true,
+    "liveVerificationChecksExactDecodedBootstrapScriptsIncludingOps": true,
+    "liveVerificationChecksCurrentAssetBytesAndUnauthenticatedApiProbes": true,
+    "rollbackRestores77Not75AndPreservesOtherOpsRelease": true,
+    "rollbackRefusesLaterRevisionAndNeedsSeparateApproval": true,
+    "rollbackDoesNotRestoreOrDeleteDatabaseOrRules": true,
+    "rollbackApprovalBindsWrapperSharedHelperAndOAuthHelper": true
+  },
+  "resolvedFindings": [
+    "Rollback approval initially hashed only the local cloud wrapper. Added explicit approval hashes for its shared cloud-common and OAuth helper imports before review completion."
+  ],
+  "blockingFindings": [],
+  "limitations": [
+    "This review does not assert deployment completion; the final deployment operation and live-verification receipt are still required.",
+    "The deployment guard must refuse another concurrent release. Unknown PATCH outcomes require reconciliation, never blind resubmission."
+  ],
+  "productionCalls": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "printJobs": 0
+}

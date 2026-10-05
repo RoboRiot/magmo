@@ -1,0 +1,408 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function accessNotRevoked() {
+      return !('magmoAccessRevoked' in request.auth.token)
+        || request.auth.token.magmoAccessRevoked != true;
+    }
+
+    function internalUser() {
+      return signedIn()
+        && accessNotRevoked()
+        && request.auth.token.email.matches('.*@advancedimagingparts[.]com$');
+    }
+
+    function approvedViewer() {
+      return signedIn()
+        && accessNotRevoked()
+        && ('role' in request.auth.token)
+        && request.auth.token.role == 'viewer';
+    }
+
+    function approvedUser() {
+      return internalUser() || approvedViewer();
+    }
+
+    function archiveIdentity(value) {
+      return value.trim().upper().matches('AIS[ _-]*[0-9]+')
+        ? value.trim().upper().replace('[ _-]', '')
+        : value.trim();
+    }
+
+    function itemIdentityAvailable(value) {
+      return value is string
+        && !exists(/databases/$(database)/documents/ArchivedItemIds/$(archiveIdentity(value)));
+    }
+
+    function itemWriteAllowed(itemId) {
+      return internalUser()
+        && itemIdentityAvailable(itemId)
+        && (!('localSN' in request.resource.data) || request.resource.data.localSN == null
+          || request.resource.data.localSN == '' || itemIdentityAvailable(request.resource.data.localSN))
+        && (!('local_sn' in request.resource.data) || request.resource.data.local_sn == null
+          || request.resource.data.local_sn == '' || itemIdentityAvailable(request.resource.data.local_sn))
+        && (!('aisNumber' in request.resource.data) || request.resource.data.aisNumber == null
+          || request.resource.data.aisNumber == '' || itemIdentityAvailable(request.resource.data.aisNumber));
+    }
+
+    // Creation identity is stricter than the historical archive/rename format.
+    // Do not change archiveIdentity: existing immutable rename receipts depend
+    // on its original interpretation of legacy document IDs.
+    function canonicalNewItemIdentity(value) {
+      let clean = value.trim().upper();
+      return clean.matches('[0-9]+') ? 'AIS' + clean
+        : clean.matches('AIS[\\s_-]*[0-9]+') ? clean.replace('[\\s_-]', '')
+        : value.trim();
+    }
+
+    function matchingNewItemAlias(itemId, value) {
+      return value == null || value == '' || (value is string && value == itemId);
+    }
+
+    function newItemIdentityAllowed(itemId) {
+      return itemId == canonicalNewItemIdentity(itemId)
+        && (!itemId.matches('AIS[0-9]+')
+          || (!existsAfter(/databases/$(database)/documents/Test/$(itemId.replace('^AIS', '')))
+            && !existsAfter(/databases/$(database)/documents/Test/$(itemId.lower()))
+            && !exists(/databases/$(database)/documents/ArchivedItemIds/$(itemId.replace('^AIS', '')))))
+        && matchingNewItemAlias(itemId, request.resource.data.get('localSN', null))
+        && matchingNewItemAlias(itemId, request.resource.data.get('local_sn', null))
+        && matchingNewItemAlias(itemId, request.resource.data.get('aisNumber', null));
+    }
+
+    function updatedItemIdentityAllowed(itemId) {
+      // Existing noncanonical records stay editable without silently renaming,
+      // merging, or discarding them. An edit cannot acquire a different AIS.
+      return (request.resource.data.get('localSN', null) == resource.data.get('localSN', null)
+          || matchingNewItemAlias(itemId, request.resource.data.get('localSN', null)))
+        && (request.resource.data.get('local_sn', null) == resource.data.get('local_sn', null)
+          || matchingNewItemAlias(itemId, request.resource.data.get('local_sn', null)))
+        && (request.resource.data.get('aisNumber', null) == resource.data.get('aisNumber', null)
+          || matchingNewItemAlias(itemId, request.resource.data.get('aisNumber', null)));
+    }
+
+    function renameAlias(value, receipt) {
+      return value is string && value.trim() != ''
+          && archiveIdentity(value) != archiveIdentity(receipt.targetId)
+        ? value.trim() : receipt.sourceId;
+    }
+
+    function expectedRetiredIds(receipt) {
+      let localSN = renameAlias(receipt.beforeData.get('localSN', ''), receipt);
+      let local_sn = renameAlias(receipt.beforeData.get('local_sn', ''), receipt);
+      let aisNumber = renameAlias(receipt.beforeData.get('aisNumber', ''), receipt);
+      return [receipt.sourceId, archiveIdentity(receipt.sourceId),
+        localSN, archiveIdentity(localSN), local_sn, archiveIdentity(local_sn),
+        aisNumber, archiveIdentity(aisNumber)].toSet();
+    }
+
+    function renameReservationAfter(identity, receipt) {
+      let reservation = getAfter(/databases/$(database)/documents/ArchivedItemIds/$(identity)).data;
+      return reservation.state == 'renamed'
+        && reservation.sourceId == receipt.sourceId
+        && reservation.itemId == receipt.targetId;
+    }
+
+    function renameReservationPair(value, receipt) {
+      // All create/update identity checks canonicalize first. Requiring these
+      // four canonical reservations is sufficient to block every raw spelling;
+      // redundant raw reservations are still validated by their own create rule.
+      let identity = archiveIdentity(renameAlias(value, receipt));
+      return renameReservationAfter(identity, receipt);
+    }
+
+    function retiredIdentityCreateAllowed(identity, value) {
+      let receipt = getAfter(/databases/$(database)/documents/ItemRenames/$(value.sourceId)).data;
+      return value.keys().hasOnly(['state', 'sourceId', 'itemId'])
+        && value.state == 'renamed'
+        && !exists(/databases/$(database)/documents/ItemRenames/$(value.sourceId))
+        && receipt.sourceId == value.sourceId
+        && receipt.targetId == value.itemId
+        && receipt.retiredIds.hasAny([identity])
+        && (identity == value.sourceId
+          || !exists(/databases/$(database)/documents/Test/$(identity)));
+    }
+
+    function validItemRename(sourceId, receipt) {
+      return receipt.keys().hasOnly(['sourceId', 'targetId', 'beforeData', 'sourcePath', 'sourcePhotoPrefix', 'retiredIds'])
+        && receipt.sourceId == sourceId
+        && receipt.targetId is string
+        && receipt.targetId.matches('[^/]+')
+        && receipt.targetId != sourceId
+        && archiveIdentity(receipt.targetId) != archiveIdentity(sourceId)
+        && receipt.retiredIds is list
+        && receipt.retiredIds.size() <= 8
+        && receipt.retiredIds.size() == receipt.retiredIds.toSet().size()
+        && receipt.retiredIds.toSet() == expectedRetiredIds(receipt)
+        && receipt.sourcePath == 'Test/' + sourceId
+        && receipt.sourcePhotoPrefix == 'Parts/' + sourceId + '/'
+        && itemIdentityAvailable(receipt.targetId)
+        && exists(/databases/$(database)/documents/Test/$(sourceId))
+        && receipt.beforeData == get(/databases/$(database)/documents/Test/$(sourceId)).data
+        && !exists(/databases/$(database)/documents/Test/$(receipt.targetId))
+        && !existsAfter(/databases/$(database)/documents/Test/$(sourceId))
+        && existsAfter(/databases/$(database)/documents/Test/$(receipt.targetId))
+        && getAfter(/databases/$(database)/documents/Test/$(receipt.targetId)).data.localSN == receipt.targetId
+        && renameReservationPair(sourceId, receipt)
+        && renameReservationPair(receipt.beforeData.get('localSN', ''), receipt)
+        && renameReservationPair(receipt.beforeData.get('local_sn', ''), receipt)
+        && renameReservationPair(receipt.beforeData.get('aisNumber', ''), receipt);
+    }
+
+    function itemRenameDeleteAllowed(sourceId) {
+      let receipt = getAfter(/databases/$(database)/documents/ItemRenames/$(sourceId)).data;
+      return internalUser()
+        && !exists(/databases/$(database)/documents/ItemRenames/$(sourceId))
+        // A newly created receipt is independently checked by its create rule.
+        // Repeating its full alias proof for every write exceeds the rules
+        // expression budget on an eight-alias rename.
+        && receipt.sourceId == sourceId
+        && !existsAfter(/databases/$(database)/documents/Test/$(sourceId))
+        && existsAfter(/databases/$(database)/documents/Test/$(receipt.targetId));
+    }
+
+    // A Local SN rename has a complete, immutable preimage and a concrete new
+    // item in the same transaction. This is the only client item-delete exception.
+    match /ItemRenames/{sourceId} {
+      allow get: if internalUser()
+        && !exists(/databases/$(database)/documents/ItemRenames/$(sourceId));
+      allow list, update, delete: if false;
+      allow create: if internalUser() && validItemRename(sourceId, request.resource.data);
+    }
+
+    // Full recovery data is server-owned. A minimal reservation is readable by
+    // item editors so a previously archived identity cannot be reused.
+    match /ItemArchives/{document=**} {
+      allow read, write: if false;
+    }
+    match /ArchivedItemIds/{itemId} {
+      allow get: if approvedUser();
+      allow list, update, delete: if false;
+      allow create: if internalUser() && retiredIdentityCreateAllowed(itemId, request.resource.data);
+    }
+
+    match /ItemVisionIndex/{itemId} {
+      allow read: if approvedUser();
+      allow write: if false;
+    }
+
+    match /UserPreferences/{userId} {
+      allow read: if approvedUser() && request.auth.uid == userId;
+      allow create, update: if approvedUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "theme",
+          "opsActiveCollapsedTiers",
+          "opsActiveCollapsedUpdatedAt",
+          "updatedAt"
+        ])
+        && (!request.resource.data.keys().hasAny(["theme"])
+          || request.resource.data.theme in ["light", "dark"])
+        && (!request.resource.data.keys().hasAny(["opsActiveCollapsedTiers"])
+          || request.resource.data.opsActiveCollapsedTiers is map);
+      allow delete: if approvedUser() && request.auth.uid == userId;
+    match /SearchConsoleTrackedPages/{document} {
+      allow read, write: if false;
+    }
+    match /SearchConsoleIndexStatus/{document} {
+      allow read, write: if false;
+    }
+    }
+
+    match /WebsiteAnalyticsEvents/{document} {
+      allow read, write: if false;
+    }
+    match /WebsiteAnalyticsDaily/{document} {
+      allow read, write: if false;
+    }
+    match /WebsitePartSearchDaily/{document} {
+      allow read, write: if false;
+    }
+    match /WebsiteRateLimits/{document} {
+      allow read, write: if false;
+    }
+    match /mail/{document} {
+      allow read, write: if false;
+    }
+
+    // Device registrations and alert delivery state are only accessible through
+    // authenticated server APIs. Registration tokens must never be listed by users.
+    match /MagmonitorNotificationDevices/{document=**} {
+      allow read, write: if false;
+    }
+    match /MagmonitorAlertDeliveries/{document=**} {
+      allow read, write: if false;
+    }
+    match /MagmonitorAlertRecipients/{document=**} {
+      allow read, write: if false;
+    }
+    match /MagmonitorAlertEvents/{document=**} {
+      allow read, write: if false;
+    }
+    match /MagmonitorHealthStates/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /MagmonitorHealthIncidents/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Employee hour-edit requests are only read and changed through the
+    // authenticated Ops APIs. Firebase Admin bypasses these client rules.
+    match /OpsTimeEditRequests/{document} {
+      allow read, write: if false;
+    }
+
+    // Scanner sessions are short-lived server-side staging records. They can
+    // contain callback-token hashes and unconfirmed scans, so browser clients
+    // must use the authenticated API instead of reading or changing them
+    // directly. Firebase Admin callers bypass these rules.
+    match /StorageUnitScanSessions/{document=**} {
+      allow read, write: if false;
+    }
+    match /StorageUnitScanControls/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Work Order scanner sessions contain callback-token hashes and staged
+    // scans. Browser clients must use the authenticated server routes; Admin
+    // SDK callers bypass these client rules.
+    match /WorkOrderAddScanSessions/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Work-order-add operation receipts enforce idempotency, and each item's
+    // WorkOrderAddHistory is an immutable server audit. Browser clients may
+    // keep editing ordinary inventory data, but these records are owned by the
+    // authenticated API (Admin SDK callers bypass client rules).
+    match /InventoryWorkOrderAddOperations/{document=**} {
+      allow read, write: if false;
+    }
+    // Shipment creation receipts are server-owned idempotency records. Browser
+    // clients must not be able to inspect or forge them.
+    match /InventoryShipmentOperations/{document=**} {
+      allow read, write: if false;
+    }
+    match /Test/{itemId} {
+      allow read: if approvedUser();
+      allow create: if itemWriteAllowed(itemId) && newItemIdentityAllowed(itemId);
+      allow update: if itemWriteAllowed(itemId) && updatedItemIdentityAllowed(itemId);
+      // All item removal must go through the admin archive API.
+      allow delete: if itemRenameDeleteAllowed(itemId);
+
+      match /WorkOrderAddHistory/{operationId} {
+        allow read: if approvedUser();
+        allow create, update, delete: if false;
+      }
+
+      match /ShipmentHistory/{operationId} {
+        allow read: if approvedUser();
+        allow create, update, delete: if false;
+      }
+
+      // Preserved-image receipts can only be read or changed by the authenticated APIs.
+      match /ImageArchiveHistory/{document=**} {
+        allow read, write: if false;
+      }
+
+      match /{subcollection}/{document=**} {
+        allow read: if approvedUser() && subcollection != "ImageArchiveHistory";
+        allow create, update, delete: if internalUser()
+          && itemIdentityAvailable(itemId)
+          && subcollection != "ShipmentHistory"
+          && subcollection != "WorkOrderAddHistory"
+          && subcollection != "ImageArchiveHistory";
+      }
+    }
+
+    // Service-request approvals and lifecycle changes are written only through
+    // the authenticated Ops/AIS APIs. Admin SDK callers bypass these rules;
+    // browser clients must not be able to forge an overseer approval or status.
+    match /ServiceRequests/{document} {
+      allow read: if approvedUser();
+      allow create, update, delete: if false;
+    }
+
+
+    // The current public website release reads the published catalog directly.
+    // Keep this collection read-only until the server-side catalog API is live.
+    match /Parts/{itemId} {
+      allow read: if true;
+      allow create, update: if itemWriteAllowed(itemId);
+      // Unpublishing remains possible while the inventory item is active.
+      allow delete: if internalUser()
+        && exists(/databases/$(database)/documents/Test/$(itemId));
+      match /{subcollection}/{document=**} {
+        allow read: if true;
+        allow write: if internalUser() && itemIdentityAvailable(itemId);
+      }
+    }
+
+    match /{collection}/{document=**} {
+      allow read: if collection != "Test"
+        && collection != "opsSlackEventInbox"
+        && collection != "opsSlackEventLocks"
+        && collection != "opsMessageIngestLeases"
+        && collection != "OpsSlackThreadLinks"
+        && collection != "OpsAstraReviewQueue"
+        && collection != "OpsAiTrials"
+        && collection != "OpsOtCoverage"
+        && collection != "OpsOtCoverageHistory"
+        && collection != "OpsOtSwapRequests"
+        && collection != "OpsOtSwapLocks"
+        && collection != "OpsEngineerDirectory"
+        && collection != "OpsDirectoryMetadata"
+        && !collection.matches('OpsEngineerNotification.*')
+        && !collection.matches('OpsWorkOrderLink.*')
+        && collection != "Parts"
+        && collection != "ItemArchives"
+        && collection != "ArchivedItemIds"
+        && collection != "ItemVisionIndex"
+        && collection != "ItemRenames"
+        && collection != "InventoryWorkOrderAddOperations"
+        && collection != "ToolSlackDeliveries"
+        && collection != "InventoryShipmentOperations"
+        && !collection.matches('Magmonitor(Notification|Alert|Health).*')
+        && collection != "StorageUnitScanSessions"
+        && collection != "WorkOrderAddScanSessions"
+        && collection != "StorageUnitScanControls"
+        && approvedUser();
+      allow create, update, delete: if collection != "Test"
+        && collection != "opsSlackEventInbox"
+        && collection != "opsSlackEventLocks"
+        && collection != "opsMessageIngestLeases"
+        && collection != "OpsSlackThreadLinks"
+        && collection != "OpsAstraReviewQueue"
+        && collection != "OpsAiTrials"
+        && collection != "OpsOtCoverage"
+        && collection != "OpsOtCoverageHistory"
+        && collection != "OpsOtSwapRequests"
+        && collection != "OpsOtSwapLocks"
+        && collection != "OpsEngineerDirectory"
+        && collection != "OpsDirectoryMetadata"
+        && !collection.matches('OpsEngineerNotification.*')
+        && !collection.matches('OpsWorkOrderLink.*')
+        && collection != "Parts"
+        && collection != "ItemArchives"
+        && collection != "ArchivedItemIds"
+        && collection != "ItemVisionIndex"
+        && collection != "ItemRenames"
+        && collection != "InventoryWorkOrderAddOperations"
+        && collection != "ToolSlackDeliveries"
+        && collection != "InventoryShipmentOperations"
+        && collection != "ServiceRequests"
+        && collection != "MagmonitorSystems"
+        && !collection.matches('Magmonitor(Notification|Alert|Health).*')
+        && collection != "StorageUnitScanSessions"
+        && collection != "WorkOrderAddScanSessions"
+        && collection != "StorageUnitScanControls"
+        && internalUser();
+    }
+  }
+}

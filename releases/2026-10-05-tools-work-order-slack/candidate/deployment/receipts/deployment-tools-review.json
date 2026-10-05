@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "reviewer": "/root/scan_tools_audit",
+  "reviewedDate": "2026-10-05",
+  "scope": "Independent source review, local syntax checks, and isolated synthetic checks only; no deployment, rollback, network request, database write, Slack post, or print job was executed by this reviewer.",
+  "files": {
+    "deploy.cjs": "4fd384ada72edf9dfb4cbf9bb1ac7087cf5a8d86703bc98964232b3bf4bbc293",
+    "rollback.cjs": "db1aa42b2dab72066a4c6c6833acef85bb8b7f6e64b1a397a07f2719eafe0225",
+    "verify-live.cjs": "c8416ffaf0dee06a14bf917a410ec9829bec2f07b422c44534f9066728b410dc",
+    "cloud-common.cjs": "fbb87bd74f2a9411bb21abcf48944fba86cc5ee75e12c62a060066c072bfd56f",
+    "verify-package-gates.cjs": "9f1ea5dceb3421ae8d119d708986fcbd08cd902a4490f512e6fbb4ec372eaf1b",
+    "approve-release.cjs": "a9140b89fdbf1c42b2029ad5d56d8dc366370997320c69cdf8026678b74515a4",
+    "../../ops-reliability-20260922/cloud.cjs": "baed3c6c1f0eeeb57bc5b543e2d5214dc109091e91554b96196fbf033c7d0c13"
+  },
+  "checks": {
+    "syntaxChecksPassed": 6,
+    "isolatedSyntheticChecksPassed": 17,
+    "sourceOnlyUpdateMask": true,
+    "baselineRevisionSourceGenerationAndArchivePinned": true,
+    "runtimeConfigurationAndLabelsPreserved": true,
+    "artifactCompositionApprovalsAndReceiptsHashBound": true,
+    "reviewHashesEnforcedByPackageGatesAndApproval": true,
+    "journalCreatedExclusivelyBeforeCloudPatch": true,
+    "uncertainSubmissionRequiresInspectionInsteadOfResubmission": true,
+    "mutatingCloudRequestsDisableAutomaticRequestRetry": true,
+    "publicProbesUnauthenticatedAndNonMutating": true,
+    "rollbackRefusesLaterDeploymentAndRequiresSeparateApproval": true,
+    "rollbackDoesNotClaimDatabaseOrRulesRestoration": true,
+    "backupVerificationAndCredentialScanRequired": true
+  },
+  "resolvedFindings": [
+    {
+      "finding": "Package gate and release approval initially checked the independent deployment-tool review result without comparing its reviewed hashes to current tools.",
+      "resolution": "Both scripts now require an exact seven-file review map and compare every current tool hash, including their own scripts and the imported OAuth request helper; release approval also checks that the review receipt remains the one bound by package gates."
+    }
+  ],
+  "blockingFindings": [],
+  "limitations": [
+    "This PASS approves the reviewed tools and their safeguards, not a completed production deployment. Production completion requires the separately recorded operation status and live-verification receipt.",
+    "Unknown cloud PATCH outcomes intentionally require manual operation reconciliation; these scripts will not automatically submit another deployment or rollback."
+  ],
+  "productionWrites": 0,
+  "networkRequests": 0
+}

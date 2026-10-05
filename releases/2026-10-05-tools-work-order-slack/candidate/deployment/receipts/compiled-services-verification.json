@@ -1,0 +1,63 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-10-05T16:23:07.706Z",
+  "passed": 125,
+  "failed": 0,
+  "skipped": 0,
+  "actualCandidateFactories": true,
+  "candidateDirectory": "scoped-source",
+  "exactHttpSharedSenderFactoryId": 1572,
+  "overlayReportSHA256": "11b972f9bae612b55b74470473b47997aeeaf1db04d27068a53189dcae914433",
+  "overlayFiles": [
+    {
+      "path": ".next/server/chunks/93100.js",
+      "sha256": "eac4ed0d0754a9711c546d9f06c1d1825fdca98fb69aac50d340ae69ab229009"
+    },
+    {
+      "path": ".next/server/chunks/1572.js",
+      "sha256": "5ce5050de322ad11894406a0f2fffd193896493266555e99fcf26c39d99081a4"
+    },
+    {
+      "path": ".next/server/pages/api/print/tool-label.js",
+      "sha256": "3edecef6eef6087336621fb4603ffac41f80886f81dc2ed305be6ba8da4ca736"
+    },
+    {
+      "path": ".next/server/pages-manifest.json",
+      "sha256": "82a943ec3c0e9652027630f22bd31ccc0714571ed3d03da0508d887f7f6749ae"
+    }
+  ],
+  "serviceFactoryIds": [
+    93100031,
+    93100057,
+    93100062,
+    93100061,
+    94500002,
+    1572
+  ],
+  "tests": [
+    {
+      "path": "test/tool-slack-identity.test.cjs",
+      "sha256": "a1b89cc3c74fdb0cfd7fc3a8bee237fd383bbf9e8e4b86985dd8ffa40453f13b"
+    },
+    {
+      "path": "test/work-order-add-service.test.cjs",
+      "sha256": "f5edcef0e123d0776885fa148a1343962cebc30d2ca6c8af9daa856996d817e9"
+    },
+    {
+      "path": "test/work-order-add-contract.test.cjs",
+      "sha256": "ed9c652eac2e9532c309da00b4da6b23b8ad130082de84dea71c563d94beec38"
+    },
+    {
+      "path": "test/work-order-add-slack.test.cjs",
+      "sha256": "9770b24f86d621a9167b353706fe9efcd2dc8ef99b1d82396266016f09f795c7"
+    },
+    {
+      "path": "test/work-order-add-slack-thread.test.cjs",
+      "sha256": "a9f86b310d11b956e0ccca899c2a87ce21ca45f858329817e9aa5d84494c7287"
+    }
+  ],
+  "loaderSHA256": "2a9b57335bbc93ec90682bb954a4b482df9b3bac298cd7299e01d40983272511",
+  "harnessSHA256": "197ecb5a2c777e3edd671ee264fdaf19ed8fe4330f1d9bab064d3edd47752ca1",
+  "logSHA256": "8a6379b747cb0a4709e41fef9390a0c2bd708b4dfb8ee9ebe0283be314c27cc1",
+  "productionMutations": 0
+}

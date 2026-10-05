@@ -1,0 +1,12 @@
+"use strict";
+const {fs,assert,file,json,sha256,writeReceipt}=require('./cloud-common.cjs');
+const gates=json('package-gates.json'),baseline=json('baseline.json'),review=json('deployment-tools-review.json');
+assert.equal(gates.result,'PASS');assert.equal(review.result,'PASS');
+const reviewedTools=['deploy.cjs','cloud-common.cjs','rollback.cjs','verify-live.cjs','verify-package-gates.cjs','approve-release.cjs','../../ops-reliability-20260922/cloud.cjs'];
+assert.deepEqual(Object.keys(review.files).sort(),[...reviewedTools].sort(),'Deployment review must bind every reviewed tool');
+for(const n of reviewedTools)assert.equal(sha256(fs.readFileSync(file(n))),review.files[n],`Reviewed tool changed: ${n}`);
+assert.equal(gates.receiptHashes['deployment-tools-review.json'],sha256(fs.readFileSync(file('deployment-tools-review.json'))),'Review changed after package gates');
+assert.equal(gates.artifactSHA256,'92cb67224b83e0cc1838bd67d3db6f98932649877967c5198493f35dae450e04');
+const toolHashes=Object.fromEntries(['deploy.cjs','cloud-common.cjs','rollback.cjs','verify-live.cjs'].map(n=>[n,sha256(fs.readFileSync(file(n)))]));
+writeReceipt('root-approval.json',{approvedAt:new Date().toISOString(),sourceOnlyApproved:true,databaseWritesAllowed:false,testSlackPostsAllowed:false,testPrintJobsAllowed:false,artifactSHA256:gates.artifactSHA256,compositionReportSHA256:gates.compositionReportSHA256,packageGatesSHA256:sha256(fs.readFileSync(file('package-gates.json'))),baselineArchiveSHA256:baseline.archiveSHA256,configHash:baseline.configHash,toolHashes},true);
+console.log(JSON.stringify({approved:true,artifactSHA256:gates.artifactSHA256,sourceOnly:true}));

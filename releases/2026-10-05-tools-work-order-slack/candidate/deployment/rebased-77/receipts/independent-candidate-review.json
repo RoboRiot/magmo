@@ -1,0 +1,156 @@
+{
+  "result": "PASS",
+  "reviewedAt": "2026-10-05T16:58:03.825Z",
+  "baselineRevision": "nextserverwest-00077-puh",
+  "rollbackRevision": "nextserverwest-00077-puh",
+  "baselineArchiveSHA256": "6c8768b805303aab52528f3cf4279626deca2f4223b027c0aeaffb0a025f83c0",
+  "artifactSHA256": "52f027af37b5fee19035ff4e387e5a4eb19e22f5a668d8e2df366b0ddfb5303e",
+  "buildId": "ops-daily-1be8985f18eaa93d",
+  "files": 575,
+  "changedFiles": [
+    ".next/server/pages/NewSearch/Tools/[id].html"
+  ],
+  "exactOneHtmlInverse": true,
+  "noAddedOrDeletedFiles": true,
+  "allOps77FilesPreservedExceptRequestedHtml": true,
+  "allJavaScriptAndConfigurationPreserved": true,
+  "bootstrap": {
+    "result": "PASS",
+    "checkedAt": "2026-10-05T16:58:03.417Z",
+    "candidateDirectory": "rebased-77/candidate",
+    "cases": [
+      {
+        "route": "/NewSearch/mainSearch",
+        "htmlSHA256": "1a041fb628fcb6273ea05459865a7c5ac9302b3bff000799e9a6213671db31ef",
+        "pageAsset": "static/chunks/pages/NewSearch/mainSearch-4c5267b535a13af7.js",
+        "pageSHA256": "4c5267b535a13af7c5ccf439041ad0be4a06add301535142efb1f735adbddefc",
+        "decodedBootstrapReferenceMatchesManifest": true
+      },
+      {
+        "route": "/NewSearch/Tools/[id]",
+        "htmlSHA256": "1f1c34acd7f24bc95637799abc3291bee7aff4b8a2fcd761eee74a3c7383e3c3",
+        "pageAsset": "static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js",
+        "pageSHA256": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90",
+        "decodedBootstrapReferenceMatchesManifest": true
+      }
+    ],
+    "productionRequests": 0,
+    "productionWrites": 0
+  },
+  "retainedFeatureFactories": [
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 93100000,
+      "sha256": "b3361c5c84d3e9b64d5b3d43a35ee1404826d40422099d86db1a69fe49b37648"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 93100031,
+      "sha256": "0dc415b5b33d81f6beec484da549c913647d49c8c684fccef78d3033d3738d91"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 93100057,
+      "sha256": "d5e92f994f14090844dbf2fd4b60a2f1fa0fec896db0e9d9881840754d10526f"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 93100061,
+      "sha256": "487abe2efe335d84243b73b302983bcad55c104abc02ac64c1aa1e2c3fc8a46e"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 93100062,
+      "sha256": "86ba788e9daa1253922840140bc1168259883cba0e62b346bbdf98f9fce6973d"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 94500000,
+      "sha256": "31a93f9812b2f29701822dbf70c2b3c06af07e2c1991b44124173e9674bebfcd"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 94500002,
+      "sha256": "338bef35b8b02819ba822abae0c09738571cd98c3eb2adad99046240cebfe33c"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 94500010,
+      "sha256": "26de22f817489030e8e7f81ed07af29497b87294cd87d47aed8091a9f9f74b10"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 94500011,
+      "sha256": "f86b77cb9d153d87bfa09f5367b3ca2fd975df30d1411df138db54940bd17c1c"
+    },
+    {
+      "file": ".next/server/chunks/93100.js",
+      "id": 94500001,
+      "sha256": "23ceac61a35e471fc43e8c098472a5f63dfc4f3a355144f03d84e1978bd792c7"
+    },
+    {
+      "file": ".next/server/chunks/1572.js",
+      "id": 1572,
+      "sha256": "b3361c5c84d3e9b64d5b3d43a35ee1404826d40422099d86db1a69fe49b37648"
+    },
+    {
+      "file": ".next/server/chunks/1572.js",
+      "id": 94500000,
+      "sha256": "31a93f9812b2f29701822dbf70c2b3c06af07e2c1991b44124173e9674bebfcd"
+    },
+    {
+      "file": ".next/server/chunks/1572.js",
+      "id": 94500002,
+      "sha256": "338bef35b8b02819ba822abae0c09738571cd98c3eb2adad99046240cebfe33c"
+    },
+    {
+      "file": ".next/server/chunks/1572.js",
+      "id": 94500010,
+      "sha256": "26de22f817489030e8e7f81ed07af29497b87294cd87d47aed8091a9f9f74b10"
+    },
+    {
+      "file": ".next/server/chunks/1572.js",
+      "id": 94500011,
+      "sha256": "f86b77cb9d153d87bfa09f5367b3ca2fd975df30d1411df138db54940bd17c1c"
+    },
+    {
+      "file": ".next/server/pages/api/print/tool-label.js",
+      "id": 94500020,
+      "sha256": "b408f930166fc33aea40e82dc4a45fd2c1f3b1916bb0e926109064897b29424c"
+    },
+    {
+      "file": ".next/server/pages/api/print/tool-label.js",
+      "id": 94500021,
+      "sha256": "7e97f9a78d93f35457def5546da891e9d49eab3255b8949240281dee86c6b284"
+    },
+    {
+      "file": ".next/server/pages/api/print/tool-label.js",
+      "id": 94500000,
+      "sha256": "31a93f9812b2f29701822dbf70c2b3c06af07e2c1991b44124173e9674bebfcd"
+    },
+    {
+      "file": ".next/server/pages/api/print/tool-label.js",
+      "id": 94500003,
+      "sha256": "eaa7b7faabed02e0f5f231206b49322c2ef470a9786e989920e960ec7d8a6924"
+    }
+  ],
+  "compiledTestsReusedByExactFactoryAndBrowserAssetIdentity": true,
+  "knownPassingFeatureTests": {
+    "compiledServer": 125,
+    "modalBrowser": 13,
+    "toolPageBrowser": 6,
+    "toolLabelApi": 5
+  },
+  "evidence": {
+    "baseline.json": "3f8b9b648e6f7addb88d028f05f2a487cf4dcb4820c16249a2c768fc53668677",
+    "baseline-files.json": "1dab400f5ab2de9ffa6aedb935c5981ea182c564b3bb488953f668f67f84ac2e",
+    "candidate-files.json": "0080597ac3cf1a773cb26e8dce5a1604257e8a8cd06e98f53b12e947d2ceff9b",
+    "package-report.json": "0b36aafe4ba2e42b4ab69da206af571e211edba5e2ba55a2e6bf9327591da706"
+  },
+  "reviewScriptSHA256": "287490ee970654cb05d07bd000d01f38cca5131af4f85f1f508765bfe7731eb1",
+  "bootstrapScriptSHA256": "4b77baa45a8b0350c7997c4c51b318d764845987b1bb539771bbc23327f3253b",
+  "productionRequests": 0,
+  "databaseWrites": 0,
+  "slackPosts": 0,
+  "printJobs": 0
+}

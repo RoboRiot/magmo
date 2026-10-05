@@ -1,0 +1,19 @@
+{
+  "valid": true,
+  "status": "complete",
+  "manifestPath": "C:\\Users\\mack2\\Desktop\\code\\outputs\\firestore-backups\\2026-10-05-tools-work-order-prechange\\manifest.json",
+  "backupDirectory": "C:\\Users\\mack2\\Desktop\\code\\outputs\\firestore-backups\\2026-10-05-tools-work-order-prechange",
+  "documentPath": "C:\\Users\\mack2\\Desktop\\code\\outputs\\firestore-backups\\2026-10-05-tools-work-order-prechange\\firestore-documents.jsonl",
+  "documentCount": 199951,
+  "collectionCount": 1163,
+  "bytes": 1812481626,
+  "sha256": "c525523cb6b847f4eac4039d46bebd6f4304fa4c37e380618af28c35314ae85c",
+  "scope": {
+    "firestoreIncluded": true,
+    "firestoreOnly": true,
+    "storageIncluded": false,
+    "storageModified": false,
+    "authIncluded": false
+  },
+  "verifiedAt": "2026-10-05T16:34:42.842Z"
+}

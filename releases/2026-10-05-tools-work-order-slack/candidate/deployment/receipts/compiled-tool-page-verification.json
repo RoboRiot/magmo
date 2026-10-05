@@ -1,0 +1,38 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-10-05T16:29:35.102Z",
+  "pageAsset": "static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js",
+  "pageSHA256": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90",
+  "factoryId": 53915,
+  "newHelperId": 98100520,
+  "assetHashes": {
+    "static/chunks/webpack-0e4290ce213ed12f.js": "dbbf5fa6a006129212380e2cf8770ce0d91a952f5df448b4494033a5744f69e4",
+    "static/chunks/framework-32a7466d5cae4a81.js": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458",
+    "static/chunks/main-9b88a952025a6e80.js": "9721dc88d71db395be7e0bbe6dbadcd97ef26033b8262361cea8aabfcc7d58d4",
+    "static/css/dfe188d46577aea3.css": "cb0402c172b971e0d1d734976fab68f5738dfbeb5ddc897031cb2ee044e8040d",
+    "static/chunks/pages/_app-581ead4499966a3b.js": "27683d3129830c55fb2628e7047c3bdb6ce383c0fd9facfc7e0a22d44bd9dbea",
+    "static/chunks/7161-fbab5101e3c6fcd3.js": "99801045a87deadf45fddcfd556b2d0c06b280d2774ee2a22f9b22145e648f85",
+    "static/chunks/9520-9723bb1a3e2cdf4a.js": "7f5301ced3523617465a4f38be6700cb326602210eff5b5c006613a1fa3bbde0",
+    "static/chunks/2317-7d26aa15d5eb547d.js": "9d079ac9d55a315e92dd64dfb81cb587776cd2991354c9ddefef0bc43a29c471",
+    "static/chunks/4514-241f5f861018e722.js": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8",
+    "static/chunks/1060-bc95950d8c7e80b6.js": "584b64f367baaf60f16538edf81fe3a0a621f6568f81866c4773bb33876bd9aa",
+    "static/chunks/2321-4da2cda4fdfa4ff5.js": "8dd034e9c19bd7df338fb37aad0567e59f25bf028e631a24c63bd788f81efe72",
+    "static/chunks/4595-4aa58e033edbb512.js": "3f2519c98339a3b0c872ec94eaed5e31fab32b241b239896a4fc6ffcfd99ae7c",
+    "static/chunks/8137-9b4fb93862431982.js": "39cb43d74122e64d2f8729e0b00578e343909e75f917a7acac221fb981096cb4",
+    "static/css/4435d527c17239c8.css": "699caac835c63e7f19648222bfa3fa8f999081122b60bc913cd505cd5616fff9",
+    "static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90"
+  },
+  "results": [
+    "Persisted currentWorkOrder wins over a newer historical date",
+    "Saved tool prints one authenticated ID-only request without any DB save",
+    "Printer failure stays visible with no automatic retry or item mutation",
+    "Tool Slack uses exact ID and shows Already on Slack instead of false new submission",
+    "Explicit current work order persists on tool save",
+    "Unsaved tool cannot print"
+  ],
+  "errors": [],
+  "externalRequests": 0,
+  "productionRequests": 0,
+  "productionWrites": 0,
+  "network": "loopback-only; Firestore/auth/router/LoggedIn/network mocked"
+}

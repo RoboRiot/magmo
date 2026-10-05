@@ -1,0 +1,635 @@
+TAP version 13
+# Subtest: explicit tool identity and old terminal-ID request work; conflicts fail closed
+ok 1 - explicit tool identity and old terminal-ID request work; conflicts fail closed
+  ---
+  duration_ms: 1.3852
+  ...
+# Subtest: exact tool ID in typed title or ID fields only; not a prefix, component mention, or description
+ok 2 - exact tool ID in typed title or ID fields only; not a prefix, component mention, or description
+  ---
+  duration_ms: 0.297
+  ...
+# Subtest: existing active tool returns alreadyExists without any Slack writes
+ok 3 - existing active tool returns alreadyExists without any Slack writes
+  ---
+  duration_ms: 1.5053
+  ...
+# Subtest: existing archived tool returns alreadyExists without any Slack writes
+ok 4 - existing archived tool returns alreadyExists without any Slack writes
+  ---
+  duration_ms: 0.3181
+  ...
+# Subtest: lookup pages past first 100 and checks archived only after all active pages
+ok 5 - lookup pages past first 100 and checks archived only after all active pages
+  ---
+  duration_ms: 0.17
+  ...
+# Subtest: metadata primary title column is honored for custom column keys
+ok 6 - metadata primary title column is honored for custom column keys
+  ---
+  duration_ms: 0.1597
+  ...
+# Subtest: missing row IDs, malformed pages and unknown pagination fail closed
+ok 7 - missing row IDs, malformed pages and unknown pagination fail closed
+  ---
+  duration_ms: 0.6
+  ...
+# Subtest: lookup errors, repeated cursors and incomplete pagination never permit creating
+ok 8 - lookup errors, repeated cursors and incomplete pagination never permit creating
+  ---
+  duration_ms: 0.6208
+  ...
+# Subtest: new tool is sent with authoritative saved fields and subsequent attempts re-check Slack
+ok 9 - new tool is sent with authoritative saved fields and subsequent attempts re-check Slack
+  ---
+  duration_ms: 0.8816
+  ...
+# Subtest: missing, deleted or unauthenticated tools cannot send or reserve a row
+ok 10 - missing, deleted or unauthenticated tools cannot send or reserve a row
+  ---
+  duration_ms: 0.7889
+  ...
+# Subtest: concurrent toolpage and work-order sends serialize by the same list and ID
+ok 11 - concurrent toolpage and work-order sends serialize by the same list and ID
+  ---
+  duration_ms: 0.4436
+  ...
+# Subtest: unknown create outcome is reconciled by ID if visible, never blindly re-created
+ok 12 - unknown create outcome is reconciled by ID if visible, never blindly re-created
+  ---
+  duration_ms: 0.4417
+  ...
+# Subtest: known row update failure resumes same saved payload and does not create again
+ok 13 - known row update failure resumes same saved payload and does not create again
+  ---
+  duration_ms: 0.5624
+  ...
+# Subtest: definitive create rejection permits retry; archived row recovered after timeout never resumes
+ok 14 - definitive create rejection permits retry; archived row recovered after timeout never resumes
+  ---
+  duration_ms: 0.5296
+  ...
+# Subtest: completed known row absent from both sets is not silently recreated
+ok 15 - completed known row absent from both sets is not silently recreated
+  ---
+  duration_ms: 3.0082
+  ...
+# Subtest: a failed duplicate lookup never downgrades a completed row into a resumable delivery
+ok 16 - a failed duplicate lookup never downgrades a completed row into a resumable delivery
+  ---
+  duration_ms: 0.5625
+  ...
+# Subtest: confirmed work-order snapshot stays immutable and a concurrent movement blocks a new send
+ok 17 - confirmed work-order snapshot stays immutable and a concurrent movement blocks a new send
+  ---
+  duration_ms: 0.7022
+  ...
+# Subtest: actual shared HTTP handler guards old toolpage and work-order paths identically
+ok 18 - actual shared HTTP handler guards old toolpage and work-order paths identically
+  ---
+  duration_ms: 151.1017
+  ...
+# Subtest: actual HTTP handler creates only one authoritative tool row and denies malformed identity
+ok 19 - actual HTTP handler creates only one authoritative tool row and denies malformed identity
+  ---
+  duration_ms: 135.796
+  ...
+# Subtest: tool receipt collection cannot be read or forged through catch-all rules
+ok 20 - tool receipt collection cannot be read or forged through catch-all rules
+  ---
+  duration_ms: 0.2129
+  ...
+# Subtest: real bulk dispatcher plus shared tool guard keeps existing archived tools out of list and thread writes
+ok 21 - real bulk dispatcher plus shared tool guard keeps existing archived tools out of list and thread writes
+  ---
+  duration_ms: 1.4765
+  ...
+# Subtest: bulk tool uncertainty is safely reconciled through the global guard without another create
+ok 22 - bulk tool uncertainty is safely reconciled through the global guard without another create
+  ---
+  duration_ms: 0.9612
+  ...
+# Subtest: bulk tool lookup failure reports a safe actionable error instead of a generic Slack failure
+ok 23 - bulk tool lookup failure reports a safe actionable error instead of a generic Slack failure
+  ---
+  duration_ms: 0.5216
+  ...
+# Subtest: new bulk tool send retains persisted tool photos in its immutable payload
+ok 24 - new bulk tool send retains persisted tool photos in its immutable payload
+  ---
+  duration_ms: 0.4876
+  ...
+# Subtest: warehouse AIS94688 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+ok 25 - warehouse AIS94688 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+  ---
+  duration_ms: 11.8347
+  ...
+# Subtest: warehouse AIS94688 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+ok 26 - warehouse AIS94688 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+  ---
+  duration_ms: 2.3389
+  ...
+# Subtest: warehouse AIS17182 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+ok 27 - warehouse AIS17182 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+  ---
+  duration_ms: 4.7678
+  ...
+# Subtest: warehouse AIS17182 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+ok 28 - warehouse AIS17182 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+  ---
+  duration_ms: 2.2189
+  ...
+# Subtest: warehouse AIS25097 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+ok 29 - warehouse AIS25097 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+  ---
+  duration_ms: 2.532
+  ...
+# Subtest: warehouse AIS25097 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+ok 30 - warehouse AIS25097 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+  ---
+  duration_ms: 2.0736
+  ...
+# Subtest: warehouse AIS89914 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+ok 31 - warehouse AIS89914 defaults to its canonical Interior for from_work_order, preserving provenance and replay
+  ---
+  duration_ms: 2.0828
+  ...
+# Subtest: warehouse AIS89914 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+ok 32 - warehouse AIS89914 defaults to its canonical Interior for current_at_work_order, preserving provenance and replay
+  ---
+  duration_ms: 1.5965
+  ...
+# Subtest: warehouse defaults never replace explicit machines/trailers or unresolved BlueFolder equipment
+ok 33 - warehouse defaults never replace explicit machines/trailers or unresolved BlueFolder equipment
+  ---
+  duration_ms: 0.8597
+  ...
+# Subtest: BlueFolder warehouse aliases require exact work-order site IDs and Lathrop own-site address, never a cached nested site
+ok 34 - BlueFolder warehouse aliases require exact work-order site IDs and Lathrop own-site address, never a cached nested site
+  ---
+  duration_ms: 2.7519
+  ...
+# Subtest: warehouse defaults fail closed on identity drift, missing Interior, wrong ownership, tombstones and malformed links
+ok 35 - warehouse defaults fail closed on identity drift, missing Interior, wrong ownership, tombstones and malformed links
+  ---
+  duration_ms: 4.9155
+  ...
+# Subtest: a confirmed direct item move is atomic, audited, searchable, and idempotent
+ok 36 - a confirmed direct item move is atomic, audited, searchable, and idempotent
+  ---
+  duration_ms: 2.7549
+  ...
+# Subtest: movement mode is required and from_work_order is authoritative over prior location
+ok 37 - movement mode is required and from_work_order is authoritative over prior location
+  ---
+  duration_ms: 1.2298
+  ...
+# Subtest: an existing work-order assignment becomes current while all original assignments retain their dates and metadata in history
+ok 38 - an existing work-order assignment becomes current while all original assignments retain their dates and metadata in history
+  ---
+  duration_ms: 0.9901
+  ...
+# Subtest: a destination machine can use an unambiguous scalar client link
+ok 39 - a destination machine can use an unambiguous scalar client link
+  ---
+  duration_ms: 0.7508
+  ...
+# Subtest: changed BlueFolder equipment blocks a stale auto-linked machine before current_at_work_order
+ok 40 - changed BlueFolder equipment blocks a stale auto-linked machine before current_at_work_order
+  ---
+  duration_ms: 0.4018
+  ...
+# Subtest: selected BlueFolder equipment requires a linked machine before current_at_work_order
+ok 41 - selected BlueFolder equipment requires a linked machine before current_at_work_order
+  ---
+  duration_ms: 0.8748
+  ...
+# Subtest: linked BlueFolder machine is saved with references, prior history, and backlinks for current_at_work_order
+ok 42 - linked BlueFolder machine is saved with references, prior history, and backlinks for current_at_work_order
+  ---
+  duration_ms: 0.993
+  ...
+# Subtest: changed BlueFolder equipment blocks a stale auto-linked machine before from_work_order
+ok 43 - changed BlueFolder equipment blocks a stale auto-linked machine before from_work_order
+  ---
+  duration_ms: 0.3249
+  ...
+# Subtest: selected BlueFolder equipment requires a linked machine before from_work_order
+ok 44 - selected BlueFolder equipment requires a linked machine before from_work_order
+  ---
+  duration_ms: 0.7775
+  ...
+# Subtest: linked BlueFolder machine is saved with references, prior history, and backlinks for from_work_order
+ok 45 - linked BlueFolder machine is saved with references, prior history, and backlinks for from_work_order
+  ---
+  duration_ms: 0.7357
+  ...
+# Subtest: conflicting direct machine client fields cannot be rescued by a stale client backlink
+ok 46 - conflicting direct machine client fields cannot be rescued by a stale client backlink
+  ---
+  duration_ms: 0.3899
+  ...
+# Subtest: a trailer destination requires a live machine and rejects a different work-order machine
+ok 47 - a trailer destination requires a live machine and rejects a different work-order machine
+  ---
+  duration_ms: 0.6276
+  ...
+# Subtest: trailer AIS20 and machine AIS82553 are saved together with full history for current_at_work_order
+ok 48 - trailer AIS20 and machine AIS82553 are saved together with full history for current_at_work_order
+  ---
+  duration_ms: 0.8583
+  ...
+# Subtest: trailer AIS20 and machine AIS82553 are saved together with full history for from_work_order
+ok 49 - trailer AIS20 and machine AIS82553 are saved together with full history for from_work_order
+  ---
+  duration_ms: 0.7474
+  ...
+# Subtest: machines that opt out of complete associatedParts backlinks are never rewritten
+ok 50 - machines that opt out of complete associatedParts backlinks are never rewritten
+  ---
+  duration_ms: 0.6862
+  ...
+# Subtest: pallet and direct scans expand and deduplicate the same current item
+ok 51 - pallet and direct scans expand and deduplicate the same current item
+  ---
+  duration_ms: 1.4775
+  ...
+# Subtest: direct bins and pallet-linked bins expand their exact current contents
+ok 52 - direct bins and pallet-linked bins expand their exact current contents
+  ---
+  duration_ms: 1.5586
+  ...
+# Subtest: confirmation stops when a reviewed bin or pallet membership changes
+ok 53 - confirmation stops when a reviewed bin or pallet membership changes
+  ---
+  duration_ms: 0.5346
+  ...
+# Subtest: legacy machine backlinks are removed and the destination backlink is added
+ok 54 - legacy machine backlinks are removed and the destination backlink is added
+  ---
+  duration_ms: 0.8273
+  ...
+# Subtest: explicit movement mode archives a stale trailer configuration without trusting it
+ok 55 - explicit movement mode archives a stale trailer configuration without trusting it
+  ---
+  duration_ms: 0.8049
+  ...
+# Subtest: movement fails closed if the authoritative Lake Forest client is missing
+ok 56 - movement fails closed if the authoritative Lake Forest client is missing
+  ---
+  duration_ms: 0.4551
+  ...
+# Subtest: movement fails closed if the Interior machine is missing
+ok 57 - movement fails closed if the Interior machine is missing
+  ---
+  duration_ms: 0.5766
+  ...
+# Subtest: movement fails closed when the canonical Interior machine has conflicting client evidence
+ok 58 - movement fails closed when the canonical Interior machine has conflicting client evidence
+  ---
+  duration_ms: 0.436
+  ...
+# Subtest: a missing prior current client is archived and does not block explicit movement
+ok 59 - a missing prior current client is archived and does not block explicit movement
+  ---
+  duration_ms: 0.758
+  ...
+# Subtest: Tool from_work_order movement preserves separate identity, flat fields, all history and components
+ok 60 - Tool from_work_order movement preserves separate identity, flat fields, all history and components
+  ---
+  duration_ms: 2.4401
+  ...
+# Subtest: Tool current_at_work_order movement preserves separate identity, flat fields, all history and components
+ok 61 - Tool current_at_work_order movement preserves separate identity, flat fields, all history and components
+  ---
+  duration_ms: 1.2952
+  ...
+# Subtest: mixed Tool/item scans stay typed and do not expand Tool component items
+ok 62 - mixed Tool/item scans stay typed and do not expand Tool component items
+  ---
+  duration_ms: 1.3261
+  ...
+# Subtest: bin/pallet Slack targets are root summaries while contained item movement and legacy membership proofs stay intact
+ok 63 - bin/pallet Slack targets are root summaries while contained item movement and legacy membership proofs stay intact
+  ---
+  duration_ms: 2.2343
+  ...
+# Subtest: unknown, deleted, conflicting and malformed Tool scans fail closed before any write
+ok 64 - unknown, deleted, conflicting and malformed Tool scans fail closed before any write
+  ---
+  duration_ms: 1.029
+  ...
+# Subtest: cross-kind IDs cannot collide in movement or Slack receipt identity
+ok 65 - cross-kind IDs cannot collide in movement or Slack receipt identity
+  ---
+  duration_ms: 1.2812
+  ...
+# Subtest: empty containers still reject movement and do not become Slack-only sends
+ok 66 - empty containers still reject movement and do not become Slack-only sends
+  ---
+  duration_ms: 0.1755
+  ...
+# Subtest: warehouse Interior mappings are exact, immutable identities and explicit asset evidence is never empty by truthiness
+ok 67 - warehouse Interior mappings are exact, immutable identities and explicit asset evidence is never empty by truthiness
+  ---
+  duration_ms: 0.0997
+  ...
+# Subtest: cleaning, operation IDs, origin choices, and scan codes are deterministic
+ok 68 - cleaning, operation IDs, origin choices, and scan codes are deterministic
+  ---
+  duration_ms: 0.3673
+  ...
+# Subtest: explicit movement modes archive exact prior branches before applying inverse endpoints
+ok 69 - explicit movement modes archive exact prior branches before applying inverse endpoints
+  ---
+  duration_ms: 0.6549
+  ...
+# Subtest: legacy warehouse fields are retained in the prior snapshot and carried to From
+ok 70 - legacy warehouse fields are retained in the prior snapshot and carried to From
+  ---
+  duration_ms: 0.321
+  ...
+# Subtest: legacy-only association aliases remain visible in flattened item history
+ok 71 - legacy-only association aliases remain visible in flattened item history
+  ---
+  duration_ms: 0.2889
+  ...
+# Subtest: work order options are cleaned, deduplicated, and ranked by number and text
+ok 72 - work order options are cleaned, deduplicated, and ranked by number and text
+  ---
+  duration_ms: 0.5124
+  ...
+# Subtest: association snapshots enforce site, machine, and trailer structure
+ok 73 - association snapshots enforce site, machine, and trailer structure
+  ---
+  duration_ms: 0.1192
+  ...
+# Subtest: SoCal detection uses canonical client, interior machine, or a live trailer mapping
+ok 74 - SoCal detection uses canonical client, interior machine, or a live trailer mapping
+  ---
+  duration_ms: 0.0916
+  ...
+# Subtest: an item already in SoCal archives current as From and dispatches in one transition
+ok 75 - an item already in SoCal archives current as From and dispatches in one transition
+  ---
+  duration_ms: 0.5683
+  ...
+# Subtest: keep_origin preserves a non-SoCal current association as From
+ok 76 - keep_origin preserves a non-SoCal current association as From
+  ---
+  duration_ms: 0.2252
+  ...
+# Subtest: stage_via_socal records two transitions and leaves SoCal as final From
+ok 77 - stage_via_socal records two transitions and leaves SoCal as final From
+  ---
+  duration_ms: 0.34
+  ...
+# Subtest: existing history is never truncated while operation audit fields are appended
+ok 78 - existing history is never truncated while operation audit fields are appended
+  ---
+  duration_ms: 0.307
+  ...
+# Subtest: transition planning rejects unsafe or ambiguous input
+ok 79 - transition planning rejects unsafe or ambiguous input
+  ---
+  duration_ms: 0.2077
+  ...
+# Subtest: machine backlink canonicalization removes every old identity and appends one ref
+ok 80 - machine backlink canonicalization removes every old identity and appends one ref
+  ---
+  duration_ms: 0.0952
+  ...
+# Subtest: scanned bins and pallets deliver only their saved name/description, never their contents
+ok 81 - scanned bins and pallets deliver only their saved name/description, never their contents
+  ---
+  duration_ms: 1.315
+  ...
+# Subtest: container sends verify each contained movement and reject stale or forged manifests
+ok 82 - container sends verify each contained movement and reject stale or forged manifests
+  ---
+  duration_ms: 0.5093
+  ...
+# Subtest: tool target uses Tool movement audit and shared exact-ID guard, reporting an existing row without posting again
+ok 83 - tool target uses Tool movement audit and shared exact-ID guard, reporting an existing row without posting again
+  ---
+  duration_ms: 0.4494
+  ...
+# Subtest: current_at_work_order sends persisted fields to shipping only after the saved operation exists
+ok 84 - current_at_work_order sends persisted fields to shipping only after the saved operation exists
+  ---
+  duration_ms: 0.4005
+  ...
+# Subtest: from_work_order sends persisted fields to receiving only after the saved operation exists
+ok 85 - from_work_order sends persisted fields to receiving only after the saved operation exists
+  ---
+  duration_ms: 0.3204
+  ...
+# Subtest: only confirmed manifest membership and its creator authorize Slack
+ok 86 - only confirmed manifest membership and its creator authorize Slack
+  ---
+  duration_ms: 0.4853
+  ...
+# Subtest: changed associations, removed work order, archived item or movement date block stale sends
+ok 87 - changed associations, removed work order, archived item or movement date block stale sends
+  ---
+  duration_ms: 0.4313
+  ...
+# Subtest: concurrent click is leased and cannot create another Slack row
+ok 88 - concurrent click is leased and cannot create another Slack row
+  ---
+  duration_ms: 0.2923
+  ...
+# Subtest: network uncertainty after create started is blocked instead of blindly duplicated
+ok 89 - network uncertainty after create started is blocked instead of blindly duplicated
+  ---
+  duration_ms: 0.2657
+  ...
+# Subtest: explicit Slack rejection permits retry; fatal/unknown responses do not
+ok 90 - explicit Slack rejection permits retry; fatal/unknown responses do not
+  ---
+  duration_ms: 0.8298
+  ...
+# Subtest: a partial send resumes its saved row and payload without saving inventory again
+ok 91 - a partial send resumes its saved row and payload without saving inventory again
+  ---
+  duration_ms: 0.4239
+  ...
+# Subtest: expired in-flight create with no row remains uncertain; pre-create lease may recover
+ok 92 - expired in-flight create with no row remains uncertain; pre-create lease may recover
+  ---
+  duration_ms: 0.3084
+  ...
+# Subtest: photo failures occur before any Slack creation and are retryable
+ok 93 - photo failures occur before any Slack creation and are retryable
+  ---
+  duration_ms: 0.1905
+  ...
+# Subtest: photo Error and TypeError retain safe diagnostics and never imply an existing Slack row
+ok 94 - photo Error and TypeError retain safe diagnostics and never imply an existing Slack row
+  ---
+  duration_ms: 0.7634
+  ...
+# Subtest: storage service error codes are preserved without disclosing SDK messages or URLs
+ok 95 - storage service error codes are preserved without disclosing SDK messages or URLs
+  ---
+  duration_ms: 0.818
+  ...
+# Subtest: the reproduced photo storage authentication failure has a specific safe diagnostic
+ok 96 - the reproduced photo storage authentication failure has a specific safe diagnostic
+  ---
+  duration_ms: 0.2556
+  ...
+# Subtest: payload building and checkpoint failures retain their own stage
+ok 97 - payload building and checkpoint failures retain their own stage
+  ---
+  duration_ms: 0.7335
+  ...
+# Subtest: known Slack failures show actionable safe code and distinguish existing row resumes
+ok 98 - known Slack failures show actionable safe code and distinguish existing row resumes
+  ---
+  duration_ms: 0.8987
+  ...
+# Subtest: untrusted error names/codes/messages/causes and sender debug are never exposed in diagnostics
+ok 99 - untrusted error names/codes/messages/causes and sender debug are never exposed in diagnostics
+  ---
+  duration_ms: 0.4556
+  ...
+# Subtest: failure receipt storage errors are logged safely without clearing create uncertainty
+ok 100 - failure receipt storage errors are logged safely without clearing create uncertainty
+  ---
+  duration_ms: 0.3585
+  ...
+# Subtest: diagnostic logger failure cannot prevent a safe failure receipt
+ok 101 - diagnostic logger failure cannot prevent a safe failure receipt
+  ---
+  duration_ms: 0.1925
+  ...
+# Subtest: a lost completion response cannot downgrade a durably sent receipt
+ok 102 - a lost completion response cannot downgrade a durably sent receipt
+  ---
+  duration_ms: 0.2944
+  ...
+# Subtest: photo loader uses existing folders and one extra URL to disclose the ten-photo limit
+ok 103 - photo loader uses existing folders and one extra URL to disclose the ten-photo limit
+  ---
+  duration_ms: 0.3673
+  ...
+# Subtest: invalid item paths and missing auth never access Firestore
+ok 104 - invalid item paths and missing auth never access Firestore
+  ---
+  duration_ms: 0.285
+  ...
+# Subtest: thread link runs only after a durable sent list receipt and uses saved identity
+ok 105 - thread link runs only after a durable sent list receipt and uses saved identity
+  ---
+  duration_ms: 0.2592
+  ...
+# Subtest: thread-only retry never repeats list creation, photo loading, or inventory writes
+ok 106 - thread-only retry never repeats list creation, photo loading, or inventory writes
+  ---
+  duration_ms: 0.3331
+  ...
+# Subtest: list failure never starts thread posting; interrupted thread result preserves list success
+ok 107 - list failure never starts thread posting; interrupted thread result preserves list success
+  ---
+  duration_ms: 0.3867
+  ...
+# Subtest: legacy receipts are not opted into thread linking during status checks or retries
+ok 108 - legacy receipts are not opted into thread linking during status checks or retries
+  ---
+  duration_ms: 0.2973
+  ...
+# Subtest: complete saved list-to-thread integration posts native row link once and preserves all inventory
+ok 109 - complete saved list-to-thread integration posts native row link once and preserves all inventory
+  ---
+  duration_ms: 2.0238
+  ...
+# Subtest: current_at_work_order posts one native list-record link into exact root, without pictures or unfurls
+ok 110 - current_at_work_order posts one native list-record link into exact root, without pictures or unfurls
+  ---
+  duration_ms: 1.3065
+  ...
+# Subtest: from_work_order posts one native list-record link into exact root, without pictures or unfurls
+ok 111 - from_work_order posts one native list-record link into exact root, without pictures or unfurls
+  ---
+  duration_ms: 0.6191
+  ...
+# Subtest: legacy completed rows do not back-post and invalid actor/manifest never writes
+ok 112 - legacy completed rows do not back-post and invalid actor/manifest never writes
+  ---
+  duration_ms: 0.8237
+  ...
+# Subtest: missing, quarantined, deleted, identity-conflicting and duplicate thread mappings never post
+ok 113 - missing, quarantined, deleted, identity-conflicting and duplicate thread mappings never post
+  ---
+  duration_ms: 2.1638
+  ...
+# Subtest: exact root proof rejects replies, title references, conflicting BlueFolder numbers and prefixes
+ok 114 - exact root proof rejects replies, title references, conflicting BlueFolder numbers and prefixes
+  ---
+  duration_ms: 1.3125
+  ...
+# Subtest: known posting rejection can retry only link, with stable client ID
+ok 115 - known posting rejection can retry only link, with stable client ID
+  ---
+  duration_ms: 1.8553
+  ...
+# Subtest: unknown errors and transport loss after post starts stay uncertain, never repost
+ok 116 - unknown errors and transport loss after post starts stay uncertain, never repost
+  ---
+  duration_ms: 1.3943
+  ...
+# Subtest: a concurrent click respects thread lease independently of completed list receipt
+ok 117 - a concurrent click respects thread lease independently of completed list receipt
+  ---
+  duration_ms: 0.366
+  ...
+# Subtest: expired leases recover before post but become uncertain after durable postStarted
+ok 118 - expired leases recover before post but become uncertain after durable postStarted
+  ---
+  duration_ms: 0.368
+  ...
+# Subtest: lost durable completion response never downgrades sent or posts twice
+ok 119 - lost durable completion response never downgrades sent or posts twice
+  ---
+  duration_ms: 0.3961
+  ...
+# Subtest: lost before-post checkpoint response blocks repost even if no request was sent
+ok 120 - lost before-post checkpoint response blocks repost even if no request was sent
+  ---
+  duration_ms: 0.3157
+  ...
+# Subtest: mapping changes after root verification are caught before posting
+ok 121 - mapping changes after root verification are caught before posting
+  ---
+  duration_ms: 0.2645
+  ...
+# Subtest: expired stale worker cannot post after another worker finishes the same link
+ok 122 - expired stale worker cannot post after another worker finishes the same link
+  ---
+  duration_ms: 0.4478
+  ...
+# Subtest: HTTP429 is definitive and preserves a useful retry-after instruction
+ok 123 - HTTP429 is definitive and preserves a useful retry-after instruction
+  ---
+  duration_ms: 0.3521
+  ...
+# Subtest: saved row or payload mutation during root verification fails closed
+ok 124 - saved row or payload mutation during root verification fails closed
+  ---
+  duration_ms: 0.4612
+  ...
+# Subtest: missing token or root read errors can retry without ever marking a post started
+ok 125 - missing token or root read errors can retry without ever marking a post started
+  ---
+  duration_ms: 0.5105
+  ...
+1..125
+# tests 125
+# suites 0
+# pass 125
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 835.9222

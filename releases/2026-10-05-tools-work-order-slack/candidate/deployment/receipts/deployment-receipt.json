@@ -1,0 +1,39 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-10-05T16:35:06.853Z",
+  "originalRevision": "nextserverwest-00075-rod",
+  "originalSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1790869540632509"
+    }
+  },
+  "originalUpdateTime": "2026-10-01T15:48:45.807350374Z",
+  "uploadedSource": {
+    "bucket": "gcf-v2-uploads-177857525147.us-west2.cloudfunctions.appspot.com",
+    "object": "cb5b348d-3c38-4a4a-840f-be4b40ec49e1.zip"
+  },
+  "artifactSHA256": "92cb67224b83e0cc1838bd67d3db6f98932649877967c5198493f35dae450e04",
+  "compositionReportSHA256": "f7f0e1cd2b4820ec8d19797653113cb35b6a93b23cc829be85a58594185736cc",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "buildId": "tools-work-order-92b00851312818f2",
+  "sourceOnly": true,
+  "rollbackArchive": "source.zip",
+  "databaseWrites": 0,
+  "testSlackPosts": 0,
+  "testPrintJobs": 0,
+  "scope": "Typed tool scanning; scan-root Slack summaries; exact-ID tool deduplication; tool labels",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1791218113230-65d1a775ab612-f2991218-a4343535",
+  "completedAt": "2026-10-05T16:39:27.701Z",
+  "revision": "nextserverwest-00076-duk",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1791218114143581"
+    }
+  },
+  "deployedUpdateTime": "2026-10-05T16:39:28.991080245Z",
+  "unrelatedConfigurationPreserved": true
+}

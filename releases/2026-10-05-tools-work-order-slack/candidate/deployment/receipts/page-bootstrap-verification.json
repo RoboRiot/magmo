@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-10-05T16:44:02.745Z",
+  "candidateDirectory": "bootstrap-fixed-source",
+  "cases": [
+    {
+      "route": "/NewSearch/mainSearch",
+      "htmlSHA256": "3d97d620045293089a8e1e7668241882a0810448873575c8a0784830afcdcc12",
+      "pageAsset": "static/chunks/pages/NewSearch/mainSearch-4c5267b535a13af7.js",
+      "pageSHA256": "4c5267b535a13af7c5ccf439041ad0be4a06add301535142efb1f735adbddefc",
+      "decodedBootstrapReferenceMatchesManifest": true
+    },
+    {
+      "route": "/NewSearch/Tools/[id]",
+      "htmlSHA256": "ccb4b42b493087924a28c30e40391207a51ba3b4569aaec1516e7d3b154f3251",
+      "pageAsset": "static/chunks/pages/NewSearch/Tools/[id]-8337b6b88e2472d0.js",
+      "pageSHA256": "8337b6b88e2472d01ce71cde2fb2d87f3c1ef1b84474be67b906c584c8696e90",
+      "decodedBootstrapReferenceMatchesManifest": true
+    }
+  ],
+  "productionRequests": 0,
+  "productionWrites": 0
+}

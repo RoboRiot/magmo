@@ -1,0 +1,24 @@
+{
+  "createdAt": "2026-10-05T16:09:08.484Z",
+  "remoteRoot": "C:\\Users\\Owner\\Desktop\\warehouse",
+  "before": {
+    "label_server/print_bluefolder_combo.py": "5f6b00d5297a729eaea3cf31f479cefffca72ace38cbfc4a6a5a158015200941",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py": "75533f280bb38e35399a0659d5da5669312f93a281f39a6c1f5f51cbd48d4ee1"
+  },
+  "preserve": {
+    "scanner-server/warehouse_scanner/storage_label_print.py": "6f69d064c187e2d5932666985c69cade9809d6d6bd2e3cd59e99bdc5b12328f2",
+    "warehouse_service_manager.py": "da41cddb8693652a369c8ea7422b5f5c61feffa914c358482e2f9e08c6d8665a"
+  },
+  "runtimeFiles": [
+    "label_server/print_bluefolder_combo.py",
+    "scanner-server/warehouse_scanner/tool_label_print.py",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py"
+  ],
+  "files": {
+    "label_server/print_bluefolder_combo.py": "9fd92b70b4dd60e1cf7cb112aaf6d75e7efdf8867d85a467d8e9a7ba4008226d",
+    "scanner-server/warehouse_scanner/tool_label_print.py": "7e549e7d4393e729d1ea6b81e4ade8c8affdbf058293d60c113f4e1bbb91a061",
+    "scanner-server/warehouse_scanner/storage_scan_bridge.py": "f7847c8afa3b244e1dd4d2652f60d315db3623d430647a3e4740ee3c57211d52",
+    "scanner-server/tests/test_tool_label_print.py": "53810f5119fcb35149744915d898812e6a4f45598de8683cc92ffe1893b80291",
+    "scanner-server/tests/test_storage_scan_bridge.py": "9b285676e08273c66700233fe1785999052a3ed0b8028d48b0aa3b49550f8435"
+  }
+}

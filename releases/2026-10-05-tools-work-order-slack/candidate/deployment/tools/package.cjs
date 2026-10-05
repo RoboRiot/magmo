@@ -1,0 +1,32 @@
+"use strict";
+const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict"), cp = require("node:child_process");
+const sha256 = (value) => require("node:crypto").createHash("sha256").update(value).digest("hex");
+const here = __dirname, file = (name) => path.join(here, name), readJson = (name) => JSON.parse(fs.readFileSync(file(name), "utf8"));
+const walk = (directory) => fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+  const full = path.join(directory, entry.name); assert(entry.isDirectory() || entry.isFile(), "No symlinks/special files in release");
+  return entry.isDirectory() ? walk(full) : [full];
+});
+const report = readJson("composition-report.json"), baseline = readJson("baseline-files.json");
+const candidate = file("scoped-source");
+assert(fs.existsSync(candidate)); assert.equal(report.noDeletedFiles, true); assert.equal(report.unrelatedFilesPreserved, true); assert.equal(report.runtimeConfigChanged, false);
+const files = walk(candidate).map((full) => ({ path: path.relative(candidate, full).replaceAll("\\", "/"), bytes: fs.statSync(full).size, sha256: sha256(fs.readFileSync(full)) })).sort((a, b) => a.path.localeCompare(b.path));
+assert(files.every(({ path: name }) => !/(^|\/)(?:\.env(?:\.|$)|private|node_modules|cache|.*firebase-adminsdk.*)(?:$|\/)/i.test(name)), "Release contains an excluded path");
+const before = new Map((Array.isArray(baseline) ? baseline : baseline.files).map((entry) => [entry.path, entry.sha256]));
+const after = new Map(files.map((entry) => [entry.path, entry.sha256]));
+const changed = [...before].filter(([name, hash]) => { assert(after.has(name), `Missing baseline file ${name}`); return after.get(name) !== hash; }).map(([name]) => name).sort();
+const added = files.filter((entry) => !before.has(entry.path)).map((entry) => entry.path).sort();
+assert.deepEqual(changed, [...report.modified].sort()); assert.deepEqual(added, [...report.added].sort());
+for (const name of ["package.json", "package-lock.json", "index.js"]) assert.equal(after.get(name), before.get(name), `${name} must preserve the live runtime`);
+fs.writeFileSync(file("candidate-files.json"), JSON.stringify(files, null, 2) + "\n");
+assert(!fs.existsSync(file("artifact.zip")), "Preserve previously reviewed package");
+fs.writeFileSync(file("zip-files.txt"), files.map((entry) => entry.path).join("\n") + "\n");
+cp.execFileSync("tar", ["-a", "-cf", file("artifact.zip"), "-C", candidate, "-T", file("zip-files.txt")], { stdio: "pipe", windowsHide: true });
+const extracted = file("package-verification"); assert(!fs.existsSync(extracted)); fs.mkdirSync(extracted);
+const names = cp.execFileSync("tar", ["-tf", file("artifact.zip")], { encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
+assert.deepEqual(names.sort(), files.map((entry) => entry.path).sort());
+assert(names.every((name) => !path.isAbsolute(name) && !name.includes("\\") && !name.split("/").includes("..")));
+cp.execFileSync("tar", ["-xf", file("artifact.zip"), "-C", extracted], { stdio: "pipe", windowsHide: true });
+for (const entry of files) assert.equal(sha256(fs.readFileSync(path.join(extracted, entry.path))), entry.sha256, `Packaged byte mismatch: ${entry.path}`);
+const receipt = { result: "PASS", createdAt: new Date().toISOString(), files: files.length, modified: changed.length, added: added.length, archiveBytes: fs.statSync(file("artifact.zip")).size,
+  artifactSHA256: sha256(fs.readFileSync(file("artifact.zip"))), compositionReportSHA256: sha256(fs.readFileSync(file("composition-report.json"))), candidateFilesSHA256: sha256(fs.readFileSync(file("candidate-files.json"))), extractedBytesMatch: true, liveRuntimeFilesPreserved: true };
+fs.writeFileSync(file("package-verification.json"), JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" }); console.log(JSON.stringify(receipt));

@@ -1,0 +1,10 @@
+{
+  "firestore": { "rules": "C:/Users/mack2/Desktop/code/tmp/tools-work-order-slack-20261005/deployment/firestore-scoped.rules" },
+  "emulators": {
+    "firestore": { "host": "127.0.0.1", "port": 8189 },
+    "hub": { "host": "127.0.0.1", "port": 4409 },
+    "logging": { "host": "127.0.0.1", "port": 4509 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

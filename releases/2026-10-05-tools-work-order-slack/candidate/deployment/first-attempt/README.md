@@ -1,0 +1,7 @@
+# First deployment — retained evidence, not final live verification
+
+Revision `nextserverwest-00076-duk` used artifact SHA-256 `92cb67224b83e0cc1838bd67d3db6f98932649877967c5198493f35dae450e04`. The server functions and browser factories passed their compiled tests. Live verification then found that the tool page's pre-rendered HTML retained the old URL-encoded script filename, so direct tool-page visits did not load the tested page asset.
+
+The independent review here proves the first candidate's executable scope and test binding; it did not verify that every HTML bootstrap URL selected the new factory. The intermediate correction artifact `18c703d6e4703016d5177cb9d788c49702970fc5141361f5e38be29e904c05b5` changed that single encoded URL, but was never deployed: a preflight guard stopped when a separate authorized Ops deployment began. It must not be deployed over that successor. The final correction is rebased onto `nextserverwest-00077-puh`, preserving Ops and the feature changes from revision76. The page-bootstrap regression verifies decoded HTML script URLs against the manifest and exact current asset hashes.
+
+Use the later `rebased-77` deployment and live-verification receipts for final production status and revision77 as the HTML correction's rollback target. The copies in this directory are retained separately so the failed live-verification finding is not erased or misrepresented as first-attempt success.

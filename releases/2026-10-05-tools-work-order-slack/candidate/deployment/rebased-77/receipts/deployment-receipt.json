@@ -1,0 +1,34 @@
+{
+  "state": "ACTIVE",
+  "startedAt": "2026-10-05T17:00:27.343Z",
+  "baselineRevision": "nextserverwest-00077-puh",
+  "baselineArchiveSHA256": "6c8768b805303aab52528f3cf4279626deca2f4223b027c0aeaffb0a025f83c0",
+  "baselineSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1791218790974241"
+    }
+  },
+  "artifactSHA256": "52f027af37b5fee19035ff4e387e5a4eb19e22f5a668d8e2df366b0ddfb5303e",
+  "configHash": "de4d951c93305fd1ae8a781baae316a87b52f5e8825a907a736c0f427eb147fc",
+  "buildId": "ops-daily-1be8985f18eaa93d",
+  "sourceOnly": true,
+  "databaseWrites": 0,
+  "testSlackPosts": 0,
+  "testPrintJobs": 0,
+  "scope": "One Tool HTML bootstrap reference; preserve Ops77 and tool/scan76 code",
+  "rollbackArchive": "source.zip",
+  "operation": "projects/magmo-ac10c/locations/us-west2/operations/operation-1791219633774-65d1ad1fc5e32-b630f0ff-b789ad4d",
+  "completedAt": "2026-10-05T17:03:29.889Z",
+  "revision": "nextserverwest-00078-dag",
+  "deployedSource": {
+    "storageSource": {
+      "bucket": "gcf-v2-sources-177857525147-us-west2",
+      "object": "nextServerWest/function-source.zip",
+      "generation": "1791219634640478"
+    }
+  },
+  "deployedUpdateTime": "2026-10-05T17:03:07.193195803Z",
+  "unrelatedConfigurationPreserved": true
+}

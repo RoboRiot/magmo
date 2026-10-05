@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checkedAt": "2026-10-05T16:22:06.643Z",
+  "routeSHA256": "3edecef6eef6087336621fb4603ffac41f80886f81dc2ed305be6ba8da4ca736",
+  "checks": [
+    "GET method guard",
+    "Unauthenticated POST guard",
+    "Forged payload fields rejected",
+    "Item ID rejected as Tool",
+    "Trusted Tool payload and single mocked print"
+  ],
+  "actualBaselineWebpackRuntime": true,
+  "baselineChunk94502Collision": false,
+  "pagesManifestOnlyNewToolRoute": true,
+  "realDatabaseReads": 0,
+  "realDatabaseWrites": 0,
+  "realPrintJobs": 0,
+  "productionMutations": 0
+}

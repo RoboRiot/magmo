@@ -1,0 +1,38 @@
+"use strict";
+const {spawnSync}=require('node:child_process');
+const {fs,path,assert,file,json,sha256,writeReceipt}=require('./cloud-common.cjs');
+const root=path.resolve(__dirname,'../../..');
+const report=json('composition-report.json'),pack=json('package-verification.json');
+assert.equal(pack.result,'PASS');assert.equal(pack.artifactSHA256,'92cb67224b83e0cc1838bd67d3db6f98932649877967c5198493f35dae450e04');
+assert.equal(sha256(fs.readFileSync(file('artifact.zip'))),pack.artifactSHA256);
+assert.equal(sha256(fs.readFileSync(file('composition-report.json'))),pack.compositionReportSHA256);
+assert.equal(sha256(fs.readFileSync(file('candidate-files.json'))),pack.candidateFilesSHA256);
+for(const f of json('candidate-files.json'))assert.equal(sha256(fs.readFileSync(file('scoped-source/'+f.path))),f.sha256,f.path);
+for(const[p,h]of Object.entries(report.frozenHashes))assert.equal(sha256(fs.readFileSync(path.join(root,p))),h,p);
+assert.equal(json('independent-review.json').result,'PASS');
+const toolReview=json('deployment-tools-review.json');assert.equal(toolReview.result,'PASS');
+const reviewedTools=['deploy.cjs','cloud-common.cjs','rollback.cjs','verify-live.cjs','verify-package-gates.cjs','approve-release.cjs','../../ops-reliability-20260922/cloud.cjs'];
+assert.deepEqual(Object.keys(toolReview.files).sort(),[...reviewedTools].sort(),'Deployment review must bind every reviewed tool');
+for(const n of reviewedTools)assert.equal(sha256(fs.readFileSync(file(n))),toolReview.files[n],`Reviewed tool changed: ${n}`);
+assert.equal(json('compiled-services-verification.json').passed,125);
+assert.equal(json('compiled-services-verification.json').failed,0);
+assert.equal(json('compiled-modal-verification.json').result,'PASS');assert.equal(json('compiled-modal-verification.json').results.length,13);
+assert.equal(json('compiled-tool-page-verification.json').result,'PASS');assert.equal(json('compiled-tool-page-verification.json').results.length,6);
+assert.equal(json('compiled-tool-label-api-verification.json').passed,true);
+assert.equal(json('rules-deployment-receipt.json').state,'ACTIVE');
+assert.equal(json('server-deployment-verification.json').ok,true);
+const verification=spawnSync(process.execPath,['scripts/backup-firestore-local.mjs','--verify=outputs/firestore-backups/2026-10-05-tools-work-order-prechange'],{cwd:root,encoding:'utf8'});
+assert.equal(verification.status,0,'Backup verification failed');const backup=JSON.parse(verification.stdout);
+assert(backup.valid&&backup.status==='complete');assert.equal(backup.documentCount,199951);assert.equal(backup.sha256,'c525523cb6b847f4eac4039d46bebd6f4304fa4c37e380618af28c35314ae85c');
+writeReceipt('backup-verification.json',{...backup,verifiedAt:new Date().toISOString()});
+const config=json('private/function-before.json');
+const secrets=Object.entries(config.serviceConfig.environmentVariables||{}).filter(([k,v])=>/TOKEN|SECRET|PASSWORD|PRIVATE|CREDENTIAL/i.test(k)&&!/^NEXT_PUBLIC_/.test(k)&&typeof v==='string'&&v.length>=16).map(([,v])=>v);
+for(const name of [...report.modified,...report.added]){
+ const data=fs.readFileSync(file('scoped-source/'+name));
+ for(const secret of secrets)assert(!data.includes(Buffer.from(secret)),`Private value in artifact: ${name}`);
+ assert(!/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{20,}/.test(data.toString('utf8')),`Credential signature in artifact: ${name}`);
+}
+writeReceipt('artifact-secret-scan.json',{result:'PASS',checkedAt:new Date().toISOString(),filesChecked:report.modified.length+report.added.length,privateValuesPrinted:false});
+const names=['package-verification.json','candidate-files.json','compiler-success-v2.json','compiler-inputs-v2.json','composition-report.json','server-overlay-report-v2.json','modal-overlay-report.json','tool-page-overlay-report.json','compiled-services-verification.json','compiled-modal-verification.json','compiled-tool-page-verification.json','compiled-tool-label-api-verification.json','independent-review.json','deployment-tools-review.json','rules-verification.json','rules-deployment-receipt.json','server-deployment-verification.json','backup-verification.json','artifact-secret-scan.json'];
+writeReceipt('package-gates.json',{result:'PASS',checkedAt:new Date().toISOString(),artifactSHA256:pack.artifactSHA256,compositionReportSHA256:pack.compositionReportSHA256,compiledTestsPassed:true,independentReviewPassed:true,backupVerified:true,scopedSourceOnly:true,receiptHashes:Object.fromEntries(names.map(n=>[n,sha256(fs.readFileSync(file(n)))]))});
+console.log(JSON.stringify({result:'PASS',artifactSHA256:pack.artifactSHA256,backupRecords:backup.documentCount,receiptCount:names.length}));
