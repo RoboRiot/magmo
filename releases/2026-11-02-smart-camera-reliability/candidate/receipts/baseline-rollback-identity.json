@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-11-02T18:18:24.254Z",
+  "revision": "nextserverwest-00099-nal",
+  "buildId": "item-save-navigation-b6cb4b71af63cae0",
+  "archiveSHA256": "ad0c4e04be6ead54219c3d0d0656142e2151fb6c4622583c03d47566c1decb79",
+  "configHash": "3791a2d2185319e9042180bd0e10d536d7837b674dac932791216e0d0b4e8ac4",
+  "sourceGeneration": "1792616558014738",
+  "exactRollbackArchiveRetainedOutsideGit": true,
+  "archiveIncluded": false,
+  "rollbackPerformed": false,
+  "warning": "Recheck production identity and apply the critical release policy before any rollback; this summary is not an executable restore artifact."
+}

@@ -1,0 +1,125 @@
+{
+  "createdAt": "2026-11-02T18:49:12.608Z",
+  "mode": "OFFLINE_COMPILED_API_WITH_SYNTHETIC_SDKS",
+  "overlay": "api-overlay-v4",
+  "artifacts": [
+    {
+      "file": ".next/server/pages/api/items/sync-index.js",
+      "fileSHA256": "300f1b7e4bffb5c45c6f3d301a2cd042ca3295d70335bf7ab0386cd2ee124b04",
+      "routeFactoryId": 31328,
+      "routeFactorySHA256": "58ff212b32fddc955e927f9eea1e5f3bc3ff646c85649461e117e5b8a22124d4",
+      "preservedDeployedFactories": [
+        {
+          "factoryId": 12031,
+          "sha256": "d622ff0b1060e98a16edf6aeb4b5a086a53dc2e824ed4de5b452b543e09807aa"
+        },
+        {
+          "factoryId": 73847,
+          "sha256": "ab844939ba82c4df037b6a1ef2ce2bee869dc7033c327adfd1e390060965a74d"
+        }
+      ]
+    },
+    {
+      "file": ".next/server/pages/api/items/change-requests.js",
+      "fileSHA256": "1fdddae2872401f26447ccc3b00c9c806d2b93bbc0fd5daf0ea9545eb5d38695",
+      "routeFactoryId": 8845,
+      "routeFactorySHA256": "f07666eb931695456145ce9d564f037c3e6afc3745632650ca63ed1ffa7300fa",
+      "preservedDeployedFactories": [
+        {
+          "factoryId": 12031,
+          "sha256": "d622ff0b1060e98a16edf6aeb4b5a086a53dc2e824ed4de5b452b543e09807aa"
+        },
+        {
+          "factoryId": 73847,
+          "sha256": "ab844939ba82c4df037b6a1ef2ce2bee869dc7033c327adfd1e390060965a74d"
+        },
+        {
+          "factoryId": 56650,
+          "sha256": "399eb6d9c3246361db3a3c6c693fc296db3d710313c5e2af42262f0abfc57198"
+        },
+        {
+          "factoryId": 40408,
+          "sha256": "1f4228795b8873112f8ff9110306c0bee6922e11e6d0178a6ef3764a6b470b01"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "name": "compiled sync-index enforces deployed missing/invalid bearer-token checks before catalog/service work",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled change-requests enforces deployed missing/invalid bearer-token checks before catalog/service work",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index hashes originals through deployed Admin bucket and writes only the v2 index",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index reports partial Storage failure with retryable saved state and retained hashes",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index refuses changed source versions before its index transaction writes",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index refuses missing inventory before photo reads",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index refuses archived inventory before photo reads",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled sync-index fails closed when deployed Admin initialization cannot provide a database",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled approval follows one committed service review with the actual v2 photo refresh",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled approval preserves committed success and reports readFailure as index-pending",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled approval preserves committed success and reports storageFailure as index-pending",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled approval preserves committed success and reports conflict as index-pending",
+      "status": "PASS"
+    },
+    {
+      "name": "compiled rejection and denied approval never run the indexing follow-up",
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS",
+  "actualDeployedModulesExecuted": [
+    12031,
+    73847
+  ],
+  "actualComposedRoutesExecuted": [
+    31328,
+    8845
+  ],
+  "actualEmbeddedHelpersExecuted": [
+    "ItemVisionIndex v2 builder",
+    "visionPhotoIndex",
+    "private storage boundary"
+  ],
+  "mockedBoundaries": [
+    "firebase-admin SDK transports",
+    "approval service review",
+    "existing search-token exports"
+  ],
+  "testedAdminWiring": "Deployed Admin module exports the synthetic getFirestore instance and synthetic configured Storage bucket to composed handlers",
+  "externalCalls": 0,
+  "liveWrites": 0,
+  "credentialsRead": false,
+  "limitation": "This is executable local fixture evidence, not production authentication, Firebase availability, or signed-in live UI proof."
+}

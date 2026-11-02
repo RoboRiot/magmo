@@ -1,0 +1,6 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-11-02T18:50:27.047Z",
+  "compositionSHA256": "3c6c49b819fa5db05ba97d889d55ae79df0bcafb445ca078f8339826022df79c",
+  "checked": "Exact candidate hashes; overlay input receipts; unrelated factories byte-identical; inverse localized edits; baseline assets/runtime preserved by composition and package gates"
+}

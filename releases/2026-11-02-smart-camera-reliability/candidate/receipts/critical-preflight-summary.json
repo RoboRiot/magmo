@@ -1,0 +1,185 @@
+{
+  "phase": "preflight",
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "buildSha256": "02c341b580e91178c175826b1062c90e49ff5a10fcfb8f5260eb7342cb7ed520",
+  "verifiedAt": "2026-11-02T18:49:54.099Z",
+  "verificationMode": "full-page-authenticated-state-mocks",
+  "sourceReceiptSHA256": "ed02152221741e028cf4aad64080f919555014663f1cb0bd77710edff6abdfad",
+  "syntheticAuthentication": true,
+  "liveProductionProof": false,
+  "pages": [
+    {
+      "path": "/NewSearch/mainSearch",
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "authenticatedFixture": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "fullPage": true,
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "50f9f232c247bc4632771696ee4354971224ec1fdc55cb18ce411ed81559911a",
+        "b10850aebeb2e7eef60fedd7219974155a94ee712cb9b52f553e922800a9d71c"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/webpack-bdc64130bf866e13.js",
+          "sha256": "e1e1285352ae62ba3b379052e66f52196be12bcede56e6b40e986cf5098b90c7"
+        },
+        {
+          "path": "/_next/static/chunks/framework-32a7466d5cae4a81.js",
+          "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+        },
+        {
+          "path": "/_next/static/chunks/main-1e501f68b3009817.js",
+          "sha256": "046e4d61a4fed9a68b658f2423285a24a3c0840c866c7b7178123f74ce1cad28"
+        },
+        {
+          "path": "/_next/static/chunks/pages/_app-a5a8e8173e9fccf8.js",
+          "sha256": "7daac1038899c83f5688a1a1203a48f3594437ab0e4930a8175d047443a513aa"
+        },
+        {
+          "path": "/_next/static/chunks/900-9cf9313a1e87e8f1.js",
+          "sha256": "136c1cea0d531d9c768a5e582ac62f57bb1642fd2cd5e6f28d624f507a2e41a4"
+        },
+        {
+          "path": "/_next/static/chunks/8230-f869215c8f2d97eb.js",
+          "sha256": "18be917dbef53701ad9c7458d69a5eaeade2f821265484cb010e41adac01240f"
+        },
+        {
+          "path": "/_next/static/chunks/1752-b05aa3e93c8271a4.js",
+          "sha256": "ee99039b5aaa7a64a0db8e58349d101fede8ef1ed4efd710e019e48259f17577"
+        },
+        {
+          "path": "/_next/static/chunks/2522-97a58a4fffb192e3.js",
+          "sha256": "645e5236d4674dfcd75538830e7f0dba3fdc19f0d02c244154abbbb2bd51158a"
+        },
+        {
+          "path": "/_next/static/chunks/4514-241f5f861018e722.js",
+          "sha256": "deea126b301415b7c562e799837cd9888250129b56809d70e22d094ce40842d8"
+        },
+        {
+          "path": "/_next/static/chunks/3025-aaec77a9bf271316.js",
+          "sha256": "025fa099c091b7d347ea5b1defd5fe603a80d7ccbc86da1bc5d0054bb763da26"
+        },
+        {
+          "path": "/_next/static/chunks/2246-9e0f1a6d20e7a34b.js",
+          "sha256": "0e6dfe8a66413f5003a08ac7abe031b8fd9a231e0eb76bd99c76bb594f8e67e3"
+        },
+        {
+          "path": "/_next/static/chunks/2705-c27aab7bf3b0b125.js",
+          "sha256": "d01181325fce1ef0cf2b3ef3d3819d2175e7932e43aa7bc7ffefb9e5361cbf58"
+        },
+        {
+          "path": "/_next/static/chunks/4268-1021a868f21dd390.js",
+          "sha256": "eb5cf59716ac70cf4e2c062b1ef8a786ffaef3040d689e9a6362a155da8cf1fc"
+        },
+        {
+          "path": "/_next/static/chunks/6872-c97e69ff9c86becb.js",
+          "sha256": "3c671dca671989784fc0f62a86a8cd407756968dbb0a6e6e71991bf51c2cd916"
+        },
+        {
+          "path": "/_next/static/chunks/6853-0183a9e4eedeeea3.js",
+          "sha256": "f0a3224b22259c4008af71aecfbb21aa341629c64b91e8b5c469a77b435ca30c"
+        },
+        {
+          "path": "/_next/static/chunks/1848-8aab9b6cbb4ac9e4.js",
+          "sha256": "8aab9b6cbb4ac9e40875bcbbed644a30b2ec7e85d84f6556d0ece6a053fe3902"
+        },
+        {
+          "path": "/_next/static/chunks/229-ff17902fdff3e4b3.js",
+          "sha256": "4a89392e1ca707d57ddd1ed03851df420be16c339e60f589ba3bfdd4035623d5"
+        },
+        {
+          "path": "/_next/static/chunks/pages/NewSearch/mainSearch-511bf9bb4134090b.js",
+          "sha256": "430570a242344faf7bcb4b73433774af88423638520c634c7c25f3e87f4e5aba"
+        }
+      ]
+    },
+    {
+      "path": "/Ops",
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "authenticatedFixture": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "fullPage": true,
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "e488fcb07bf4f5b7dbc0ed24dfcdf08f7e918781c2fca5404a28c182917aa779",
+        "39b507abb3010e80fba1403b6f420476e4d6a616a30ef903b58de6da2aaae62e"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/webpack-bdc64130bf866e13.js",
+          "sha256": "e1e1285352ae62ba3b379052e66f52196be12bcede56e6b40e986cf5098b90c7"
+        },
+        {
+          "path": "/_next/static/chunks/framework-32a7466d5cae4a81.js",
+          "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+        },
+        {
+          "path": "/_next/static/chunks/main-1e501f68b3009817.js",
+          "sha256": "046e4d61a4fed9a68b658f2423285a24a3c0840c866c7b7178123f74ce1cad28"
+        },
+        {
+          "path": "/_next/static/chunks/pages/_app-a5a8e8173e9fccf8.js",
+          "sha256": "7daac1038899c83f5688a1a1203a48f3594437ab0e4930a8175d047443a513aa"
+        },
+        {
+          "path": "/_next/static/chunks/8230-f869215c8f2d97eb.js",
+          "sha256": "18be917dbef53701ad9c7458d69a5eaeade2f821265484cb010e41adac01240f"
+        },
+        {
+          "path": "/_next/static/chunks/pages/Ops-ceae5408e89df6c6.js",
+          "sha256": "ceae5408e89df6c63245430b779d763831918a89dd110eb310045068ec4209f4"
+        }
+      ]
+    },
+    {
+      "path": "/Ops-General",
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "authenticatedFixture": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "fullPage": true,
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "ade0465d66db166f4e6b5f2c51bdbaa2523b2ce8e82258299347d8f9faaf051f",
+        "21e19d8d243211f11ca0dd59f91637de631c4faa69bf951782fdd173d749700c"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/webpack-bdc64130bf866e13.js",
+          "sha256": "e1e1285352ae62ba3b379052e66f52196be12bcede56e6b40e986cf5098b90c7"
+        },
+        {
+          "path": "/_next/static/chunks/framework-32a7466d5cae4a81.js",
+          "sha256": "8b8e1d095e3dba341cdf0b5439bc83478e54ac783d0f9c0d6417b3f855c1e458"
+        },
+        {
+          "path": "/_next/static/chunks/main-1e501f68b3009817.js",
+          "sha256": "046e4d61a4fed9a68b658f2423285a24a3c0840c866c7b7178123f74ce1cad28"
+        },
+        {
+          "path": "/_next/static/chunks/pages/_app-a5a8e8173e9fccf8.js",
+          "sha256": "7daac1038899c83f5688a1a1203a48f3594437ab0e4930a8175d047443a513aa"
+        },
+        {
+          "path": "/_next/static/chunks/8230-f869215c8f2d97eb.js",
+          "sha256": "18be917dbef53701ad9c7458d69a5eaeade2f821265484cb010e41adac01240f"
+        },
+        {
+          "path": "/_next/static/chunks/4919-d4466ac36d70bc85.js",
+          "sha256": "40f3c09f68eabe077b56dc6f484360501a9a7ad4107683943801bee89c27db7b"
+        },
+        {
+          "path": "/_next/static/chunks/pages/Ops-General-ea1ad4d0c9e5250b.js",
+          "sha256": "edae704a6df65a7948e92278fcfb4ba7eb3f39ff11e7124cc1cc94f512e49ba6"
+        }
+      ]
+    }
+  ],
+  "rawScreenshotsAndBrowserDataIncluded": false
+}

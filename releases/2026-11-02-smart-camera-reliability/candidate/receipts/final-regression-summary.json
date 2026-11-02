@@ -1,0 +1,36 @@
+{
+  "verifiedAt": "2026-11-02T20:52:43.596Z",
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "counts": {
+    "tests": 112,
+    "pass": 112,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "testInputs": {
+    "test/item-analyze-reliability.test.cjs": "10829e5cda3528339be29f14201148a62873889b1eb01885846924fe4931a00b",
+    "test/item-analysis-ui-safety.test.cjs": "c2b30a511ae86c268ef9d4e6bf8e2ff690288e4f9ec2e5c30fbc080f5cb42035",
+    "test/item-save-navigation.test.cjs": "f6e8b21b4805e913ca7751d241fc9c06259e04c79c6d2273183abdec9b8b2f94",
+    "test/item-analysis-compiled-ui.test.cjs": "55ac3a3846a1eb8a2c748c91247397a4bd97c3d912a817b59434dc28f8034aba",
+    "test/item-vision-photo-index.test.cjs": "118b7ebb2b5cdaf163843327fd89c74db5efa22e9e74a962ab5716b9fb83edb6",
+    "test/item-vision-index-routes.test.cjs": "c2831764e85db9b10056e5a0a8d6da93127e2df2f115d1a71ea6a2c5c8cc83ee",
+    "test/item-vision-compiled-index-api.test.cjs": "add888446f33f8f68a28fa776685e4acbb955e74359fdc6f31300e498c885299",
+    "test/item-vision-index-repair.test.cjs": "26d901a3452a6af20aadf9389e465aea00869fc6ae3341b973d7c2148a887c27",
+    "test/item-vision-approval-notice.test.cjs": "37180ee395118541b3ea0e4a40fa3d0ef44e4e6361c3d5733eb13e9b278531fd"
+  },
+  "fixturePortabilityOnly": [
+    {
+      "test": "test/item-analysis-compiled-ui.test.cjs",
+      "preflightSHA256": "d5947a92f7aa965a35ebb335994bc3570d4b8ae6dd9bcaa0f7d789be5fa416c6",
+      "checkpointSHA256": "55ac3a3846a1eb8a2c748c91247397a4bd97c3d912a817b59434dc28f8034aba"
+    },
+    {
+      "test": "test/item-vision-compiled-index-api.test.cjs",
+      "preflightSHA256": "3e3737a4712d03c5811a74dc0075d9ad9721486fb6158a0bbf3feb7ab4efd8bb",
+      "checkpointSHA256": "add888446f33f8f68a28fa776685e4acbb955e74359fdc6f31300e498c885299"
+    }
+  ],
+  "evidence": "Explicit frozen compiled fixtures and synthetic source cases",
+  "liveWrites": 0
+}

@@ -1,0 +1,14 @@
+"use strict";
+const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto"),assert=require("node:assert/strict");
+const parser=require("@babel/parser"),traverse=require("@babel/traverse").default,generate=require("@babel/generator").default;
+const sha=x=>crypto.createHash("sha256").update(x).digest("hex"),read=p=>fs.readFileSync(p,"utf8"),slash=p=>p.replaceAll("\\","/");
+const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
+function factories(code){const out=[];traverse(parser.parse(code),{ObjectProperty(p){if(p.node.key.type!=="NumericLiteral"||!p.get("value").isFunction())return;const n=p.node.value;out.push({id:p.node.key.value,start:n.start,end:n.end,objectEnd:p.parent.end,source:code.slice(n.start,n.end)});}});return out;}
+function getFactory(code,id){const found=factories(code).filter(x=>x.id===id);assert.equal(found.length,1,"Ambiguous/missing module "+id);return found[0].source;}
+function patchFactories(code,replacements){const edits=Object.entries(replacements).map(([id,text])=>{const found=factories(code).filter(x=>x.id===Number(id));assert.equal(found.length,1);parser.parseExpression(text);return{...found[0],text};});for(const e of edits.sort((a,b)=>b.start-a.start))code=code.slice(0,e.start)+e.text+code.slice(e.end);parser.parse(code);return code;}
+function requiredIds(factory){const ast=parser.parse("("+factory+")"),name=ast.program.body[0].expression.params[2]?.name,out=new Set();if(!name)return out;traverse(ast,{CallExpression(p){if(p.node.callee.name===name&&p.node.arguments[0]?.type==="NumericLiteral")out.add(p.node.arguments[0].value);}});return out;}
+function loaderChunks(code){const out=[];traverse(parser.parse(code),{CallExpression(p){if(p.node.callee?.property?.name!=="X")return;const a=p.node.arguments.find(x=>x.type==="ArrayExpression");if(a)out.push(...a.elements.map(x=>x.value));}});return out;}
+function canonical(factory){const ast=parser.parse("("+factory+")");let n=0;traverse(ast,{Scope(p){for(const key of Object.keys(p.scope.bindings).sort((a,b)=>p.scope.bindings[a].identifier.start-p.scope.bindings[b].identifier.start))p.scope.rename(key,"__b"+n++);},Directive(p){if(p.node.value.value==="use strict")p.remove();}});return generate(ast,{compact:true,comments:false}).code;}
+function index(root){const result=new Map();for(const file of walk(root).filter(x=>x.endsWith(".js")&&!x.includes("webpack-runtime")&&!x.includes("webpack-api-runtime"))){let items;try{items=factories(read(file));}catch{continue;}for(const f of items){const copies=result.get(f.id)||[];copies.push({...f,file:slash(path.relative(root,file))});result.set(f.id,copies);}}return result;}
+module.exports={sha,read,slash,walk,factories,getFactory,patchFactories,requiredIds,loaderChunks,canonical,index};
+

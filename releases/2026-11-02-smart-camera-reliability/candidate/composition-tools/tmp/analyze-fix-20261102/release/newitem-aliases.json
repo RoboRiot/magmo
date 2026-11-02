@@ -1,0 +1,45 @@
+{
+  "source": "source/.next/static/chunks/pages/NewSearch/AddItem/NewItem-928f00a142c2c3a6.js",
+  "factoryId": 29826,
+  "factorySHA256": "1d6d32c7842b1c1a369d8f4aa09f6bd23e66899b43ef3d99ef266d142b0da14f",
+  "component": "eI",
+  "serverNote": "NewItem is a static shell in this baseline: NewItem.html and js.nft.json exist, no NewItem.js server factory.",
+  "globals": {
+    "React": "n", "useState": "n.useState", "useRef": "n.useRef", "useEffect": "n.useEffect",
+    "_jsx": "(0,i.jsx)", "_jsxs": "(0,i.jsxs)", "_Fragment": "i.Fragment",
+    "Modal": "a.A", "Button": "l.A", "Spinner": "c.A", "styles": "ea()", "OemEvidenceCard": "eC",
+    "firebase": "A.A", "photos": "rl", "setPhotos": "rs",
+    "analyzingPhotos": "tq", "setAnalyzingPhotos": "tH", "analysisResult": "tU", "setAnalysisResult": "tz",
+    "showAnalysisModal": "tV", "setShowAnalysisModal": "tW", "matchPreviewUrl": "tG", "setMatchPreviewUrl": "tK",
+    "matchPreviewLoading": "tJ", "setMatchPreviewLoading": "tY", "items": "K", "setItems": "J",
+    "selectedOems": "eN", "setSelectedOems": "eT", "selectedModalities": "eI", "setSelectedModalities": "ek",
+    "selectedModels": "eM", "setSelectedModels": "eF", "normalizeSelection": "ig", "uniqueSelection": "ix",
+    "isMountedRef": "im", "photoActionRef": "tD", "photoUploadsRef": "tP", "savedDocId": "ia", "setSavedDocId": "il",
+    "committedDocIdRef": "is", "saveInFlightRef": "io", "saveOperationPending": "ic", "setSaveOperationPending": "id",
+    "showSaveModal": "rM", "setShowSaveModal": "rF", "saveRedirectPath": "rE", "setSaveRedirectPath": "rO", "router": "e",
+    "handleCloseSaveModal": "iR", "handleShowSaveModal": "(()=>rF(!0))", "handleAnalyzePhotos": "iO",
+    "uploadPhotos": "ni", "runItemSave": "nn", "toSend": "nl",
+    "normalizeItemPhotoCategory": "(0,D.l4)", "createItemPhotoStorageName": "(0,D.Yz)", "activePhotoCategory": "ro",
+    "capturedPhoto": "ta", "setCapturedPhoto": "tl", "setShowCameraModal": "rT", "browseInputRef": "t7",
+    "handleShowCameraModal": "(()=>rT(!0))", "handleBrowsePhotos": "(()=>{t7.current&&t7.current.click()})",
+    "setErr": "rx", "setShowErr": "rf", "associationSelectionRequestRef": "r3", "machineOptionsRequestRef": "r2",
+    "machineDetailRequestRef": "r7", "latestMachineDetailOwnerRef": "te", "machineDetailHydrationRef": "tr",
+    "createMachineDetailHydrationState": "(0,$.aq)"
+  },
+  "toSendLocals": { "docId": "et", "existingId": "u", "forceNew": "c", "currentUser": "h", "queuePhotoUpload": "ea" },
+  "inlineHandlers": {
+    "handleFilesSelected": "input[type=file] onChange at factoryoffset approximately70529",
+    "savePhoto": "Camera modal OK onClick around factoryoffset51250, uses rs(e=>[...e,{file:ta,url:URL.createObjectURL(ta),category:ro}]),tl(null),rT(!1)",
+    "applyAnalysisMatch": "Analyze modal Yes fill item fields onClick around factoryoffset55700"
+  },
+  "anchors": {
+    "previewEffect": "Could not load comparison photo:; deps[tU,tV]",
+    "mountEffect": "im.current=!1; first cleanup useEffect",
+    "cloneReset": "is.current=\"\" in cloneFrom effect",
+    "analysisModal": "Modal show:tV",
+    "saveModal": "Modal show:rM",
+    "photoActionRow": "div style marginBottom1rem contains photoActionsRow aroundoffset68700",
+    "oldIndexTry": "try containing Smart Camera index update followed by catch Smart Camera index update failed:",
+    "queueInvocation": "await ea(et) before rd&&await shippinggroup"
+  }
+}

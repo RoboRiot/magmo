@@ -1,0 +1,78 @@
+{
+  "status": "LIVE_VERIFIED",
+  "date": "2026-11-02",
+  "branch": "codex/smart-camera-reliability-20261102",
+  "baseCommitPrefix": "e40ae499",
+  "releaseDirectory": "releases/2026-11-02-smart-camera-reliability",
+  "sourceCopiesComplete": true,
+  "finalArtifactCopied": false,
+  "deploymentClaimed": true,
+  "baseline": {
+    "revision": "nextserverwest-00099-nal",
+    "buildId": "item-save-navigation-b6cb4b71af63cae0",
+    "archiveIncluded": false
+  },
+  "sourceFiles": [
+    "pages/api/items/analyze.js",
+    "pages/api/items/sync-index.js",
+    "pages/api/items/change-requests.js",
+    "pages/NewSearch/AddItem/NewItem.js",
+    "pages/NewSearch/item/[id]/index.js",
+    "components/ItemChangeReview.js",
+    "pages/notifications.js",
+    "lib/items/visionPhotoIndex.cjs",
+    "lib/items/itemEditorOperations.cjs",
+    "utils/itemVisionIndex.js",
+    "utils/itemImageAnalysis.js",
+    "utils/itemVisionIndexClient.cjs",
+    "utils/askMagmoPrivateBoundary.cjs",
+    "scripts/repair-item-vision-index.cjs",
+    "scripts/backfill-item-vision-index.js"
+  ],
+  "testFiles": [
+    "test/item-analyze-reliability.test.cjs",
+    "test/item-analysis-ui-safety.test.cjs",
+    "test/item-save-navigation.test.cjs",
+    "test/item-analysis-compiled-ui.test.cjs",
+    "test/item-vision-photo-index.test.cjs",
+    "test/item-vision-index-routes.test.cjs",
+    "test/item-vision-compiled-index-api.test.cjs",
+    "test/item-vision-index-repair.test.cjs",
+    "test/item-vision-approval-notice.test.cjs"
+  ],
+  "policyFiles": [
+    "docs/CRITICAL_DEPLOYMENT_POLICY.md",
+    "scripts/verify-critical-deployment.cjs"
+  ],
+  "compositionTools": [
+    "tmp/analyze-fix-20261102/release/compile-api.cjs",
+    "tmp/analyze-fix-20261102/release/compile-newitem.cjs",
+    "tmp/analyze-fix-20261102/release/compile-editor.cjs",
+    "tmp/analyze-fix-20261102/release/compile-approval-ui.cjs",
+    "tmp/analyze-fix-20261102/release/newitem-aliases.json",
+    "tmp/analyze-fix-20261102/release/compose.cjs",
+    "tmp/analyze-fix-20261102/release/verify-candidate.cjs",
+    "tmp/analyze-fix-20261102/release/test-approval-ui-overlay.cjs",
+    "tmp/ot-collapse-20260928/factory-tools.cjs"
+  ],
+  "excluded": [
+    "database backups or document contents",
+    "photo contents or storage object metadata",
+    "repair plans, before-images, or raw repair results",
+    "environment files, credential values, tokens, service accounts",
+    "authenticated browser profiles, cookies, local storage, or user data",
+    "raw operational API or browser evidence containing business data",
+    "complete production source or compiled archives",
+    "unrelated dirty workspace files"
+  ],
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "artifactSHA256": "19baa03470ad8e14664f0bfb20d658cd78441232123161569a2f6412fb7b861b",
+  "finalCompositionSHA256": "3c6c49b819fa5db05ba97d889d55ae79df0bcafb445ca078f8339826022df79c",
+  "copiedEntries": 47,
+  "preflightPassed": true,
+  "preflightSynthetic": true,
+  "livePostflightVerified": true,
+  "deployedRevision": "nextserverwest-00100-guf",
+  "validatorCompletedAt": "2026-11-02T20:50:41.669Z",
+  "indexReadbackVerified": true
+}

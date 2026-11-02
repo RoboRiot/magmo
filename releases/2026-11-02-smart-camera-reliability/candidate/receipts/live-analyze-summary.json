@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-11-02T20:48:42.429Z",
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "route": "/NewSearch/AddItem/NewItem",
+  "loadedAsset": {
+    "path": "/_next/static/chunks/pages/NewSearch/AddItem/NewItem-e92496fecf9deffb.js",
+    "sha256": "e92496fecf9deffb0da2262a6cfccbf5dbc3e5655a280a04971c84f1a4d369a2"
+  },
+  "originalPhotoReused": true,
+  "enteredNameOrPartNumber": false,
+  "exactCatalogItemReturned": true,
+  "submittedAndCatalogPhotosDisplayed": true,
+  "nameAndPartNumberFilledInForm": true,
+  "serialLeftBlank": true,
+  "noInventorySave": true,
+  "capturedErrorCount": 0,
+  "evidenceHashes": [
+    "5e07a3fab3c52074138b301c4376fddd9ba2b2e16b2cd13e2d53e47d01a08723",
+    "f3cea4592316c8088839113170b09865364a9d76d9f0b8c1e0a5db669a29b23f"
+  ],
+  "rawPhotosOrItemDetailsIncluded": false
+}

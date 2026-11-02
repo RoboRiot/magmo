@@ -1,0 +1,2 @@
+# Exact source and receipt hashes must survive checkout on Windows and Linux.
+* -text

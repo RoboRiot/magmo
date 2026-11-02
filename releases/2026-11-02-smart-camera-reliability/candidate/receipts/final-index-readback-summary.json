@@ -1,0 +1,18 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-11-02T20:50:52.118Z",
+  "sourceReceiptSHA256": "584f545c6081cdd362fe899b9b6e253ef2a5b7a753858516633b5043c29b394f",
+  "activeInventoryRecords": 4251,
+  "currentIndexRecords": 4251,
+  "checked": 4568,
+  "matchingIndexes": 4251,
+  "confirmedOrphanDeletions": 317,
+  "additionalCurrentRecordsVerifiedWithoutRepair": 10,
+  "missing": 0,
+  "orphan": 0,
+  "unplanned": 0,
+  "discrepancies": 0,
+  "changedSources": 0,
+  "readbackWrites": 0,
+  "operationalRecordsIncluded": false
+}

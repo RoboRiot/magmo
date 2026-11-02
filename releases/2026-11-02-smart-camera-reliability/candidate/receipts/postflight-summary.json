@@ -1,0 +1,83 @@
+{
+  "status": "VERIFIED",
+  "revision": "nextserverwest-00100-guf",
+  "publishedAt": "2026-11-02T18:53:34.592Z",
+  "validatorCompletedAt": "2026-11-02T20:50:41.669Z",
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "candidateTreeSHA256": "02c341b580e91178c175826b1062c90e49ff5a10fcfb8f5260eb7342cb7ed520",
+  "artifactSHA256": "19baa03470ad8e14664f0bfb20d658cd78441232123161569a2f6412fb7b861b",
+  "compositionSHA256": "3c6c49b819fa5db05ba97d889d55ae79df0bcafb445ca078f8339826022df79c",
+  "deploymentJournalSHA256": "8260ee5a2dd152b3a615ae8f2fce748956be280d7e1e6f7b9a2d0f0419a8953a",
+  "signedInReceiptSHA256": "7b17e154a54bfef7cbb30e957b8fb85c53ededc8249eb3d4eaf233073fa99058",
+  "sourceOnly": true,
+  "unrelatedConfigurationPreserved": true,
+  "origin": "https://magmo.cloud",
+  "verificationMode": "authenticated-browser",
+  "verifiedAt": "2026-11-02T20:47:35.688Z",
+  "pages": [
+    {
+      "path": "/NewSearch/mainSearch",
+      "fullPage": true,
+      "authenticated": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "3cf7e6fc1a65127e3915f76057fa0fb92066f168985d977ed481f95a0106598f",
+        "cac3c946d07d7e5994973edfffddecc7442b4398b0dabe0a31485117707bb4de"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/pages/NewSearch/mainSearch-511bf9bb4134090b.js",
+          "sha256": "430570a242344faf7bcb4b73433774af88423638520c634c7c25f3e87f4e5aba"
+        }
+      ],
+      "interaction": "Searched inventory, opened an item preview and checked its description and both locations."
+    },
+    {
+      "path": "/Ops",
+      "fullPage": true,
+      "authenticated": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "2f71eda6cffa2b379d28a6ddabf3497c72ec9f4505ea047f22d004b98d8feee7",
+        "a0496da6a1c93079b52f0fcb9d467a8603f5521c5ab2d4aed4fcc16244610d7a"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/pages/Ops-ceae5408e89df6c6.js",
+          "sha256": "ceae5408e89df6c63245430b779d763831918a89dd110eb310045068ec4209f4"
+        }
+      ],
+      "interaction": "Changed tabs, searched work orders and opened assignment history."
+    },
+    {
+      "path": "/Ops-General",
+      "fullPage": true,
+      "authenticated": true,
+      "dataLoaded": true,
+      "interactionPassed": true,
+      "observedBuildId": "smart-camera-reliability-ed8af4ad1980c779",
+      "pageErrorCount": 0,
+      "consoleErrorCount": 0,
+      "evidenceHashes": [
+        "b1118ba33c150278105fbff947a572cfa9ecbc997a2fda29a2342e259983cbac",
+        "f6ad250fd4dac17448ec012e482dff3a62aa1d18f45c0cbf2ac8e1f37a63b408"
+      ],
+      "assets": [
+        {
+          "path": "/_next/static/chunks/pages/Ops-General-ea1ad4d0c9e5250b.js",
+          "sha256": "edae704a6df65a7948e92278fcfb4ba7eb3f39ff11e7124cc1cc94f512e49ba6"
+        }
+      ],
+      "interaction": "Expanded the team queue, searched a work order and checked its assignment details."
+    }
+  ],
+  "rawBrowserDataIncluded": false
+}

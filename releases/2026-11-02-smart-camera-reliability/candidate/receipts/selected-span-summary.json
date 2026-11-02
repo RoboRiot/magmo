@@ -1,0 +1,467 @@
+{
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "overlays": [
+    {
+      "name": "api-overlay-v4",
+      "receiptSHA256": "3129e70bbcc878564a582285c4e44952a51b2dff1b1e021e30baff6d7f857a5d",
+      "inputs": {
+        "lib/items/itemEditorOperations.cjs": "902a251be9d33f1204458953cc228cd0533cf7beff792baea72411b4558b06a0",
+        "lib/items/visionPhotoIndex.cjs": "ea12ff09a0142034c5ca8ec3b51e643856fb66889fcb6cafce284f61ed8b36fa",
+        "utils/itemVisionIndex.js": "adb3d1d5d958048ba4f040eb91394fb73d39611fca8d6f8312fa2c4c311894d5",
+        "pages/api/items/analyze.js": "2a90b389c42a74479347ac6b93dd1324eeceb99556052ef3c32be658479f370c",
+        "pages/api/items/sync-index.js": "a11cbef1368fd91733735dee627098e4806e60d0cc74cb329dca7fb10f56f90c",
+        "pages/api/items/change-requests.js": "a17596356be8fd87b7fb8bbb488a00622f7543bf99ee1b5bb14931d5d26cddb2"
+      },
+      "changes": [
+        {
+          "file": ".next/server/pages/api/items/analyze.js",
+          "moduleId": 37922,
+          "oldSHA256": "f2bf054719cff85fcb4071f9610768f64ae88dd15b73e0a894521a49f6f13241",
+          "newSHA256": "a5847adf0329705122c76f4fa4e5d5b2f0341bea0596cfa6dfed49ad5579b4b6",
+          "oldFactorySHA256": "5ac73c426d3d8ad75474e0675c743d24bd456e08b08d9dadef1d1117a854601a",
+          "newFactorySHA256": "929a2b242d56567a316fedfd8ba0a1b43f11b0d9bcc86573a919c418c67b6913",
+          "inverseExact": null,
+          "unrelatedFactoriesPreserved": true,
+          "edits": []
+        },
+        {
+          "file": ".next/server/pages/api/items/sync-index.js",
+          "moduleId": 31328,
+          "oldSHA256": "3c5f5c2064fbde0894454cd407b3af584572aa90ef31664f1acb11927e7f3db5",
+          "newSHA256": "300f1b7e4bffb5c45c6f3d301a2cd042ca3295d70335bf7ab0386cd2ee124b04",
+          "oldFactorySHA256": "4615e19d943fe69ee3cc6df4757d1ab56611d528a23ed05c772542850203deae",
+          "newFactorySHA256": "58ff212b32fddc955e927f9eea1e5f3bc3ff646c85649461e117e5b8a22124d4",
+          "inverseExact": null,
+          "unrelatedFactoriesPreserved": true,
+          "edits": []
+        },
+        {
+          "file": ".next/server/pages/api/items/change-requests.js",
+          "moduleId": 8845,
+          "oldSHA256": "e318c09b0af0d00cd71cb911614c0843d91c6c27e2147c8db3effb89a60b9e46",
+          "newSHA256": "1fdddae2872401f26447ccc3b00c9c806d2b93bbc0fd5daf0ea9545eb5d38695",
+          "oldFactorySHA256": "5af3faebe793a3bd60df435d45480661c2562041418c9538b6364078cfa72c1f",
+          "newFactorySHA256": "f07666eb931695456145ce9d564f037c3e6afc3745632650ca63ed1ffa7300fa",
+          "inverseExact": null,
+          "unrelatedFactoriesPreserved": true,
+          "edits": []
+        }
+      ]
+    },
+    {
+      "name": "editor-overlay-v4",
+      "receiptSHA256": "9183efd54ad0f9afbb7c057598532e59638a0aaf6ea11fb4be437c7b3774a1b1",
+      "inputs": {
+        "pages/NewSearch/item/[id]/index.js": "f7787b1cbd880d636712543f0982372eacdf7e036a89c0d5dc1680254f547568",
+        "utils/itemVisionIndexClient.cjs": "1ac9ffb882a2d2eb1d2b10d8901ec8602c219c422dca25353377e063cb317cf5"
+      },
+      "changes": [
+        {
+          "file": ".next/server/pages/NewSearch/item/[id].js",
+          "moduleId": 16859,
+          "oldSHA256": "711737826c469ee300dcb5c11b44c8be9fb85b4ddff2ad041d46010b88ee2b4b",
+          "newSHA256": "6c8a2ebc34f31ea0550fd293069a9372a2656cdc7f043c86932d2fe3d9cb6ed1",
+          "oldFactorySHA256": "17e27117b4405deb180c993e96cddadbbd2ab79bfd9316c153d8cc842c42406f",
+          "newFactorySHA256": "8640d4360e200b51d35563a329e124860f8bfed52be93cbfcc1a6378cb6f83fb",
+          "inverseExact": true,
+          "unrelatedFactoriesPreserved": null,
+          "edits": [
+            {
+              "label": "index-client-helper",
+              "start": 4071,
+              "end": 4071,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "2d88ba07d123bef947be1fc41dcb642486aedc90deb45aca96cfc63fa8e1458e"
+            },
+            {
+              "label": "index-state-and-retry",
+              "start": 4129,
+              "end": 4129,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "bdee6f1a6fa8af61a9214c645997f58fe7f36345b4a42e6cfcbbd340799a5324"
+            },
+            {
+              "label": "handleCloseSaveModal",
+              "start": 13439,
+              "end": 13449,
+              "originalSHA256": "0d4019298f468ab556cff91c5e987f362218af6487bc0cd0d758493c6dfd7b4e",
+              "replacementSHA256": "1ce0130bde286c39fe5b60565ef8dd94ed6caa1aae4a51dfa624245124703aae"
+            },
+            {
+              "label": "current-photo-snapshot",
+              "start": 22753,
+              "end": 22753,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "19d7895780df7a795f6fe670548b6eda341fd960596e36f7033813149c35cca9"
+            },
+            {
+              "label": "post-commit-photo-index-recovery",
+              "start": 35404,
+              "end": 35425,
+              "originalSHA256": "704103655f259825fb71bae4130403d5d328404732dedb93ab9ae469c4c4edb8",
+              "replacementSHA256": "010d88395574b7577485b918e3da204eb300e9f611c643db18e172921fda5ce3"
+            },
+            {
+              "label": "keep-pending-originals-before-rename",
+              "start": 35586,
+              "end": 35587,
+              "originalSHA256": "62c66a7a5dd70c3146618063c344e531e6d4b59e379808443ce962b3abd63c5a",
+              "replacementSHA256": "414c1fe5f5dd8aea67d488251358d8aecc11883cf72d965d6050d0fa9cc07d85"
+            },
+            {
+              "label": "saved-warning-dialog",
+              "start": 35851,
+              "end": 35873,
+              "originalSHA256": "cb45ce8759d31990cb6b93908f5b3b3c90c85a65dc35d1a2af77a1ca9f31d6bc",
+              "replacementSHA256": "d05c23d747769b8aaf25a3c11180d5ee96915f97e2fdde2d47e2becb0adc6907"
+            },
+            {
+              "label": "saved-photo-completion-contract",
+              "start": 35880,
+              "end": 35880,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "3b8e2a73fb4b691e9ea421297f7fa834d7270024c3584fce884f6bacdc145da3"
+            },
+            {
+              "label": "uploadPhotos",
+              "start": 37231,
+              "end": 37759,
+              "originalSHA256": "082e85f4cc5cbe20f5e94351a8ba6a11565f3dc77bf1e3c4195db91794ade883",
+              "replacementSHA256": "cc9071d02b4c10bf2678bdd99e1763c09ae40cb790d474367020a53aa9d849be"
+            },
+            {
+              "label": "retain-downstream-stop-on-upload-failure",
+              "start": 42962,
+              "end": 42971,
+              "originalSHA256": "79286ddab23daa27942f49a94293a8d6892742bb8099a7487dddb47b8d17eb61",
+              "replacementSHA256": "6d792654ce141fa0018e0c34c16c08ebccf0c43a217846dde2f255e2bf534223"
+            },
+            {
+              "label": "index-warning-retry-ui",
+              "start": 45391,
+              "end": 46078,
+              "originalSHA256": "246d96cd05a501f1038c198dcee103ae2bec5a22987a9d56e35757d4a13e8a61",
+              "replacementSHA256": "80514e10fa0cf819ef20ac680c6a07512642b0eb6196eb916e92d403c9935b19"
+            },
+            {
+              "label": "serialize-camera-selection",
+              "start": 53470,
+              "end": 53553,
+              "originalSHA256": "13b647ae5e77953313711a141d09acb783790ce3fec7aed6c16d024f048df604",
+              "replacementSHA256": "2cf34604ac76ecbe3d2e601c764c5013976a2e14b6955769b49294527e3db1dd"
+            },
+            {
+              "label": "visible-pending-assets-and-input-lock",
+              "start": 68293,
+              "end": 69501,
+              "originalSHA256": "7da8f396a1188bd3db6d85cd2abf6c8b28d3911abce8526782674beddab26c56",
+              "replacementSHA256": "940f186a14be0bf3c701dcf6394ca3fb10088df7796016542291c1357a6d71fd"
+            },
+            {
+              "label": "serialize-photo-selection",
+              "start": 69601,
+              "end": 69774,
+              "originalSHA256": "968d0a59b2c05874edc6bfa85aa97fbc60a96dc335a7b0417a90755cd994f090",
+              "replacementSHA256": "69e906f5e7c4ff8d6339c62694099565f614548df3480923982bd6ed1efeca0a"
+            }
+          ]
+        },
+        {
+          "file": ".next/static/chunks/pages/NewSearch/item/[id]-7d5599e3503b73e8.js",
+          "moduleId": 57784,
+          "oldSHA256": "7d5599e3503b73e839afd629c555298f861778e85b90593ce86fd1fae7c6a0d5",
+          "newSHA256": "962ba22085b493d3aa4afbcd2ecf91cc63c5cf8295a89dce5740c673db9d2477",
+          "oldFactorySHA256": "b85afb5c557fc1d5eae75c09af130b77c5632bcf09234703395f7fe02ccf3c84",
+          "newFactorySHA256": "4e0db4e50be6fe856a0a4657d8a36d14606394bc9cd78c8563b26b29829f4b43",
+          "inverseExact": true,
+          "unrelatedFactoriesPreserved": null,
+          "edits": [
+            {
+              "label": "index-client-helper",
+              "start": 4062,
+              "end": 4062,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "2d88ba07d123bef947be1fc41dcb642486aedc90deb45aca96cfc63fa8e1458e"
+            },
+            {
+              "label": "index-state-and-retry",
+              "start": 4120,
+              "end": 4120,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "82557e3d2ad2b991e7e837c80c5e2735896c149e514a7d821d438074821ae27b"
+            },
+            {
+              "label": "current-photo-snapshot",
+              "start": 10260,
+              "end": 10260,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "e4909b8e02ffadcb48ad7db75e7dfe96be607be9e889ec2f6fd71db592408813"
+            },
+            {
+              "label": "reset-recovery-for-new-route",
+              "start": 13693,
+              "end": 13705,
+              "originalSHA256": "cf59f94222caa6ecc85f8ed1506283fc566e56414b5fdd68975016a59a330a53",
+              "replacementSHA256": "dc12cf276dfd231cf283aa681aa35ed73eadc810568a3a271e08fffefb952139"
+            },
+            {
+              "label": "handleCloseSaveModal",
+              "start": 22917,
+              "end": 22927,
+              "originalSHA256": "38c41791fda5e34b36a95d0f3c98020c2be14bc9c681828a2c1a9a3b06f6a969",
+              "replacementSHA256": "09b8348fb5efc713d2ea8637b4fe724ff5c9f8eb5d05471d657a73f7810b6cdc"
+            },
+            {
+              "label": "post-commit-photo-index-recovery",
+              "start": 44833,
+              "end": 44854,
+              "originalSHA256": "f6efc8b778a7afb034a10dcd95f9428e2882950e6a79034ba1474746e57b36b0",
+              "replacementSHA256": "cf998bdce8c339fa2442b779b2d02d94441763ab98cdcc40fe3a81329358492d"
+            },
+            {
+              "label": "keep-pending-originals-before-rename",
+              "start": 45015,
+              "end": 45016,
+              "originalSHA256": "18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4",
+              "replacementSHA256": "6daf7e5bf4d21b5bd3c9118b3ca20e2647295090d54d0aaefbacb37407491cbf"
+            },
+            {
+              "label": "saved-warning-dialog",
+              "start": 45280,
+              "end": 45302,
+              "originalSHA256": "7374af56394b5dcfe824e19e5ec1c0dc088e522afbcee3e8db6ab7be8a0e143f",
+              "replacementSHA256": "5549529b76d27e18b05676fc52cb2e932083c4cafabcf47b5d8693159c0dd468"
+            },
+            {
+              "label": "saved-photo-completion-contract",
+              "start": 45309,
+              "end": 45309,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "3b8e2a73fb4b691e9ea421297f7fa834d7270024c3584fce884f6bacdc145da3"
+            },
+            {
+              "label": "uploadPhotos",
+              "start": 46666,
+              "end": 47194,
+              "originalSHA256": "d693e58294025fbf0129b658b9ded1d8778de4ddbd8c41107cd74ffc3d2350c6",
+              "replacementSHA256": "5896e6e092969fd5f44de8509ffadda2ad760b02caa1d0b12703ed980ee26433"
+            },
+            {
+              "label": "retain-downstream-stop-on-upload-failure",
+              "start": 52747,
+              "end": 52756,
+              "originalSHA256": "85ed04f32f80cfaa249b834dee47f1914863b1c33bb8288876845f64b47eb1c3",
+              "replacementSHA256": "e243891d649fd952d78f0e4f9f3bb737ddcfbbdbacc1d7e5c5a25869d999f598"
+            },
+            {
+              "label": "index-warning-retry-ui",
+              "start": 55164,
+              "end": 55845,
+              "originalSHA256": "e2c21203c4ae06b6562b5ae8e1b64ccde16eb2bbcff3135f60c99bc681faaacb",
+              "replacementSHA256": "9d08850ec1059d5c17e69502c6996d7e023e64c1e8039bd49282ff66f3132364"
+            },
+            {
+              "label": "serialize-camera-selection",
+              "start": 63172,
+              "end": 63255,
+              "originalSHA256": "c5484ffdd9a73ffce4c305ab2389554b1faa8b25c94febb4436f7df4f370c78f",
+              "replacementSHA256": "f647e916dbfc2c725947a10a63e7e1d09d12bca876c7ae2a58b03fd8e6d298f0"
+            },
+            {
+              "label": "visible-pending-assets-and-input-lock",
+              "start": 77925,
+              "end": 79125,
+              "originalSHA256": "87ac74451209f7c1048cf5922f77a07ea03ebf51b628a39890e39059fb365d10",
+              "replacementSHA256": "97e2aba2d2a968f5fd0af63e1dbb171a714941e270b42c6ee4bdf4a9d442ee06"
+            },
+            {
+              "label": "serialize-photo-selection",
+              "start": 79225,
+              "end": 79398,
+              "originalSHA256": "cabad940f5b097ad54d70fdacfd4751e01dfd3e5b9463da4ce77f5f392707826",
+              "replacementSHA256": "6f777fe2821985aa71f6cc9f281de24b7c78c7abedfe349ec7b32f57842264f0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "newitem-overlay-v2",
+      "receiptSHA256": "09808a6e7c03cdd383d8eeb9c80db89f113554d6a0553f2996b19f29cb58183c",
+      "inputs": {
+        "pages/NewSearch/AddItem/NewItem.js": "a10b016fd5fe184b838046462f3d29bb5b306129a9177ddfad476965fb720926",
+        "utils/itemImageAnalysis.js": "7f56a533cac818dbbf40e123c2243e61e0ffdc4ccd673639813a717a896e3ff6",
+        "utils/itemVisionIndexClient.cjs": "1ac9ffb882a2d2eb1d2b10d8901ec8602c219c422dca25353377e063cb317cf5"
+      },
+      "changes": [
+        {
+          "file": ".next/static/chunks/pages/NewSearch/AddItem/NewItem-928f00a142c2c3a6.js",
+          "moduleId": 29826,
+          "oldSHA256": "317fbcdb71a9a5b7086a17c119586affdccd7ca4f505535664b779b4991af4fb",
+          "newSHA256": "e92496fecf9deffb0da2262a6cfccbf5dbc3e5655a280a04971c84f1a4d369a2",
+          "oldFactorySHA256": "1d6d32c7842b1c1a369d8f4aa09f6bd23e66899b43ef3d99ef266d142b0da14f",
+          "newFactorySHA256": "824af49b73884a614f7a3f508861a3735c3b3960c1f27964cc052c4f71d4c55c",
+          "inverseExact": true,
+          "unrelatedFactoriesPreserved": true,
+          "edits": [
+            {
+              "label": "isolated-photo-and-index-helpers",
+              "start": 3781,
+              "end": 3781,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "b6a13ce9db448513bb20d477ab6aabb774822ec548f07a82a6e9e474787031ce"
+            },
+            {
+              "label": "analysis-generation-and-index-retry-state",
+              "start": 7232,
+              "end": 7232,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "9dec9e0efb7bb376fded3ce0ba89990e71abb5864ea14df948f25a3c3b75c3b0"
+            },
+            {
+              "label": "request-invalidation-on-unmount",
+              "start": 7232,
+              "end": 7477,
+              "originalSHA256": "60c50194c3bb0657cb55331690746479ab544e8905c9ae098877ee70817f8dd8",
+              "replacementSHA256": "a6d7ba4473c1fdd887fd3612e5be72d89113a62db634b6da4f0065b17f0556d9"
+            },
+            {
+              "label": "reset-index-state-on-new-item",
+              "start": 8904,
+              "end": 8917,
+              "originalSHA256": "bd1878a3829e6fa9aa1c350e6c36afd53bfb6152d642bf3e6aaf5625dc2142b1",
+              "replacementSHA256": "0225ba63ce3d806922cbe74f9400995955fb3906dab202c841b7a05bd179cfbf"
+            },
+            {
+              "label": "handleAnalyzePhotos",
+              "start": 16976,
+              "end": 17783,
+              "originalSHA256": "e89f42988b4338a480c55cb8d7e2175166dd4186f2df41e5f78b15abda71c489",
+              "replacementSHA256": "f3d7a69783a755c9e0f320d49c0ecec7d654378946a344c6143df1a468ee4083"
+            },
+            {
+              "label": "preview-actionable-results-from-current-allowed-prefixes",
+              "start": 17784,
+              "end": 18258,
+              "originalSHA256": "4a4b9dbd32710661b2de5f4700a2c5497a4c3142369200c4850869981e3c5949",
+              "replacementSHA256": "aef3d6a74d50922730648bb617ecc4b4be3fbc4ed56245698605b917469074f7"
+            },
+            {
+              "label": "handleCloseSaveModal",
+              "start": 18294,
+              "end": 18330,
+              "originalSHA256": "d9fc60688154a7269bf3fdb367f5cd284de0e575cc2d2b23ad5225dac0c74e25",
+              "replacementSHA256": "47a6db63d2cc8c208e6ffb9e88b3496a335a7453963c9506dc56ea024a40bf41"
+            },
+            {
+              "label": "uploadPhotos",
+              "start": 26649,
+              "end": 27161,
+              "originalSHA256": "f2a810bbce1c62e9e4d089bbb40ca63864e599265b78e8d688936e35d5e517ba",
+              "replacementSHA256": "7272fe74de0f42ab64da09eae760dc623a972b6b6df4b1410fbb17a8422b088c"
+            },
+            {
+              "label": "serialize-save-and-index-retry",
+              "start": 27191,
+              "end": 27191,
+              "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "replacementSHA256": "b20b87511ba41b7c5ac7fe079da2b7feea2065717ff3ac2ba9f49719ecd77d54"
+            },
+            {
+              "label": "await-photo-uploads-before-indexing",
+              "start": 37795,
+              "end": 37807,
+              "originalSHA256": "4a64d7ca64e238d62db502022f81e19c912fe668c94d89bd607a648d20ead9df",
+              "replacementSHA256": "18498c7a467dab5d13a04f781e49206b643de924cd2ba59f9ce7234a1d5f3a3e"
+            },
+            {
+              "label": "remove-swallowed-background-index-refresh",
+              "start": 37889,
+              "end": 38512,
+              "originalSHA256": "0b93a9a925feafbbdd5649d1e707c50ef4b5ec0654588ae89318542f0031408a",
+              "replacementSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "label": "committed-item-index-retry-modal",
+              "start": 47282,
+              "end": 47593,
+              "originalSHA256": "a53aca7d05036d5d8be486cca649fde0368a19566ffffd22065e1ef362860803",
+              "replacementSHA256": "15c6ab16c16f2b6882dc9fd095e4836237eacee54eec6adb4123e03726d19d13"
+            },
+            {
+              "label": "block-camera-change-during-save-retry",
+              "start": 51405,
+              "end": 51490,
+              "originalSHA256": "7e332e232624dede322f235d3234831c7a389ef57efdb31646076a9e01431860",
+              "replacementSHA256": "657254a1317b03bc8a794e0218a100042979db71b3d8f0f1aea624c9c7aab8e5"
+            },
+            {
+              "label": "actionable-match-modal-and-snapshot-preview",
+              "start": 52101,
+              "end": 56082,
+              "originalSHA256": "69f196c8fe99b4a5a6cbd7ff15a2e848f02224f1c186c420c84ee4a9f4fb691c",
+              "replacementSHA256": "68a36701272e3602226670f11d46c622b63610d79d257d2df003aab480265ae1"
+            },
+            {
+              "label": "visible-index-retry-status",
+              "start": 68756,
+              "end": 70417,
+              "originalSHA256": "e622c4ace741ce6c91ab7a40785a97ccf6f6c4f94b2403e1319005a9537cbc2d",
+              "replacementSHA256": "1b8cfdb1dca2d438e617e094cf022c0f1bba9cfe5a28f19b3ec61d082f07a984"
+            },
+            {
+              "label": "block-photo-change-during-save-retry",
+              "start": 70517,
+              "end": 70690,
+              "originalSHA256": "36c37b90fc7e6f76b39e7c2301725681270c3ed09e8ac8df9765cad376c8d1fb",
+              "replacementSHA256": "1ea36331e95814fb6271ed666b8dbd3be666007036abc8507bcc28392a765eb3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "approval-ui-overlay",
+      "receiptSHA256": "e44f41d5cd39a478505f8884dba8be7c3b3c7b13d7f0d79b0cb07a0be0e478f0",
+      "inputs": {
+        "components/ItemChangeReview.js": "3f6286d8c27b086af3104c09e5cb4355b1a68fe8a109db501f4f075c4283cd12",
+        "pages/notifications.js": "1753c5752a021dcee6de2a09a36fae53e977b3466b95c882a3585719dcaab6d9"
+      },
+      "changes": [
+        {
+          "file": ".next/static/chunks/pages/notifications-1b8e7d04e392db15.js",
+          "moduleId": 33159,
+          "oldSHA256": "e8b64eb7da02570605164d3c51824d40c78909c05bf7a95e187cd5beabbc43d5",
+          "newSHA256": "3ce5405d663a60a450aba108b84875dd457c8371abcbba6e4e58ad44567480aa",
+          "oldFactorySHA256": "647f552418813c7a75311f1acd407a08929c0674e5bdf1fef80bfc3d5a4a7e36",
+          "newFactorySHA256": "606ae980fd3a29244e3c5b6fbbfddf2434019336cd747571b819198e3307a348",
+          "inverseExact": true,
+          "unrelatedFactoriesPreserved": null,
+          "edits": [
+            {
+              "label": "forward-approved-index-status",
+              "start": 3182,
+              "end": 3295,
+              "originalSHA256": "1d1147a37f34f5a7735c0eeb2d7f080be64b90c82a01467d0236e1b9e4513f41",
+              "replacementSHA256": "06ff2e461f220a88365d6f0dccc0bd741ffc2385bf7cd024fe7c49a82669fde3"
+            },
+            {
+              "label": "warning-and-saved-item-link",
+              "start": 8624,
+              "end": 8702,
+              "originalSHA256": "3d88a3e08a614f66d9b2bdf4c4710328447a610c8eccea921a9873804b992de1",
+              "replacementSHA256": "e5668d4768bc3f8bee9a51e61b2a8026bd2741fb2a2653cba5f8ef7b94045bac"
+            },
+            {
+              "label": "retain-saved-index-warning",
+              "start": 10258,
+              "end": 10394,
+              "originalSHA256": "87d8424b7786f9be5113f0b02e897cab5a3fd993a99f67e9c464f551455f2ab2",
+              "replacementSHA256": "62e2dc0ac5ec45dcb84d783951a113dd3f63575566b4716fa4a7411ee54b6760"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

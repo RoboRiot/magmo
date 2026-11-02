@@ -1,0 +1,59 @@
+{
+  "createdAt": "2026-11-02T18:49:42.132Z",
+  "buildId": "smart-camera-reliability-ed8af4ad1980c779",
+  "baselineRevision": "nextserverwest-00099-nal",
+  "oldBuildId": "item-save-navigation-b6cb4b71af63cae0",
+  "baselineArchiveSHA256": "ad0c4e04be6ead54219c3d0d0656142e2151fb6c4622583c03d47566c1decb79",
+  "sourceReceiptSHA256": "3c6c49b819fa5db05ba97d889d55ae79df0bcafb445ca078f8339826022df79c",
+  "inputs": {
+    "lib/items/itemEditorOperations.cjs": "902a251be9d33f1204458953cc228cd0533cf7beff792baea72411b4558b06a0",
+    "lib/items/visionPhotoIndex.cjs": "ea12ff09a0142034c5ca8ec3b51e643856fb66889fcb6cafce284f61ed8b36fa",
+    "utils/itemVisionIndex.js": "adb3d1d5d958048ba4f040eb91394fb73d39611fca8d6f8312fa2c4c311894d5",
+    "pages/api/items/analyze.js": "2a90b389c42a74479347ac6b93dd1324eeceb99556052ef3c32be658479f370c",
+    "pages/api/items/sync-index.js": "a11cbef1368fd91733735dee627098e4806e60d0cc74cb329dca7fb10f56f90c",
+    "pages/api/items/change-requests.js": "a17596356be8fd87b7fb8bbb488a00622f7543bf99ee1b5bb14931d5d26cddb2",
+    "pages/NewSearch/item/[id]/index.js": "f7787b1cbd880d636712543f0982372eacdf7e036a89c0d5dc1680254f547568",
+    "utils/itemVisionIndexClient.cjs": "1ac9ffb882a2d2eb1d2b10d8901ec8602c219c422dca25353377e063cb317cf5",
+    "pages/NewSearch/AddItem/NewItem.js": "a10b016fd5fe184b838046462f3d29bb5b306129a9177ddfad476965fb720926",
+    "utils/itemImageAnalysis.js": "7f56a533cac818dbbf40e123c2243e61e0ffdc4ccd673639813a717a896e3ff6",
+    "components/ItemChangeReview.js": "3f6286d8c27b086af3104c09e5cb4355b1a68fe8a109db501f4f075c4283cd12",
+    "pages/notifications.js": "1753c5752a021dcee6de2a09a36fae53e977b3466b95c882a3585719dcaab6d9"
+  },
+  "overlays": [
+    {
+      "name": "api-overlay-v4",
+      "receiptSHA256": "3129e70bbcc878564a582285c4e44952a51b2dff1b1e021e30baff6d7f857a5d"
+    },
+    {
+      "name": "editor-overlay-v4",
+      "receiptSHA256": "9183efd54ad0f9afbb7c057598532e59638a0aaf6ea11fb4be437c7b3774a1b1"
+    },
+    {
+      "name": "newitem-overlay-v2",
+      "receiptSHA256": "09808a6e7c03cdd383d8eeb9c80db89f113554d6a0553f2996b19f29cb58183c"
+    },
+    {
+      "name": "approval-ui-overlay",
+      "receiptSHA256": "e44f41d5cd39a478505f8884dba8be7c3b3c7b13d7f0d79b0cb07a0be0e478f0"
+    }
+  ],
+  "assetChanges": [
+    {
+      "old": "static/chunks/pages/NewSearch/item/[id]-7d5599e3503b73e8.js",
+      "next": "static/chunks/pages/NewSearch/item/[id]-962ba22085b493d3.js",
+      "sha256": "962ba22085b493d3aa4afbcd2ecf91cc63c5cf8295a89dce5740c673db9d2477"
+    },
+    {
+      "old": "static/chunks/pages/NewSearch/AddItem/NewItem-928f00a142c2c3a6.js",
+      "next": "static/chunks/pages/NewSearch/AddItem/NewItem-e92496fecf9deffb.js",
+      "sha256": "e92496fecf9deffb0da2262a6cfccbf5dbc3e5655a280a04971c84f1a4d369a2"
+    },
+    {
+      "old": "static/chunks/pages/notifications-1b8e7d04e392db15.js",
+      "next": "static/chunks/pages/notifications-3ce5405d663a60a4.js",
+      "sha256": "3ce5405d663a60a450aba108b84875dd457c8371abcbba6e4e58ad44567480aa"
+    }
+  ],
+  "artifactIncluded": false,
+  "fullSourceArchiveIncluded": false
+}

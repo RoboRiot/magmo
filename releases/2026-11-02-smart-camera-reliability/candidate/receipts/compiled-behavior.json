@@ -1,0 +1,25 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-11-02T18:50:28.722Z",
+  "compositionSHA256": "3c6c49b819fa5db05ba97d889d55ae79df0bcafb445ca078f8339826022df79c",
+  "tests": [
+    "test/item-analyze-reliability.test.cjs",
+    "test/item-vision-photo-index.test.cjs",
+    "test/item-analysis-ui-safety.test.cjs",
+    "test/item-save-navigation.test.cjs",
+    "test/item-vision-index-routes.test.cjs",
+    "test/item-vision-index-repair.test.cjs",
+    "test/item-vision-approval-notice.test.cjs",
+    "test/item-analysis-compiled-ui.test.cjs",
+    "test/item-vision-compiled-index-api.test.cjs"
+  ],
+  "mode": "Explicit synthetic API/auth/Storage/React fixtures; actual compiled API and UI factory execution, plus source-helper regressions",
+  "tapSHA256": "292b24a293ff4c069da740903d0a617f10b53078bae547006553474d7e38fc63",
+  "summary": [
+    "# tests 112",
+    "# pass 112",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0"
+  ]
+}
